@@ -31,6 +31,10 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET' && action === 'ref' && id) {
     const { data, error } = await supabase.from('orders').select('*').eq('id', id).single();
     if (error || !data) return json(res, 404, { error: 'Order not found' });
+    // Shipping: 25 THB for 1 physical book, free for 2+
+    const physicalCount = orderItems.filter(i => i.type === 'physical' || i.type === 'both').length;
+    const shipping_thb = physicalCount === 1 ? 25 : 0;
+    const grand_total_thb = final_thb + shipping_thb;
     const authUser = await getUser(req);
     // Allow if owner or admin
     if (data.user_id && authUser?.id !== data.user_id && authUser?.role !== 'admin') {
@@ -86,6 +90,10 @@ module.exports = async function handler(req, res) {
     const final_thb = Math.round(subtotal_thb * (1 - discount_pct));
     const hasPhysical = orderItems.some(i => i.type === 'physical' || i.type === 'both');
 
+    // Shipping: 25 THB for 1 physical book, free for 2+
+    const physicalCount = orderItems.filter(i => i.type === 'physical' || i.type === 'both').length;
+    const shipping_thb = physicalCount === 1 ? 25 : 0;
+    const grand_total_thb = final_thb + shipping_thb;
     const authUser = await getUser(req);
     const { data: order, error } = await supabase.from('orders').insert({
       user_id: authUser?.id || null,
@@ -99,7 +107,10 @@ module.exports = async function handler(req, res) {
       subtotal_thb,
       discount: Math.round(subtotal_usd * discount_pct * 100) / 100,
       total: final_usd,
-      total_thb: total_thb || final_thb,
+      total_thb: total_thb || grand_total_thb,
+      total_amount: total_thb || grand_total_thb,
+      shipping_thb: shipping_thb,
+      grand_total_thb: grand_total_thb,
       total_amount: total_thb || final_thb,
       promo_code: promoCode || null,
       status: 'pending_payment',
@@ -168,6 +179,15 @@ module.exports = async function handler(req, res) {
     const { data, error } = await supabase.from('orders').update(updates).eq('id', id).select().single();
     if (error) return json(res, 404, { error: 'Order not found' });
     return json(res, 200, data);
+  }
+
+  // DELETE order (admin)
+  if (req.method === 'DELETE' && id) {
+    const user = await requireAuth(req, res, ['admin']);
+    if (!user) return;
+    const { error } = await supabase.from('orders').delete().eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
   }
 
   return json(res, 405, { error: 'Method not allowed' });

@@ -39,10 +39,14 @@ export default function CheckoutPage() {
   const discount    = promoApplied ? Math.round(total * 0.15 * 100) / 100 : 0;
   const finalTotalUSD = Math.round((total - discount) * 100) / 100;
   // THB amount: use price_thb from items if available, else multiply by 35
-  const finalTotalTHB = Math.round(items.reduce((s, i) => {
+  const subtotalTHB = Math.round(items.reduce((s, i) => {
     const itemTHB = (i as any).price_thb || (i.price * 35);
     return s + itemTHB;
   }, 0) * (promoApplied ? 0.85 : 1));
+  // Shipping: 25 THB for 1 physical, free for 2+
+  const physicalCount = items.filter(i => (i as any).type === 'physical').length;
+  const shippingTHB = physicalCount === 1 ? 25 : 0;
+  const finalTotalTHB = subtotalTHB + shippingTHB;
 
   // Display amount based on language
   const displayTotal = lang === 'th' ? finalTotalTHB : finalTotalUSD;
@@ -333,7 +337,8 @@ export default function CheckoutPage() {
               <span>{lang==='th'?`฿${finalTotalTHB.toLocaleString('th-TH')}` : `$${total.toFixed(2)}`}</span>
             </div>
             {promoApplied && <div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'#10b981',fontWeight:700,marginBottom:4}}><span>{t('discount')}</span><span>-15%</span></div>}
-            <div style={{display:'flex',justifyContent:'space-between',fontWeight:900,color:theme.textColor,fontSize:16,marginTop:8}}>
+            {shippingTHB>0&&<div style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'#64748b',marginTop:4}}><span>{lang==='th'?'ค่าจัดส่ง':'Shipping'}</span><span>{lang==='th'?`฿${shippingTHB}`:'฿25'}</span></div>}
+            <div style={{display:'flex',justifyContent:'space-between',fontWeight:900,color:theme.textColor,fontSize:16,marginTop:8,borderTop:'1px solid #f3f4f6',paddingTop:8}}>
               <span>{t('total')}</span>
               <span>{lang==='th'?`฿${finalTotalTHB.toLocaleString('th-TH')}`:`$${finalTotalUSD.toFixed(2)}`}</span>
             </div>

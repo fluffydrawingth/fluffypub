@@ -82,40 +82,68 @@ const STATUS_TEXT:any  = { pending_payment:'Pending Payment', paid:'Paid', packi
 function DashboardTab() {
   const [stats, setStats] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
-  useEffect(()=>{ api.getAnalytics().then(s=>setStats(s)); api.allOrders().then(o=>setOrders(Array.isArray(o)?o.slice(0,6):[])); },[]);
-  const statCards = stats ? [
-    {label:'Total Revenue',value:`$${stats.revenue}`,icon:'💰',color:'#10b981',bg:'#d1fae5'},
-    {label:'Orders Today',value:stats.ordersToday,icon:'📦',color:P,bg:'#fce7f3'},
-    {label:'Total Products',value:stats.totalProducts,icon:'📚',color:'#8b5cf6',bg:'#ede9fe'},
-    {label:'Customers',value:stats.totalCustomers,icon:'👥',color:'#f59e0b',bg:'#fef3c7'},
-    {label:'Artists',value:stats.totalArtists,icon:'🎨',color:'#06b6d4',bg:'#cffafe'},
-    {label:'Total Orders',value:stats.totalOrders,icon:'📋',color:'#64748b',bg:'#f1f5f9'},
+  const [, setTab] = useState('dashboard'); // for navigation
+  useEffect(()=>{ api.getAnalytics().then(s=>setStats(s)); api.allOrders().then(o=>setOrders(Array.isArray(o)?o.slice(0,8):[])); },[]);
+
+  const statusCards = stats ? [
+    {label:'Pending Payment',value:stats.byStatus?.pending_payment||0,icon:'⏳',color:'#d97706',bg:'#fef3c7',status:'pending_payment'},
+    {label:'Paid',value:stats.byStatus?.paid||0,icon:'✅',color:'#059669',bg:'#d1fae5',status:'paid'},
+    {label:'Preparing',value:stats.byStatus?.packing||0,icon:'📦',color:'#2563eb',bg:'#dbeafe',status:'packing'},
+    {label:'Shipped',value:stats.byStatus?.shipped||0,icon:'🚚',color:'#7c3aed',bg:'#ede9fe',status:'shipped'},
+    {label:'Delivered',value:stats.byStatus?.delivered||0,icon:'🎉',color:'#059669',bg:'#d1fae5',status:'delivered'},
+    {label:'Cancelled',value:stats.byStatus?.cancelled||0,icon:'❌',color:'#dc2626',bg:'#fee2e2',status:'cancelled'},
   ] : [];
+
+  const topCards = stats ? [
+    {label:'Revenue (THB)',value:`฿${(stats.revenue_thb||0).toLocaleString('th-TH')}`,icon:'💰',color:'#10b981',bg:'#d1fae5'},
+    {label:'Orders Today',value:stats.ordersToday||0,icon:'📅',color:P,bg:'#fce7f3'},
+    {label:'This Month',value:stats.ordersThisMonth||0,icon:'📆',color:'#8b5cf6',bg:'#ede9fe'},
+    {label:'Total Products',value:stats.totalProducts||0,icon:'📚',color:'#f59e0b',bg:'#fef3c7'},
+  ] : [];
+
   return (
-    <div style={{padding:32}}>
-      <h1 style={{fontSize:28,fontWeight:900,color:'#111827',margin:'0 0 24px'}}>Dashboard</h1>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,marginBottom:28}}>
-        {statCards.map(s=>(
-          <div key={s.label} style={{...card,padding:20}}>
+    <div style={{padding:28}}>
+      <h1 style={{fontSize:26,fontWeight:900,color:'#111827',margin:'0 0 20px'}}>Dashboard 📊</h1>
+
+      {/* Top stats */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,marginBottom:20}}>
+        {topCards.map(s=>(
+          <div key={s.label} style={{...card,padding:18}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
-              <div><div style={{fontSize:12,color:'#6b7280',fontWeight:600,marginBottom:6,textTransform:'uppercase' as const,letterSpacing:0.5}}>{s.label}</div><div style={{fontSize:26,fontWeight:900,color:'#111827'}}>{s.value??'—'}</div></div>
-              <div style={{width:44,height:44,borderRadius:12,background:s.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22}}>{s.icon}</div>
+              <div>
+                <div style={{fontSize:11,color:'#6b7280',fontWeight:600,marginBottom:4,textTransform:'uppercase' as const,letterSpacing:0.5}}>{s.label}</div>
+                <div style={{fontSize:24,fontWeight:900,color:'#111827'}}>{s.value??'—'}</div>
+              </div>
+              <div style={{width:40,height:40,borderRadius:10,background:s.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>{s.icon}</div>
             </div>
           </div>
         ))}
       </div>
-      <div style={{...card,padding:24}}>
-        <h3 style={{fontSize:16,fontWeight:800,color:'#111827',margin:'0 0 16px'}}>Recent Orders</h3>
-        {orders.length===0?<div style={{textAlign:'center',padding:'24px',color:'#9ca3af'}}>No orders yet</div>:(
+
+      {/* Status breakdown */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:10,marginBottom:24}}>
+        {statusCards.map(s=>(
+          <div key={s.label} style={{...card,padding:14,textAlign:'center' as const,cursor:'pointer',borderLeft:`3px solid ${s.color}`}}>
+            <div style={{fontSize:22,marginBottom:4}}>{s.icon}</div>
+            <div style={{fontSize:20,fontWeight:900,color:s.color}}>{s.value}</div>
+            <div style={{fontSize:10,color:'#6b7280',fontWeight:600,marginTop:2}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Recent orders */}
+      <div style={{...card,padding:20}}>
+        <h3 style={{fontSize:15,fontWeight:800,color:'#111827',margin:'0 0 14px'}}>Recent Orders</h3>
+        {orders.length===0?<div style={{textAlign:'center',padding:'20px',color:'#9ca3af'}}>No orders yet</div>:(
           <table style={{width:'100%',borderCollapse:'collapse'}}>
-            <thead><tr style={{borderBottom:'2px solid #f3f4f6'}}>{['Order','Customer','Total','Type','Status'].map(h=><th key={h} style={{textAlign:'left',padding:'8px 12px',fontSize:11,color:'#9ca3af',fontWeight:700,textTransform:'uppercase' as const,letterSpacing:0.5}}>{h}</th>)}</tr></thead>
+            <thead><tr style={{borderBottom:'2px solid #f3f4f6'}}>{['Order','Customer','Amount','Status','Date'].map(h=><th key={h} style={{textAlign:'left',padding:'8px 10px',fontSize:11,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}</tr></thead>
             <tbody>{orders.map(o=>{const[c,bg]=STATUS_COLOR[o.status]||['#6b7280','#f1f5f9'];return(
               <tr key={o.id} style={{borderBottom:'1px solid #f9fafb'}}>
-                <td style={{padding:'12px',fontSize:13,fontWeight:700,color:P}}>#{(o.id||'').slice(-8).toUpperCase()}</td>
-                <td style={{padding:'12px',fontSize:13,color:'#374151'}}>{o.customer_name||o.customerName}</td>
-                <td style={{padding:'12px',fontWeight:800,color:'#111827'}}>${o.total}</td>
-                <td style={{padding:'12px',fontSize:12,color:'#6b7280'}}>{o.type==='digital'?'⬇️ Digital':'📦 Physical'}</td>
-                <td style={{padding:'12px'}}><Badge color={c} bg={bg} text={STATUS_TEXT[o.status]||o.status}/></td>
+                <td style={{padding:'10px',fontSize:12,fontWeight:700,color:P}}>#{(o.id||'').slice(-8).toUpperCase()}</td>
+                <td style={{padding:'10px',fontSize:12,color:'#374151'}}>{o.customer_name||''}</td>
+                <td style={{padding:'10px',fontWeight:800,color:'#111827',fontSize:12}}>฿{(o.total_thb||o.total_amount||(parseFloat(o.total||'0')*35)).toLocaleString('th-TH')}</td>
+                <td style={{padding:'10px'}}><Badge color={c} bg={bg} text={STATUS_TEXT[o.status]||o.status}/></td>
+                <td style={{padding:'10px',fontSize:11,color:'#9ca3af'}}>{new Date(o.created_at).toLocaleDateString('th-TH')}</td>
               </tr>
             );})}</tbody>
           </table>
@@ -271,10 +299,33 @@ function ProductsTab() {
             {inp('Compare Price USD $', price, setPrice, '14.99', 'number')}
             <div>
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Category *</label>
-              <select value={category} onChange={e=>setCategory(e.target.value)} style={{width:'100%',padding:'9px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit'}}>
-                <option value="">Select category...</option>
-                {categories.map(cat=><option key={cat} value={cat}>{cat}</option>)}
-              </select>
+              <div style={{display:'flex',gap:6,marginBottom:6}}>
+                <select value={category} onChange={e=>setCategory(e.target.value)} style={{flex:1,padding:'9px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit'}}>
+                  <option value="">Select category...</option>
+                  {categories.map(cat=><option key={cat} value={cat}>{cat}</option>)}
+                </select>
+                <button type="button" onClick={()=>setShowCatMgr(x=>!x)} style={{padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',background:showCatMgr?'#fdf2f8':'white',cursor:'pointer',fontSize:12,color:P,fontWeight:700}}>⚙️</button>
+              </div>
+              {showCatMgr&&(
+                <div style={{background:'#fdf2f8',borderRadius:10,padding:12,marginBottom:8}}>
+                  <div style={{fontSize:11,fontWeight:700,color:P,marginBottom:8}}>Manage Categories</div>
+                  <div style={{display:'flex',gap:6,marginBottom:8}}>
+                    <input value={newCat} onChange={e=>setNewCat(e.target.value)} placeholder="New category name..."
+                      style={{flex:1,padding:'7px 10px',borderRadius:8,border:`1.5px solid ${P}30`,fontSize:12,outline:'none',fontFamily:'inherit'}}
+                      onKeyDown={e=>{if(e.key==='Enter'&&newCat.trim()){setCategories(cats=>[...cats,newCat.trim()]);setNewCat('');}}}
+                    />
+                    <button type="button" onClick={()=>{if(newCat.trim()){setCategories(cats=>[...cats,newCat.trim()]);setNewCat('');}}} style={{padding:'7px 12px',borderRadius:8,border:'none',background:P,color:'white',cursor:'pointer',fontSize:12,fontWeight:700}}>Add</button>
+                  </div>
+                  <div style={{display:'flex',flexWrap:'wrap' as const,gap:6}}>
+                    {categories.map(cat=>(
+                      <span key={cat} style={{background:'white',border:`1px solid ${P}30`,borderRadius:20,padding:'3px 10px',fontSize:11,fontWeight:600,color:'#374151',display:'flex',alignItems:'center',gap:4}}>
+                        {cat}
+                        <button type="button" onClick={()=>setCategories(cats=>cats.filter(c=>c!==cat))} style={{background:'none',border:'none',cursor:'pointer',color:'#ef4444',fontSize:12,padding:0,lineHeight:1}}>✕</button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div>
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Artist</label>
@@ -381,20 +432,28 @@ function OrdersTab() {
   const [tracking, setTracking] = useState('');
   const [provider, setProvider] = useState('');
   const [status, setStatus] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [saving, setSaving] = useState(false);
   const [marking, setMarking] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [msg, setMsg] = useState('');
 
   const load = () => api.allOrders().then(o=>setOrders(Array.isArray(o)?o:[]));
   useEffect(()=>{load();},[]);
 
-  const select = (o:any) => { setSelected(o); setTracking(o.tracking_number||o.trackingNumber||''); setProvider(o.shipping_provider||o.shippingProvider||''); setStatus(o.status); setMsg(''); };
+  const select = (o:any) => {
+    setSelected(o);
+    setTracking(o.tracking_number||'');
+    setProvider(o.shipping_provider||'');
+    setStatus(o.status);
+    setMsg('');
+  };
 
   const save = async () => {
     if (!selected) return; setSaving(true);
-    const updated = await api.updateOrder(selected.id, { status, trackingNumber:tracking, shippingProvider:provider });
-    setOrders(prev=>prev.map(o=>o.id===selected.id?updated:o));
-    setSelected(updated); setSaving(false); setMsg('✓ Updated!'); setTimeout(()=>setMsg(''),3000);
+    const updated = await api.updateOrder(selected.id, { status, tracking_number:tracking, shipping_provider:provider });
+    setOrders(prev=>prev.map(o=>o.id===selected.id?{...o,...updated}:o));
+    setSelected((prev:any)=>({...prev,...updated})); setSaving(false); setMsg('✓ Updated!'); setTimeout(()=>setMsg(''),3000);
   };
 
   const markPaid = async () => {
@@ -403,76 +462,177 @@ function OrdersTab() {
       const token = sessionStorage.getItem('fluffy_token');
       const r = await fetch(`/api/orders?action=pay&id=${selected.id}`,{method:'POST',headers:{Authorization:`Bearer ${token}`}});
       const updated = await r.json();
-      if (updated.error){setMsg('⚠️ '+updated.error);}
-      else{setOrders(prev=>prev.map(o=>o.id===selected.id?updated:o));setSelected(updated);setMsg('✓ Marked as paid! Downloads unlocked.');}
-    } catch{setMsg('⚠️ Failed.');}
+      if (updated.error) setMsg('⚠️ '+updated.error);
+      else { setOrders(prev=>prev.map(o=>o.id===selected.id?updated:o)); setSelected(updated); setMsg('✓ Marked as paid!'); }
+    } catch { setMsg('⚠️ Failed.'); }
     setMarking(false); setTimeout(()=>setMsg(''),4000);
   };
 
+  const deleteOrder = async (id:string) => {
+    if (!confirm('Delete this order? This cannot be undone.')) return;
+    setDeleting(true);
+    await api.deleteOrder(id);
+    setOrders(prev=>prev.filter(o=>o.id!==id));
+    if (selected?.id===id) setSelected(null);
+    setDeleting(false);
+  };
+
+  const printSlip = (o:any) => {
+    const sa = o.shipping_address || {};
+    const addr = typeof sa === 'string' ? sa : [sa.address,sa.province,sa.postal_code,sa.country].filter(Boolean).join(', ');
+    const w = window.open('','_blank');
+    if (!w) return;
+    w.document.write(`<html><head><title>Packing Slip #${(o.id||'').slice(-8).toUpperCase()}</title>
+    <style>body{font-family:sans-serif;padding:20px;max-width:400px;}h2{margin:0}hr{margin:12px 0}.row{display:flex;justify-content:space-between;margin:4px 0}</style></head>
+    <body><h2>📦 Packing Slip</h2><p>Order #${(o.id||'').slice(-8).toUpperCase()}</p><hr>
+    <strong>Ship To:</strong><p>${o.customer_name}<br>${addr}<br>${o.customer_phone||''}</p><hr>
+    <strong>Items:</strong>${(o.items||[]).map((i:any)=>`<div class="row"><span>${i.title}${i.variant?` (${i.variant.name})`:''}</span><span>฿${i.price_thb||(i.price*35)|i.price}</span></div>`).join('')}
+    <hr><div class="row"><strong>Total</strong><strong>฿${o.total_thb||o.total_amount||(parseFloat(o.total||0)*35)}</strong></div>
+    <script>window.print()</script></body></html>`);
+  };
+
+  const filteredOrders = filterStatus==='all' ? orders : orders.filter(o=>o.status===filterStatus);
   const STATUS_OPTS = ['pending_payment','paid','packing','shipped','delivered','cancelled'];
+  const FILTER_TABS = [{k:'all',label:'All'},{k:'pending_payment',label:'Pending'},{k:'paid',label:'Paid'},{k:'packing',label:'Preparing'},{k:'shipped',label:'Shipped'},{k:'delivered',label:'Delivered'},{k:'cancelled',label:'Cancelled'}];
+
+  const fmtAddr = (sa:any) => {
+    if (!sa) return '';
+    if (typeof sa === 'string') return sa;
+    return [sa.address,sa.province,sa.postal_code,sa.country].filter(Boolean).join(', ');
+  };
+
   return (
-    <div style={{padding:32,display:'grid',gridTemplateColumns:'1fr 360px',gap:24,alignItems:'start'}}>
-      <div>
-        <h1 style={{fontSize:28,fontWeight:900,color:'#111827',margin:'0 0 24px'}}>Orders</h1>
+    <div style={{padding:24}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+        <h1 style={{fontSize:24,fontWeight:900,color:'#111827',margin:0}}>Orders ({filteredOrders.length})</h1>
+      </div>
+
+      {/* Status filter tabs */}
+      <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap' as const}}>
+        {FILTER_TABS.map(ft=>{
+          const count = ft.k==='all'?orders.length:orders.filter(o=>o.status===ft.k).length;
+          return (
+            <button key={ft.k} onClick={()=>setFilterStatus(ft.k)} style={{padding:'6px 14px',borderRadius:20,border:`1.5px solid ${filterStatus===ft.k?P:'#e5e7eb'}`,background:filterStatus===ft.k?P:'white',color:filterStatus===ft.k?'white':'#374151',cursor:'pointer',fontSize:12,fontWeight:600,fontFamily:'inherit'}}>
+              {ft.label} <span style={{opacity:0.7}}>({count})</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 380px',gap:20,alignItems:'start'}}>
         <div style={{...card,overflow:'hidden'}}>
           <table style={{width:'100%',borderCollapse:'collapse'}}>
-            <thead><tr style={{borderBottom:'2px solid #f3f4f6',background:'#fafafa'}}>{['ORDER','CUSTOMER','TOTAL','TYPE','STATUS'].map(h=><th key={h} style={{textAlign:'left',padding:'12px 16px',fontSize:11,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}</tr></thead>
-            <tbody>{orders.map(o=>{const[c,bg]=STATUS_COLOR[o.status]||['#6b7280','#f1f5f9'];return(
-              <tr key={o.id} style={{borderBottom:'1px solid #f9fafb',cursor:'pointer',background:selected?.id===o.id?'#fdf2f8':'white'}}
-                onClick={()=>select(o)} onMouseEnter={e=>{if(selected?.id!==o.id)(e.currentTarget.style.background='#fafafa');}} onMouseLeave={e=>{if(selected?.id!==o.id)(e.currentTarget.style.background='white');}}>
-                <td style={{padding:'13px 16px',fontSize:13,fontWeight:700,color:P}}>#{(o.id||'').slice(-8).toUpperCase()}</td>
-                <td style={{padding:'13px 16px',fontSize:13,color:'#374151'}}>{o.customer_name||o.customerName}</td>
-                <td style={{padding:'13px 16px',fontWeight:800,color:'#111827'}}>${o.total}</td>
-                <td style={{padding:'13px 16px',fontSize:12,color:'#6b7280'}}>{o.type==='digital'?'⬇️ Digital':'📦 Physical'}</td>
-                <td style={{padding:'13px 16px'}}><Badge color={c} bg={bg} text={STATUS_TEXT[o.status]||o.status}/></td>
-              </tr>
-            );})}</tbody>
+            <thead><tr style={{borderBottom:'2px solid #f3f4f6',background:'#fafafa'}}>
+              {['Order','Date','Customer','Amount','Status',''].map(h=><th key={h} style={{textAlign:'left' as const,padding:'10px 12px',fontSize:10,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}
+            </tr></thead>
+            <tbody>{filteredOrders.map(o=>{
+              const[c,bg]=STATUS_COLOR[o.status]||['#6b7280','#f1f5f9'];
+              const thb = o.total_thb||o.total_amount||(parseFloat(o.total||'0')*35);
+              return (
+                <tr key={o.id} style={{borderBottom:'1px solid #f9fafb',cursor:'pointer',background:selected?.id===o.id?'#fdf2f8':'white'}}
+                  onClick={()=>select(o)} onMouseEnter={e=>{if(selected?.id!==o.id)e.currentTarget.style.background='#fafafa';}} onMouseLeave={e=>{if(selected?.id!==o.id)e.currentTarget.style.background='white';}}>
+                  <td style={{padding:'11px 12px',fontSize:12,fontWeight:700,color:P}}>#{(o.id||'').slice(-8).toUpperCase()}</td>
+                  <td style={{padding:'11px 12px',fontSize:11,color:'#9ca3af'}}>{new Date(o.created_at).toLocaleDateString('th-TH',{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+                  <td style={{padding:'11px 12px',fontSize:12,color:'#374151'}}>
+                    <div style={{fontWeight:600}}>{o.customer_name}</div>
+                    <div style={{fontSize:10,color:'#9ca3af'}}>{o.customer_phone}</div>
+                  </td>
+                  <td style={{padding:'11px 12px',fontWeight:800,color:'#111827',fontSize:13}}>฿{Number(thb).toLocaleString('th-TH')}</td>
+                  <td style={{padding:'11px 12px'}}><Badge color={c} bg={bg} text={STATUS_TEXT[o.status]||o.status}/></td>
+                  <td style={{padding:'11px 12px'}}>
+                    <button onClick={e=>{e.stopPropagation();deleteOrder(o.id);}} disabled={deleting} style={{background:'none',border:'none',cursor:'pointer',color:'#fca5a5',fontSize:14,padding:4}}>🗑</button>
+                  </td>
+                </tr>
+              );
+            })}</tbody>
           </table>
-          {orders.length===0&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af'}}>No orders yet</div>}
+          {filteredOrders.length===0&&<div style={{textAlign:'center',padding:'40px',color:'#9ca3af'}}>No orders {filterStatus!=='all'?`with status "${filterStatus}"`:'yet'}</div>}
         </div>
-      </div>
-      {selected&&(
-        <div style={{...card,padding:24,position:'sticky',top:24}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16}}>
-            <div><div style={{fontWeight:800,color:'#111827',fontSize:15}}>#{(selected.id||'').slice(-8).toUpperCase()}</div><div style={{fontSize:12,color:'#9ca3af',marginTop:2}}>{selected.customer_email||selected.customerEmail}</div></div>
-            <button onClick={()=>setSelected(null)} style={{background:'none',border:'none',cursor:'pointer',color:'#9ca3af',fontSize:16}}>✕</button>
-          </div>
-          {(selected.customer_phone||selected.customerPhone)&&<div style={{fontSize:13,color:'#374151',marginBottom:8}}>📞 {selected.customer_phone||selected.customerPhone}</div>}
-          {(selected.shipping_address||selected.shippingAddress)&&<div style={{fontSize:12,color:'#6b7280',background:'#f9fafb',borderRadius:8,padding:'8px 12px',marginBottom:12}}>📦 {JSON.stringify(selected.shipping_address||selected.shippingAddress)}</div>}
-          <div style={{borderTop:'1px solid #f3f4f6',borderBottom:'1px solid #f3f4f6',padding:'12px 0',marginBottom:14}}>
-            {selected.items?.map((i:any,idx:number)=>(
-              <div key={idx} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
-                <span style={{fontSize:20}}>{i.image}</span><span style={{flex:1,fontSize:13,color:'#374151',fontWeight:600}}>{i.title}</span><span style={{fontWeight:800,color:'#111827',fontSize:13}}>${i.price}</span>
+
+        {selected&&(
+          <div style={{...card,padding:20,position:'sticky' as const,top:20,maxHeight:'90vh',overflowY:'auto' as const}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14}}>
+              <div>
+                <div style={{fontWeight:800,color:'#111827',fontSize:15}}>#{(selected.id||'').slice(-8).toUpperCase()}</div>
+                <div style={{fontSize:11,color:'#9ca3af',marginTop:2}}>{new Date(selected.created_at).toLocaleString('th-TH')}</div>
               </div>
-            ))}
-            <div style={{display:'flex',justifyContent:'space-between',marginTop:8,fontWeight:900,color:'#111827',fontSize:15}}><span>Total</span><span>${selected.total}</span></div>
-          </div>
-          {(selected.payment_status==='pending'||selected.paymentStatus==='pending')&&(
-            <button onClick={markPaid} disabled={marking} style={{width:'100%',padding:'12px',background:marking?'#10b981aa':'#10b981',color:'white',border:'none',cursor:'pointer',borderRadius:12,fontSize:14,fontWeight:700,fontFamily:'inherit',marginBottom:12,boxShadow:'0 4px 12px #10b98144'}}>
-              {marking?'Processing...':'✅ Mark as Paid'}
-            </button>
-          )}
-          {(selected.payment_status==='paid'||selected.paymentStatus==='paid')&&<div style={{background:'#d1fae5',borderRadius:10,padding:'9px 14px',fontSize:13,color:'#065f46',fontWeight:700,marginBottom:12}}>✅ Payment confirmed</div>}
-          <div style={{marginBottom:10}}>
-            <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Update Status</label>
-            <select value={status} onChange={e=>setStatus(e.target.value)} style={{width:'100%',padding:'9px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit'}}>
-              {STATUS_OPTS.map(s=><option key={s} value={s}>{STATUS_TEXT[s]}</option>)}
-            </select>
-          </div>
-          {selected.type==='physical'&&<>
-            <div style={{marginBottom:10}}>
-              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Shipping Provider</label>
-              <input value={provider} onChange={e=>setProvider(e.target.value)} placeholder="Thailand Post, Kerry..." style={{width:'100%',padding:'9px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} />
+              <div style={{display:'flex',gap:6}}>
+                <button onClick={()=>printSlip(selected)} style={{background:'#f3f4f6',border:'none',cursor:'pointer',padding:'5px 10px',borderRadius:8,fontSize:11,fontWeight:600}}>🖨️ Print</button>
+                <button onClick={()=>setSelected(null)} style={{background:'none',border:'none',cursor:'pointer',color:'#9ca3af',fontSize:16}}>✕</button>
+              </div>
             </div>
-            <div style={{marginBottom:14}}>
-              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Tracking Number</label>
-              <input value={tracking} onChange={e=>setTracking(e.target.value)} placeholder="TH123456789" style={{width:'100%',padding:'9px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} />
+
+            {/* Customer info */}
+            <div style={{background:'#f9fafb',borderRadius:10,padding:'10px 12px',marginBottom:12,fontSize:12}}>
+              <div style={{fontWeight:700,color:'#374151',marginBottom:4}}>👤 {selected.customer_name}</div>
+              <div style={{color:'#6b7280'}}>{selected.customer_email}</div>
+              {selected.customer_phone&&<div style={{color:'#6b7280'}}>📞 {selected.customer_phone}</div>}
+              {selected.shipping_address&&<div style={{color:'#6b7280',marginTop:4}}>📍 {fmtAddr(selected.shipping_address)}</div>}
             </div>
-          </>}
-          {msg&&<div style={{marginBottom:10,fontSize:12,fontWeight:600,color:msg.startsWith('✓')?'#059669':'#dc2626'}}>{msg}</div>}
-          <button onClick={save} disabled={saving} style={{width:'100%',padding:'11px',background:saving?P+'88':P,color:'white',border:'none',cursor:'pointer',borderRadius:12,fontSize:14,fontWeight:700,fontFamily:'inherit',boxShadow:`0 4px 12px ${P}44`}}>{saving?'Saving...':'Update Order'}</button>
-        </div>
-      )}
+
+            {/* Products */}
+            <div style={{borderTop:'1px solid #f3f4f6',borderBottom:'1px solid #f3f4f6',padding:'10px 0',marginBottom:12}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#9ca3af',marginBottom:8}}>PRODUCTS</div>
+              {(selected.items||[]).map((i:any,idx:number)=>(
+                <div key={idx} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                  <span style={{fontSize:18}}>{i.image}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:12,color:'#374151',fontWeight:600}}>{i.title}</div>
+                    {i.variant&&<div style={{fontSize:10,color:P}}>{i.variant.name}</div>}
+                  </div>
+                  <span style={{fontWeight:800,color:'#111827',fontSize:12}}>฿{Number(i.price_thb||(i.price*35)).toLocaleString('th-TH')}</span>
+                </div>
+              ))}
+              {selected.shipping_thb>0&&<div style={{display:'flex',justifyContent:'space-between',marginTop:8,fontSize:12,color:'#6b7280'}}><span>Shipping</span><span>฿{selected.shipping_thb}</span></div>}
+              <div style={{display:'flex',justifyContent:'space-between',marginTop:6,fontWeight:900,color:'#111827',fontSize:14}}>
+                <span>Total</span>
+                <span>฿{Number(selected.total_thb||selected.total_amount||(parseFloat(selected.total||'0')*35)).toLocaleString('th-TH')}</span>
+              </div>
+            </div>
+
+            {/* Slip */}
+            {selected.slip_url&&(
+              <div style={{marginBottom:12}}>
+                <div style={{fontSize:11,fontWeight:700,color:'#9ca3af',marginBottom:6}}>PAYMENT SLIP</div>
+                <a href={selected.slip_url} target="_blank" rel="noreferrer">
+                  <img src={selected.slip_url} alt="slip" style={{width:'100%',borderRadius:8,border:'1px solid #e5e7eb'}} />
+                </a>
+                <div style={{fontSize:10,color:'#9ca3af',marginTop:4}}>Uploaded: {selected.slip_uploaded_at?new Date(selected.slip_uploaded_at).toLocaleString('th-TH'):''}</div>
+              </div>
+            )}
+
+            {/* Mark paid */}
+            {selected.payment_status!=='paid'&&(
+              <button onClick={markPaid} disabled={marking} style={{width:'100%',padding:'10px',background:marking?'#10b981aa':'#10b981',color:'white',border:'none',cursor:'pointer',borderRadius:10,fontSize:13,fontWeight:700,fontFamily:'inherit',marginBottom:10,boxShadow:'0 4px 12px #10b98144'}}>
+                {marking?'Processing...':'✅ Mark as Paid'}
+              </button>
+            )}
+            {selected.payment_status==='paid'&&<div style={{background:'#d1fae5',borderRadius:8,padding:'8px 12px',fontSize:12,color:'#065f46',fontWeight:700,marginBottom:10}}>✅ Payment confirmed</div>}
+
+            {/* Status update */}
+            <div style={{marginBottom:8}}>
+              <label style={{display:'block',fontSize:11,fontWeight:700,color:'#374151',marginBottom:4}}>Update Status</label>
+              <select value={status} onChange={e=>setStatus(e.target.value)} style={{width:'100%',padding:'8px 12px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit'}}>
+                {STATUS_OPTS.map(s=><option key={s} value={s}>{STATUS_TEXT[s]}</option>)}
+              </select>
+            </div>
+
+            {(selected.type==='physical'||selected.type==='both')&&<>
+              <div style={{marginBottom:8}}>
+                <label style={{display:'block',fontSize:11,fontWeight:700,color:'#374151',marginBottom:4}}>Shipping Provider</label>
+                <input value={provider} onChange={e=>setProvider(e.target.value)} placeholder="Thailand Post, Kerry, Flash..." style={{width:'100%',padding:'8px 12px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} />
+              </div>
+              <div style={{marginBottom:12}}>
+                <label style={{display:'block',fontSize:11,fontWeight:700,color:'#374151',marginBottom:4}}>Tracking Number</label>
+                <input value={tracking} onChange={e=>setTracking(e.target.value)} placeholder="TH123456789" style={{width:'100%',padding:'8px 12px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} />
+              </div>
+            </>}
+
+            {msg&&<div style={{marginBottom:8,fontSize:12,fontWeight:600,color:msg.startsWith('✓')?'#059669':'#dc2626'}}>{msg}</div>}
+            <button onClick={save} disabled={saving} style={{width:'100%',padding:'10px',background:saving?P+'88':P,color:'white',border:'none',cursor:'pointer',borderRadius:10,fontSize:13,fontWeight:700,fontFamily:'inherit',boxShadow:`0 4px 12px ${P}44`}}>{saving?'Saving...':'Update Order'}</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1011,7 +1171,7 @@ function FooterCMSEditor({ footer, onFooterChange }: { footer: FooterConfig; onF
 function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v: any[]) => void }) {
   const vuid = () => Math.random().toString(36).slice(2, 9);
 
-  const add = () => onChange([...variants, { id: vuid(), name: '', price: '', enabled: true, stock: '' }]);
+  const add = () => onChange([...variants, { id: vuid(), name: '', price_thb: '', price_usd: '', enabled: true, stock: '' }]);
   const update = (id: string, key: string, val: any) => onChange(variants.map(v => v.id === id ? { ...v, [key]: val } : v));
   const del = (id: string) => onChange(variants.filter(v => v.id !== id));
   const move = (i: number, dir: number) => {
@@ -1024,53 +1184,48 @@ function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v:
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <label style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>
-          Product Variants <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional — e.g. Spiral binding, Digital file)</span>
+          Product Variants <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional — each product manages its own variants)</span>
         </label>
         <button onClick={add} style={{ padding: '4px 12px', borderRadius: 8, border: `1.5px solid ${P}`, background: '#fdf2f8', color: P, cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'inherit' }}>+ Add Variant</button>
       </div>
 
       {variants.length === 0 && (
         <div style={{ padding: '12px 16px', background: '#f9fafb', borderRadius: 10, fontSize: 13, color: '#9ca3af', textAlign: 'center' as const }}>
-          No variants — product uses base price. Add variants if you offer multiple options.
+          No variants. Add variants like "สันห่วงปกติ", "สันห่วงเปิดบน", "Digital file" etc.
         </div>
       )}
 
       {variants.map((v, i) => (
-        <div key={v.id} style={{ display: 'grid', gridTemplateColumns: '1fr 90px 80px auto auto auto auto', gap: 8, alignItems: 'center', background: '#f9fafb', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
-          <input
-            value={v.name}
-            onChange={e => update(v.id, 'name', e.target.value)}
-            placeholder="e.g. สันห่วงปกติ, Digital file..."
-            style={{ padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const }}
-            onFocus={e => e.target.style.borderColor = P}
-            onBlur={e => e.target.style.borderColor = '#e5e7eb'}
-          />
-          <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: 13 }}>$</span>
+        <div key={v.id} style={{ background: '#f9fafb', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 100px 60px auto auto auto', gap: 6, alignItems: 'center' }}>
             <input
-              type="number"
-              value={v.price}
-              onChange={e => update(v.id, 'price', e.target.value)}
-              placeholder="0.00"
-              style={{ padding: '7px 8px 7px 20px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const }}
+              value={v.name}
+              onChange={e => update(v.id, 'name', e.target.value)}
+              placeholder="e.g. สันห่วงปกติ"
+              style={{ padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const }}
               onFocus={e => e.target.style.borderColor = P}
               onBlur={e => e.target.style.borderColor = '#e5e7eb'}
             />
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: 12 }}>฿</span>
+              <input type="number" value={v.price_thb||v.price||''} onChange={e => update(v.id, 'price_thb', e.target.value)} placeholder="THB"
+                style={{ padding: '7px 6px 7px 18px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 12, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const }}
+                onFocus={e => e.target.style.borderColor = P} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+            </div>
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: 12 }}>$</span>
+              <input type="number" value={v.price_usd||''} onChange={e => update(v.id, 'price_usd', e.target.value)} placeholder="USD"
+                style={{ padding: '7px 6px 7px 16px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 12, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const }}
+                onFocus={e => e.target.style.borderColor = P} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer', fontSize: 11, color: '#374151' }}>
+              <input type="checkbox" checked={v.enabled !== false} onChange={e => update(v.id, 'enabled', e.target.checked)} style={{ accentColor: P }} />
+              On
+            </label>
+            <button onClick={() => move(i, -1)} disabled={i === 0} style={{ padding: '4px 7px', borderRadius: 6, border: '1px solid #e5e7eb', background: 'white', cursor: i === 0 ? 'not-allowed' : 'pointer', opacity: i === 0 ? 0.4 : 1, fontSize: 11 }}>↑</button>
+            <button onClick={() => move(i, 1)} disabled={i === variants.length - 1} style={{ padding: '4px 7px', borderRadius: 6, border: '1px solid #e5e7eb', background: 'white', cursor: i === variants.length - 1 ? 'not-allowed' : 'pointer', opacity: i === variants.length - 1 ? 0.4 : 1, fontSize: 11 }}>↓</button>
+            <button onClick={() => del(v.id)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #fca5a5', background: '#fef2f2', cursor: 'pointer', fontSize: 11, color: '#ef4444' }}>✕</button>
           </div>
-          <input
-            type="number"
-            value={v.stock}
-            onChange={e => update(v.id, 'stock', e.target.value)}
-            placeholder="Stock"
-            style={{ padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const }}
-          />
-          <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12, color: '#374151', whiteSpace: 'nowrap' as const }}>
-            <input type="checkbox" checked={v.enabled !== false} onChange={e => update(v.id, 'enabled', e.target.checked)} style={{ accentColor: P }} />
-            On
-          </label>
-          <button onClick={() => move(i, -1)} disabled={i === 0} style={{ padding: '4px 7px', borderRadius: 6, border: '1px solid #e5e7eb', background: 'white', cursor: i === 0 ? 'not-allowed' : 'pointer', opacity: i === 0 ? 0.4 : 1, fontSize: 11 }}>↑</button>
-          <button onClick={() => move(i, 1)} disabled={i === variants.length - 1} style={{ padding: '4px 7px', borderRadius: 6, border: '1px solid #e5e7eb', background: 'white', cursor: i === variants.length - 1 ? 'not-allowed' : 'pointer', opacity: i === variants.length - 1 ? 0.4 : 1, fontSize: 11 }}>↓</button>
-          <button onClick={() => del(v.id)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #fca5a5', background: '#fef2f2', cursor: 'pointer', fontSize: 11, color: '#ef4444' }}>✕</button>
         </div>
       ))}
     </div>

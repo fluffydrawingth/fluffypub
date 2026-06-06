@@ -20,7 +20,7 @@ export default function AccountPage() {
     return null;
   }
 
-  const tabs: [string,string,string][] = [['orders','📦',tRaw('คำสั่งซื้อ','Orders')],['favorites','❤️',tRaw('รายการโปรด','Favorites')],['profile','👤',tRaw('โปรไฟล์','Profile')]];
+  const tabs: [string,string,string][] = [['orders','📦',tRaw('คำสั่งซื้อ','Orders')],['profile','👤',tRaw('โปรไฟล์','Profile')],['favorites','❤️',tRaw('รายการโปรด','Favorites')]];
 
   return (
     <div style={{ minHeight:'100vh', background:'#f8fafc', fontFamily:theme.fontFamily }}>
@@ -53,32 +53,129 @@ export default function AccountPage() {
 function OrdersTab({p,theme}:any) {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<any>(null);
+  const [slipUploading, setSlipUploading] = useState(false);
+  const { tRaw, lang } = useLang();
   const STATUS_COLORS: Record<string,string> = {
-    pending_payment:'#fef3c7', paid:'#d1fae5', packing:'#dbeafe', shipped:'#e0e7ff', delivered:'#d1fae5',
+    pending_payment:'#fef3c7', paid:'#d1fae5', packing:'#dbeafe', shipped:'#e0e7ff', delivered:'#d1fae5', cancelled:'#fee2e2',
   };
-  const STATUS_TEXT: Record<string,string> = {
-    pending_payment:'Pending Payment', paid:'Paid', packing:'Packing', shipped:'Shipped', delivered:'Delivered',
+  const STATUS_TEXT: Record<string,string[]> = {
+    pending_payment:['#d97706','รอชำระเงิน','Pending Payment'],
+    paid:['#059669','ชำระแล้ว','Paid'],
+    packing:['#2563eb','กำลังแพ็ค','Preparing'],
+    shipped:['#7c3aed','จัดส่งแล้ว','Shipped'],
+    delivered:['#059669','ได้รับแล้ว','Delivered'],
+    cancelled:['#dc2626','ยกเลิก','Cancelled'],
   };
 
   useEffect(() => { api.myOrders().then(o=>{ setOrders(Array.isArray(o)?o:[]); setLoading(false); }); }, []);
 
-  if (loading) return <div style={{ textAlign:'center', padding:40, color:'#888' }}>Loading orders...</div>;
+  const uploadSlip = async (orderId: string, file: File) => {
+    setSlipUploading(true);
+    try {
+      const result = await api.uploadFile(file, 'slips');
+      if (result.error) { alert(tRaw('อัปโหลดไม่สำเร็จ','Upload failed')); return; }
+      const token = sessionStorage.getItem('fluffy_token');
+      await fetch(`/api/orders?action=slip&id=${orderId}`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token||''}`},body:JSON.stringify({slip_url:result.publicUrl})});
+      setOrders(prev=>prev.map(o=>o.id===orderId?{...o,slip_url:result.publicUrl}:o));
+      if (selected?.id===orderId) setSelected((s:any)=>({...s,slip_url:result.publicUrl}));
+    } catch { alert('Upload failed'); }
+    setSlipUploading(false);
+  };
+
+  const fmtAddr = (sa:any) => {
+    if (!sa) return '';
+    if (typeof sa==='string') return sa;
+    return [sa.address,sa.province,sa.postal_code,sa.country].filter(Boolean).join(', ');
+  };
+
+  if (loading) return <div style={{ textAlign:'center', padding:40, color:'#888' }}>Loading...</div>;
   if (!orders.length) return (
     <div style={{ textAlign:'center', padding:'60px 24px', background:'white', borderRadius:20 }}>
       <div style={{ fontSize:56, marginBottom:14 }}>📦</div>
-      <h3 style={{ color:'#1e293b', fontWeight:800 }}>No orders yet</h3>
-      <p style={{ color:'#64748b', fontSize:14 }}>Your orders will appear here after you make a purchase.</p>
+      <h3 style={{ color:'#1e293b', fontWeight:800 }}>{tRaw('ยังไม่มีคำสั่งซื้อ','No orders yet')}</h3>
+    </div>
+  );
+
+  if (selected) return (
+    <div style={{background:'white',borderRadius:20,padding:24,boxShadow:'0 2px 10px rgba(0,0,0,0.05)'}}>
+      <button onClick={()=>setSelected(null)} style={{background:'none',border:'none',cursor:'pointer',color:p,fontSize:13,fontWeight:600,marginBottom:16,padding:0}}>
+        ← {tRaw('กลับ','Back to Orders')}
+      </button>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16}}>
+        <div>
+          <div style={{fontWeight:900,color:'#1e293b',fontSize:18}}>#{selected.id.slice(-8).toUpperCase()}</div>
+          <div style={{fontSize:12,color:'#94a3b8',marginTop:2}}>{new Date(selected.created_at||selected.createdAt).toLocaleString(lang==='th'?'th-TH':'en-US')}</div>
+        </div>
+        {STATUS_TEXT[selected.status]&&<span style={{background:STATUS_COLORS[selected.status]||'#f1f5f9',color:STATUS_TEXT[selected.status]?.[0]||'#6b7280',borderRadius:20,padding:'5px 14px',fontSize:12,fontWeight:700}}>{lang==='th'?STATUS_TEXT[selected.status]?.[1]:STATUS_TEXT[selected.status]?.[2]}</span>}
+      </div>
+
+      {/* Products */}
+      <div style={{borderTop:'1px solid #f3f4f6',borderBottom:'1px solid #f3f4f6',padding:'14px 0',marginBottom:14}}>
+        {(selected.items||[]).map((i:any,idx:number)=>(
+          <div key={idx} style={{display:'flex',gap:10,alignItems:'center',marginBottom:8}}>
+            <span style={{fontSize:26}}>{i.image}</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,color:'#1e293b',fontSize:14}}>{i.title}</div>
+              {i.variant&&<div style={{fontSize:11,color:p,fontWeight:600}}>{i.variant.name}</div>}
+            </div>
+            <span style={{fontWeight:800,color:'#1e293b'}}>฿{Number(i.price_thb||(i.price*35)).toLocaleString('th-TH')}</span>
+          </div>
+        ))}
+        {selected.shipping_thb>0&&<div style={{display:'flex',justifyContent:'space-between',fontSize:13,color:'#64748b',marginTop:8}}><span>{tRaw('ค่าจัดส่ง','Shipping')}</span><span>฿{selected.shipping_thb}</span></div>}
+        <div style={{display:'flex',justifyContent:'space-between',fontWeight:900,color:'#1e293b',fontSize:16,marginTop:8}}>
+          <span>{tRaw('ยอดรวม','Total')}</span>
+          <span>฿{Number(selected.total_thb||selected.total_amount||(parseFloat(selected.total||'0')*35)).toLocaleString('th-TH')}</span>
+        </div>
+      </div>
+
+      {/* Shipping address */}
+      {selected.shipping_address&&<div style={{background:'#f9fafb',borderRadius:12,padding:'12px 14px',marginBottom:14,fontSize:13,color:'#374151'}}>
+        <div style={{fontWeight:700,marginBottom:4}}>📍 {tRaw('ที่อยู่จัดส่ง','Shipping Address')}</div>
+        <div>{selected.customer_name}</div>
+        <div>{fmtAddr(selected.shipping_address)}</div>
+        {selected.customer_phone&&<div>{selected.customer_phone}</div>}
+      </div>}
+
+      {/* Tracking */}
+      {selected.tracking_number&&<div style={{background:'#dbeafe',borderRadius:12,padding:'12px 14px',marginBottom:14,fontSize:13,color:'#1d4ed8',fontWeight:600}}>
+        🚚 {selected.shipping_provider}: {selected.tracking_number}
+      </div>}
+
+      {/* Slip upload */}
+      {selected.status==='pending_payment'&&<div style={{marginBottom:14}}>
+        <div style={{fontWeight:700,fontSize:13,color:'#374151',marginBottom:8}}>{tRaw('อัปโหลดสลิปการโอนเงิน','Upload Payment Slip')}</div>
+        {selected.slip_url?(
+          <div style={{background:'#d1fae5',borderRadius:10,padding:'10px 14px',fontSize:13,color:'#065f46',fontWeight:600}}>✅ {tRaw('อัปโหลดสลิปแล้ว','Slip uploaded')}</div>
+        ):(
+          <label style={{display:'block',cursor:'pointer'}}>
+            <div style={{background:p+'10',border:`2px dashed ${p}40`,borderRadius:12,padding:14,textAlign:'center' as const,fontSize:13,color:p,fontWeight:600}}>
+              {slipUploading?'⏳ ...':'📷 '+tRaw('อัปโหลดสลิป','Upload slip')}
+            </div>
+            <input type="file" accept="image/*" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)uploadSlip(selected.id,f);}} />
+          </label>
+        )}
+      </div>}
+
+      {/* Download links */}
+      {(selected.items||[]).filter((i:any)=>i.digital_download_url).map((i:any,idx:number)=>(
+        <a key={idx} href={i.digital_download_url} target="_blank" rel="noreferrer" style={{display:'block',background:p,color:'white',textDecoration:'none',padding:'12px 16px',borderRadius:12,fontSize:14,fontWeight:700,textAlign:'center' as const,marginBottom:8}}>
+          ⬇️ {tRaw('ดาวน์โหลด','Download')}: {i.title}
+        </a>
+      ))}
     </div>
   );
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
       {orders.map(o=>(
-        <div key={o.id} style={{ background:'white', borderRadius:18, padding:22, boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14 }}>
+        <div key={o.id} onClick={()=>setSelected(o)} style={{ background:'white', borderRadius:18, padding:20, boxShadow:'0 2px 10px rgba(0,0,0,0.05)', cursor:'pointer', border:`1.5px solid ${p}10` }}
+          onMouseEnter={e=>e.currentTarget.style.borderColor=p+'40'}
+          onMouseLeave={e=>e.currentTarget.style.borderColor=p+'10'}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
             <div>
-              <div style={{ fontWeight:800, color:'#1e293b', marginBottom:3 }}>Order #{o.id.slice(-8).toUpperCase()}</div>
-              <div style={{ fontSize:12, color:'#94a3b8' }}>{new Date(o.createdAt).toLocaleDateString()}</div>
+              <div style={{ fontWeight:800, color:'#1e293b', marginBottom:3 }}>#{o.id.slice(-8).toUpperCase()}</div>
+              <div style={{ fontSize:12, color:'#94a3b8' }}>{new Date(o.created_at||o.createdAt).toLocaleDateString(lang==='th'?'th-TH':'en-US')}</div>
             </div>
             <span style={{ background:STATUS_COLORS[o.status]||'#f1f5f9', color:o.status==='delivered'||o.status==='paid'?'#059669':'#d97706', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:700 }}>
               {STATUS_TEXT[o.status]||o.status}

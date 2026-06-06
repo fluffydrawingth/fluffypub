@@ -47,8 +47,9 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const isPhysical = product.is_physical===true||(product.is_physical==null&&(product.type==='physical'||product.type==='both'));
   const variants = (product.variants||[]).filter((v:any)=>v.enabled!==false);
   const hasVariants = variants.length>0;
-  const basePrice = selectedVariant ? Number(selectedVariant.price) : product.price;
-  const displayPrice = fmtPrice(selectedVariant ? null : product.price_thb, selectedVariant ? null : product.price_usd, basePrice);
+  const basePrice = selectedVariant ? (Number(selectedVariant.price_thb||selectedVariant.price||0)) : product.price;
+  const baseUSD = selectedVariant ? (Number(selectedVariant.price_usd||selectedVariant.price||0)) : product.price;
+  const displayPrice = fmtPrice(selectedVariant ? selectedVariant.price_thb : product.price_thb, selectedVariant ? selectedVariant.price_usd : product.price_usd, basePrice);
   const originalPrice = product.original_price||product.originalPrice;
   const cartKey = product.id+(selectedVariant?.id||'');
   const inCart = items.some(i=>(i.id+(( i as any).variant?.id||''))===cartKey);
@@ -141,16 +142,21 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             {/* Variant selector */}
             {hasVariants&&(
               <div style={{marginBottom:16}}>
-                <div style={{fontSize:13,fontWeight:700,color:theme.textColor,marginBottom:8}}>{t('select_option')}:</div>
-                <div style={{display:'flex',flexDirection:'column' as const,gap:7}}>
+                <label style={{display:'block',fontSize:13,fontWeight:700,color:theme.textColor,marginBottom:6}}>{t('select_option')}:</label>
+                <select
+                  value={selectedVariant?.id||''}
+                  onChange={e=>{
+                    const v=variants.find((v:any)=>v.id===e.target.value);
+                    setSelectedVariant(v||null);
+                    setVariantError('');
+                  }}
+                  style={{width:'100%',padding:'11px 14px',borderRadius:12,border:`2px solid ${selectedVariant?p:'#e5e7eb'}`,fontSize:14,outline:'none',fontFamily:theme.fontFamily,background:'white',cursor:'pointer',appearance:'auto'}}
+                >
+                  <option value="">{tRaw('-- เลือกรูปแบบ --','-- Select option --')}</option>
                   {variants.map((v:any)=>(
-                    <button key={v.id} onClick={()=>{setSelectedVariant(v);setVariantError('');}}
-                      style={{padding:'10px 14px',borderRadius:12,cursor:'pointer',textAlign:'left' as const,border:`2px solid ${selectedVariant?.id===v.id?p:'#e5e7eb'}`,background:selectedVariant?.id===v.id?p+'10':'white',fontFamily:theme.fontFamily,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                      <span style={{fontSize:13,fontWeight:selectedVariant?.id===v.id?700:500,color:theme.textColor}}>{selectedVariant?.id===v.id?'✓ ':''}{v.name}</span>
-                      <span style={{fontSize:14,fontWeight:800,color:p}}>{fmtPrice(null,null,v.price)}</span>
-                    </button>
+                    <option key={v.id} value={v.id}>{v.name} — {fmtPrice(v.price_thb||null,v.price_usd||null,v.price_thb||v.price_usd||v.price)}</option>
                   ))}
-                </div>
+                </select>
                 {variantError&&<div style={{marginTop:6,fontSize:12,color:'#ef4444',fontWeight:600}}>⚠️ {variantError}</div>}
               </div>
             )}

@@ -30,6 +30,9 @@ export const api = {
   myOrders: () => fetch('/api/orders?action=my', { headers: h() }).then(r => r.json()).then((d: any) => Array.isArray(d) ? d.map(normalizeOrder) : d),
   artistOrders: () => fetch('/api/orders?action=artist', { headers: h() }).then(r => r.json()).then((d: any) => Array.isArray(d) ? d.map(normalizeOrder) : d),
   allOrders: () => fetch('/api/orders', { headers: h() }).then(r => r.json()).then((d: any) => Array.isArray(d) ? d.map(normalizeOrder) : d),
+  deleteOrder: (id: string) =>
+    fetch(`/api/orders?id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
+
   updateOrder: (id: string, data: any) => fetch(`/api/orders?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify({ status: data.status, tracking_number: data.trackingNumber, shipping_provider: data.shippingProvider }) }).then(r => r.json()).then(normalizeOrder),
 
   // Users
