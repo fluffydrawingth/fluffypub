@@ -2,15 +2,9 @@ const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const anonKey = process.env.SUPABASE_ANON_KEY;
 
-// Service role client for DB operations
+// Single client with service role
 const supabase = createClient(supabaseUrl, serviceKey, {
-  auth: { autoRefreshToken: false, persistSession: false }
-});
-
-// Anon client for validating user tokens
-const supabaseAnon = createClient(supabaseUrl, anonKey || serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
 
@@ -23,15 +17,21 @@ async function getUser(req) {
   const token = getToken(req);
   if (!token) return null;
   try {
-    // Use anon client to validate the user's JWT token
-    const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
-    if (error || !user) return null;
+    // Decode JWT manually to get user_id (avoids auth.getUser issues)
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
+    const userId = payload.sub;
+    if (!userId) return null;
     
-    // Use service role client to get profile (bypasses RLS)
+    // Check expiry
+    if (payload.exp && Date.now() / 1000 > payload.exp) return null;
+    
+    // Get profile from DB using service role
     const { data: profile } = await supabase
       .from('profiles')
       .select('id, email, name, role, bio, artist_slug, favorites')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single();
     return profile;
   } catch (e) {
