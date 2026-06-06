@@ -50,7 +50,7 @@ export default function CartPage() {
                 {/* Info */}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 800, color: theme.textColor, fontSize: 16, marginBottom: 4 }}>{item.title}</div>
-                  <div style={{ fontSize: 13, color: theme.primaryColor, fontWeight: 600, marginBottom: 4 }}>{item.artist}</div>
+                  <div style={{ fontSize: 13, color: theme.primaryColor, fontWeight: 600, marginBottom: 4 }}>{item.artist}{(item as any).variant ? <span style={{color:'#6b7280', fontWeight:500}}> · {(item as any).variant.name}</span> : null}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontSize: 12, color: '#888' }}>⬇️ PDF Download</span>
                     <span style={{ fontSize: 12, color: '#888' }}>· 🖨️ Printable</span>
