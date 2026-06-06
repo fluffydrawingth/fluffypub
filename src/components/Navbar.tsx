@@ -16,7 +16,9 @@ export default function Navbar() {
 
   const handleLogout = async () => { await logout(); navigate('/'); };
 
-  const dashPath = user?.role === 'admin' ? '/admin' : user?.role === 'artist' ? '/artist-dashboard' : '/account';
+  const ADMIN_EMAIL = 'fluffydrawing.th@gmail.com';
+  const isAdmin = user?.role === 'admin' && user?.email === ADMIN_EMAIL;
+  const dashPath = isAdmin ? '/admin' : user?.role === 'artist' ? '/artist-dashboard' : '/account';
 
   return (
     <nav style={{ background:'rgba(255,255,255,0.92)', backdropFilter:'blur(16px)', borderBottom:`2px solid ${p}22`, position:'sticky', top:0, zIndex:100, fontFamily:theme.fontFamily }}>
@@ -50,7 +52,7 @@ export default function Navbar() {
                 <div style={{ position:'absolute', right:0, top:'calc(100% + 8px)', background:'white', borderRadius:16, boxShadow:'0 8px 32px rgba(0,0,0,0.12)', border:`1.5px solid ${p}15`, minWidth:180, zIndex:200, overflow:'hidden' }}>
                   <div style={{ padding:'10px 16px', borderBottom:`1px solid ${p}10`, fontSize:12, color:'#888' }}>{user.email}</div>
                   <button onClick={()=>{navigate(dashPath);setMenuOpen(false);}} style={{ width:'100%', padding:'10px 16px', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontSize:14, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
-                    {user.role==='admin'?'⚙️ Admin Panel':user.role==='artist'?'🎨 Artist Dashboard':'👤 My Account'}
+                    {isAdmin?'⚙️ Admin Panel':user.role==='artist'?'🎨 Artist Dashboard':'👤 My Account'}
                   </button>
                   <button onClick={()=>{handleLogout();setMenuOpen(false);}} style={{ width:'100%', padding:'10px 16px', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontSize:14, fontWeight:600, color:'#ef4444', fontFamily:theme.fontFamily }}>
                     🚪 Sign Out
