@@ -4,6 +4,7 @@ import { useTheme } from '../lib/theme';
 import { useCart } from '../lib/cart';
 import { useRouter } from '../lib/router';
 import ProductCard from '../components/ProductCard';
+import { RichDescRenderer } from '../components/RichDescEditor';
 
 export default function ProductDetailPage({ slug }: { slug: string }) {
   const { theme } = useTheme();
@@ -32,6 +33,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   }
 
   const related = allProducts.filter((p:any) => product && p.category === product.category && p.id !== product.id).slice(0, 4);
+  const isDigital = product.is_digital !== false && (product.is_digital === true || product.type === 'digital' || product.type === 'both');
+  const isPhysical = product.is_physical === true || product.type === 'physical' || product.type === 'both';
   const inCart = items.some(i => i.id === product.id);
   const discount = product.originalPrice ? Math.round((1 - product.price / product.originalPrice) * 100) : null;
 

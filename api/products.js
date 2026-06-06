@@ -26,7 +26,9 @@ module.exports = async function handler(req, res) {
   if (req.method === 'POST') {
     const user = await requireAuth(req, res, ['artist', 'admin']);
     if (!user) return;
-    const { title, price, category, description = '', image = '🎨', cover_image_url, type = 'digital', pages = 0, tags = [], original_price, status = 'published', digital_download_url, download_instruction, physical_stock = 0, shipping_required = false, artist_id } = req.body || {};
+    const { title, price, category, description = '', rich_description, image = '🎨', cover_image_url, type, is_physical = false, is_digital = true, pages = 0, tags = [], original_price, status = 'published', digital_download_url, download_instruction, physical_stock = 0, shipping_required = false, shipping_note = '', artist_id } = req.body || {};
+    // derive type from checkboxes if not provided
+    const finalType = type || (is_physical && is_digital ? 'both' : is_physical ? 'physical' : 'digital');
     if (!title || !price || !category) return json(res, 400, { error: 'title, price, category required' });
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36);
     const finalArtistId = user.role === 'admin' && artist_id ? artist_id : user.id;
@@ -43,7 +45,7 @@ module.exports = async function handler(req, res) {
     const { data: product } = await supabase.from('products').select('artist_id').eq('id', id).single();
     if (!product) return json(res, 404, { error: 'Not found' });
     if (user.role === 'artist' && product.artist_id !== user.id) return json(res, 403, { error: 'Forbidden' });
-    const allowed = ['title','price','original_price','category','description','image','cover_image_url','type','pages','tags','active','status','physical_stock','shipping_required'];
+    const allowed = ['title','price','original_price','category','description','rich_description','image','cover_image_url','type','is_physical','is_digital','pages','tags','active','status','physical_stock','shipping_required','shipping_note'];
     if (user.role === 'admin') allowed.push('featured','bestseller','is_new','digital_download_url','download_instruction','artist_id','artist_name');
     const updates = { updated_at: new Date().toISOString() };
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });

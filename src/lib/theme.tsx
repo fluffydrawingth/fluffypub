@@ -1,5 +1,26 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+export interface FooterLink {
+  id: string;
+  label: string;
+  url: string;
+  newTab: boolean;
+  enabled: boolean;
+}
+
+export interface FooterColumn {
+  id: string;
+  title: string;
+  links: FooterLink[];
+}
+
+export interface FooterConfig {
+  description: string;
+  copyright: string;
+  trustBadges: string;
+  columns: FooterColumn[];
+}
+
 export interface ThemeConfig {
   primaryColor: string; secondaryColor: string; accentColor: string;
   bgColor: string; bgColor2: string; textColor: string; fontFamily: string;
@@ -8,7 +29,32 @@ export interface ThemeConfig {
   heroCrop: any | null; mobileHeroCrop: any | null;
   bannerText: string; bannerBg: string; bannerImageCrop: any | null;
   bgImageCrop: any | null; sections: string[];
+  footer: FooterConfig;
 }
+
+const DEFAULT_FOOTER: FooterConfig = {
+  description: 'Beautiful digital coloring books for every dreamer. Download, print, and color your way to happiness! 🌸',
+  copyright: '© 2026 Fluffy Pub. Made with 💕',
+  trustBadges: '🔒 Secure · ⚡ Instant Downloads · 💯 Satisfaction Guaranteed',
+  columns: [
+    { id: 'shop', title: 'Shop', links: [
+      { id: 's1', label: 'All Books', url: '/products', newTab: false, enabled: true },
+      { id: 's2', label: 'Animals', url: '/products', newTab: false, enabled: true },
+      { id: 's3', label: 'Fantasy', url: '/products', newTab: false, enabled: true },
+      { id: 's4', label: 'Kawaii', url: '/products', newTab: false, enabled: true },
+    ]},
+    { id: 'company', title: 'Company', links: [
+      { id: 'c1', label: 'About Us', url: '/', newTab: false, enabled: true },
+      { id: 'c2', label: 'Artists', url: '/artists', newTab: false, enabled: true },
+      { id: 'c3', label: 'Blog', url: '/', newTab: false, enabled: true },
+    ]},
+    { id: 'support', title: 'Support', links: [
+      { id: 'p1', label: 'Help Center', url: '/', newTab: false, enabled: true },
+      { id: 'p2', label: 'Contact Us', url: '/', newTab: false, enabled: true },
+      { id: 'p3', label: 'FAQ', url: '/', newTab: false, enabled: true },
+    ]},
+  ],
+};
 
 const DEFAULT: ThemeConfig = {
   primaryColor:'#f472b6', secondaryColor:'#c084fc', accentColor:'#fb923c',
@@ -19,6 +65,7 @@ const DEFAULT: ThemeConfig = {
   heroCrop:null, mobileHeroCrop:null, bannerText:'🌟 Free shipping on orders over $30! Use FLUFFY15 for 15% off 🌸',
   bannerBg:'#f472b6', bannerImageCrop:null, bgImageCrop:null,
   sections:['hero','featured','categories','artists','newsletter'],
+  footer: DEFAULT_FOOTER,
 };
 
 const ThemeContext = createContext<{ theme: ThemeConfig; setTheme:(t:ThemeConfig)=>void; saveTheme:(t:ThemeConfig)=>Promise<void>; }>
@@ -29,11 +76,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    // Load from server
     fetch('/api/theme').then(r=>r.json()).then(t => {
       if (t && typeof t === 'object' && !Array.isArray(t)) {
         const parsed = JSON.parse(JSON.stringify(t));
-        delete parsed.heroImage; delete parsed.bgImage; // strip legacy
+        delete parsed.heroImage; delete parsed.bgImage;
+        // Merge footer with defaults to ensure structure
+        if (!parsed.footer) parsed.footer = DEFAULT_FOOTER;
+        else parsed.footer = { ...DEFAULT_FOOTER, ...parsed.footer };
         setThemeState({ ...DEFAULT, ...parsed });
       }
       setLoaded(true);
@@ -58,7 +107,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     r.style.setProperty('--text', theme.textColor);
   }, [theme]);
 
-  if (!loaded) return null; // wait for server theme
+  if (!loaded) return null;
   return <ThemeContext.Provider value={{ theme, setTheme, saveTheme }}>{children}</ThemeContext.Provider>;
 }
 

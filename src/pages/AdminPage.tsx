@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import ImageUpload from '../components/ImageUpload';
+import RichDescEditor, { Block } from '../components/RichDescEditor';
+import { FooterConfig, FooterColumn, FooterLink } from '../lib/theme';
 import { useTheme, ThemeConfig } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
@@ -145,7 +148,11 @@ function ProductsTab() {
   const [downloadInstruction, setDownloadInstruction] = useState('');
   const [physicalStock, setPhysicalStock] = useState('0');
   const [shippingRequired, setShippingRequired] = useState(false);
+  const [shippingNote, setShippingNote] = useState('');
   const [artistId, setArtistId] = useState('');
+  const [isDigital, setIsDigital] = useState(true);
+  const [isPhysical, setIsPhysical] = useState(false);
+  const [richBlocks, setRichBlocks] = useState<Block[]>([]);
 
   const CATEGORIES = ['Animals','Fantasy','Botanicals','Mandala','Kawaii','Seasonal'];
 
@@ -161,7 +168,8 @@ function ProductsTab() {
     setTitle(''); setPrice(''); setOriginalPrice(''); setCategory('');
     setDescription(''); setImage('🎨'); setCoverImageUrl(''); setType('digital');
     setPages(''); setTags(''); setStatus('published'); setDigitalDownloadUrl('');
-    setDownloadInstruction(''); setPhysicalStock('0'); setShippingRequired(false); setArtistId('');
+    setDownloadInstruction(''); setPhysicalStock('0'); setShippingRequired(false); setShippingNote('');
+    setArtistId(''); setIsDigital(true); setIsPhysical(false); setRichBlocks([]);
     setEditingId(null);
   };
 
@@ -172,7 +180,10 @@ function ProductsTab() {
     setTags((pr.tags||[]).join(', ')); setStatus(pr.status||'published');
     setDigitalDownloadUrl(pr.digital_download_url||''); setDownloadInstruction(pr.download_instruction||'');
     setPhysicalStock(String(pr.physical_stock||0)); setShippingRequired(!!pr.shipping_required);
-    setArtistId(pr.artist_id||'');
+    setShippingNote(pr.shipping_note||''); setArtistId(pr.artist_id||'');
+    setIsDigital(pr.is_digital !== false);
+    setIsPhysical(!!pr.is_physical);
+    setRichBlocks(Array.isArray(pr.rich_description) ? pr.rich_description : []);
     setEditingId(pr.id);
     setShowForm(true);
   };
@@ -180,11 +191,18 @@ function ProductsTab() {
   const save = async () => {
     if (!title||!price||!category){setMsg('⚠️ Title, price and category required.');return;}
     setSaving(true); setMsg('');
-    const body:any = { title, price:parseFloat(price)||0, category, description, image,
-      cover_image_url:coverImageUrl||null, type, pages:parseInt(pages)||0,
+    const body:any = { title, price:parseFloat(price)||0, category, description,
+      rich_description:richBlocks.length?richBlocks:null, image,
+      cover_image_url:coverImageUrl||null,
+      is_digital:isDigital, is_physical:isPhysical,
+      type:isPhysical&&isDigital?'both':isPhysical?'physical':'digital',
+      pages:parseInt(pages)||0,
       tags:tags.split(',').map((t:string)=>t.trim()).filter(Boolean), status,
-      digital_download_url:digitalDownloadUrl||null, download_instruction:downloadInstruction||null,
-      physical_stock:parseInt(physicalStock)||0, shipping_required:shippingRequired,
+      digital_download_url:isDigital?(digitalDownloadUrl||null):null,
+      download_instruction:isDigital?(downloadInstruction||null):null,
+      physical_stock:isPhysical?(parseInt(physicalStock)||0):0,
+      shipping_required:isPhysical?shippingRequired:false,
+      shipping_note:isPhysical?shippingNote:'',
       artist_id:artistId||undefined };
     if (originalPrice) body.original_price = parseFloat(originalPrice);
     const result = editingId ? await api.updateProduct(editingId, body) : await api.createProduct(body);
@@ -242,12 +260,17 @@ function ProductsTab() {
               </select>
             </div>
             <div>
-              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Product Type</label>
-              <select value={type} onChange={e=>setType(e.target.value)} style={{width:'100%',padding:'9px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit'}}>
-                <option value="digital">⬇️ Digital</option>
-                <option value="physical">📦 Physical</option>
-                <option value="both">📦+⬇️ Both</option>
-              </select>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:8}}>Product Type</label>
+              <div style={{display:'flex',gap:16}}>
+                <label style={{display:'flex',gap:6,alignItems:'center',cursor:'pointer',fontSize:13,fontWeight:600,color:'#374151'}}>
+                  <input type="checkbox" checked={isDigital} onChange={e=>setIsDigital(e.target.checked)} style={{width:16,height:16,accentColor:P}} />
+                  ⬇️ Digital
+                </label>
+                <label style={{display:'flex',gap:6,alignItems:'center',cursor:'pointer',fontSize:13,fontWeight:600,color:'#374151'}}>
+                  <input type="checkbox" checked={isPhysical} onChange={e=>setIsPhysical(e.target.checked)} style={{width:16,height:16,accentColor:P}} />
+                  📦 Physical
+                </label>
+              </div>
             </div>
             <div>
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Status</label>
@@ -258,13 +281,14 @@ function ProductsTab() {
             </div>
             {inp('Emoji Icon', image, setImage, '🎨')}
             {inp('Pages', pages, setPages, '30', 'number')}
-            <div style={{gridColumn:'1/-1'}}>{inp('Cover Image URL', coverImageUrl, setCoverImageUrl, 'https://...')}</div>
-            {(type==='digital'||type==='both')&&<>
+            <div style={{gridColumn:'1/-1'}}><ImageUpload label="Cover Image" value={coverImageUrl} onChange={setCoverImageUrl} folder="products" hint="Recommended: 800×600px" /></div>
+            {isDigital&&<>
               <div style={{gridColumn:'1/-1'}}>{inp('Download URL (Google Drive or direct)', digitalDownloadUrl, setDigitalDownloadUrl, 'https://drive.google.com/...')}</div>
               <div style={{gridColumn:'1/-1'}}>{inp('Download Instructions', downloadInstruction, setDownloadInstruction, 'How to access your download...')}</div>
             </>}
-            {(type==='physical'||type==='both')&&<>
+            {isPhysical&&<>
               {inp('Stock Quantity', physicalStock, setPhysicalStock, '0', 'number')}
+              {inp('Shipping Note', shippingNote, setShippingNote, 'Weight, size, delivery estimate...')}
               <div style={{display:'flex',alignItems:'center',gap:8,paddingTop:22}}>
                 <input type="checkbox" checked={shippingRequired} onChange={e=>setShippingRequired(e.target.checked)} id="ship" style={{width:16,height:16,accentColor:P}} />
                 <label htmlFor="ship" style={{fontSize:13,fontWeight:700,color:'#374151',cursor:'pointer'}}>Shipping Required</label>
@@ -275,6 +299,10 @@ function ProductsTab() {
               <textarea value={description} onChange={e=>setDescription(e.target.value)} rows={3}
                 style={{width:'100%',padding:'9px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',resize:'vertical' as const,boxSizing:'border-box' as const}}
                 onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+            </div>
+            <div style={{gridColumn:'1/-1'}}>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:8}}>Rich Description</label>
+              <RichDescEditor blocks={richBlocks} onChange={setRichBlocks} />
             </div>
             <div style={{gridColumn:'1/-1'}}>{inp('Tags (comma-separated)', tags, setTags, 'bunnies, garden, spring')}</div>
           </div>
@@ -531,8 +559,8 @@ function ArtistsTab() {
             </div>
             <div style={{gridColumn:'1/-1'}}><div style={{fontWeight:700,fontSize:13,color:'#374151',marginBottom:12}}>Images</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-                {inp('Avatar Image URL', avatarUrl, setAvatarUrl, 'https://...')}
-                {inp('Cover Image URL', coverUrl, setCoverUrl, 'https://...')}
+                <ImageUpload label="Avatar Image" value={avatarUrl} onChange={setAvatarUrl} folder="artists" hint="Square, 200×200px" />
+                <ImageUpload label="Cover Image" value={coverUrl} onChange={setCoverUrl} folder="artists" hint="Wide banner, 1200×400px" />
               </div>
             </div>
             <div style={{gridColumn:'1/-1'}}><div style={{fontWeight:700,fontSize:13,color:'#374151',marginBottom:12}}>Social Links</div>
@@ -612,7 +640,7 @@ function ThemeTab() {
   const upd = (k:keyof ThemeConfig,v:any) => setDraft(p=>({...p,[k]:v}));
   const save = async () => { await saveTheme(draft); setSaved('✓ Saved!'); setTimeout(()=>setSaved(''),3000); };
 
-  const SECTIONS=[['brand','🏷️','Brand & Logo'],['colors','🎨','Colors'],['hero','⭐','Hero Section'],['banner','📢','Banner'],['pages','📐','Page Sections'],['background','🖼️','Background']] as const;
+  const SECTIONS=[['brand','🏷️','Brand & Logo'],['colors','🎨','Colors'],['hero','⭐','Hero Section'],['banner','📢','Banner'],['pages','📐','Page Sections'],['background','🖼️','Background'],['footer','🦶','Footer CMS']] as const;
   const PRESETS=[
     {name:'Sakura',primaryColor:'#f472b6',secondaryColor:'#c084fc',accentColor:'#fb923c',bgColor:'#fdf2f8',bgColor2:'#faf5ff',textColor:'#4a1942'},
     {name:'Ocean', primaryColor:'#38bdf8',secondaryColor:'#818cf8',accentColor:'#34d399',bgColor:'#f0f9ff',bgColor2:'#eef2ff',textColor:'#0c4a6e'},
@@ -716,7 +744,174 @@ function ThemeTab() {
           <p style={{fontSize:13,color:'#6b7280',marginBottom:20}}>Upload a site-wide background image</p>
           <ImageCropEditor title="Background Image" hint="Large image. Set focal point for responsive display." value={draft.bgImageCrop} aspectRatio={16/9} onChange={v=>upd('bgImageCrop',v)} />
         </>)}
+        {section==='footer'&&<FooterCMSEditor footer={draft.footer} onChange={v=>upd('footer',v)} />}
       </div>
+    </div>
+  );
+}
+
+// ── Footer CMS Editor ────────────────────────────────────────────────────────
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+function FooterCMSEditor({ footer, onChange }: { footer: FooterConfig; onChange: (f: FooterConfig) => void }) {
+  const upd = (key: keyof FooterConfig, val: any) => onChange({ ...footer, [key]: val });
+  const [editingCol, setEditingCol] = useState<string | null>(null);
+  const [editingLink, setEditingLink] = useState<{ colId: string; linkId: string } | null>(null);
+
+  const addColumn = () => {
+    const col: FooterColumn = { id: uid(), title: 'New Column', links: [] };
+    upd('columns', [...footer.columns, col]);
+    setEditingCol(col.id);
+  };
+
+  const updateColumn = (colId: string, updates: Partial<FooterColumn>) => {
+    upd('columns', footer.columns.map(c => c.id === colId ? { ...c, ...updates } : c));
+  };
+
+  const deleteColumn = (colId: string) => {
+    if (!confirm('Delete this column?')) return;
+    upd('columns', footer.columns.filter(c => c.id !== colId));
+    if (editingCol === colId) setEditingCol(null);
+  };
+
+  const addLink = (colId: string) => {
+    const link: FooterLink = { id: uid(), label: 'New Link', url: '/', newTab: false, enabled: true };
+    updateColumn(colId, { links: [...(footer.columns.find(c => c.id === colId)?.links || []), link] });
+    setEditingLink({ colId, linkId: link.id });
+  };
+
+  const updateLink = (colId: string, linkId: string, updates: Partial<FooterLink>) => {
+    updateColumn(colId, {
+      links: (footer.columns.find(c => c.id === colId)?.links || []).map(l => l.id === linkId ? { ...l, ...updates } : l),
+    });
+  };
+
+  const deleteLink = (colId: string, linkId: string) => {
+    updateColumn(colId, {
+      links: (footer.columns.find(c => c.id === colId)?.links || []).filter(l => l.id !== linkId),
+    });
+    if (editingLink?.linkId === linkId) setEditingLink(null);
+  };
+
+  const moveColumn = (colId: string, dir: number) => {
+    const cols = [...footer.columns];
+    const i = cols.findIndex(c => c.id === colId);
+    const j = i + dir;
+    if (j < 0 || j >= cols.length) return;
+    [cols[i], cols[j]] = [cols[j], cols[i]];
+    upd('columns', cols);
+  };
+
+  const moveLink = (colId: string, linkId: string, dir: number) => {
+    const col = footer.columns.find(c => c.id === colId);
+    if (!col) return;
+    const links = [...col.links];
+    const i = links.findIndex(l => l.id === linkId);
+    const j = i + dir;
+    if (j < 0 || j >= links.length) return;
+    [links[i], links[j]] = [links[j], links[i]];
+    updateColumn(colId, { links });
+  };
+
+  const inp = (label: string, val: string, set: (v: string) => void, placeholder = '') => (
+    <div style={{ marginBottom: 12 }}>
+      <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 5 }}>{label}</label>
+      <input value={val} onChange={e => set(e.target.value)} placeholder={placeholder}
+        style={{ width: '100%', padding: '9px 13px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' as const }}
+        onFocus={e => e.target.style.borderColor = P} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+    </div>
+  );
+
+  return (
+    <div>
+      <h2 style={{ fontSize: 20, fontWeight: 900, color: '#111827', marginBottom: 4 }}>Footer CMS</h2>
+      <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>Edit footer content and links</p>
+
+      {/* Global settings */}
+      <div style={{ ...card, padding: 20, marginBottom: 20 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 800, color: '#111827', margin: '0 0 14px' }}>Global Settings</h3>
+        {inp('Description', footer.description, v => upd('description', v), 'Store description...')}
+        {inp('Copyright Text', footer.copyright, v => upd('copyright', v), '© 2026 Fluffy Pub. Made with 💕')}
+        {inp('Trust Badges', footer.trustBadges, v => upd('trustBadges', v), '🔒 Secure · ⚡ Downloads · 💯 Guaranteed')}
+      </div>
+
+      {/* Columns */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 800, color: '#111827', margin: 0 }}>Footer Columns ({footer.columns.length})</h3>
+        <button onClick={addColumn} style={{ background: P, color: 'white', border: 'none', cursor: 'pointer', padding: '8px 16px', borderRadius: 20, fontSize: 13, fontWeight: 700, fontFamily: 'inherit' }}>+ Add Column</button>
+      </div>
+
+      {footer.columns.map((col, ci) => (
+        <div key={col.id} style={{ ...card, padding: 18, marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {editingCol === col.id ? (
+                <input value={col.title} onChange={e => updateColumn(col.id, { title: e.target.value })}
+                  style={{ padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${P}`, fontSize: 14, fontWeight: 700, outline: 'none', fontFamily: 'inherit' }}
+                  onBlur={() => setEditingCol(null)}
+                  autoFocus
+                />
+              ) : (
+                <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{col.title}</span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button onClick={() => setEditingCol(col.id)} style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#374151' }}>Rename</button>
+              <button onClick={() => moveColumn(col.id, -1)} disabled={ci === 0} style={{ padding: '4px 8px', borderRadius: 7, border: '1px solid #e5e7eb', background: 'white', cursor: ci === 0 ? 'not-allowed' : 'pointer', opacity: ci === 0 ? 0.4 : 1, fontSize: 11 }}>↑</button>
+              <button onClick={() => moveColumn(col.id, 1)} disabled={ci === footer.columns.length - 1} style={{ padding: '4px 8px', borderRadius: 7, border: '1px solid #e5e7eb', background: 'white', cursor: ci === footer.columns.length - 1 ? 'not-allowed' : 'pointer', opacity: ci === footer.columns.length - 1 ? 0.4 : 1, fontSize: 11 }}>↓</button>
+              <button onClick={() => deleteColumn(col.id)} style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid #fca5a5', background: '#fef2f2', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#ef4444' }}>Delete</button>
+            </div>
+          </div>
+
+          {/* Links */}
+          <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: 12 }}>
+            {col.links.map((link, li) => (
+              <div key={link.id} style={{ background: editingLink?.linkId === link.id ? '#fdf2f8' : '#f9fafb', borderRadius: 10, padding: '10px 12px', marginBottom: 8, border: `1px solid ${editingLink?.linkId === link.id ? P + '40' : '#f3f4f6'}` }}>
+                {editingLink?.linkId === link.id ? (
+                  <div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 3 }}>Label</label>
+                        <input value={link.label} onChange={e => updateLink(col.id, link.id, { label: e.target.value })}
+                          style={{ width: '100%', padding: '6px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' as const }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 3 }}>URL</label>
+                        <input value={link.url} onChange={e => updateLink(col.id, link.id, { url: e.target.value })}
+                          placeholder="/products or https://..."
+                          style={{ width: '100%', padding: '6px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' as const }} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                      <label style={{ display: 'flex', gap: 5, alignItems: 'center', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#374151' }}>
+                        <input type="checkbox" checked={link.newTab} onChange={e => updateLink(col.id, link.id, { newTab: e.target.checked })} style={{ accentColor: P }} />
+                        Open in new tab
+                      </label>
+                      <label style={{ display: 'flex', gap: 5, alignItems: 'center', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#374151' }}>
+                        <input type="checkbox" checked={link.enabled} onChange={e => updateLink(col.id, link.id, { enabled: e.target.checked })} style={{ accentColor: P }} />
+                        Enabled
+                      </label>
+                      <button onClick={() => setEditingLink(null)} style={{ marginLeft: 'auto', padding: '4px 12px', borderRadius: 8, border: `1px solid ${P}`, background: P, color: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Done</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: link.enabled ? '#374151' : '#9ca3af' }}>{link.label}</span>
+                    <span style={{ fontSize: 11, color: '#9ca3af' }}>{link.url}</span>
+                    {!link.enabled && <span style={{ fontSize: 10, background: '#f3f4f6', color: '#9ca3af', borderRadius: 4, padding: '1px 6px' }}>Off</span>}
+                    {link.newTab && <span style={{ fontSize: 10, background: '#dbeafe', color: '#2563eb', borderRadius: 4, padding: '1px 6px' }}>↗</span>}
+                    <button onClick={() => moveLink(col.id, link.id, -1)} disabled={li === 0} style={{ padding: '2px 6px', borderRadius: 5, border: '1px solid #e5e7eb', background: 'white', cursor: li === 0 ? 'not-allowed' : 'pointer', opacity: li === 0 ? 0.4 : 1, fontSize: 10 }}>↑</button>
+                    <button onClick={() => moveLink(col.id, link.id, 1)} disabled={li === col.links.length - 1} style={{ padding: '2px 6px', borderRadius: 5, border: '1px solid #e5e7eb', background: 'white', cursor: li === col.links.length - 1 ? 'not-allowed' : 'pointer', opacity: li === col.links.length - 1 ? 0.4 : 1, fontSize: 10 }}>↓</button>
+                    <button onClick={() => setEditingLink({ colId: col.id, linkId: link.id })} style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer', fontSize: 11, color: '#374151' }}>Edit</button>
+                    <button onClick={() => deleteLink(col.id, link.id)} style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid #fca5a5', background: '#fef2f2', cursor: 'pointer', fontSize: 11, color: '#ef4444' }}>✕</button>
+                  </div>
+                )}
+              </div>
+            ))}
+            <button onClick={() => addLink(col.id)} style={{ padding: '6px 14px', borderRadius: 10, border: `1.5px dashed ${P}40`, background: '#fdf2f8', color: P, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', width: '100%', marginTop: 4 }}>+ Add Link</button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -49,6 +49,23 @@ export const api = {
   // Analytics
   getAnalytics: () => fetch('/api/analytics', { headers: h() }).then(r => r.json()),
 
+  // Upload
+  getUploadUrl: (fileName: string, fileType: string, folder = 'uploads') =>
+    fetch('/api/upload', { method: 'POST', headers: h(), body: JSON.stringify({ fileName, fileType, folder }) }).then(r => r.json()),
+
+  uploadFile: async (file: File, folder = 'uploads') => {
+    const token = sessionStorage.getItem('fluffy_token') || '';
+    const { uploadUrl, publicUrl, error } = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ fileName: file.name, fileType: file.type, folder }),
+    }).then(r => r.json());
+    if (error) return { error };
+    // Upload directly to Supabase Storage
+    await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+    return { publicUrl };
+  },
+
   // Theme
   getTheme: () => fetch('/api/theme').then(r => r.json()),
   saveTheme: (data: any) => fetch('/api/theme', { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
