@@ -1,79 +1,43 @@
-// API client — all calls go to /api/* (same origin on Vercel)
 const getToken = () => sessionStorage.getItem('fluffy_token') || '';
-const h = () => ({
-  'Content-Type': 'application/json',
-  Authorization: `Bearer ${getToken()}`,
-});
+const h = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` });
 
-// Normalize field names from Supabase snake_case to camelCase for the UI
-function normalize(product: any) {
-  if (!product) return product;
-  return {
-    ...product,
-    artistName: product.artist_name || product.artistName || '',
-    artistSlug: product.artist_slug || product.artistSlug || '',
-    originalPrice: product.original_price ?? product.originalPrice,
-    isNew: product.is_new ?? product.isNew,
-    // Keep snake_case too so nothing breaks
-  };
+function normalize(p: any) {
+  if (!p) return p;
+  return { ...p, artistName: p.artist_name || p.artistName || '', artistSlug: p.artist_slug || p.artistSlug || '', originalPrice: p.original_price ?? p.originalPrice, isNew: p.is_new ?? p.isNew };
 }
-
 function normalizeOrder(o: any) {
   if (!o) return o;
-  return {
-    ...o,
-    customerName: o.customer_name || o.customerName,
-    customerEmail: o.customer_email || o.customerEmail,
-    paymentStatus: o.payment_status || o.paymentStatus,
-    trackingNumber: o.tracking_number || o.trackingNumber,
-    shippingProvider: o.shipping_provider || o.shippingProvider,
-    shippingAddress: o.shipping_address || o.shippingAddress,
-    createdAt: o.created_at ? new Date(o.created_at).getTime() : (o.createdAt || 0),
-    paidAt: o.paid_at ? new Date(o.paid_at).getTime() : undefined,
-  };
+  return { ...o, customerName: o.customer_name || o.customerName, customerEmail: o.customer_email || o.customerEmail, paymentStatus: o.payment_status || o.paymentStatus, trackingNumber: o.tracking_number || o.trackingNumber, shippingProvider: o.shipping_provider || o.shippingProvider, shippingAddress: o.shipping_address || o.shippingAddress, createdAt: o.created_at ? new Date(o.created_at).getTime() : (o.createdAt || 0) };
 }
 
 export const api = {
+  // Auth
+  login: (email: string, password: string) => fetch('/api/auth?action=login', { method: 'POST', headers: h(), body: JSON.stringify({ email, password }) }).then(r => r.json()),
+  register: (name: string, email: string, password: string, role: string) => fetch('/api/auth?action=register', { method: 'POST', headers: h(), body: JSON.stringify({ name, email, password, role }) }).then(r => r.json()),
+  logout: () => fetch('/api/auth?action=logout', { method: 'POST', headers: h() }).then(r => r.json()),
+  me: () => fetch('/api/auth?action=me', { headers: h() }).then(r => r.json()),
+
   // Products
   getProducts: () => fetch('/api/products').then(r => r.json()).then((d: any) => Array.isArray(d) ? d.map(normalize) : d),
-  getProduct: (slug: string) => fetch(`/api/products/${slug}`).then(r => r.json()).then(normalize),
+  getProduct: (slug: string) => fetch(`/api/products?id=${slug}`).then(r => r.json()).then(normalize),
   createProduct: (data: any) => fetch('/api/products', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
-  updateProduct: (id: string, data: any) => fetch(`/api/products/${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
-  deleteProduct: (id: string) => fetch(`/api/products/${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
+  updateProduct: (id: string, data: any) => fetch(`/api/products?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  deleteProduct: (id: string) => fetch(`/api/products?id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 
   // Orders
-  createOrder: (data: any) => {
-    // Map camelCase to snake_case for the API
-    const body = {
-      items: data.items,
-      customerName: data.customerName,
-      customerEmail: data.customerEmail,
-      customerPhone: data.customerPhone,
-      shippingAddress: data.shippingAddress,
-      promoCode: data.promoCode,
-    };
-    return fetch('/api/orders', { method: 'POST', headers: h(), body: JSON.stringify(body) }).then(r => r.json()).then(normalizeOrder);
-  },
-  payOrder: (id: string) => fetch(`/api/orders/pay?id=${id}`, { method: 'POST', headers: h() }).then(r => r.json()).then(normalizeOrder),
-  myOrders: () => fetch('/api/orders/my', { headers: h() }).then(r => r.json()).then((d: any) => Array.isArray(d) ? d.map(normalizeOrder) : d),
-  artistOrders: () => fetch('/api/orders/artist', { headers: h() }).then(r => r.json()).then((d: any) => Array.isArray(d) ? d.map(normalizeOrder) : d),
+  createOrder: (data: any) => fetch('/api/orders', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()).then(normalizeOrder),
+  payOrder: (id: string) => fetch(`/api/orders?action=pay&id=${id}`, { method: 'POST', headers: h() }).then(r => r.json()).then(normalizeOrder),
+  myOrders: () => fetch('/api/orders?action=my', { headers: h() }).then(r => r.json()).then((d: any) => Array.isArray(d) ? d.map(normalizeOrder) : d),
+  artistOrders: () => fetch('/api/orders?action=artist', { headers: h() }).then(r => r.json()).then((d: any) => Array.isArray(d) ? d.map(normalizeOrder) : d),
   allOrders: () => fetch('/api/orders', { headers: h() }).then(r => r.json()).then((d: any) => Array.isArray(d) ? d.map(normalizeOrder) : d),
-  updateOrder: (id: string, data: any) => {
-    // Map to snake_case for API
-    const body = {
-      status: data.status,
-      tracking_number: data.trackingNumber,
-      shipping_provider: data.shippingProvider,
-    };
-    return fetch(`/api/orders/${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(body) }).then(r => r.json()).then(normalizeOrder);
-  },
+  updateOrder: (id: string, data: any) => fetch(`/api/orders?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify({ status: data.status, tracking_number: data.trackingNumber, shipping_provider: data.shippingProvider }) }).then(r => r.json()).then(normalizeOrder),
 
   // Users
-  updateMe: (data: any) => fetch('/api/users/me', { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  updateMe: (data: any) => fetch('/api/users?action=me', { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   allUsers: () => fetch('/api/users', { headers: h() }).then(r => r.json()),
-  getFavorites: () => fetch('/api/users/favorites', { headers: h() }).then(r => r.json()),
-  addFavorite: (id: string) => fetch(`/api/users/favorites?productId=${id}`, { method: 'POST', headers: h() }).then(r => r.json()),
-  removeFavorite: (id: string) => fetch(`/api/users/favorites?productId=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
+  getFavorites: () => fetch('/api/users?action=favorites', { headers: h() }).then(r => r.json()),
+  addFavorite: (id: string) => fetch(`/api/users?action=favorites&productId=${id}`, { method: 'POST', headers: h() }).then(r => r.json()),
+  removeFavorite: (id: string) => fetch(`/api/users?action=favorites&productId=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 
   // Artists
   getArtists: () => fetch('/api/artists').then(r => r.json()),

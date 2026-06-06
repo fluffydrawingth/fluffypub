@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const t = sessionStorage.getItem(TOKEN_KEY);
     if (!t) { setUser(null); setLoading(false); return; }
     try {
-      const r = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${t}` } });
+      const r = await fetch('/api/auth?action=me', { headers: { Authorization: `Bearer ${t}` } });
       if (r.ok) { const u = await r.json(); setUser(u); }
       else { sessionStorage.removeItem(TOKEN_KEY); setToken(null); setUser(null); }
     } catch { setUser(null); }
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+      const r = await fetch('/api/auth?action=login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
       const d = await r.json();
       if (r.ok && d.success) {
         sessionStorage.setItem(TOKEN_KEY, d.token);
@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (name: string, email: string, password: string, role: UserRole = 'customer') => {
     try {
-      const r = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password, role }) });
+      const r = await fetch('/api/auth?action=register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password, role }) });
       const d = await r.json();
       if (r.ok && d.success) {
         // Don't auto-login — user must confirm email first
@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     const t = sessionStorage.getItem(TOKEN_KEY);
-    if (t) await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${t}` } }).catch(() => {});
+    if (t) await fetch('/api/auth?action=logout', { method: 'POST', headers: { Authorization: `Bearer ${t}` } }).catch(() => {});
     sessionStorage.removeItem(TOKEN_KEY);
     setToken(null); setUser(null);
   };
