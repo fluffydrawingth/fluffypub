@@ -24,3 +24,16 @@ alter table public.products
 GRANT ALL ON public.orders TO service_role;
 GRANT ALL ON public.profiles TO service_role;
 GRANT ALL ON public.products TO service_role;
+
+-- Add province and postal_code to profiles
+alter table public.profiles
+  add column if not exists province text,
+  add column if not exists postal_code text;
+
+-- Add shipping_thb and grand_total_thb to orders
+alter table public.orders
+  add column if not exists shipping_thb numeric(10,2) default 0,
+  add column if not exists grand_total_thb numeric(10,2);
+
+GRANT ALL ON public.profiles TO service_role;
+GRANT ALL ON public.orders TO service_role;

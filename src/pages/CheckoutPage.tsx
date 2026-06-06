@@ -8,7 +8,7 @@ import { api } from '../lib/api';
 
 export default function CheckoutPage() {
   const { theme } = useTheme();
-  const { items, total, clear } = useCart();
+  const { items, total, totalTHB, clear } = useCart();
   const { navigate } = useRouter();
   const { user } = useAuth();
   const { lang, t, tRaw, price: fmtPrice } = useLang();
@@ -38,13 +38,10 @@ export default function CheckoutPage() {
   const hasDigital  = items.some(i => (i as any).type !== 'physical');
   const discount    = promoApplied ? Math.round(total * 0.15 * 100) / 100 : 0;
   const finalTotalUSD = Math.round((total - discount) * 100) / 100;
-  // THB amount: use price_thb from items if available, else multiply by 35
-  const subtotalTHB = Math.round(items.reduce((s, i) => {
-    const itemTHB = (i as any).price_thb || (i.price * 35);
-    return s + itemTHB;
-  }, 0) * (promoApplied ? 0.85 : 1));
-  // Shipping: 25 THB for 1 physical, free for 2+
-  const physicalCount = items.filter(i => (i as any).type === 'physical').length;
+  // THB: use cart's pre-computed totalTHB (correct price_thb per item)
+  const subtotalTHB = promoApplied ? Math.round(totalTHB * 0.85) : totalTHB;
+  // Shipping: 1 physical = 25 THB, 2+ = free, digital = no shipping
+  const physicalCount = items.filter(i => (i as any).type === 'physical' || (i as any).type === 'both').length;
   const shippingTHB = physicalCount === 1 ? 25 : 0;
   const finalTotalTHB = subtotalTHB + shippingTHB;
 

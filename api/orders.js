@@ -2,9 +2,20 @@
 const { supabase, requireAuth, getUser, json } = require('./_lib');
 
 async function sendEmail(to, subject, html) {
-  // Simple email via Supabase edge or just log for now
-  // In production, integrate with SendGrid/Resend via env
-  console.log('EMAIL TO:', to, 'SUBJECT:', subject);
+  // Use Resend API if configured, otherwise log
+  const RESEND_KEY = process.env.RESEND_API_KEY;
+  const FROM = process.env.EMAIL_FROM || 'noreply@fluffypub.vercel.app';
+  if (!RESEND_KEY) {
+    console.log('[EMAIL] No RESEND_API_KEY. Would send to:', to, 'Subject:', subject);
+    return;
+  }
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RESEND_KEY}` },
+      body: JSON.stringify({ from: `Fluffy Pub <${FROM}>`, to, subject, html }),
+    });
+  } catch(e) { console.error('Email send failed:', e.message); }
 }
 
 module.exports = async function handler(req, res) {
@@ -118,6 +129,37 @@ module.exports = async function handler(req, res) {
       type: hasPhysical ? 'physical' : 'digital',
     }).select().single();
     if (error) return json(res, 400, { error: error.message });
+    // Send confirmation emails
+    const SITE = process.env.SITE_URL || 'https://fluffypub.vercel.app';
+    const orderRef = (order.id || '').slice(-8).toUpperCase();
+    const adminEmail = process.env.ADMIN_EMAIL || 'fluffydrawing.th@gmail.com';
+    const thbAmount = order.total_thb || order.total_amount || (parseFloat(order.total||'0') * 35);
+
+    // Email customer
+    await sendEmail(customerEmail, `✅ คำสั่งซื้อ #${orderRef} รับแล้ว — Fluffy Pub`,
+      `<div style="font-family:sans-serif;max-width:480px;margin:auto">
+        <h2>🐰 ขอบคุณสำหรับการสั่งซื้อ!</h2>
+        <p>เลขที่คำสั่งซื้อ: <strong>#${orderRef}</strong></p>
+        <p>ยอดชำระ: <strong>฿${Number(thbAmount).toLocaleString('th-TH')}</strong></p>
+        <h3>วิธีชำระเงิน PromptPay</h3>
+        <p>โอนเงินผ่าน PromptPay แล้วอัปโหลดสลิปที่:</p>
+        <p><a href="${SITE}/#/account/orders">${SITE}/#/account/orders</a></p>
+        <p>หลังจากยืนยันการชำระเงิน ทีมงานจะดำเนินการต่อภายใน 24 ชม.</p>
+        <hr/><p style="color:#888;font-size:12px">Fluffy Pub — adorable coloring books 🌸</p>
+      </div>`
+    );
+
+    // Email admin
+    await sendEmail(adminEmail, `🛍️ New Order #${orderRef} — ฿${Number(thbAmount).toLocaleString('th-TH')}`,
+      `<p><strong>New order received!</strong></p>
+       <p>Order: #${orderRef}</p>
+       <p>Customer: ${customerName} (${customerEmail})</p>
+       <p>Phone: ${customerPhone||'-'}</p>
+       <p>Amount: ฿${Number(thbAmount).toLocaleString('th-TH')}</p>
+       <p>Items: ${orderItems.map(i=>`${i.title}${i.variant?` (${i.variant.name})`:''}`).join(', ')}</p>
+       <p><a href="${SITE}/#/admin/orders">View in Admin →</a></p>`
+    );
+
     return json(res, 201, order);
   }
 
@@ -138,6 +180,17 @@ module.exports = async function handler(req, res) {
     const adminEmail = process.env.ADMIN_EMAIL || 'fluffydrawing.th@gmail.com';
     await sendEmail(adminEmail, `💳 Payment slip uploaded — Order #${id.slice(-8).toUpperCase()}`,
       `<p>Customer <strong>${order.customer_name}</strong> uploaded a payment slip for Order #${id.slice(-8).toUpperCase()}.</p><p>Amount: ฿${order.total_thb || order.total_amount || order.total}</p><p>Slip: <a href="${slip_url}">${slip_url}</a></p>`
+    );
+    // Notify admin of slip upload
+    const adminEmail2 = process.env.ADMIN_EMAIL || 'fluffydrawing.th@gmail.com';
+    const SITE2 = process.env.SITE_URL || 'https://fluffypub.vercel.app';
+    const ref2 = (order.id||'').slice(-8).toUpperCase();
+    const thb2 = order.total_thb || order.total_amount || (parseFloat(order.total||'0')*35);
+    await sendEmail(adminEmail2, `💳 Payment Slip Uploaded — Order #${ref2}`,
+      `<p><strong>${order.customer_name}</strong> uploaded a payment slip.</p>
+       <p>Order: #${ref2} — ฿${Number(thb2).toLocaleString('th-TH')}</p>
+       <p>Slip: <a href="${slip_url}">${slip_url}</a></p>
+       <p><a href="${SITE2}/#/admin/orders">Review in Admin →</a></p>`
     );
     return json(res, 200, data);
   }

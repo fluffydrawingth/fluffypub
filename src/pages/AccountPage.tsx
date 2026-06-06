@@ -11,7 +11,7 @@ export default function AccountPage() {
   const { theme } = useTheme();
   const { route, navigate } = useRouter();
   const { user, logout, refreshUser } = useAuth();
-  const [tab, setTab] = useState<Tab>((route.params?.tab as Tab) || 'orders');
+  const [tab, setTab] = useState<Tab>(() => { const t = route.params?.tab; return (t === 'orders' || t === 'profile' || t === 'favorites') ? t as Tab : 'orders'; });
   const { t, tRaw, lang } = useLang();
   const p = theme.primaryColor;
 
@@ -256,8 +256,8 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
   const [deliveryEmail, setDeliveryEmail] = useState(user.delivery_email || user.email || '');
   const [phone, setPhone]               = useState(user.phone || '');
   const [addr, setAddr]                 = useState(user.shipping_address?.address || '');
-  const [province, setProvince]         = useState(user.shipping_address?.province || '');
-  const [postalCode, setPostalCode]     = useState(user.shipping_address?.postal_code || user.shipping_address?.zip || '');
+  const [province, setProvince]         = useState(user.province || user.shipping_address?.province || '');
+  const [postalCode, setPostalCode]     = useState(user.postal_code || user.shipping_address?.postal_code || user.shipping_address?.zip || '');
   const [country, setCountry]           = useState(user.shipping_address?.country || 'Thailand');
   const [saving, setSaving]             = useState(false);
   const [msg, setMsg]                   = useState('');
@@ -271,6 +271,8 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
       last_name: lastName,
       delivery_email: deliveryEmail,
       phone,
+      province,
+      postal_code: postalCode,
       shipping_address: { address: addr, province, postal_code: postalCode, country },
     });
     await refreshUser();

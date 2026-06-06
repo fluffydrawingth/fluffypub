@@ -59,7 +59,24 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const handleAddToCart = () => {
     if (hasVariants&&!selectedVariant){setVariantError(tRaw('กรุณาเลือกรูปแบบก่อน','Please select an option.')); return;}
     setVariantError('');
-    add({ id:product.id, title, price:basePrice, image:product.image, artist:product.artistName||product.artist_name||product.artist||'', slug:product.slug, type:isPhysical&&!isDigital?'physical':'digital', variant:selectedVariant||undefined } as any);
+    add({
+      id: product.id,
+      title,
+      price: baseUSD || basePrice,
+      price_thb: selectedVariant ? (selectedVariant.price_thb || Math.round((selectedVariant.price_usd || selectedVariant.price || 0) * 35)) : (product.price_thb || Math.round(product.price * 35)),
+      price_usd: selectedVariant ? (selectedVariant.price_usd || selectedVariant.price) : (product.price_usd || product.price),
+      image: product.image,
+      artist: product.artistName || product.artist_name || product.artist || '',
+      slug: product.slug,
+      type: isPhysical && !isDigital ? 'physical' : isDigital && !isPhysical ? 'digital' : product.type || 'digital',
+      variant: selectedVariant ? {
+        id: selectedVariant.id,
+        name: selectedVariant.name,
+        price_thb: selectedVariant.price_thb || Math.round((selectedVariant.price_usd || selectedVariant.price || 0) * 35),
+        price_usd: selectedVariant.price_usd || selectedVariant.price,
+        price: selectedVariant.price,
+      } : undefined,
+    } as any);
   };
 
   return (
