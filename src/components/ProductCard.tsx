@@ -5,27 +5,7 @@ import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
 
 interface ProductCardProps {
-  product: {
-    id: string;
-    title: string;
-    slug: string;
-    price: number;
-    originalPrice?: number;
-    original_price?: number;
-    artist?: string;
-    artistName?: string;
-    artist_name?: string;
-    category: string;
-    pages: number;
-    rating: number;
-    reviews: number;
-    image: string;
-    cover_image_url?: string;
-    featured?: boolean;
-    bestseller?: boolean;
-    isNew?: boolean;
-    is_new?: boolean;
-  };
+  product: any;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
