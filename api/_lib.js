@@ -1,10 +1,16 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+const supabaseUrl = process.env.SUPABASE_URL;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const anonKey = process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !serviceKey) {
+  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+}
+
+const supabase = createClient(supabaseUrl, serviceKey, {
+  auth: { autoRefreshToken: false, persistSession: false }
+});
 
 function getToken(req) {
   const auth = req.headers['authorization'] || '';
@@ -14,14 +20,19 @@ function getToken(req) {
 async function getUser(req) {
   const token = getToken(req);
   if (!token) return null;
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) return null;
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, email, name, role, bio, artist_slug, favorites')
-    .eq('id', user.id)
-    .single();
-  return profile;
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return null;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, email, name, role, bio, artist_slug, favorites')
+      .eq('id', user.id)
+      .single();
+    return profile;
+  } catch (e) {
+    console.error('getUser error:', e.message);
+    return null;
+  }
 }
 
 function json(res, status, data) {

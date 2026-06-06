@@ -1,18 +1,22 @@
-const { supabase, requireAuth, json } = require('../_lib');
+const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+
   if (req.method === 'GET') {
-    const { data } = await supabase.from('theme').select('config').eq('id', 1).single();
-    return json(res, 200, data?.config || {});
+    try {
+      const { data, error } = await supabase.from('theme').select('config').eq('id', 1).single();
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(200).json(data?.config || {});
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
   }
-  if (req.method === 'PUT') {
-    const user = await requireAuth(req, res, ['admin']);
-    if (!user) return;
-    const { data, error } = await supabase.from('theme')
-      .update({ config: req.body, updated_at: new Date().toISOString() })
-      .eq('id', 1).select('config').single();
-    if (error) return json(res, 400, { error: error.message });
-    return json(res, 200, data.config);
-  }
-  return json(res, 405, { error: 'Method not allowed' });
+  return res.status(405).json({ error: 'Method not allowed' });
 };

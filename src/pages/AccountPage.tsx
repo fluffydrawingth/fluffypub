@@ -95,7 +95,21 @@ function OrdersTab({p,theme}:any) {
           <div style={{ borderTop:'1px solid #f1f5f9', marginTop:10, paddingTop:10, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
             <div style={{ fontSize:13, color:'#64748b' }}>Total: <strong style={{color:'#1e293b'}}>${o.total}</strong></div>
             {o.paymentStatus==='paid'&&o.type==='digital'&&(
-              <button style={{ background:p, color:'white', border:'none', cursor:'pointer', padding:'7px 16px', borderRadius:12, fontSize:12, fontWeight:700, fontFamily:theme.fontFamily }}>⬇️ Download</button>
+              <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:'flex-end'}}>
+                {o.items?.some((i:any)=>i.digital_download_url||i.download_instruction) ? (
+                  o.items?.filter((i:any)=>i.digital_download_url||i.download_instruction).map((i:any,idx:number)=>(
+                    <div key={idx}>
+                      {i.digital_download_url&&<a href={i.digital_download_url} target="_blank" rel="noreferrer" style={{background:p,color:'white',textDecoration:'none',padding:'6px 14px',borderRadius:11,fontSize:12,fontWeight:700,display:'inline-block'}}>⬇️ Download</a>}
+                      {i.download_instruction&&!i.digital_download_url&&<div style={{fontSize:11,color:'#64748b',maxWidth:200}}>{i.download_instruction}</div>}
+                    </div>
+                  ))
+                ) : (
+                  <div style={{fontSize:11,color:'#94a3b8'}}>Download link will be sent to your email</div>
+                )}
+              </div>
+            )}
+            {(o.paymentStatus==='pending'||o.payment_status==='pending')&&o.type==='digital'&&(
+              <div style={{fontSize:11,color:'#f59e0b',fontWeight:600}}>⏳ Awaiting payment confirmation</div>
             )}
             {o.trackingNumber&&(
               <div style={{ fontSize:12, color:'#64748b' }}>🚚 {o.shippingProvider}: <strong>{o.trackingNumber}</strong></div>

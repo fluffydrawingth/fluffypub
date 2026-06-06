@@ -71,8 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const r = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, email, password, role }) });
       const d = await r.json();
       if (r.ok && d.success) {
-        sessionStorage.setItem(TOKEN_KEY, d.token);
-        setToken(d.token); setUser(d.user);
+        // Don't auto-login — user must confirm email first
         return { success: true };
       }
       return { success: false, error: d.error || 'Registration failed' };
