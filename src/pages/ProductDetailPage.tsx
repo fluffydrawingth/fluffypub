@@ -5,6 +5,7 @@ import { useCart } from '../lib/cart';
 import { useRouter } from '../lib/router';
 import ProductCard from '../components/ProductCard';
 import { RichDescRenderer } from '../components/RichDescEditor';
+import { useLang } from '../lib/lang';
 
 export default function ProductDetailPage({ slug }: { slug: string }) {
   const { theme } = useTheme();
@@ -44,6 +45,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   );
 
   const p = theme.primaryColor;
+  const { lang, price: fmtPrice } = useLang();
   const related = allProducts.filter((x:any) => x.category === product.category && x.id !== product.id).slice(0,4);
 
   // Product type — prefer boolean fields, fallback to type string
@@ -80,31 +82,37 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   ];
 
   return (
-    <div style={{fontFamily:theme.fontFamily, background:theme.bgColor, maxWidth:'100vw', overflowX:'hidden'}}>
+    <div className="pd-wrap" style={{fontFamily:theme.fontFamily, background:theme.bgColor, maxWidth:'100vw', overflowX:'hidden'}}>
       <style>{`
+        .pd-wrap { max-width: 100%; overflow-x: hidden; }
         .pd-grid { display: grid; grid-template-columns: 1fr 1fr; }
-        .pd-img { min-height: 360px; }
-        .pd-info { padding: 32px 36px; }
-        .pd-title { font-size: 28px; }
+        .pd-img { min-height: 380px; width: 100%; }
+        .pd-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .pd-info { padding: 36px 40px; }
+        .pd-title { font-size: 28px; line-height: 1.25; }
         .pd-price { font-size: 36px; }
         .pd-tabs-row { display: flex; }
         .pd-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .pd-related { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-        @media (max-width: 700px) {
-          .pd-grid { grid-template-columns: 1fr !important; }
-          .pd-img { min-height: 280px !important; max-height: 340px !important; }
-          .pd-info { padding: 20px 18px 28px !important; }
-          .pd-title { font-size: 20px !important; }
-          .pd-price { font-size: 28px !important; }
-          .pd-tabs-row { overflow-x: auto !important; }
+        @media (max-width: 680px) {
+          .pd-grid { grid-template-columns: 1fr !important; display: flex !important; flex-direction: column !important; }
+          .pd-img { min-height: 260px !important; max-height: 300px !important; height: 300px !important; width: 100% !important; flex-shrink: 0; }
+          .pd-img img { object-fit: contain !important; background: #f9f0fa; }
+          .pd-info { padding: 18px 16px 24px !important; }
+          .pd-title { font-size: 19px !important; }
+          .pd-price { font-size: 26px !important; }
+          .pd-tabs-row { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
           .pd-details-grid { grid-template-columns: 1fr !important; }
-          .pd-related { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
-          .pd-cart-btn { font-size: 15px !important; padding: 13px !important; }
+          .pd-related { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+          .pd-cart-btn { font-size: 14px !important; padding: 12px !important; }
+          .pd-breadcrumb { font-size: 11px !important; padding: 10px 12px !important; }
+          .pd-outer { padding: 0 10px 32px !important; }
+          .pd-discount-badge { width: 44px !important; height: 44px !important; font-size: 11px !important; top: 10px !important; right: 10px !important; }
         }
       `}</style>
 
       {/* Breadcrumb */}
-      <div style={{maxWidth:1200,margin:'0 auto',padding:'14px 16px'}}>
+      <div className="pd-breadcrumb" style={{maxWidth:1200,margin:'0 auto',padding:'14px 16px'}}>
         <span style={{color:theme.textColor+'66',fontSize:13}}>
           <button onClick={()=>navigate('/')} style={{background:'none',border:'none',cursor:'pointer',color:'inherit',fontFamily:theme.fontFamily,fontSize:13}}>Home</button>
           {' > '}
@@ -113,7 +121,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
         </span>
       </div>
 
-      <div style={{maxWidth:1200,margin:'0 auto',padding:'0 16px 48px'}}>
+      <div className="pd-outer" style={{maxWidth:1200,margin:'0 auto',padding:'0 16px 48px'}}>
 
         {/* Main card */}
         <div className="pd-grid" style={{background:'white',borderRadius:20,overflow:'hidden',boxShadow:'0 4px 24px rgba(0,0,0,0.07)'}}>
@@ -125,7 +133,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               : <span>{product.image}</span>
             }
             {discount && discount > 0 && (
-              <div style={{position:'absolute',top:16,right:16,background:theme.accentColor,color:'white',borderRadius:'50%',width:52,height:52,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:800}}>-{discount}%</div>
+              <div className="pd-discount-badge" style={{position:'absolute',top:16,right:16,background:theme.accentColor,color:'white',borderRadius:'50%',width:52,height:52,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:800}}>-{discount}%</div>
             )}
           </div>
 
@@ -136,7 +144,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             </div>
 
             <h1 className="pd-title" style={{fontWeight:900,color:theme.textColor,margin:'0 0 12px',lineHeight:1.25}}>
-              {product.title}
+              {lang==='th' && product.title_th ? product.title_th : product.title}
             </h1>
 
             {/* Rating */}
@@ -155,15 +163,15 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
             {/* Price */}
             <div style={{display:'flex',alignItems:'baseline',gap:10,marginBottom:16}}>
-              <span className="pd-price" style={{fontWeight:900,color:theme.textColor}}>${displayPrice}</span>
+              <span className="pd-price" style={{fontWeight:900,color:theme.textColor}}>{fmtPrice(product.price_thb, product.price_usd, displayPrice)}</span>
               {originalPrice && originalPrice > displayPrice && (
-                <span style={{fontSize:16,color:'#aaa',textDecoration:'line-through'}}>${originalPrice}</span>
+                <span style={{fontSize:16,color:'#aaa',textDecoration:'line-through'}}>{fmtPrice(null, null, originalPrice)}</span>
               )}
             </div>
 
             {/* Short description */}
-            {product.description && (
-              <p style={{color:theme.textColor+'cc',fontSize:14,lineHeight:1.7,marginBottom:18}}>{product.description}</p>
+            {(product.description || product.description_th || product.description_en) && (
+              <p style={{color:theme.textColor+'cc',fontSize:14,lineHeight:1.7,marginBottom:18}}>{lang==='th' && product.description_th ? product.description_th : product.description}</p>
             )}
 
             {/* Variant selector */}
@@ -179,7 +187,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                       <span style={{fontSize:14,fontWeight:selectedVariant?.id===v.id?700:500,color:theme.textColor}}>
                         {selectedVariant?.id===v.id?'✓ ':''}{v.name}
                       </span>
-                      <span style={{fontSize:15,fontWeight:800,color:p}}>${v.price}</span>
+                      <span style={{fontSize:15,fontWeight:800,color:p}}>{fmtPrice(null, null, v.price)}</span>
                     </button>
                   ))}
                 </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { useTheme } from '../lib/theme';
 import { useCart } from '../lib/cart';
 import { useRouter } from '../lib/router';
+import { useLang } from '../lib/lang';
 
 interface ProductCardProps {
   product: {
@@ -31,6 +32,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   const { theme } = useTheme();
   const { add, items } = useCart();
   const { navigate } = useRouter();
+  const { lang, price: fmtPrice } = useLang();
   const inCart = items.some(i => i.id === product.id);
   const artistDisplay = product.artistName || product.artist_name || product.artist || '';
   const isNew = product.isNew || product.is_new;
@@ -77,7 +79,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           onClick={() => navigate(`/products/${product.slug}`)}
           style={{ fontSize:16, fontWeight:800, color:theme.textColor, marginBottom:8, lineHeight:1.3 }}
         >
-          {product.title}
+          {lang==='th' && (product as any).title_th ? (product as any).title_th : product.title}
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:12 }}>
           <span style={{ color:'#f59e0b', fontSize:13 }}>{'★'.repeat(Math.min(5, Math.round(product.rating||0)))}</span>
@@ -86,8 +88,8 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div>
-            <span style={{ fontSize:20, fontWeight:800, color:theme.textColor }}>${product.price}</span>
-            {originalPrice && <span style={{ fontSize:13, color:'#aaa', textDecoration:'line-through', marginLeft:8 }}>${originalPrice}</span>}
+            <span style={{ fontSize:20, fontWeight:800, color:theme.textColor }}>{fmtPrice((product as any).price_thb, (product as any).price_usd, product.price)}</span>
+            {originalPrice && <span style={{ fontSize:13, color:'#aaa', textDecoration:'line-through', marginLeft:8 }}>{fmtPrice(null, null, originalPrice)}</span>}
           </div>
           <button
             onClick={() => add({ id:product.id, title:product.title, price:product.price, image:product.image, artist:artistDisplay, slug:product.slug })}

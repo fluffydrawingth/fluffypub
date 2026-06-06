@@ -70,11 +70,11 @@ export default function Navbar() {
 
           {/* Language switcher */}
           <button
-            onClick={()=>setLang(lang==='en'?'th':'en')}
-            style={{ background:'transparent', border:`1.5px solid ${p}30`, cursor:'pointer', padding:'6px 12px', borderRadius:16, fontSize:12, fontWeight:700, color:p, fontFamily:theme.fontFamily }}
-            title={lang==='en'?'Switch to Thai':'Switch to English'}
+            onClick={()=>setLang(lang==='th'?'en':'th')}
+            style={{ background:p+'12', border:`1.5px solid ${p}30`, cursor:'pointer', padding:'6px 12px', borderRadius:16, fontSize:12, fontWeight:700, color:p, fontFamily:theme.fontFamily }}
+            title={lang==='th'?'Switch to English':'Switch to Thai'}
           >
-            {lang==='en'?'🇹🇭 TH':'🇬🇧 EN'}
+            {lang==='th'?'🇬🇧 EN':'🇹🇭 TH'}
           </button>
 
           {/* Cart */}

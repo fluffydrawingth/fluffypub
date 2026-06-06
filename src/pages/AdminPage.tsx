@@ -154,6 +154,11 @@ function ProductsTab() {
   const [isPhysical, setIsPhysical] = useState(false);
   const [richBlocks, setRichBlocks] = useState<Block[]>([]);
   const [variants, setVariants] = useState<any[]>([]);
+  const [titleTh, setTitleTh] = useState('');
+  const [titleEn, setTitleEn] = useState('');
+  const [priceTHB, setPriceTHB] = useState('');
+  const [priceUSD, setPriceUSD] = useState('');
+  const [descTh, setDescTh] = useState('');
 
   const CATEGORIES = ['Animals','Fantasy','Botanicals','Mandala','Kawaii','Seasonal'];
 
@@ -186,6 +191,9 @@ function ProductsTab() {
     setIsPhysical(!!pr.is_physical);
     setRichBlocks(Array.isArray(pr.rich_description) ? pr.rich_description : []);
     setVariants(Array.isArray(pr.variants) ? pr.variants : []);
+    setTitleTh(pr.title_th||''); setTitleEn(pr.title_en||'');
+    setPriceTHB(String(pr.price_thb||'')); setPriceUSD(String(pr.price_usd||''));
+    setDescTh(pr.description_th||'');
     setEditingId(pr.id);
     setShowForm(true);
   };
@@ -206,7 +214,11 @@ function ProductsTab() {
       shipping_required:isPhysical?shippingRequired:false,
       shipping_note:isPhysical?shippingNote:'',
       artist_id:artistId||undefined,
-      variants:variants };
+      variants:variants,
+      title_th:titleTh||null, title_en:titleEn||null,
+      price_thb:priceTHB?parseFloat(priceTHB):null,
+      price_usd:priceUSD?parseFloat(priceUSD):null,
+      description_th:descTh||null };
     if (originalPrice) body.original_price = parseFloat(originalPrice);
     const result = editingId ? await api.updateProduct(editingId, body) : await api.createProduct(body);
     if (result.error){setMsg('⚠️ '+result.error);}
@@ -245,9 +257,13 @@ function ProductsTab() {
             {editingId&&<button onClick={()=>{setShowForm(false);resetForm();}} style={{background:'none',border:'none',cursor:'pointer',color:'#9ca3af',fontSize:18}}>✕</button>}
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
-            <div style={{gridColumn:'1/-1'}}>{inp('Title *', title, setTitle, 'Product title')}</div>
-            {inp('Price *', price, setPrice, '9.99', 'number')}
-            {inp('Original Price', originalPrice, setOriginalPrice, '12.99', 'number')}
+            <div style={{gridColumn:'1/-1'}}>{inp('Title (EN) *', title, setTitle, 'Product title in English')}</div>
+            {inp('Title (TH)', titleTh, setTitleTh, 'ชื่อสินค้าภาษาไทย')}
+            {inp('Title (EN fallback)', titleEn, setTitleEn, 'English title fallback')}
+            {inp('Price (USD) *', price, setPrice, '9.99', 'number')}
+            {inp('Original Price (USD)', originalPrice, setOriginalPrice, '12.99', 'number')}
+            {inp('Price THB ฿', priceTHB, setPriceTHB, '350', 'number')}
+            {inp('Price USD $', priceUSD, setPriceUSD, '9.99', 'number')}
             <div>
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Category *</label>
               <select value={category} onChange={e=>setCategory(e.target.value)} style={{width:'100%',padding:'9px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit'}}>
@@ -298,8 +314,14 @@ function ProductsTab() {
               </div>
             </>}
             <div style={{gridColumn:'1/-1'}}>
-              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Description</label>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Description (EN)</label>
               <textarea value={description} onChange={e=>setDescription(e.target.value)} rows={3}
+                style={{width:'100%',padding:'9px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',resize:'vertical' as const,boxSizing:'border-box' as const}}
+                onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+            </div>
+            <div style={{gridColumn:'1/-1'}}>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Description (TH) คำอธิบาย</label>
+              <textarea value={descTh} onChange={e=>setDescTh(e.target.value)} rows={3}
                 style={{width:'100%',padding:'9px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',resize:'vertical' as const,boxSizing:'border-box' as const}}
                 onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
             </div>
@@ -645,11 +667,26 @@ function ArtistsTab() {
 }
 
 // ── Theme text field — defined OUTSIDE component to prevent remount ──────────
+// StableInput: keeps local state while typing, flushes to parent only on blur.
+// This prevents the focus-loss bug caused by parent re-renders on every keystroke.
 function TF({label,val,set}:{label:string,val:string,set:(v:string)=>void}) {
+  const [local, setLocal] = React.useState(val);
+  // Sync from parent only when val changes from outside (e.g. preset applied)
+  const prevVal = React.useRef(val);
+  if (prevVal.current !== val && local === prevVal.current) {
+    setLocal(val);
+  }
+  prevVal.current = val;
   return (
     <div style={{marginBottom:14}}>
       <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:6}}>{label}</label>
-      <input value={val} onChange={e=>set(e.target.value)} style={{width:'100%',padding:'10px 14px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+      <input
+        value={local}
+        onChange={e=>setLocal(e.target.value)}
+        onBlur={()=>set(local)}
+        style={{width:'100%',padding:'10px 14px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+        onFocus={e=>e.target.style.borderColor=P}
+      />
     </div>
   );
 }
