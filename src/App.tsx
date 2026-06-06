@@ -15,6 +15,7 @@ import ArtistsPage from './pages/ArtistsPage';
 import LoginPage from './pages/LoginPage';
 import AccountPage from './pages/AccountPage';
 import ArtistDashboardPage from './pages/ArtistDashboardPage';
+import ArtistProfilePage from './pages/ArtistProfilePage';
 
 function ProtectedRoute({ roles, children }: { roles: string[]; children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -42,6 +43,7 @@ function AppContent() {
       case '/products/:slug': return <ProductDetailPage slug={route.params?.slug||''} />;
       case '/cart': return <CartPage />;
       case '/checkout': return <CheckoutPage />;
+      case '/artists/:slug': return <ArtistProfilePage slug={route.params?.slug||''} />;
       case '/artists': return <ArtistsPage />;
       case '/login': return <LoginPage />;
       case '/account': return <ProtectedRoute roles={['customer','artist','admin']}><AccountPage /></ProtectedRoute>;

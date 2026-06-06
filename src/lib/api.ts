@@ -41,6 +41,10 @@ export const api = {
 
   // Artists
   getArtists: () => fetch('/api/artists').then(r => r.json()),
+  getArtist: (id: string) => fetch(`/api/artists?id=${id}`).then(r => r.json()),
+  createArtist: (data: any) => fetch('/api/artists', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  updateArtist: (id: string, data: any) => fetch(`/api/artists?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  deleteArtist: (id: string) => fetch(`/api/artists?id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 
   // Analytics
   getAnalytics: () => fetch('/api/analytics', { headers: h() }).then(r => r.json()),
