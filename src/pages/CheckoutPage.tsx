@@ -38,14 +38,21 @@ export default function CheckoutPage() {
   const discount    = promoApplied ? Math.round(total * 0.15 * 100) / 100 : 0;
   const finalTotal  = Math.round((total - discount) * 100) / 100;
 
-  // Pre-fill from user profile
+  // Pre-fill from saved profile
   useEffect(() => {
-    if (user?.name) {
-      const parts = user.name.split(' ');
-      setFirstName(parts[0] || '');
-      setLastName(parts.slice(1).join(' ') || '');
+    if (!user) return;
+    if (user.first_name) setFirstName(user.first_name);
+    else if (user.name) { const p = user.name.split(' '); setFirstName(p[0]||''); setLastName(p.slice(1).join(' ')||''); }
+    if (user.last_name) setLastName(user.last_name);
+    setEmail(user.delivery_email || user.email || '');
+    if (user.phone) setPhone(user.phone);
+    if (user.shipping_address) {
+      const sa = user.shipping_address;
+      if (sa.address) setAddress(sa.address);
+      if (sa.city) setCity(sa.city);
+      if (sa.zip) setZip(sa.zip);
+      if (sa.country) setCountry(sa.country);
     }
-    if (user?.email) setEmail(user.email);
   }, [user]);
 
   // Load PromptPay QR after order is created

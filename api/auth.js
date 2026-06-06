@@ -49,5 +49,27 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { success: true });
   }
 
+  if (req.method === 'POST' && action === 'reset') {
+    const { email, redirectTo } = req.body || {};
+    if (!email) return json(res, 400, { error: 'Email required.' });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectTo || `${process.env.SITE_URL || 'https://fluffypub.vercel.app'}/#/reset-password`,
+    });
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true, message: 'Password reset email sent.' });
+  }
+
+  if (req.method === 'POST' && action === 'update-password') {
+    const token = (req.headers['authorization'] || '').replace('Bearer ', '');
+    const { password } = req.body || {};
+    if (!password || password.length < 6) return json(res, 400, { error: 'Password must be at least 6 characters.' });
+    // Use the user's token to update their password
+    const { createClient } = require('@supabase/supabase-js');
+    const userSupabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const { error } = await userSupabase.auth.updateUser({ password });
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
+  }
+
   return json(res, 404, { error: 'Not found' });
 };

@@ -16,6 +16,8 @@ import LoginPage from './pages/LoginPage';
 import AccountPage from './pages/AccountPage';
 import ArtistDashboardPage from './pages/ArtistDashboardPage';
 import ArtistProfilePage from './pages/ArtistProfilePage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import { LangProvider } from './lib/lang';
 
 function ProtectedRoute({ roles, children }: { roles: string[]; children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -44,6 +46,7 @@ function AppContent() {
       case '/cart': return <CartPage />;
       case '/checkout': return <CheckoutPage />;
       case '/artists/:slug': return <ArtistProfilePage slug={route.params?.slug||''} />;
+      case '/reset-password': return <ResetPasswordPage />;
       case '/artists': return <ArtistsPage />;
       case '/login': return <LoginPage />;
       case '/account': return <ProtectedRoute roles={['customer','artist','admin']}><AccountPage /></ProtectedRoute>;
@@ -75,6 +78,7 @@ function AppContent() {
 export default function App() {
   return (
     <ThemeProvider>
+      <LangProvider>
       <AuthProvider>
         <CartProvider>
           <RouterProvider>
@@ -82,6 +86,7 @@ export default function App() {
           </RouterProvider>
         </CartProvider>
       </AuthProvider>
+      </LangProvider>
     </ThemeProvider>
   );
 }

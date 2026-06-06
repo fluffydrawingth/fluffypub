@@ -13,10 +13,16 @@ module.exports = async function handler(req, res) {
     if (req.method === 'PUT') {
       const user = await requireAuth(req, res);
       if (!user) return;
-      const { name, bio } = req.body || {};
+      const { name, bio, first_name, last_name, phone, delivery_email, shipping_address, preferred_lang } = req.body || {};
       const updates = { updated_at: new Date().toISOString() };
-      if (name) updates.name = name;
+      if (name !== undefined) updates.name = name;
       if (bio !== undefined) updates.bio = bio;
+      if (first_name !== undefined) updates.first_name = first_name;
+      if (last_name !== undefined) updates.last_name = last_name;
+      if (phone !== undefined) updates.phone = phone;
+      if (delivery_email !== undefined) updates.delivery_email = delivery_email;
+      if (shipping_address !== undefined) updates.shipping_address = shipping_address;
+      if (preferred_lang !== undefined) updates.preferred_lang = preferred_lang;
       const { data, error } = await supabase.from('profiles').update(updates).eq('id', user.id).select().single();
       if (error) return json(res, 400, { error: error.message });
       return json(res, 200, data);

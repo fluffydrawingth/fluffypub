@@ -4,10 +4,10 @@ import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 
 export default function LoginPage() {
-  const { login, register, user, loading } = useAuth();
+  const { login, register, user, loading, resetPassword } = useAuth();
   const { theme } = useTheme();
   const { navigate } = useRouter();
-  const [tab, setTab] = useState<'login'|'register'>('login');
+  const [tab, setTab] = useState<'login'|'register'|'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -40,6 +40,13 @@ export default function LoginPage() {
 
   const submit = async () => {
     setError(''); setSuccess(''); setBusy(true);
+    if (tab === 'forgot') {
+      if (!email) { setError('Please enter your email.'); setBusy(false); return; }
+      const result = await resetPassword(email);
+      if (result.success) setSuccess('✅ Password reset email sent! Check your inbox.');
+      else setError(result.error || 'Failed to send reset email.');
+      setBusy(false); return;
+    }
     if (tab === 'login') {
       if (!email || !password) { setError('Email and password required.'); setBusy(false); return; }
       const result = await login(email, password);
@@ -79,7 +86,7 @@ export default function LoginPage() {
 
         <div style={{ display:'flex', background:`${p}10`, borderRadius:14, padding:4, marginBottom:24 }}>
           {(['login','register'] as const).map(t=>(
-            <button key={t} onClick={()=>{setTab(t);setError('');setSuccess('');}} style={{ flex:1, padding:'9px', borderRadius:11, border:'none', cursor:'pointer', fontSize:14, fontWeight:700, background:tab===t?'white':'transparent', color:tab===t?p:theme.textColor+'88', boxShadow:tab===t?'0 2px 8px rgba(0,0,0,0.08)':'none', fontFamily:theme.fontFamily }}>
+            <button key={t} onClick={()=>{setTab(t as any);setError('');setSuccess('');}} style={{ flex:1, padding:'9px', borderRadius:11, border:'none', cursor:'pointer', fontSize:14, fontWeight:700, background:tab===t?'white':'transparent', color:tab===t?p:theme.textColor+'88', boxShadow:tab===t?'0 2px 8px rgba(0,0,0,0.08)':'none', fontFamily:theme.fontFamily }}>
               {t==='login'?'Sign In':'Create Account'}
             </button>
           ))}
@@ -100,19 +107,24 @@ export default function LoginPage() {
 
         {inp(email, setEmail, 'Email address', 'email')}
 
-        <div style={{ position:'relative', marginBottom:20 }}>
+        {tab !== 'forgot' && <div style={{ position:'relative', marginBottom:20 }}>
           <input type={showPw?'text':'password'} value={password} onChange={e=>setPassword(e.target.value)}
             placeholder="Password" onKeyDown={e=>e.key==='Enter'&&submit()}
             style={{ width:'100%', padding:'12px 46px 12px 16px', borderRadius:13, border:`2px solid ${p}30`, fontSize:15, outline:'none', fontFamily:theme.fontFamily, boxSizing:'border-box' }}
             onFocus={e=>(e.target.style.borderColor=p)} onBlur={e=>(e.target.style.borderColor=p+'30')}
           />
           <button type="button" onClick={()=>setShowPw(x=>!x)} style={{ position:'absolute', right:13, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', fontSize:16, padding:0 }}>{showPw?'🙈':'👁️'}</button>
-        </div>
+        </div>}
 
+        {tab==='login' && (
+          <div style={{ textAlign:'right' as const, marginTop:-8, marginBottom:16 }}>
+            <button onClick={()=>{setTab('forgot');setError('');setSuccess('');}} style={{ background:'none', border:'none', cursor:'pointer', color:p, fontSize:12, fontFamily:theme.fontFamily, fontWeight:600 }}>Forgot password?</button>
+          </div>
+        )}
         {error && <div style={{ background:'#fef2f2', border:'1.5px solid #fca5a5', borderRadius:11, padding:'9px 13px', marginBottom:16, fontSize:13, color:'#dc2626', fontWeight:600 }}>⚠️ {error}</div>}
 
         <button onClick={submit} disabled={busy} style={{ width:'100%', padding:'14px', background:busy?p+'88':p, color:'white', border:'none', cursor:busy?'wait':'pointer', borderRadius:15, fontSize:15, fontWeight:800, fontFamily:theme.fontFamily, boxShadow:`0 8px 24px ${p}44`, marginBottom:14 }}>
-          {busy?'⏳ Please wait...':(tab==='login'?'🔓 Sign In':'✨ Create Account')}
+          {busy?'⏳ Please wait...':(tab==='login'?'🔓 Sign In':tab==='forgot'?'📧 Send Reset Email':'✨ Create Account')}
         </button>
 
         <div style={{ textAlign:'center' }}>

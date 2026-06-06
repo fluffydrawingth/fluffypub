@@ -151,29 +151,65 @@ function FavoritesTab({p,theme,navigate}:any) {
 }
 
 function ProfileTab({user,p,theme,refreshUser}:any) {
-  const [name, setName] = useState(user.name);
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState('');
+  const [firstName, setFirstName]       = useState(user.first_name || '');
+  const [lastName, setLastName]         = useState(user.last_name || '');
+  const [deliveryEmail, setDeliveryEmail] = useState(user.delivery_email || user.email || '');
+  const [phone, setPhone]               = useState(user.phone || '');
+  const [addr, setAddr]                 = useState(user.shipping_address?.address || '');
+  const [city, setCity]                 = useState(user.shipping_address?.city || '');
+  const [zip, setZip]                   = useState(user.shipping_address?.zip || '');
+  const [country, setCountry]           = useState(user.shipping_address?.country || 'Thailand');
+  const [saving, setSaving]             = useState(false);
+  const [msg, setMsg]                   = useState('');
+
   const save = async () => {
     setSaving(true); setMsg('');
-    await api.updateMe({ name });
+    const fullName = `${firstName} ${lastName}`.trim();
+    await api.updateMe({
+      name: fullName || user.name,
+      first_name: firstName,
+      last_name: lastName,
+      delivery_email: deliveryEmail,
+      phone,
+      shipping_address: { address: addr, city, zip, country },
+    });
     await refreshUser();
     setSaving(false); setMsg('✓ Profile updated!');
     setTimeout(()=>setMsg(''),3000);
   };
+
+  const inp = (label:string, val:string, set:(v:string)=>void, type='text', disabled=false) => (
+    <div style={{marginBottom:14}}>
+      <label style={{display:'block',fontSize:13,fontWeight:700,color:'#374151',marginBottom:5}}>{label}</label>
+      <input type={type} value={val} onChange={e=>set(e.target.value)} disabled={disabled}
+        style={{width:'100%',padding:'11px 14px',borderRadius:12,border:`1.5px solid ${disabled?'#e5e7eb':p}30`,fontSize:14,outline:'none',fontFamily:theme.fontFamily,boxSizing:'border-box' as const,background:disabled?'#f8fafc':'white',color:disabled?'#888':'inherit'}}
+        onFocus={e=>{if(!disabled)e.target.style.borderColor=p;}} onBlur={e=>{if(!disabled)e.target.style.borderColor=p+'30';}}
+      />
+    </div>
+  );
+
   return (
     <div style={{background:'white',borderRadius:20,padding:28,boxShadow:'0 2px 10px rgba(0,0,0,0.05)'}}>
       <h3 style={{fontSize:18,fontWeight:800,color:'#1e293b',marginBottom:24}}>Edit Profile</h3>
-      <div style={{marginBottom:16}}>
-        <label style={{display:'block',fontSize:13,fontWeight:700,color:'#374151',marginBottom:7}}>Display Name</label>
-        <input value={name} onChange={e=>setName(e.target.value)} style={{width:'100%',padding:'11px 14px',borderRadius:12,border:`1.5px solid ${p}30`,fontSize:14,outline:'none',fontFamily:theme.fontFamily,boxSizing:'border-box'}} onFocus={e=>(e.target.style.borderColor=p)} onBlur={e=>(e.target.style.borderColor=p+'30')} />
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:4}}>
+        <div>{inp('First Name', firstName, setFirstName)}</div>
+        <div>{inp('Last Name', lastName, setLastName)}</div>
       </div>
-      <div style={{marginBottom:24}}>
-        <label style={{display:'block',fontSize:13,fontWeight:700,color:'#374151',marginBottom:7}}>Email</label>
-        <input value={user.email} disabled style={{width:'100%',padding:'11px 14px',borderRadius:12,border:'1.5px solid #e5e7eb',fontSize:14,background:'#f8fafc',color:'#888',fontFamily:theme.fontFamily,boxSizing:'border-box'}} />
-        <div style={{fontSize:11,color:'#94a3b8',marginTop:4}}>Email cannot be changed.</div>
+      {inp('Account Email', user.email, ()=>{}, 'email', true)}
+      <div style={{fontSize:11,color:'#94a3b8',marginTop:-10,marginBottom:14}}>Account email cannot be changed.</div>
+      {inp('Email for Digital Delivery', deliveryEmail, setDeliveryEmail, 'email')}
+      {inp('Phone Number', phone, setPhone, 'tel')}
+
+      <h4 style={{fontSize:14,fontWeight:800,color:'#374151',margin:'18px 0 12px'}}>📦 Shipping Address</h4>
+      {inp('Street Address', addr, setAddr)}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+        <div>{inp('City', city, setCity)}</div>
+        <div>{inp('ZIP / Postal', zip, setZip)}</div>
       </div>
-      {msg&&<div style={{background:'#d1fae5',border:'1.5px solid #6ee7b7',borderRadius:11,padding:'9px 13px',marginBottom:16,fontSize:13,color:'#065f46',fontWeight:600}}>{msg}</div>}
+      {inp('Country', country, setCountry)}
+
+      {msg && <div style={{background:'#d1fae5',border:'1.5px solid #6ee7b7',borderRadius:11,padding:'9px 13px',marginBottom:16,fontSize:13,color:'#065f46',fontWeight:600}}>{msg}</div>}
       <button onClick={save} disabled={saving} style={{background:saving?p+'88':p,color:'white',border:'none',cursor:saving?'wait':'pointer',padding:'12px 28px',borderRadius:14,fontSize:14,fontWeight:800,fontFamily:theme.fontFamily}}>
         {saving?'Saving...':'Save Changes'}
       </button>

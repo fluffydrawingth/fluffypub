@@ -30,7 +30,7 @@ async function getUser(req) {
     // Get profile from DB using service role
     const { data: profile } = await supabase
       .from('profiles')
-      .select('id, email, name, role, bio, artist_slug, favorites')
+      .select('id, email, name, role, bio, artist_slug, favorites, first_name, last_name, phone, delivery_email, shipping_address, preferred_lang')
       .eq('id', userId)
       .single();
     return profile;

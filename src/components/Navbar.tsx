@@ -3,6 +3,7 @@ import { useTheme } from '../lib/theme';
 import { useCart } from '../lib/cart';
 import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
+import { useLang } from '../lib/lang';
 
 export default function Navbar() {
   const { theme } = useTheme();
@@ -10,6 +11,7 @@ export default function Navbar() {
   const { navigate, route } = useRouter();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const { lang, setLang } = useLang();
 
   const isActive = (p: string) => route.path === p || route.path.startsWith(p + '/');
   const p = theme.primaryColor;
@@ -65,6 +67,15 @@ export default function Navbar() {
               Login
             </button>
           )}
+
+          {/* Language switcher */}
+          <button
+            onClick={()=>setLang(lang==='en'?'th':'en')}
+            style={{ background:'transparent', border:`1.5px solid ${p}30`, cursor:'pointer', padding:'6px 12px', borderRadius:16, fontSize:12, fontWeight:700, color:p, fontFamily:theme.fontFamily }}
+            title={lang==='en'?'Switch to Thai':'Switch to English'}
+          >
+            {lang==='en'?'🇹🇭 TH':'🇬🇧 EN'}
+          </button>
 
           {/* Cart */}
           <button onClick={()=>navigate('/cart')} style={{ background:p, border:'none', cursor:'pointer', padding:'8px 16px', borderRadius:22, display:'flex', alignItems:'center', gap:6, fontSize:14, fontWeight:700, color:'white', fontFamily:theme.fontFamily, boxShadow:`0 4px 12px ${p}44` }}>

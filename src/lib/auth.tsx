@@ -20,6 +20,8 @@ interface AuthCtx {
   register: (name: string, email: string, password: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+  updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthCtx>({
@@ -28,6 +30,8 @@ const AuthContext = createContext<AuthCtx>({
   register: async () => ({ success: false }),
   logout: async () => {},
   refreshUser: async () => {},
+  resetPassword: async () => ({ success: false }),
+  updatePassword: async () => ({ success: false }),
 });
 
 const TOKEN_KEY = 'fluffy_token';
@@ -143,8 +147,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      const redirectTo = `${window.location.origin}/#/reset-password`;
+      const r = await fetch('/api/auth?action=reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, redirectTo }),
+      });
+      const d = await r.json();
+      if (r.ok) return { success: true };
+      return { success: false, error: d.error || 'Failed to send reset email.' };
+    } catch { return { success: false, error: 'Connection error.' }; }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const t = sessionStorage.getItem(TOKEN_KEY);
+      const r = await fetch('/api/auth?action=update-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      const d = await r.json();
+      if (r.ok) return { success: true };
+      return { success: false, error: d.error || 'Failed to update password.' };
+    } catch { return { success: false, error: 'Connection error.' }; }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, token, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, token, login, register, logout, refreshUser, resetPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );
