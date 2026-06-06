@@ -657,11 +657,16 @@ function TF({label,val,set}:{label:string,val:string,set:(v:string)=>void}) {
 // ── Theme & CMS ─────────────────────────────────────────────────────────────
 function ThemeTab() {
   const { theme, saveTheme } = useTheme();
-  const [draft, setDraft] = useState<ThemeConfig>({...theme});
+  // Initialize draft ONCE from theme — do NOT reinitialize on every render
+  const [draft, setDraft] = useState<ThemeConfig>(() => ({...theme}));
   const [section, setSection] = useState('brand');
   const [saved, setSaved] = useState('');
-  const upd = (k:keyof ThemeConfig,v:any) => setDraft(p=>({...p,[k]:v}));
-  const save = async () => { await saveTheme(draft); setSaved('✓ Saved!'); setTimeout(()=>setSaved(''),3000); };
+  // Memoize upd so it never changes reference
+  const upd = useCallback((k:keyof ThemeConfig, v:any) => setDraft(p=>({...p,[k]:v})), []);
+  const save = useCallback(async () => {
+    setDraft(d => { saveTheme(d); return d; });
+    setSaved('✓ Saved!'); setTimeout(()=>setSaved(''),3000);
+  }, [saveTheme]);
 
   const SECTIONS=[['brand','🏷️','Brand & Logo'],['colors','🎨','Colors'],['hero','⭐','Hero Section'],['banner','📢','Banner'],['pages','📐','Page Sections'],['background','🖼️','Background'],['footer','🦶','Footer CMS']] as const;
   const PRESETS=[
@@ -762,8 +767,28 @@ function ThemeTab() {
           <p style={{fontSize:13,color:'#6b7280',marginBottom:20}}>Upload a site-wide background image</p>
           <ImageCropEditor title="Background Image" hint="Large image. Set focal point for responsive display." value={draft.bgImageCrop} aspectRatio={16/9} onChange={v=>upd('bgImageCrop',v)} />
         </>)}
-        {section==='footer'&&<FooterCMSEditor footer={draft.footer} onChange={v=>upd('footer',v)} />}
+        {section==='footer'&&<FooterCMSEditor footer={draft.footer} onFooterChange={upd} />}
       </div>
+    </div>
+  );
+}
+
+// ── Footer text field — defined OUTSIDE to prevent focus loss on re-renders ──
+function FooterTextField({ label, value, onChange, onBlur, placeholder }: {
+  label: string; value: string; onChange: (v: string) => void;
+  onBlur?: () => void; placeholder?: string;
+}) {
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 5 }}>{label}</label>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onBlur={onBlur}
+        placeholder={placeholder}
+        style={{ width: '100%', padding: '9px 13px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' as const }}
+        onFocus={e => e.target.style.borderColor = P}
+      />
     </div>
   );
 }
@@ -771,32 +796,45 @@ function ThemeTab() {
 // ── Footer CMS Editor ────────────────────────────────────────────────────────
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-function FooterCMSEditor({ footer, onChange }: { footer: FooterConfig; onChange: (f: FooterConfig) => void }) {
-  const upd = (key: keyof FooterConfig, val: any) => onChange({ ...footer, [key]: val });
-  const [editingCol, setEditingCol] = useState<string | null>(null);
+function FooterCMSEditor({ footer, onFooterChange }: { footer: FooterConfig; onFooterChange: (k: any, v: any) => void }) {
+  // Local state for text fields — prevents focus loss from prop re-renders
+  const [description, setDescription] = useState(footer.description || '');
+  const [copyright, setCopyright]     = useState(footer.copyright || '');
+  const [trustBadges, setTrustBadges] = useState(footer.trustBadges || '');
+  const [editingCol, setEditingCol]   = useState<string | null>(null);
   const [editingLink, setEditingLink] = useState<{ colId: string; linkId: string } | null>(null);
+
+  // Flush local text to parent (only on blur)
+  const flushText = useCallback(() => {
+    onFooterChange('footer', { ...footer, description, copyright, trustBadges });
+  }, [footer, description, copyright, trustBadges, onFooterChange]);
+
+  // Column/link operations (non-text, no focus issue)
+  const updCol = useCallback((updates: Partial<FooterConfig>) => {
+    onFooterChange('footer', { ...footer, description, copyright, trustBadges, ...updates });
+  }, [footer, description, copyright, trustBadges, onFooterChange]);
 
   const addColumn = () => {
     const col: FooterColumn = { id: uid(), title: 'New Column', links: [] };
-    upd('columns', [...footer.columns, col]);
+    updCol({ columns: [...footer.columns, col] });
     setEditingCol(col.id);
   };
 
-  const updateColumn = (colId: string, updates: Partial<FooterColumn>) => {
-    upd('columns', footer.columns.map(c => c.id === colId ? { ...c, ...updates } : c));
-  };
+  const updateColumn = useCallback((colId: string, updates: Partial<FooterColumn>) => {
+    updCol({ columns: footer.columns.map(c => c.id === colId ? { ...c, ...updates } : c) });
+  }, [footer.columns, updCol]);
 
-  const deleteColumn = (colId: string) => {
+  const deleteColumn = useCallback((colId: string) => {
     if (!confirm('Delete this column?')) return;
-    upd('columns', footer.columns.filter(c => c.id !== colId));
+    updCol({ columns: footer.columns.filter(c => c.id !== colId) });
     if (editingCol === colId) setEditingCol(null);
-  };
+  }, [footer.columns, editingCol, updCol]);
 
-  const addLink = (colId: string) => {
+  const addLink = useCallback((colId: string) => {
     const link: FooterLink = { id: uid(), label: 'New Link', url: '/', newTab: false, enabled: true };
     updateColumn(colId, { links: [...(footer.columns.find(c => c.id === colId)?.links || []), link] });
     setEditingLink({ colId, linkId: link.id });
-  };
+  }, [footer.columns, updateColumn]);
 
   const updateLink = (colId: string, linkId: string, updates: Partial<FooterLink>) => {
     updateColumn(colId, {
@@ -811,14 +849,14 @@ function FooterCMSEditor({ footer, onChange }: { footer: FooterConfig; onChange:
     if (editingLink?.linkId === linkId) setEditingLink(null);
   };
 
-  const moveColumn = (colId: string, dir: number) => {
+  const moveColumn = useCallback((colId: string, dir: number) => {
     const cols = [...footer.columns];
     const i = cols.findIndex(c => c.id === colId);
     const j = i + dir;
     if (j < 0 || j >= cols.length) return;
     [cols[i], cols[j]] = [cols[j], cols[i]];
-    upd('columns', cols);
-  };
+    updCol({ columns: cols });
+  }, [footer.columns, updCol]);
 
   const moveLink = (colId: string, linkId: string, dir: number) => {
     const col = footer.columns.find(c => c.id === colId);
@@ -831,26 +869,19 @@ function FooterCMSEditor({ footer, onChange }: { footer: FooterConfig; onChange:
     updateColumn(colId, { links });
   };
 
-  const inp = (label: string, val: string, set: (v: string) => void, placeholder = '') => (
-    <div style={{ marginBottom: 12 }}>
-      <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 5 }}>{label}</label>
-      <input value={val} onChange={e => set(e.target.value)} placeholder={placeholder}
-        style={{ width: '100%', padding: '9px 13px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' as const }}
-        onFocus={e => e.target.style.borderColor = P} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
-    </div>
-  );
+  // Field inputs use FooterTextField component (defined outside) to prevent focus loss
 
   return (
     <div>
       <h2 style={{ fontSize: 20, fontWeight: 900, color: '#111827', marginBottom: 4 }}>Footer CMS</h2>
       <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>Edit footer content and links</p>
 
-      {/* Global settings */}
+      {/* Global settings — local state to prevent focus loss */}
       <div style={{ ...card, padding: 20, marginBottom: 20 }}>
         <h3 style={{ fontSize: 15, fontWeight: 800, color: '#111827', margin: '0 0 14px' }}>Global Settings</h3>
-        {inp('Description', footer.description, v => upd('description', v), 'Store description...')}
-        {inp('Copyright Text', footer.copyright, v => upd('copyright', v), '© 2026 Fluffy Pub. Made with 💕')}
-        {inp('Trust Badges', footer.trustBadges, v => upd('trustBadges', v), '🔒 Secure · ⚡ Downloads · 💯 Guaranteed')}
+        <FooterTextField label="Description" value={description} onChange={setDescription} onBlur={flushText} placeholder="Store description..." />
+        <FooterTextField label="Copyright Text" value={copyright} onChange={setCopyright} onBlur={flushText} placeholder="© 2026 Fluffy Pub. Made with 💕" />
+        <FooterTextField label="Trust Badges" value={trustBadges} onChange={setTrustBadges} onBlur={flushText} placeholder="🔒 Secure · ⚡ Downloads · 💯 Guaranteed" />
       </div>
 
       {/* Columns */}
