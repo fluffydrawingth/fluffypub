@@ -3,6 +3,7 @@ import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
+import { useLang } from '../lib/lang';
 
 type Tab = 'orders' | 'favorites' | 'profile';
 
@@ -11,6 +12,7 @@ export default function AccountPage() {
   const { route, navigate } = useRouter();
   const { user, logout, refreshUser } = useAuth();
   const [tab, setTab] = useState<Tab>((route.params?.tab as Tab) || 'orders');
+  const { t, tRaw, lang } = useLang();
   const p = theme.primaryColor;
 
   if (!user) {
@@ -18,7 +20,7 @@ export default function AccountPage() {
     return null;
   }
 
-  const tabs = [['orders','📦','Orders'],['favorites','❤️','Favorites'],['profile','👤','Profile']] as const;
+  const tabs: [string,string,string][] = [['orders','📦',tRaw('คำสั่งซื้อ','Orders')],['favorites','❤️',tRaw('รายการโปรด','Favorites')],['profile','👤',tRaw('โปรไฟล์','Profile')]];
 
   return (
     <div style={{ minHeight:'100vh', background:'#f8fafc', fontFamily:theme.fontFamily }}>
@@ -151,13 +153,14 @@ function FavoritesTab({p,theme,navigate}:any) {
 }
 
 function ProfileTab({user,p,theme,refreshUser}:any) {
+  const { tRaw } = useLang();
   const [firstName, setFirstName]       = useState(user.first_name || '');
   const [lastName, setLastName]         = useState(user.last_name || '');
   const [deliveryEmail, setDeliveryEmail] = useState(user.delivery_email || user.email || '');
   const [phone, setPhone]               = useState(user.phone || '');
   const [addr, setAddr]                 = useState(user.shipping_address?.address || '');
-  const [city, setCity]                 = useState(user.shipping_address?.city || '');
-  const [zip, setZip]                   = useState(user.shipping_address?.zip || '');
+  const [province, setProvince]         = useState(user.shipping_address?.province || '');
+  const [postalCode, setPostalCode]     = useState(user.shipping_address?.postal_code || user.shipping_address?.zip || '');
   const [country, setCountry]           = useState(user.shipping_address?.country || 'Thailand');
   const [saving, setSaving]             = useState(false);
   const [msg, setMsg]                   = useState('');
@@ -171,7 +174,7 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
       last_name: lastName,
       delivery_email: deliveryEmail,
       phone,
-      shipping_address: { address: addr, city, zip, country },
+      shipping_address: { address: addr, province, postal_code: postalCode, country },
     });
     await refreshUser();
     setSaving(false); setMsg('✓ Profile updated!');
@@ -202,12 +205,12 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
       {inp('Phone Number', phone, setPhone, 'tel')}
 
       <h4 style={{fontSize:14,fontWeight:800,color:'#374151',margin:'18px 0 12px'}}>📦 Shipping Address</h4>
-      {inp('Street Address', addr, setAddr)}
+      {inp(tRaw('บ้านเลขที่/ถนน','Street Address'), addr, setAddr)}
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-        <div>{inp('City', city, setCity)}</div>
-        <div>{inp('ZIP / Postal', zip, setZip)}</div>
+        <div>{inp(tRaw('จังหวัด','Province'), province, setProvince)}</div>
+        <div>{inp(tRaw('รหัสไปรษณีย์','Postal Code'), postalCode, setPostalCode)}</div>
       </div>
-      {inp('Country', country, setCountry)}
+      {inp(tRaw('ประเทศ','Country'), country, setCountry)}
 
       {msg && <div style={{background:'#d1fae5',border:'1.5px solid #6ee7b7',borderRadius:11,padding:'9px 13px',marginBottom:16,fontSize:13,color:'#065f46',fontWeight:600}}>{msg}</div>}
       <button onClick={save} disabled={saving} style={{background:saving?p+'88':p,color:'white',border:'none',cursor:saving?'wait':'pointer',padding:'12px 28px',borderRadius:14,fontSize:14,fontWeight:800,fontFamily:theme.fontFamily}}>

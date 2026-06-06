@@ -4,83 +4,67 @@ import { useCart } from '../lib/cart';
 import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
 
-interface ProductCardProps {
-  product: any;
-}
-
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product }: { product: any }) {
   const { theme } = useTheme();
   const { add, items } = useCart();
   const { navigate } = useRouter();
-  const { lang, price: fmtPrice } = useLang();
-  const inCart = items.some(i => i.id === product.id);
+  const { lang, price: fmtPrice, t } = useLang();
+
+  const inCart = items.some(i => {
+    const cartKey = i.id + ((i as any).variant?.id || '');
+    return cartKey === product.id;
+  });
   const artistDisplay = product.artistName || product.artist_name || product.artist || '';
   const isNew = product.isNew || product.is_new;
   const originalPrice = product.originalPrice || product.original_price;
-  const coverImg = product.cover_image_url;
   const p = theme.primaryColor;
+  const title = (lang === 'th' && product.title_th) ? product.title_th : product.title;
 
   return (
     <div
-      style={{
-        background:'white', borderRadius:20, overflow:'hidden',
-        boxShadow:'0 4px 20px rgba(0,0,0,0.06)', border:`1.5px solid ${p}18`,
-        transition:'all 0.25s', cursor:'pointer', fontFamily:theme.fontFamily,
-      }}
-      onMouseEnter={e => { e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow=`0 12px 32px ${p}25`; }}
-      onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 20px rgba(0,0,0,0.06)'; }}
+      style={{ background:'white', borderRadius:16, overflow:'hidden', boxShadow:'0 2px 12px rgba(0,0,0,0.07)', border:`1.5px solid ${p}15`, transition:'all 0.2s', cursor:'pointer', fontFamily:theme.fontFamily }}
+      onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.boxShadow=`0 8px 24px ${p}20`;}}
+      onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 2px 12px rgba(0,0,0,0.07)';}}
     >
-      {/* Product Image */}
+      {/* Square image 1:1 */}
       <div
-        onClick={() => navigate(`/products/${product.slug}`)}
-        style={{
-          height:180, background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`,
-          display:'flex', alignItems:'center', justifyContent:'center',
-          fontSize:72, position:'relative', overflow:'hidden',
-        }}
+        onClick={()=>navigate(`/products/${product.slug}`)}
+        style={{ position:'relative', width:'100%', paddingBottom:'100%', background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, overflow:'hidden' }}
       >
-        {coverImg
-          ? <img src={coverImg} alt={product.title} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-          : <span>{product.image}</span>
-        }
-        {product.bestseller && (
-          <span style={{ position:'absolute', top:12, left:12, background:theme.accentColor||'#fb923c', color:'white', borderRadius:20, padding:'4px 10px', fontSize:11, fontWeight:700, zIndex:1 }}>⭐ Bestseller</span>
-        )}
-        {isNew && (
-          <span style={{ position:'absolute', top:12, right:12, background:theme.secondaryColor||'#c084fc', color:'white', borderRadius:20, padding:'4px 10px', fontSize:11, fontWeight:700, zIndex:1 }}>✨ New</span>
-        )}
+        <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:60 }}>
+          {product.cover_image_url
+            ? <img src={product.cover_image_url} alt={title} style={{ width:'100%', height:'100%', objectFit:'cover', position:'absolute', inset:0 }} />
+            : <span>{product.image}</span>
+          }
+        </div>
+        {product.bestseller && <span style={{ position:'absolute', top:8, left:8, background:theme.accentColor||'#fb923c', color:'white', borderRadius:12, padding:'3px 8px', fontSize:10, fontWeight:700, zIndex:1 }}>⭐ Bestseller</span>}
+        {isNew && <span style={{ position:'absolute', top:8, right:8, background:theme.secondaryColor||'#c084fc', color:'white', borderRadius:12, padding:'3px 8px', fontSize:10, fontWeight:700, zIndex:1 }}>✨ New</span>}
       </div>
 
-      <div style={{ padding:'16px 18px 18px' }}>
-        <div style={{ fontSize:12, color:p, fontWeight:700, marginBottom:4 }}>
-          {artistDisplay} · {product.category}
+      <div style={{ padding:'12px 14px 14px' }}>
+        <div style={{ fontSize:11, color:p, fontWeight:700, marginBottom:3 }}>
+          {artistDisplay}{artistDisplay && product.category ? ' · ' : ''}{product.category}
         </div>
-        <div
-          onClick={() => navigate(`/products/${product.slug}`)}
-          style={{ fontSize:16, fontWeight:800, color:theme.textColor, marginBottom:8, lineHeight:1.3 }}
-        >
-          {lang==='th' && (product as any).title_th ? (product as any).title_th : product.title}
+        <div onClick={()=>navigate(`/products/${product.slug}`)} style={{ fontSize:14, fontWeight:800, color:theme.textColor, marginBottom:6, lineHeight:1.3, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' as any }}>
+          {title}
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:12 }}>
-          <span style={{ color:'#f59e0b', fontSize:13 }}>{'★'.repeat(Math.min(5, Math.round(product.rating||0)))}</span>
-          <span style={{ fontSize:12, color:'#888' }}>({product.reviews||0})</span>
-          <span style={{ fontSize:12, color:'#aaa', marginLeft:'auto' }}>{product.pages||0} pages</span>
+        <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:8 }}>
+          <span style={{ color:'#f59e0b', fontSize:11 }}>{'★'.repeat(Math.min(5,Math.round(product.rating||0)))}</span>
+          <span style={{ fontSize:10, color:'#888' }}>({product.reviews||0})</span>
+          {product.pages > 0 && <span style={{ fontSize:10, color:'#aaa', marginLeft:'auto' }}>{product.pages} {t('pages','pages')}</span>}
         </div>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:6 }}>
           <div>
-            <span style={{ fontSize:20, fontWeight:800, color:theme.textColor }}>{fmtPrice((product as any).price_thb, (product as any).price_usd, product.price)}</span>
-            {originalPrice && <span style={{ fontSize:13, color:'#aaa', textDecoration:'line-through', marginLeft:8 }}>{fmtPrice(null, null, originalPrice)}</span>}
+            <span style={{ fontSize:16, fontWeight:900, color:theme.textColor }}>
+              {fmtPrice(product.price_thb, product.price_usd, product.price)}
+            </span>
+            {originalPrice && <span style={{ fontSize:11, color:'#aaa', textDecoration:'line-through', marginLeft:6 }}>{fmtPrice(null, null, originalPrice)}</span>}
           </div>
           <button
-            onClick={() => add({ id:product.id, title:product.title, price:product.price, image:product.image, artist:artistDisplay, slug:product.slug })}
-            style={{
-              background:inCart?'#e5e7eb':p, color:inCart?'#888':'white',
-              border:'none', cursor:inCart?'default':'pointer',
-              padding:'8px 16px', borderRadius:16, fontSize:13, fontWeight:700,
-              fontFamily:theme.fontFamily, transition:'all 0.2s',
-            }}
+            onClick={()=>add({ id:product.id, title, price:product.price, image:product.image, artist:artistDisplay, slug:product.slug, type:product.type } as any)}
+            style={{ background:inCart?'#e5e7eb':p, color:inCart?'#888':'white', border:'none', cursor:inCart?'default':'pointer', padding:'6px 12px', borderRadius:12, fontSize:11, fontWeight:700, fontFamily:theme.fontFamily, flexShrink:0 }}
           >
-            {inCart ? '✓ Added' : '+ Cart'}
+            {inCart ? '✓' : '+'}
           </button>
         </div>
       </div>

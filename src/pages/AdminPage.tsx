@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ImageUpload from '../components/ImageUpload';
 import RichDescEditor, { Block } from '../components/RichDescEditor';
 import { FooterConfig, FooterColumn, FooterLink } from '../lib/theme';
+import { DEFAULT_TRANSLATIONS } from '../lib/lang';
 import { useTheme, ThemeConfig } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
@@ -48,6 +49,7 @@ export default function AdminPage() {
           <NavItem icon="📦" label="Orders"    active={tab==='orders'}    onClick={()=>setTab('orders')} />
           <NavItem icon="🎨" label="Artists"   active={tab==='artists'}   onClick={()=>setTab('artists')} />
           <NavItem icon="✨" label="Theme & CMS" active={tab==='theme'}   onClick={()=>setTab('theme')} />
+          <NavItem icon="🌐" label="Language CMS" active={tab==='lang'}    onClick={()=>setTab('lang')} />
         </nav>
         <div style={{ padding:'16px 12px', borderTop:'1px solid #f3f4f6' }}>
           <button onClick={()=>navigate('/')} style={{ width:'100%', padding:'9px', borderRadius:10, border:'1px solid #e5e7eb', color:'#6b7280', cursor:'pointer', background:'transparent', fontSize:13, fontWeight:600, marginBottom:8, fontFamily:'inherit' }}>← View Store</button>
@@ -60,6 +62,7 @@ export default function AdminPage() {
         {tab==='orders'    && <OrdersTab />}
         {tab==='artists'   && <ArtistsTab />}
         {tab==='theme'     && <ThemeTab />}
+        {tab==='lang'      && <LanguageCMSTab />}
       </div>
     </div>
   );
@@ -160,7 +163,9 @@ function ProductsTab() {
   const [priceUSD, setPriceUSD] = useState('');
   const [descTh, setDescTh] = useState('');
 
-  const CATEGORIES = ['Animals','Fantasy','Botanicals','Mandala','Kawaii','Seasonal'];
+  const [categories, setCategories] = useState<string[]>(['Animals','Fantasy','Botanicals','Mandala','Kawaii','Seasonal']);
+  const [newCat, setNewCat] = useState('');
+  const [showCatMgr, setShowCatMgr] = useState(false);
 
   const load = useCallback(() => {
     fetch('/api/products',{headers:{Authorization:`Bearer ${sessionStorage.getItem('fluffy_token')}`}})
@@ -260,15 +265,15 @@ function ProductsTab() {
             <div style={{gridColumn:'1/-1'}}>{inp('Title (EN) *', title, setTitle, 'Product title in English')}</div>
             {inp('Title (TH)', titleTh, setTitleTh, 'ชื่อสินค้าภาษาไทย')}
             {inp('Title (EN fallback)', titleEn, setTitleEn, 'English title fallback')}
-            {inp('Price (USD) *', price, setPrice, '9.99', 'number')}
-            {inp('Original Price (USD)', originalPrice, setOriginalPrice, '12.99', 'number')}
-            {inp('Price THB ฿', priceTHB, setPriceTHB, '350', 'number')}
-            {inp('Price USD $', priceUSD, setPriceUSD, '9.99', 'number')}
+            {inp('Selling Price THB ฿ *', priceTHB, setPriceTHB, '350', 'number')}
+            {inp('Selling Price USD $', priceUSD, setPriceUSD, '9.99', 'number')}
+            {inp('Compare Price THB ฿', originalPrice, setOriginalPrice, '490', 'number')}
+            {inp('Compare Price USD $', price, setPrice, '14.99', 'number')}
             <div>
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Category *</label>
               <select value={category} onChange={e=>setCategory(e.target.value)} style={{width:'100%',padding:'9px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit'}}>
                 <option value="">Select category...</option>
-                {CATEGORIES.map(c=><option key={c} value={c}>{c}</option>)}
+                {categories.map(cat=><option key={cat} value={cat}>{cat}</option>)}
               </select>
             </div>
             <div>
@@ -1068,6 +1073,62 @@ function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v:
           <button onClick={() => del(v.id)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #fca5a5', background: '#fef2f2', cursor: 'pointer', fontSize: 11, color: '#ef4444' }}>✕</button>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ── Language CMS ──────────────────────────────────────────────────────────────
+function LanguageCMSTab() {
+  const [entries, setEntries] = React.useState<Record<string, {th:string;en:string}>>(() => {
+    try {
+      const stored = localStorage.getItem('fluffy_translations');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return { ...DEFAULT_TRANSLATIONS };
+  });
+  const [saved, setSaved] = React.useState('');
+
+  const save = () => {
+    localStorage.setItem('fluffy_translations', JSON.stringify(entries));
+    setSaved('✓ Saved!');
+    setTimeout(() => setSaved(''), 2000);
+  };
+
+  const upd = (key: string, lang: 'th'|'en', val: string) => {
+    setEntries(e => ({ ...e, [key]: { ...e[key], [lang]: val } }));
+  };
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+        <div>
+          <h2 style={{ fontSize:20, fontWeight:900, color:'#111827', margin:0 }}>🌐 Language CMS</h2>
+          <p style={{ fontSize:13, color:'#6b7280', margin:'4px 0 0' }}>Edit all UI text for Thai and English</p>
+        </div>
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          {saved && <span style={{ fontSize:13, color:'#10b981', fontWeight:700 }}>{saved}</span>}
+          <button onClick={save} style={{ background:P, color:'white', border:'none', cursor:'pointer', padding:'10px 20px', borderRadius:20, fontSize:14, fontWeight:700, fontFamily:'inherit' }}>Save Changes</button>
+        </div>
+      </div>
+
+      <div style={{ ...card, padding:16 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'140px 1fr 1fr', gap:8, marginBottom:8, padding:'0 8px' }}>
+          <span style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase' as const }}>Key</span>
+          <span style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase' as const }}>🇹🇭 Thai</span>
+          <span style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase' as const }}>🇬🇧 English</span>
+        </div>
+        {Object.entries(entries).map(([key, val]) => (
+          <div key={key} style={{ display:'grid', gridTemplateColumns:'140px 1fr 1fr', gap:8, marginBottom:6, alignItems:'center' }}>
+            <span style={{ fontSize:11, color:'#6b7280', fontFamily:'monospace', background:'#f3f4f6', padding:'6px 8px', borderRadius:6 }}>{key}</span>
+            <input value={val?.th || ''} onChange={e => upd(key, 'th', e.target.value)}
+              style={{ padding:'7px 10px', borderRadius:8, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none', fontFamily:'inherit' }}
+              onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+            <input value={val?.en || ''} onChange={e => upd(key, 'en', e.target.value)}
+              style={{ padding:'7px 10px', borderRadius:8, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none', fontFamily:'inherit' }}
+              onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

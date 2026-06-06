@@ -2,6 +2,7 @@ import React from 'react';
 import { useTheme } from '../lib/theme';
 import { useCart } from '../lib/cart';
 import { useRouter } from '../lib/router';
+import { useLang } from '../lib/lang';
 
 export default function CartPage() {
   const { theme } = useTheme();
