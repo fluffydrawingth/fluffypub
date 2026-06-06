@@ -4,11 +4,13 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const anonKey = process.env.SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !serviceKey) {
-  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-}
-
+// Service role client for DB operations
 const supabase = createClient(supabaseUrl, serviceKey, {
+  auth: { autoRefreshToken: false, persistSession: false }
+});
+
+// Anon client for validating user tokens
+const supabaseAnon = createClient(supabaseUrl, anonKey || serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
 
@@ -21,8 +23,11 @@ async function getUser(req) {
   const token = getToken(req);
   if (!token) return null;
   try {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    // Use anon client to validate the user's JWT token
+    const { data: { user }, error } = await supabaseAnon.auth.getUser(token);
     if (error || !user) return null;
+    
+    // Use service role client to get profile (bypasses RLS)
     const { data: profile } = await supabase
       .from('profiles')
       .select('id, email, name, role, bio, artist_slug, favorites')
