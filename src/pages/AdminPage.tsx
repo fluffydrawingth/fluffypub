@@ -153,6 +153,7 @@ function ProductsTab() {
   const [isDigital, setIsDigital] = useState(true);
   const [isPhysical, setIsPhysical] = useState(false);
   const [richBlocks, setRichBlocks] = useState<Block[]>([]);
+  const [variants, setVariants] = useState<any[]>([]);
 
   const CATEGORIES = ['Animals','Fantasy','Botanicals','Mandala','Kawaii','Seasonal'];
 
@@ -184,6 +185,7 @@ function ProductsTab() {
     setIsDigital(pr.is_digital !== false);
     setIsPhysical(!!pr.is_physical);
     setRichBlocks(Array.isArray(pr.rich_description) ? pr.rich_description : []);
+    setVariants(Array.isArray(pr.variants) ? pr.variants : []);
     setEditingId(pr.id);
     setShowForm(true);
   };
@@ -203,7 +205,8 @@ function ProductsTab() {
       physical_stock:isPhysical?(parseInt(physicalStock)||0):0,
       shipping_required:isPhysical?shippingRequired:false,
       shipping_note:isPhysical?shippingNote:'',
-      artist_id:artistId||undefined };
+      artist_id:artistId||undefined,
+      variants:variants };
     if (originalPrice) body.original_price = parseFloat(originalPrice);
     const result = editingId ? await api.updateProduct(editingId, body) : await api.createProduct(body);
     if (result.error){setMsg('⚠️ '+result.error);}
@@ -305,6 +308,9 @@ function ProductsTab() {
               <RichDescEditor blocks={richBlocks} onChange={setRichBlocks} />
             </div>
             <div style={{gridColumn:'1/-1'}}>{inp('Tags (comma-separated)', tags, setTags, 'bunnies, garden, spring')}</div>
+            <div style={{gridColumn:'1/-1'}}>
+              <VariantsEditor variants={variants} onChange={setVariants} />
+            </div>
           </div>
           <div style={{display:'flex',gap:10,marginTop:20}}>
             <button onClick={save} disabled={saving} style={{background:saving?P+'88':P,color:'white',border:'none',cursor:'pointer',padding:'11px 28px',borderRadius:20,fontSize:14,fontWeight:700,fontFamily:'inherit'}}>{saving?'Saving...':'Save Product'}</button>
@@ -542,7 +548,14 @@ function ArtistsTab() {
               />
             </div>
             {inp('Artist Slug *', slug, setSlug, 'mochi-arts')}
-            {inp('Email (optional, creates login)', email, setEmail, 'artist@email.com', 'email')}
+            <div>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Email <span style={{color:'#9ca3af',fontWeight:400'}}>(optional)</span></label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="artist@email.com (leave blank to skip)"
+                style={{width:'100%',padding:'9px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'}
+              />
+              <div style={{fontSize:11,color:'#9ca3af',marginTop:3}}>Only fill if you want to create a login account for this artist.</div>
+            </div>
             <div>
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Status</label>
               <select value={artistStatus} onChange={e=>setArtistStatus(e.target.value)} style={{width:'100%',padding:'9px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit'}}>
@@ -631,6 +644,16 @@ function ArtistsTab() {
   );
 }
 
+// ── Theme text field — defined OUTSIDE component to prevent remount ──────────
+function TF({label,val,set}:{label:string,val:string,set:(v:string)=>void}) {
+  return (
+    <div style={{marginBottom:14}}>
+      <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:6}}>{label}</label>
+      <input value={val} onChange={e=>set(e.target.value)} style={{width:'100%',padding:'10px 14px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+    </div>
+  );
+}
+
 // ── Theme & CMS ─────────────────────────────────────────────────────────────
 function ThemeTab() {
   const { theme, saveTheme } = useTheme();
@@ -649,12 +672,7 @@ function ThemeTab() {
     {name:'Lavender',primaryColor:'#a78bfa',secondaryColor:'#f0abfc',accentColor:'#fb7185',bgColor:'#f5f3ff',bgColor2:'#fdf4ff',textColor:'#2e1065'},
   ];
 
-  const TF = ({label,val,set}:{label:string,val:string,set:(v:string)=>void}) => (
-    <div style={{marginBottom:14}}>
-      <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:6}}>{label}</label>
-      <input value={val} onChange={e=>set(e.target.value)} style={{width:'100%',padding:'10px 14px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
-    </div>
-  );
+  // TF defined outside component — see below
 
   return (
     <div style={{padding:32,display:'grid',gridTemplateColumns:'240px 1fr',gap:24}}>
@@ -910,6 +928,76 @@ function FooterCMSEditor({ footer, onChange }: { footer: FooterConfig; onChange:
             ))}
             <button onClick={() => addLink(col.id)} style={{ padding: '6px 14px', borderRadius: 10, border: `1.5px dashed ${P}40`, background: '#fdf2f8', color: P, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'inherit', width: '100%', marginTop: 4 }}>+ Add Link</button>
           </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Variants Editor ───────────────────────────────────────────────────────────
+function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v: any[]) => void }) {
+  const vuid = () => Math.random().toString(36).slice(2, 9);
+
+  const add = () => onChange([...variants, { id: vuid(), name: '', price: '', enabled: true, stock: '' }]);
+  const update = (id: string, key: string, val: any) => onChange(variants.map(v => v.id === id ? { ...v, [key]: val } : v));
+  const del = (id: string) => onChange(variants.filter(v => v.id !== id));
+  const move = (i: number, dir: number) => {
+    const a = [...variants]; const j = i + dir;
+    if (j < 0 || j >= a.length) return;
+    [a[i], a[j]] = [a[j], a[i]]; onChange(a);
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <label style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>
+          Product Variants <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional — e.g. Spiral binding, Digital file)</span>
+        </label>
+        <button onClick={add} style={{ padding: '4px 12px', borderRadius: 8, border: `1.5px solid ${P}`, background: '#fdf2f8', color: P, cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'inherit' }}>+ Add Variant</button>
+      </div>
+
+      {variants.length === 0 && (
+        <div style={{ padding: '12px 16px', background: '#f9fafb', borderRadius: 10, fontSize: 13, color: '#9ca3af', textAlign: 'center' as const }}>
+          No variants — product uses base price. Add variants if you offer multiple options.
+        </div>
+      )}
+
+      {variants.map((v, i) => (
+        <div key={v.id} style={{ display: 'grid', gridTemplateColumns: '1fr 90px 80px auto auto auto auto', gap: 8, alignItems: 'center', background: '#f9fafb', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
+          <input
+            value={v.name}
+            onChange={e => update(v.id, 'name', e.target.value)}
+            placeholder="e.g. สันห่วงปกติ, Digital file..."
+            style={{ padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const }}
+            onFocus={e => e.target.style.borderColor = P}
+            onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+          />
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: 13 }}>$</span>
+            <input
+              type="number"
+              value={v.price}
+              onChange={e => update(v.id, 'price', e.target.value)}
+              placeholder="0.00"
+              style={{ padding: '7px 8px 7px 20px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const }}
+              onFocus={e => e.target.style.borderColor = P}
+              onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+            />
+          </div>
+          <input
+            type="number"
+            value={v.stock}
+            onChange={e => update(v.id, 'stock', e.target.value)}
+            placeholder="Stock"
+            style={{ padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const }}
+          />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontSize: 12, color: '#374151', whiteSpace: 'nowrap' as const }}>
+            <input type="checkbox" checked={v.enabled !== false} onChange={e => update(v.id, 'enabled', e.target.checked)} style={{ accentColor: P }} />
+            On
+          </label>
+          <button onClick={() => move(i, -1)} disabled={i === 0} style={{ padding: '4px 7px', borderRadius: 6, border: '1px solid #e5e7eb', background: 'white', cursor: i === 0 ? 'not-allowed' : 'pointer', opacity: i === 0 ? 0.4 : 1, fontSize: 11 }}>↑</button>
+          <button onClick={() => move(i, 1)} disabled={i === variants.length - 1} style={{ padding: '4px 7px', borderRadius: 6, border: '1px solid #e5e7eb', background: 'white', cursor: i === variants.length - 1 ? 'not-allowed' : 'pointer', opacity: i === variants.length - 1 ? 0.4 : 1, fontSize: 11 }}>↓</button>
+          <button onClick={() => del(v.id)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #fca5a5', background: '#fef2f2', cursor: 'pointer', fontSize: 11, color: '#ef4444' }}>✕</button>
         </div>
       ))}
     </div>
