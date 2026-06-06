@@ -67,9 +67,12 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
           <div style={{
             background: `linear-gradient(135deg, ${theme.bgColor}, ${theme.bgColor2})`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            minHeight: 400, fontSize: 120, position: 'relative', padding: 40,
+            minHeight: 400, fontSize: 120, position: 'relative', padding: product.cover_image_url ? 0 : 40, overflow: 'hidden',
           }}>
-            {product.image}
+            {product.cover_image_url
+              ? <img src={product.cover_image_url} alt={product.title} style={{ width:'100%', height:'100%', objectFit:'cover', minHeight:400 }} />
+              : <span>{product.image}</span>
+            }
             {discount && (
               <div style={{
                 position: 'absolute', top: 24, right: 24,

@@ -3,7 +3,7 @@ const h = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${
 
 function normalize(p: any) {
   if (!p) return p;
-  return { ...p, artistName: p.artist_name || p.artistName || '', artistSlug: p.artist_slug || p.artistSlug || '', originalPrice: p.original_price ?? p.originalPrice, isNew: p.is_new ?? p.isNew };
+  return { ...p, artistName: p.artist_name || p.artistName || '', artistSlug: p.artist_slug || p.artistSlug || '', originalPrice: p.original_price ?? p.originalPrice, isNew: p.is_new ?? p.isNew, cover_image_url: p.cover_image_url || null };
 }
 function normalizeOrder(o: any) {
   if (!o) return o;
