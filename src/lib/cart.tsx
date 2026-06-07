@@ -57,11 +57,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return s + Number(p || 0);
   }, 0);
 
-  // THB total — use price_thb if set, else price * 35
+  // THB total — use price_thb ONLY, never multiply USD*35
   const totalTHB = items.reduce((s, i) => {
     const varTHB = i.variant?.price_thb;
-    const p = varTHB ?? i.price_thb ?? (i.price * 35);
-    return s + Math.round(Number(p || 0));
+    // Only use explicit price_thb fields — if missing, show 0 (product wasn't set up with THB)
+    const p = (varTHB != null && varTHB > 0) ? varTHB : (i.price_thb != null && i.price_thb > 0 ? i.price_thb : 0);
+    return s + Math.round(Number(p));
   }, 0);
 
   const count = items.length;

@@ -47,12 +47,31 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const isPhysical = product.is_physical===true||(product.is_physical==null&&(product.type==='physical'||product.type==='both'));
   const variants = (product.variants||[]).filter((v:any)=>v.enabled!==false);
   const hasVariants = variants.length>0;
-  const basePrice = selectedVariant ? (Number(selectedVariant.price_thb||selectedVariant.price||0)) : product.price;
-  const baseUSD = selectedVariant ? (Number(selectedVariant.price_usd||selectedVariant.price||0)) : product.price;
-  const displayPrice = fmtPrice(selectedVariant ? selectedVariant.price_thb : product.price_thb, selectedVariant ? selectedVariant.price_usd : product.price_usd, basePrice);
-  const originalPrice = product.original_price||product.originalPrice;
-  const cartKey = product.id+(selectedVariant?.id||'');
-  const inCart = items.some(i=>(i.id+(( i as any).variant?.id||''))===cartKey);
+  // Separate THB and USD — never mix
+  const thbPrice = selectedVariant
+    ? Number(selectedVariant.price_thb || 0)
+    : Number(product.price_thb || 0);
+  const usdPrice = selectedVariant
+    ? Number(selectedVariant.price_usd || selectedVariant.price || 0)
+    : Number(product.price_usd || product.price || 0);
+
+  // basePrice for cart — always USD (or raw price)
+  const baseUSD = usdPrice || Number(product.price || 0);
+  // Legacy field used in a few places
+  const basePrice = baseUSD;
+
+  // Display price: show THB in TH mode, USD in EN mode — no conversion
+  const displayPrice = lang === 'th'
+    ? (thbPrice > 0 ? `฿${thbPrice.toLocaleString('th-TH')}` : '—')
+    : (usdPrice > 0 ? `$${usdPrice.toFixed(2)}` : '—');
+  const originalPriceTHB = Number(product.compare_price_thb || product.original_price_thb || 0);
+  const originalPriceUSD = Number(product.compare_price_usd || product.original_price || 0);
+  const originalPrice = lang === 'th' ? originalPriceTHB : originalPriceUSD;
+  const displayOriginalPrice = lang === 'th'
+    ? (originalPriceTHB > 0 ? `฿${originalPriceTHB.toLocaleString('th-TH')}` : null)
+    : (originalPriceUSD > 0 ? `$${originalPriceUSD.toFixed(2)}` : null);
+  const cartKey = product.id + (selectedVariant?.id || '');
+  const inCart = items.some(i => (i.id + ((i as any).variant?.id || '')) === cartKey);
   const title = (lang==='th'&&product.title_th)?product.title_th:product.title;
   const description = (lang==='th'&&product.description_th)?product.description_th:product.description;
 
@@ -62,9 +81,9 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     add({
       id: product.id,
       title,
-      price: baseUSD || basePrice,
-      price_thb: selectedVariant ? (selectedVariant.price_thb || Math.round((selectedVariant.price_usd || selectedVariant.price || 0) * 35)) : (product.price_thb || Math.round(product.price * 35)),
-      price_usd: selectedVariant ? (selectedVariant.price_usd || selectedVariant.price) : (product.price_usd || product.price),
+      price: baseUSD,           // USD (legacy total field)
+      price_thb: thbPrice || 0, // exact THB — never computed from USD
+      price_usd: usdPrice || 0, // exact USD
       image: product.image,
       artist: product.artistName || product.artist_name || product.artist || '',
       slug: product.slug,
@@ -72,9 +91,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       variant: selectedVariant ? {
         id: selectedVariant.id,
         name: selectedVariant.name,
-        price_thb: selectedVariant.price_thb || Math.round((selectedVariant.price_usd || selectedVariant.price || 0) * 35),
-        price_usd: selectedVariant.price_usd || selectedVariant.price,
-        price: selectedVariant.price,
+        price_thb: Number(selectedVariant.price_thb || 0),
+        price_usd: Number(selectedVariant.price_usd || selectedVariant.price || 0),
       } : undefined,
     } as any);
   };
@@ -124,9 +142,9 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               ? <img src={product.cover_image_url} alt={title} style={{width:'100%',height:'100%',objectFit:'cover',display:'block',position:'absolute',inset:0}} />
               : <span className="pd-img-emoji" style={{fontSize:100}}>{product.image}</span>
             }
-            {originalPrice&&originalPrice>basePrice&&(
+            {discountPct && discountPct > 0 && (
               <div style={{position:'absolute',top:12,right:12,background:theme.accentColor,color:'white',borderRadius:'50%',width:48,height:48,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:800}}>
-                -{Math.round((1-basePrice/originalPrice)*100)}%
+                -{discountPct}%
               </div>
             )}
           </div>
@@ -151,7 +169,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
             <div style={{display:'flex',alignItems:'baseline',gap:10,marginBottom:16}}>
               <span className="pd-price" style={{fontWeight:900,color:theme.textColor}}>{displayPrice}</span>
-              {originalPrice&&originalPrice>basePrice&&<span style={{fontSize:15,color:'#aaa',textDecoration:'line-through'}}>{fmtPrice(null,null,originalPrice)}</span>}
+              {displayOriginalPrice && <span style={{fontSize:15,color:'#aaa',textDecoration:'line-through'}}>{displayOriginalPrice}</span>}
             </div>
 
             {description&&<p style={{color:theme.textColor+'cc',fontSize:14,lineHeight:1.7,marginBottom:16}}>{description}</p>}
@@ -171,7 +189,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                 >
                   <option value="">{tRaw('-- เลือกรูปแบบ --','-- Select option --')}</option>
                   {variants.map((v:any)=>(
-                    <option key={v.id} value={v.id}>{v.name} — {fmtPrice(v.price_thb||null,v.price_usd||null,v.price_thb||v.price_usd||v.price)}</option>
+                    <option key={v.id} value={v.id}>{v.name} — {lang==='th' ? `฿${Number(v.price_thb||0).toLocaleString('th-TH')}` : `$${Number(v.price_usd||v.price||0).toFixed(2)}`}</option>
                   ))}
                 </select>
                 {variantError&&<div style={{marginTop:6,fontSize:12,color:'#ef4444',fontWeight:600}}>⚠️ {variantError}</div>}

@@ -59,20 +59,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const t = sessionStorage.getItem(TOKEN_KEY);
     if (!t) { setUser(null); setLoading(false); return; }
 
-    // Try stored user first
-    const stored = sessionStorage.getItem(USER_KEY);
-    if (stored) {
-      try {
-        const u = JSON.parse(stored);
-        // Force admin role for admin email
-        if (u.email === ADMIN_EMAIL) u.role = 'admin';
-        setUser(u);
-        setLoading(false);
-        return;
-      } catch {}
-    }
-
-    // Try /api/auth?action=me
+    // Always fetch fresh from API (never return stale sessionStorage cache)
+    // This ensures profile saves persist immediately
     try {
       const r = await fetch('/api/auth?action=me', { headers: { Authorization: `Bearer ${t}` } });
       if (r.ok) {

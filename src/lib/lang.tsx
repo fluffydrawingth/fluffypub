@@ -100,14 +100,18 @@ export function LangProvider({ children }: { children: React.ReactNode }) {
   // Translate raw TH/EN strings directly
   const tRaw = useCallback((th: string, en: string) => lang === 'th' ? th : en, [lang]);
 
-  // Price formatting
+  // Price formatting — strict: TH=THB only, EN=USD only, never multiply
   const price = useCallback((thb?: number|null, usd?: number|null, base?: number) => {
     if (lang === 'th') {
-      const amount = (thb != null && thb > 0) ? thb : (base ? Math.round(base * 35) : 0);
-      return `฿${Number(amount).toLocaleString('th-TH', { maximumFractionDigits: 0 })}`;
+      // Use price_thb if available; never multiply USD by 35
+      if (thb != null && thb > 0) return `฿${Number(thb).toLocaleString('th-TH', { maximumFractionDigits: 0 })}`;
+      // base is only used if it IS already a THB amount (e.g. passed from THB context)
+      if (base != null && base > 0) return `฿${Number(base).toLocaleString('th-TH', { maximumFractionDigits: 0 })}`;
+      return '฿—';
     }
-    const amount = (usd != null && usd > 0) ? usd : (base ?? 0);
-    return `$${Number(amount).toFixed(2)}`;
+    if (usd != null && usd > 0) return `$${Number(usd).toFixed(2)}`;
+    if (base != null && base > 0) return `$${Number(base).toFixed(2)}`;
+    return '$—';
   }, [lang]);
 
   const currency = lang === 'th' ? '฿' : '$';

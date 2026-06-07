@@ -136,16 +136,33 @@ export default function CheckoutPage() {
     if (!order) return;
     setSlipUploading(true);
     try {
+      console.log('[checkout slip] order id:', order.id, 'file:', file.name);
       const result = await api.uploadFile(file, 'slips');
-      if (result.error) { alert(tRaw('อัปโหลดไม่สำเร็จ', 'Upload failed')); return; }
-      // Save slip URL to order
-      await fetch(`/api/orders?action=slip&id=${order.id}`, {
+      if (result.error) {
+        console.error('[checkout slip] upload error:', result.error);
+        alert(tRaw(`อัปโหลดไม่สำเร็จ: ${result.error}`, `Upload failed: ${result.error}`));
+        setSlipUploading(false);
+        return;
+      }
+      console.log('[checkout slip] uploaded:', result.publicUrl);
+      const token = sessionStorage.getItem('fluffy_token');
+      const saveRes = await fetch(`/api/orders?action=slip&id=${order.id}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionStorage.getItem('fluffy_token')}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token||''}` },
         body: JSON.stringify({ slip_url: result.publicUrl }),
       });
+      const saveData = await saveRes.json();
+      if (saveData.error) {
+        console.error('[checkout slip] save error:', saveData.error);
+        alert(tRaw(`บันทึกไม่สำเร็จ: ${saveData.error}`, `Save error: ${saveData.error}`));
+        setSlipUploading(false);
+        return;
+      }
       setSlipUrl(result.publicUrl);
-    } catch { alert('Upload failed'); }
+    } catch (e: any) {
+      console.error('[checkout slip] exception:', e.message);
+      alert('Error: ' + e.message);
+    }
     setSlipUploading(false);
   };
 
@@ -313,7 +330,9 @@ export default function CheckoutPage() {
                   {(i as any).variant && <div style={{fontSize:10,color:p,fontWeight:600}}>{(i as any).variant.name}</div>}
                 </div>
                 <span style={{fontWeight:800,color:theme.textColor,fontSize:12,flexShrink:0}}>
-                  {fmtPrice((i as any).price_thb, (i as any).price_usd, i.price)}
+                  {lang==='th'
+                    ? (i.price_thb > 0 ? `฿${Number(i.price_thb).toLocaleString('th-TH')}` : '฿—')
+                    : (i.price_usd > 0 ? `$${Number(i.price_usd).toFixed(2)}` : `$${Number(i.price||0).toFixed(2)}`)}
                 </span>
               </div>
             ))}

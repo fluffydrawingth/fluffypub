@@ -58,15 +58,33 @@ export const api = {
 
   uploadFile: async (file: File, folder = 'uploads') => {
     const token = sessionStorage.getItem('fluffy_token') || '';
-    const { uploadUrl, publicUrl, error } = await fetch('/api/upload', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ fileName: file.name, fileType: file.type, folder }),
-    }).then(r => r.json());
-    if (error) return { error };
-    // Upload directly to Supabase Storage
-    await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-    return { publicUrl };
+    try {
+      const metaRes = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fileName: file.name, fileType: file.type, folder }),
+      });
+      const meta = await metaRes.json();
+      if (meta.error) {
+        console.error('[upload] meta error:', meta.error);
+        return { error: meta.error };
+      }
+      // PUT file directly to Supabase Storage via signed URL
+      const uploadRes = await fetch(meta.uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      });
+      if (!uploadRes.ok) {
+        const errText = await uploadRes.text().catch(() => uploadRes.status.toString());
+        console.error('[upload] PUT error:', errText);
+        return { error: `Storage upload failed: ${errText}` };
+      }
+      return { publicUrl: meta.publicUrl };
+    } catch (e: any) {
+      console.error('[upload] exception:', e.message);
+      return { error: e.message };
+    }
   },
 
   // Theme

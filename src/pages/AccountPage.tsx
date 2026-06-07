@@ -73,13 +73,35 @@ function OrdersTab({p,theme}:any) {
   const uploadSlip = async (orderId: string, file: File) => {
     setSlipUploading(true);
     try {
+      console.log('[slip upload] starting for order:', orderId, 'file:', file.name, file.type, file.size);
       const result = await api.uploadFile(file, 'slips');
-      if (result.error) { alert(tRaw('อัปโหลดไม่สำเร็จ','Upload failed')); return; }
+      if (result.error) {
+        console.error('[slip upload] error:', result.error);
+        alert(tRaw(`อัปโหลดไม่สำเร็จ: ${result.error}`, `Upload failed: ${result.error}`));
+        setSlipUploading(false);
+        return;
+      }
+      console.log('[slip upload] uploaded to:', result.publicUrl);
       const token = sessionStorage.getItem('fluffy_token');
-      await fetch(`/api/orders?action=slip&id=${orderId}`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token||''}`},body:JSON.stringify({slip_url:result.publicUrl})});
-      setOrders(prev=>prev.map(o=>o.id===orderId?{...o,slip_url:result.publicUrl}:o));
-      if (selected?.id===orderId) setSelected((s:any)=>({...s,slip_url:result.publicUrl}));
-    } catch { alert('Upload failed'); }
+      const saveRes = await fetch(`/api/orders?action=slip&id=${orderId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token||''}` },
+        body: JSON.stringify({ slip_url: result.publicUrl }),
+      });
+      const saveData = await saveRes.json();
+      if (saveData.error) {
+        console.error('[slip upload] save error:', saveData.error);
+        alert(tRaw(`บันทึกไม่สำเร็จ: ${saveData.error}`, `Save failed: ${saveData.error}`));
+        setSlipUploading(false);
+        return;
+      }
+      console.log('[slip upload] saved to order OK');
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, slip_url: result.publicUrl } : o));
+      if (selected?.id === orderId) setSelected((s: any) => ({ ...s, slip_url: result.publicUrl }));
+    } catch (e: any) {
+      console.error('[slip upload] exception:', e.message);
+      alert(tRaw('เกิดข้อผิดพลาด', 'Error: ' + e.message));
+    }
     setSlipUploading(false);
   };
 
