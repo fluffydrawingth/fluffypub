@@ -286,20 +286,30 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
 
   const save = async () => {
     setSaving(true); setMsg('');
-    const fullName = `${firstName} ${lastName}`.trim();
-    await api.updateMe({
-      name: fullName || user.name,
-      first_name: firstName,
-      last_name: lastName,
-      delivery_email: deliveryEmail,
-      phone,
-      province,
-      postal_code: postalCode,
-      shipping_address: { address: addr, province, postal_code: postalCode, country },
-    });
-    await refreshUser();
-    setSaving(false); setMsg('✓ Profile updated!');
-    setTimeout(()=>setMsg(''),3000);
+    try {
+      const fullName = `${firstName} ${lastName}`.trim();
+      const result = await api.updateMe({
+        name: fullName || user.name,
+        first_name: firstName,
+        last_name: lastName,
+        delivery_email: deliveryEmail,
+        phone,
+        province,
+        postal_code: postalCode,
+        shipping_address: { address: addr, province, postal_code: postalCode, country },
+      });
+      if (result?.error) {
+        setMsg(`⚠️ Error: ${result.error}`);
+        setSaving(false);
+        return;
+      }
+      await refreshUser();
+      setMsg('✓ บันทึกแล้ว / Profile saved!');
+    } catch (e: any) {
+      setMsg(`⚠️ ${e.message}`);
+    }
+    setSaving(false);
+    setTimeout(()=>setMsg(''),4000);
   };
 
   const inp = (label:string, val:string, set:(v:string)=>void, type='text', disabled=false) => (

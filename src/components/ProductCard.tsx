@@ -56,9 +56,7 @@ export default function ProductCard({ product }: { product: any }) {
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:6 }}>
           <div>
             <span style={{ fontSize:16, fontWeight:900, color:theme.textColor }}>
-              {lang === 'th'
-                ? (product.price_thb > 0 ? `฿${Number(product.price_thb).toLocaleString('th-TH')}` : `฿${Math.round(product.price * 35).toLocaleString('th-TH')}`)
-                : (product.price_usd > 0 ? `$${Number(product.price_usd).toFixed(2)}` : `$${Number(product.price || 0).toFixed(2)}`)}
+              {product.price_thb > 0 ? `฿${Number(product.price_thb).toLocaleString('th-TH')}` : '฿—'}
             </span>
           </div>
           <button

@@ -4,16 +4,12 @@ export interface CartVariant {
   id: string;
   name: string;
   price_thb?: number;
-  price_usd?: number;
-  price?: number; // legacy fallback
 }
 
 export interface CartItem {
   id: string;
   title: string;
-  price: number;       // base USD price (legacy)
-  price_thb?: number;  // THB price
-  price_usd?: number;  // USD price
+  price_thb: number;   // THB — the only price used everywhere
   image: string;
   artist: string;
   slug?: string;
@@ -26,13 +22,15 @@ interface CartCtx {
   add: (item: CartItem) => void;
   remove: (id: string, variantId?: string) => void;
   clear: () => void;
-  total: number;       // USD total
-  totalTHB: number;    // THB total
+  subtotalTHB: number;
+  shippingTHB: number;
+  totalTHB: number;
   count: number;
 }
 
 const CartContext = createContext<CartCtx>({
-  items: [], add: ()=>{}, remove: ()=>{}, clear: ()=>{}, total: 0, totalTHB: 0, count: 0
+  items: [], add: ()=>{}, remove: ()=>{}, clear: ()=>{},
+  subtotalTHB: 0, shippingTHB: 0, totalTHB: 0, count: 0,
 });
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -50,25 +48,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clear = () => setItems([]);
 
-  // USD total — use price_usd if set, else price
-  const total = items.reduce((s, i) => {
-    const varUSD = i.variant?.price_usd || i.variant?.price;
-    const p = varUSD ?? i.price_usd ?? i.price;
-    return s + Number(p || 0);
+  // THB subtotal — sum variant price if selected, else item price
+  const subtotalTHB = items.reduce((s, i) => {
+    const p = (i.variant?.price_thb != null && i.variant.price_thb > 0)
+      ? i.variant.price_thb
+      : i.price_thb;
+    return s + Math.round(Number(p) || 0);
   }, 0);
 
-  // THB total — use price_thb ONLY, never multiply USD*35
-  const totalTHB = items.reduce((s, i) => {
-    const varTHB = i.variant?.price_thb;
-    // Only use explicit price_thb fields — if missing, show 0 (product wasn't set up with THB)
-    const p = (varTHB != null && varTHB > 0) ? varTHB : (i.price_thb != null && i.price_thb > 0 ? i.price_thb : 0);
-    return s + Math.round(Number(p));
-  }, 0);
-
+  // Shipping: 1 physical = 25 THB, 2+ = free, digital = 0
+  const physicalCount = items.filter(i => i.type === 'physical').length;
+  const shippingTHB = physicalCount === 1 ? 25 : 0;
+  const totalTHB = subtotalTHB + shippingTHB;
   const count = items.length;
 
   return (
-    <CartContext.Provider value={{ items, add, remove, clear, total, totalTHB, count }}>
+    <CartContext.Provider value={{ items, add, remove, clear, subtotalTHB, shippingTHB, totalTHB, count }}>
       {children}
     </CartContext.Provider>
   );

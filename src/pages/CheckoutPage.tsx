@@ -8,7 +8,7 @@ import { api } from '../lib/api';
 
 export default function CheckoutPage() {
   const { theme } = useTheme();
-  const { items, total, totalTHB, clear } = useCart();
+  const { items, subtotalTHB, shippingTHB, totalTHB, clear } = useCart();
   const { navigate } = useRouter();
   const { user } = useAuth();
   const { lang, t, tRaw, price: fmtPrice } = useLang();
@@ -35,19 +35,12 @@ export default function CheckoutPage() {
   const [slipUrl, setSlipUrl]           = useState('');
 
   const hasPhysical = items.some(i => (i as any).type === 'physical');
-  const hasDigital  = items.some(i => (i as any).type !== 'physical');
-  const discount    = promoApplied ? Math.round(total * 0.15 * 100) / 100 : 0;
-  const finalTotalUSD = Math.round((total - discount) * 100) / 100;
-  // THB: use cart's pre-computed totalTHB (correct price_thb per item)
-  const subtotalTHB = promoApplied ? Math.round(totalTHB * 0.85) : totalTHB;
-  // Shipping: 1 physical = 25 THB, 2+ = free, digital = no shipping
-  const physicalCount = items.filter(i => (i as any).type === 'physical' || (i as any).type === 'both').length;
-  const shippingTHB = physicalCount === 1 ? 25 : 0;
-  const finalTotalTHB = subtotalTHB + shippingTHB;
-
-  // Display amount based on language
-  const displayTotal = lang === 'th' ? finalTotalTHB : finalTotalUSD;
-  const displayCurrency = lang === 'th' ? 'THB' : 'USD';
+  const hasDigital  = items.some(i => (i as any).type !== 'physical' && (i as any).type !== 'both');
+  // All pricing in THB — use cart computed values directly
+  const discountedSubtotalTHB = promoApplied ? Math.round(subtotalTHB * 0.85) : subtotalTHB;
+  const discountAmtTHB = promoApplied ? subtotalTHB - discountedSubtotalTHB : 0;
+  // Shipping comes from cart (1 physical = 25 THB)
+  const grandTotalTHB = discountedSubtotalTHB + shippingTHB;
 
   useEffect(() => {
     if (!user) return;
@@ -68,7 +61,7 @@ export default function CheckoutPage() {
   // Load PromptPay QR after order created
   useEffect(() => {
     if (step === 'payment' && order) {
-      const amt = order.total_thb || order.total_amount || finalTotalTHB;
+      const amt = order.total_thb || order.total_amount || grandTotalTHB || 0;
       if (amt > 0) {
         setQrLoading(true);
         fetch(`/api/promptpay?amount=${amt}`, {
@@ -330,9 +323,7 @@ export default function CheckoutPage() {
                   {(i as any).variant && <div style={{fontSize:10,color:p,fontWeight:600}}>{(i as any).variant.name}</div>}
                 </div>
                 <span style={{fontWeight:800,color:theme.textColor,fontSize:12,flexShrink:0}}>
-                  {lang==='th'
-                    ? (i.price_thb > 0 ? `฿${Number(i.price_thb).toLocaleString('th-TH')}` : '฿—')
-                    : (i.price_usd > 0 ? `$${Number(i.price_usd).toFixed(2)}` : `$${Number(i.price||0).toFixed(2)}`)}
+                  {(i as any).price_thb > 0 ? `฿${Number((i as any).price_thb).toLocaleString('th-TH')}` : '฿—'}
                 </span>
               </div>
             ))}
