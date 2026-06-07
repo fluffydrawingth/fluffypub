@@ -642,34 +642,38 @@ function OrdersTab() {
             <div style={{borderTop:'1px solid #f3f4f6',borderBottom:'1px solid #f3f4f6',padding:'10px 0',marginBottom:12}}>
               <div style={{fontSize:11,fontWeight:700,color:'#9ca3af',marginBottom:8}}>PRODUCTS</div>
               {(selected.items||[]).map((i:any,idx:number)=>{
-                // Determine type label for packing
-                const isDigital = i.optionType==='digital' || i.type==='digital' || (i.is_digital && !i.is_physical);
-                const isPhysical = i.optionType==='physical' || i.type==='physical' || i.is_physical;
-                const typeLabel = isDigital && isPhysical ? '📦+⬇️' : isDigital ? '⬇️ ดิจิทัล' : '📦 หนังสือ';
-                // Option name: prefer optionName, then variant.name
-                const optionLabel = i.optionName || i.variant?.name || '';
+                // Read EXACTLY from order snapshot — never infer from product data
+                const optionType: 'digital'|'physical' = i.optionType || (i.type==='digital' ? 'digital' : 'physical');
+                const optionName = i.optionName || i.variant?.name || '';
                 const qty = i.qty || 1;
+                const unitPrice = i.unitPriceTHB || i.price_thb || (i.price ? i.price*35 : 0);
+                const lineTotal = i.lineTotalTHB || (unitPrice * qty);
+                const isDigital = optionType === 'digital';
+
                 return (
-                  <div key={idx} style={{background:'#f9fafb',borderRadius:10,padding:'8px 10px',marginBottom:6}}>
+                  <div key={idx} style={{background:'#f9fafb',borderRadius:10,padding:'10px 12px',marginBottom:6,border:`1px solid ${isDigital?'#bfdbfe':'#bbf7d0'}`}}>
                     <div style={{display:'flex',alignItems:'flex-start',gap:8}}>
                       <span style={{fontSize:18,flexShrink:0}}>{i.image}</span>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:13,color:'#111827',fontWeight:700,lineHeight:1.3}}>{i.title}</div>
-                        <div style={{display:'flex',gap:6,marginTop:4,flexWrap:'wrap' as const}}>
-                          {/* Type badge */}
-                          <span style={{fontSize:11,fontWeight:700,background:isDigital&&!isPhysical?'#dbeafe':isPhysical&&!isDigital?'#d1fae5':'#ede9fe',color:isDigital&&!isPhysical?'#1d4ed8':isPhysical&&!isDigital?'#065f46':'#7c3aed',borderRadius:8,padding:'2px 8px'}}>
-                            {typeLabel}
+                        <div style={{display:'flex',gap:5,marginTop:5,flexWrap:'wrap' as const,alignItems:'center'}}>
+                          {/* Type — from snapshot */}
+                          <span style={{fontSize:11,fontWeight:700,background:isDigital?'#dbeafe':'#d1fae5',color:isDigital?'#1d4ed8':'#065f46',borderRadius:6,padding:'2px 8px'}}>
+                            {isDigital ? '⬇️ Digital' : '📦 Physical'}
                           </span>
-                          {/* Option/variant name */}
-                          {optionLabel&&<span style={{fontSize:11,fontWeight:600,background:P+'15',color:P,borderRadius:8,padding:'2px 8px'}}>{optionLabel}</span>}
+                          {/* Variant/option name — from snapshot */}
+                          {optionName && <span style={{fontSize:11,fontWeight:600,background:P+'15',color:P,borderRadius:6,padding:'2px 8px'}}>{optionName}</span>}
                           {/* Quantity */}
-                          {qty>1&&<span style={{fontSize:11,fontWeight:600,background:'#f3f4f6',color:'#374151',borderRadius:8,padding:'2px 8px'}}>×{qty}</span>}
+                          <span style={{fontSize:11,color:'#6b7280'}}>×{qty}</span>
                         </div>
                       </div>
-                      <span style={{fontWeight:800,color:'#111827',fontSize:13,flexShrink:0,paddingTop:2}}>
-                        ฿{Number(i.price_thb||(i.price*35)).toLocaleString('th-TH')}
-                        {qty>1&&<span style={{fontSize:10,color:'#6b7280',fontWeight:500}}> ×{qty}</span>}
-                      </span>
+                      {/* Price breakdown */}
+                      <div style={{textAlign:'right' as const,flexShrink:0}}>
+                        <div style={{fontWeight:800,color:'#111827',fontSize:13}}>
+                          ฿{Number(lineTotal).toLocaleString('th-TH')}
+                        </div>
+                        {qty>1&&<div style={{fontSize:10,color:'#9ca3af'}}>฿{Number(unitPrice).toLocaleString('th-TH')} ×{qty}</div>}
+                      </div>
                     </div>
                   </div>
                 );

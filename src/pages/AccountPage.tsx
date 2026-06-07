@@ -149,16 +149,32 @@ function OrdersTab({p,theme}:any) {
 
       {/* Products */}
       <div style={{borderTop:'1px solid #f3f4f6',borderBottom:'1px solid #f3f4f6',padding:'14px 0',marginBottom:14}}>
-        {(selected.items||[]).map((i:any,idx:number)=>(
-          <div key={idx} style={{display:'flex',gap:10,alignItems:'center',marginBottom:8}}>
-            <span style={{fontSize:26}}>{i.image}</span>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:700,color:'#1e293b',fontSize:14}}>{i.title}</div>
-              {i.variant&&<div style={{fontSize:11,color:p,fontWeight:600}}>{i.variant.name}</div>}
+        {(selected.items||[]).map((i:any,idx:number)=>{
+          const optionType = i.optionType || (i.type==='digital'?'digital':'physical');
+          const optionName = i.optionName || i.variant?.name || '';
+          const qty = i.qty || 1;
+          const unitPrice = i.unitPriceTHB || i.price_thb || 0;
+          const lineTotal = i.lineTotalTHB || (unitPrice * qty);
+          return (
+            <div key={idx} style={{display:'flex',gap:10,alignItems:'flex-start',marginBottom:10,background:'#f9fafb',borderRadius:10,padding:'8px 10px'}}>
+              <span style={{fontSize:24,flexShrink:0}}>{i.image}</span>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,color:'#1e293b',fontSize:14}}>{i.title}</div>
+                <div style={{display:'flex',gap:5,marginTop:3,flexWrap:'wrap' as const}}>
+                  <span style={{fontSize:10,fontWeight:700,background:optionType==='digital'?'#dbeafe':'#d1fae5',color:optionType==='digital'?'#1d4ed8':'#065f46',borderRadius:6,padding:'1px 7px'}}>
+                    {optionType==='digital'?'⬇️ Digital':'📦 Physical'}
+                  </span>
+                  {optionName&&<span style={{fontSize:10,color:p,fontWeight:600}}>{optionName}</span>}
+                  {qty>1&&<span style={{fontSize:10,color:'#6b7280'}}>×{qty}</span>}
+                </div>
+              </div>
+              <div style={{textAlign:'right' as const,flexShrink:0}}>
+                <div style={{fontWeight:800,color:'#1e293b',fontSize:13}}>฿{Number(lineTotal).toLocaleString('th-TH')}</div>
+                {qty>1&&<div style={{fontSize:10,color:'#9ca3af'}}>฿{Number(unitPrice).toLocaleString('th-TH')} ×{qty}</div>}
+              </div>
             </div>
-            <span style={{fontWeight:800,color:'#1e293b'}}>฿{Number(i.price_thb||(i.price*35)).toLocaleString('th-TH')}</span>
-          </div>
-        ))}
+          );
+        })}
         {selected.shipping_thb>0&&<div style={{display:'flex',justifyContent:'space-between',fontSize:13,color:'#64748b',marginTop:8}}><span>{tRaw('ค่าจัดส่ง','Shipping')}</span><span>฿{selected.shipping_thb}</span></div>}
         <div style={{display:'flex',justifyContent:'space-between',fontWeight:900,color:'#1e293b',fontSize:16,marginTop:8}}>
           <span>{tRaw('ยอดรวม','Total')}</span>

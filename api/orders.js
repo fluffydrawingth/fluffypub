@@ -79,32 +79,46 @@ module.exports = async function handler(req, res) {
 
   // POST create order
   if (req.method === 'POST' && !action) {
-    const { items, customerName, customerEmail, customerPhone, shippingAddress, promoCode, total_thb, total_usd } = req.body || {};
+    const { items, customerName, customerEmail, customerPhone, shippingAddress, promoCode, total_thb, shipping_thb: shippingFromCart, subtotal_thb } = req.body || {};
     if (!items?.length || !customerName || !customerEmail) return json(res, 400, { error: 'items, name, email required' });
-    const ids = items.map(i => i.productId);
-    const { data: products } = await supabase.from('products').select('id,title,price,price_thb,price_usd,image,artist_id,type,is_physical,is_digital,digital_download_url,download_instruction').in('id', ids).eq('active', true);
-    if (!products || products.length !== ids.length) return json(res, 400, { error: 'One or more products unavailable.' });
 
-    let subtotal_usd = 0, subtotal_thb = 0;
-    const orderItems = products.map(p => {
-      const reqItem = items.find(i => i.productId === p.id) || {};
-      const usdPrice = parseFloat(p.price_usd || p.price || 0);
-      const thbPrice = parseFloat(p.price_thb || (usdPrice * 35)) || 0;
-      subtotal_usd += usdPrice;
-      subtotal_thb += thbPrice;
-      return { productId: p.id, title: p.title, price: usdPrice, price_thb: thbPrice, image: p.image, artistId: p.artist_id, type: p.type || (p.is_physical ? 'physical' : 'digital'), variant: reqItem.variant || null };
+    // Validate products exist and get image/artist data only (do NOT override prices or types)
+    const ids = [...new Set(items.map(i => i.productId))];
+    const { data: products } = await supabase
+      .from('products')
+      .select('id,title,image,artist_id,artist_name,digital_download_url,download_instruction')
+      .in('id', ids);
+    const productMap = Object.fromEntries((products || []).map(p => [p.id, p]));
+
+    // Build order items from CART SNAPSHOT — preserve exact optionType, optionName, price, qty
+    const orderItems = items.map(cartItem => {
+      const prod = productMap[cartItem.productId] || {};
+      const qty = cartItem.qty || 1;
+      const unitPriceTHB = cartItem.unitPriceTHB || 0;
+      return {
+        productId: cartItem.productId,
+        title: prod.title || cartItem.title || '',
+        image: prod.image || '📚',
+        artistId: prod.artist_id || null,
+        artistName: prod.artist_name || '',
+        // SNAPSHOT — these come from cart, never recalculated
+        optionId: cartItem.optionId || '',
+        optionName: cartItem.optionName || '',
+        optionType: cartItem.optionType || 'physical',  // 'digital' | 'physical'
+        unitPriceTHB,
+        qty,
+        lineTotalTHB: unitPriceTHB * qty,
+        // Digital download links (unlocked after payment)
+        digital_download_url: null,
+        download_instruction: null,
+      };
     });
 
-    let discount_pct = 0;
-    if (promoCode?.toUpperCase() === 'FLUFFY15') discount_pct = 0.15;
-    const final_usd = Math.round(subtotal_usd * (1 - discount_pct) * 100) / 100;
-    const final_thb = Math.round(subtotal_thb * (1 - discount_pct));
-    const hasPhysical = orderItems.some(i => i.type === 'physical' || i.type === 'both');
+    // Use totals from cart (already calculated correctly on frontend)
+    const shipping_thb = shippingFromCart || 0;
+    const grand_total_thb = total_thb || (subtotal_thb + shipping_thb);
+    const hasPhysical = orderItems.some(i => i.optionType === 'physical');
 
-    // Shipping: 25 THB for 1 physical book, free for 2+
-    const physicalCount = orderItems.filter(i => i.type === 'physical' || i.type === 'both').length;
-    const shipping_thb = physicalCount === 1 ? 25 : 0;
-    const grand_total_thb = final_thb + shipping_thb;
     const authUser = await getUser(req);
     const { data: order, error } = await supabase.from('orders').insert({
       user_id: authUser?.id || null,
