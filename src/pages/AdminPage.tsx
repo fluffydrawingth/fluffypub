@@ -641,16 +641,39 @@ function OrdersTab() {
             {/* Products */}
             <div style={{borderTop:'1px solid #f3f4f6',borderBottom:'1px solid #f3f4f6',padding:'10px 0',marginBottom:12}}>
               <div style={{fontSize:11,fontWeight:700,color:'#9ca3af',marginBottom:8}}>PRODUCTS</div>
-              {(selected.items||[]).map((i:any,idx:number)=>(
-                <div key={idx} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
-                  <span style={{fontSize:18}}>{i.image}</span>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:12,color:'#374151',fontWeight:600}}>{i.title}</div>
-                    {i.variant&&<div style={{fontSize:10,color:P}}>{i.variant.name}</div>}
+              {(selected.items||[]).map((i:any,idx:number)=>{
+                // Determine type label for packing
+                const isDigital = i.optionType==='digital' || i.type==='digital' || (i.is_digital && !i.is_physical);
+                const isPhysical = i.optionType==='physical' || i.type==='physical' || i.is_physical;
+                const typeLabel = isDigital && isPhysical ? '📦+⬇️' : isDigital ? '⬇️ ดิจิทัล' : '📦 หนังสือ';
+                // Option name: prefer optionName, then variant.name
+                const optionLabel = i.optionName || i.variant?.name || '';
+                const qty = i.qty || 1;
+                return (
+                  <div key={idx} style={{background:'#f9fafb',borderRadius:10,padding:'8px 10px',marginBottom:6}}>
+                    <div style={{display:'flex',alignItems:'flex-start',gap:8}}>
+                      <span style={{fontSize:18,flexShrink:0}}>{i.image}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,color:'#111827',fontWeight:700,lineHeight:1.3}}>{i.title}</div>
+                        <div style={{display:'flex',gap:6,marginTop:4,flexWrap:'wrap' as const}}>
+                          {/* Type badge */}
+                          <span style={{fontSize:11,fontWeight:700,background:isDigital&&!isPhysical?'#dbeafe':isPhysical&&!isDigital?'#d1fae5':'#ede9fe',color:isDigital&&!isPhysical?'#1d4ed8':isPhysical&&!isDigital?'#065f46':'#7c3aed',borderRadius:8,padding:'2px 8px'}}>
+                            {typeLabel}
+                          </span>
+                          {/* Option/variant name */}
+                          {optionLabel&&<span style={{fontSize:11,fontWeight:600,background:P+'15',color:P,borderRadius:8,padding:'2px 8px'}}>{optionLabel}</span>}
+                          {/* Quantity */}
+                          {qty>1&&<span style={{fontSize:11,fontWeight:600,background:'#f3f4f6',color:'#374151',borderRadius:8,padding:'2px 8px'}}>×{qty}</span>}
+                        </div>
+                      </div>
+                      <span style={{fontWeight:800,color:'#111827',fontSize:13,flexShrink:0,paddingTop:2}}>
+                        ฿{Number(i.price_thb||(i.price*35)).toLocaleString('th-TH')}
+                        {qty>1&&<span style={{fontSize:10,color:'#6b7280',fontWeight:500}}> ×{qty}</span>}
+                      </span>
+                    </div>
                   </div>
-                  <span style={{fontWeight:800,color:'#111827',fontSize:12}}>฿{Number(i.price_thb||(i.price*35)).toLocaleString('th-TH')}</span>
-                </div>
-              ))}
+                );
+              })}
               {selected.shipping_thb>0&&<div style={{display:'flex',justifyContent:'space-between',marginTop:8,fontSize:12,color:'#6b7280'}}><span>Shipping</span><span>฿{selected.shipping_thb}</span></div>}
               <div style={{display:'flex',justifyContent:'space-between',marginTop:6,fontWeight:900,color:'#111827',fontSize:14}}>
                 <span>Total</span>
