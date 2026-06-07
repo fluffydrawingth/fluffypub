@@ -3,6 +3,8 @@ import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
+import ProductCard from '../components/ProductCard';
+import { useFavorites } from '../lib/favorites';
 import { useLang } from '../lib/lang';
 
 type Tab = 'orders' | 'favorites' | 'profile';
@@ -243,30 +245,34 @@ function OrdersTab({p,theme}:any) {
 }
 
 function FavoritesTab({p,theme,navigate}:any) {
-  const [favIds, setFavIds] = useState<string[]>([]);
+  const { favIds } = useFavorites();
+  const { tRaw } = useLang();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(()=>{
-    Promise.all([api.getFavorites(), api.getProducts()]).then(([favs,prods])=>{
-      setFavIds(Array.isArray(favs)?favs:[]);
+    api.getProducts().then(prods=>{
       setProducts(Array.isArray(prods)?prods:[]);
       setLoading(false);
     });
   },[]);
-  const favProducts = products.filter(p=>favIds.includes(p.id));
+  const favProducts = products.filter(pr=>favIds.includes(pr.id));
   if (loading) return <div style={{textAlign:'center',padding:40,color:'#888'}}>Loading...</div>;
-  if (!favProducts.length) return <div style={{textAlign:'center',padding:'60px 24px',background:'white',borderRadius:20}}><div style={{fontSize:56,marginBottom:14}}>❤️</div><h3 style={{color:'#1e293b',fontWeight:800}}>No favorites yet</h3><p style={{color:'#64748b',fontSize:14}}>Heart products you love while browsing.</p></div>;
+  if (!favProducts.length) return (
+    <div style={{textAlign:'center',padding:'60px 24px',background:'white',borderRadius:20}}>
+      <div style={{fontSize:56,marginBottom:14}}>🤍</div>
+      <h3 style={{color:'#1e293b',fontWeight:800}}>{tRaw('ยังไม่มีสินค้าที่ถูกใจ','No favorites yet')}</h3>
+      <p style={{color:'#64748b',fontSize:14,marginBottom:20}}>{tRaw('กดหัวใจที่สินค้าเพื่อเพิ่มลงรายการโปรด','Tap ❤️ on any product to save it here.')}</p>
+      <button onClick={()=>navigate('/products')} style={{background:p,color:'white',border:'none',cursor:'pointer',padding:'11px 24px',borderRadius:20,fontSize:14,fontWeight:700,fontFamily:'inherit'}}>
+        {tRaw('เลือกดูสินค้า','Browse Products')}
+      </button>
+    </div>
+  );
   return (
-    <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:16}}>
-      {favProducts.map(pr=>(
-        <div key={pr.id} style={{background:'white',borderRadius:16,overflow:'hidden',boxShadow:'0 2px 10px rgba(0,0,0,0.06)',cursor:'pointer'}} onClick={()=>navigate(`/products/${pr.slug}`)}>
-          <div style={{height:120,background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:48}}>{pr.image}</div>
-          <div style={{padding:'12px 14px'}}>
-            <div style={{fontWeight:800,color:'#1e293b',fontSize:14,marginBottom:4}}>{pr.title}</div>
-            <div style={{fontWeight:900,color:'#1e293b'}}>${pr.price}</div>
-          </div>
-        </div>
-      ))}
+    <div>
+      <p style={{fontSize:13,color:'#6b7280',marginBottom:16}}>{favProducts.length} {tRaw('รายการที่ถูกใจ','saved items')}</p>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:16}}>
+        {favProducts.map(pr=>(<ProductCard key={pr.id} product={pr}/>))}
+      </div>
     </div>
   );
 }

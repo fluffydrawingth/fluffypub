@@ -18,6 +18,7 @@ import ArtistDashboardPage from './pages/ArtistDashboardPage';
 import ArtistProfilePage from './pages/ArtistProfilePage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import { LangProvider } from './lib/lang';
+import { FavoritesProvider } from './lib/favorites';
 
 function ProtectedRoute({ roles, children }: { roles: string[]; children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -80,11 +81,13 @@ export default function App() {
     <ThemeProvider>
       <LangProvider>
       <AuthProvider>
+      <FavoritesProvider>
         <CartProvider>
           <RouterProvider>
             <AppContent />
           </RouterProvider>
         </CartProvider>
+      </FavoritesProvider>
       </AuthProvider>
       </LangProvider>
     </ThemeProvider>

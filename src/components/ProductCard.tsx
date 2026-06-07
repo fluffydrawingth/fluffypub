@@ -3,6 +3,8 @@ import { useTheme } from '../lib/theme';
 import { useCart } from '../lib/cart';
 import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
+import { useFavorites } from '../lib/favorites';
+import { useAuth } from '../lib/auth';
 
 export default function ProductCard({ product }: { product: any }) {
   const { theme } = useTheme();
@@ -10,6 +12,9 @@ export default function ProductCard({ product }: { product: any }) {
   const { navigate } = useRouter();
   const { lang, tRaw } = useLang();
   const [modal, setModal] = useState(false);
+  const { isFav, toggle } = useFavorites();
+  const { user } = useAuth();
+  const fav = isFav(product.id);
   const p = theme.primaryColor;
 
   const title = (lang === 'th' && product.title_th) ? product.title_th : product.title;
@@ -68,6 +73,18 @@ export default function ProductCard({ product }: { product: any }) {
               : <span>{product.image}</span>}
           </div>
           {product.is_new && <span style={{ position:'absolute', top:8, right:8, background:theme.secondaryColor||'#c084fc', color:'white', borderRadius:12, padding:'3px 8px', fontSize:10, fontWeight:700, zIndex:1 }}>✨ New</span>}
+          {/* Heart / favorite button */}
+          <button
+            onClick={e => {
+              e.stopPropagation();
+              if (!user) { navigate('/login'); return; }
+              toggle(product.id);
+            }}
+            style={{ position:'absolute', top:8, left:8, width:30, height:30, borderRadius:'50%', border:'none', background:fav ? '#ef4444' : 'rgba(255,255,255,0.85)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, zIndex:1, boxShadow:'0 2px 8px rgba(0,0,0,0.15)', transition:'all 0.15s' }}
+            title={fav ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            {fav ? '❤️' : '🤍'}
+          </button>
         </div>
         <div style={{ padding:'12px 14px 14px' }}>
           <div style={{ fontSize:11, color:p, fontWeight:700, marginBottom:3 }}>{artist}{artist&&product.category?' · ':''}{product.category}</div>

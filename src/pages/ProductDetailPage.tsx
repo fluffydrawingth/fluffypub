@@ -6,6 +6,8 @@ import { useRouter } from '../lib/router';
 import ProductCard from '../components/ProductCard';
 import { RichDescRenderer } from '../components/RichDescEditor';
 import { useLang } from '../lib/lang';
+import { useFavorites } from '../lib/favorites';
+import { useAuth } from '../lib/auth';
 
 export default function ProductDetailPage({ slug }: { slug: string }) {
   const { theme } = useTheme();
@@ -17,6 +19,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const [selectedOption, setSelectedOption] = useState<any>(null);
   const [optionError, setOptionError] = useState('');
   const [related, setRelated] = useState<any[]>([]);
+  const { isFav, toggle } = useFavorites();
+  const { user } = useAuth();
 
   useEffect(() => {
     api.getProduct(slug).then(p => {
@@ -174,6 +178,14 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
             {/* Add to cart */}
             <div style={{display:'flex',gap:10,flexWrap:'wrap' as const}}>
+              {/* Heart / favorite button */}
+              <button
+                onClick={()=>{ if(!user){navigate('/login');return;} toggle(product.id); }}
+                style={{ width:48, height:48, borderRadius:14, border:`2px solid ${isFav(product.id)?'#ef4444':p+'30'}`, background:isFav(product.id)?'#fef2f2':'white', cursor:'pointer', fontSize:20, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.15s' }}
+                title={isFav(product.id)?tRaw('ลบออกจากรายการโปรด','Remove from favorites'):tRaw('เพิ่มในรายการโปรด','Add to favorites')}
+              >
+                {isFav(product.id) ? '❤️' : '🤍'}
+              </button>
               <button onClick={handleAddToCart} disabled={options.length===0}
                 style={{flex:1,minWidth:140,padding:'14px',borderRadius:20,background:options.length===0?'#e5e7eb':btnInCart?'#10b981':p,color:'white',border:'none',cursor:options.length===0?'not-allowed':'pointer',fontSize:15,fontWeight:800,fontFamily:theme.fontFamily,boxShadow:btnInCart||options.length===0?'none':`0 6px 20px ${p}40`,transition:'all 0.2s'}}>
                 {options.length===0 ? tRaw('ไม่มีสินค้า','Not available') : btnInCart ? `✓ ${tRaw('อยู่ในตะกร้า','In cart')} +` : t('add_to_cart')}
