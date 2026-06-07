@@ -520,15 +520,75 @@ function OrdersTab() {
   const printSlip = (o:any) => {
     const sa = o.shipping_address || {};
     const addr = typeof sa === 'string' ? sa : [sa.address,sa.province,sa.postal_code,sa.country].filter(Boolean).join(', ');
+    const ref = (o.id||'').slice(-8).toUpperCase();
+    const totalTHB = o.total_thb || o.total_amount || (parseFloat(o.total||'0')*35);
+    const shippingTHB = o.shipping_thb || 0;
+
+    // Build item rows from snapshot fields — same data as admin order detail
+    const itemRows = (o.items||[]).map((i:any) => {
+      const optionType: string = i.optionType || (i.type==='digital' ? 'digital' : 'physical');
+      const optionName: string = i.optionName || i.variant?.name || '';
+      const qty: number = i.qty || 1;
+      const unitPrice: number = i.unitPriceTHB || i.price_thb || (i.price ? Math.round(i.price*35) : 0);
+      const lineTotal: number = i.lineTotalTHB || (unitPrice * qty);
+      return `
+        <div class="item">
+          <div class="item-title">${i.title}</div>
+          ${optionName ? `<div class="item-variant">📌 ${optionName}</div>` : ''}
+          <div class="item-meta">${optionType === 'digital' ? '⬇️ Digital' : '📦 Physical'} · Qty: ${qty}</div>
+          <div class="item-price">
+            ฿${lineTotal.toLocaleString('th-TH')}
+            ${qty > 1 ? `<span class="unit-price">฿${unitPrice.toLocaleString('th-TH')} × ${qty}</span>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
     const w = window.open('','_blank');
     if (!w) return;
-    w.document.write(`<html><head><title>Packing Slip #${(o.id||'').slice(-8).toUpperCase()}</title>
-    <style>body{font-family:sans-serif;padding:20px;max-width:400px;}h2{margin:0}hr{margin:12px 0}.row{display:flex;justify-content:space-between;margin:4px 0}</style></head>
-    <body><h2>📦 Packing Slip</h2><p>Order #${(o.id||'').slice(-8).toUpperCase()}</p><hr>
-    <strong>Ship To:</strong><p>${o.customer_name}<br>${addr}<br>${o.customer_phone||''}</p><hr>
-    <strong>Items:</strong>${(o.items||[]).map((i:any)=>`<div class="row"><span>${i.title}${i.variant?` (${i.variant.name})`:''}</span><span>฿${i.price_thb||(i.price*35)|i.price}</span></div>`).join('')}
-    <hr><div class="row"><strong>Total</strong><strong>฿${o.total_thb||o.total_amount||(parseFloat(o.total||0)*35)}</strong></div>
-    <script>window.print()</script></body></html>`);
+    w.document.write(`<!DOCTYPE html><html><head>
+      <meta charset="utf-8">
+      <title>Packing Slip #${ref}</title>
+      <style>
+        body { font-family: 'Sarabun', sans-serif; padding: 24px; max-width: 420px; margin: 0 auto; color: #111; }
+        h2 { margin: 0 0 4px; font-size: 18px; }
+        .order-ref { font-size: 13px; color: #555; margin-bottom: 4px; }
+        .date { font-size: 11px; color: #888; margin-bottom: 16px; }
+        hr { border: none; border-top: 1px solid #ddd; margin: 12px 0; }
+        .section-title { font-size: 11px; font-weight: 700; color: #888; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+        .ship-to { font-size: 13px; line-height: 1.6; margin-bottom: 4px; }
+        .item { background: #f9fafb; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; border-left: 3px solid #d1fae5; }
+        .item.digital { border-left-color: #bfdbfe; }
+        .item-title { font-weight: 700; font-size: 13px; margin-bottom: 3px; }
+        .item-variant { font-size: 12px; color: #374151; font-weight: 600; margin-bottom: 2px; }
+        .item-meta { font-size: 11px; color: #6b7280; margin-bottom: 4px; }
+        .item-price { font-weight: 800; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+        .unit-price { font-size: 10px; color: #9ca3af; font-weight: 400; }
+        .totals { margin-top: 4px; }
+        .total-row { display: flex; justify-content: space-between; font-size: 12px; color: #555; margin: 3px 0; }
+        .total-row.grand { font-weight: 900; font-size: 15px; color: #111; margin-top: 6px; padding-top: 6px; border-top: 1px solid #ddd; }
+        @media print { body { padding: 8px; } }
+      </style>
+    </head><body>
+      <h2>📦 Packing Slip</h2>
+      <div class="order-ref">Order #${ref}</div>
+      <div class="date">${new Date(o.created_at).toLocaleString('th-TH')}</div>
+      <hr>
+      <div class="section-title">Ship To</div>
+      <div class="ship-to">
+        <strong>${o.customer_name}</strong><br>
+        ${addr ? addr + '<br>' : ''}
+        ${o.customer_phone || ''}
+      </div>
+      <hr>
+      <div class="section-title">Items</div>
+      ${itemRows}
+      <hr>
+      <div class="totals">
+        ${shippingTHB > 0 ? `<div class="total-row"><span>Shipping</span><span>฿${shippingTHB.toLocaleString('th-TH')}</span></div>` : ''}
+        <div class="total-row grand"><span>Total</span><span>฿${Number(totalTHB).toLocaleString('th-TH')}</span></div>
+      </div>
+      <script>window.print();<\/script>
+    </body></html>`);
   };
 
   const filteredOrders = filterStatus==='all' ? orders : orders.filter(o=>o.status===filterStatus);
