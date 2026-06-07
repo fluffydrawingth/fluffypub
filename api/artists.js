@@ -54,14 +54,17 @@ module.exports = async function handler(req, res) {
         artist_status,
       }).eq('id', artistId);
     } else {
-      // Create profile directly without auth user
-      const { data: profile, error } = await supabase.from('profiles').insert({
+      // Create profile directly without auth user — do NOT insert null email (violates NOT NULL)
+      const noEmailRecord = {
         id: require('crypto').randomUUID(),
-        name, artist_slug, bio: bio || '', role: 'artist', email: email || null,
+        name, artist_slug, bio: bio || '', role: 'artist',
         avatar_url: avatar_url || null, cover_image_url: cover_image_url || null,
         website: website || null, social_links: social_links || null,
         artist_status,
-      }).select().single();
+      };
+      // Only add email field if a real email value was provided
+      if (email && email.trim()) noEmailRecord.email = email.trim();
+      const { data: profile, error } = await supabase.from('profiles').insert(noEmailRecord).select().single();
       if (error) return json(res, 400, { error: error.message });
       return json(res, 201, profile);
     }
