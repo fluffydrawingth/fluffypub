@@ -32,18 +32,26 @@ export default function CheckoutPage() {
 
   const hasPhysical = items.some(i => i.optionType === 'physical');
 
-  // Pre-fill from profile
+  // Pre-fill from profile — fetch directly from API (same as ProfileTab)
+  // This ensures checkout always has the latest saved profile data
   useEffect(() => {
-    if (!user) return;
-    setFirstName(user.first_name || user.name?.split(' ')[0] || '');
-    setLastName(user.last_name || user.name?.split(' ').slice(1).join(' ') || '');
-    setEmail(user.delivery_email || user.email || '');
-    setPhone(user.phone || '');
-    const sa = user.shipping_address || {};
-    setAddress(sa.address || '');
-    setProvince(user.province || sa.province || '');
-    setPostalCode(user.postal_code || sa.postal_code || '');
-  }, [user?.id]);
+    const token = localStorage.getItem('fluffy_token');
+    if (!token) return;
+    fetch('/api/users?action=me', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(profile => {
+        if (profile.error || !profile.id) return;
+        setFirstName(profile.first_name || profile.name?.split(' ')[0] || '');
+        setLastName(profile.last_name || profile.name?.split(' ').slice(1).join(' ') || '');
+        setEmail(profile.delivery_email || profile.email || '');
+        setPhone(profile.phone || '');
+        const sa = profile.shipping_address || {};
+        setAddress(sa.address || '');
+        setProvince(profile.province || sa.province || '');
+        setPostalCode(profile.postal_code || sa.postal_code || '');
+      })
+      .catch(() => {});
+  }, [user?.id]); // re-fetch when user changes
 
   // Load PromptPay QR after order created
   useEffect(() => {
