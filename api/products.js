@@ -35,12 +35,16 @@ module.exports = async function handler(req, res) {
     if (!title || !price || !category) return json(res, 400, { error: 'title, price, category required' });
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36);
     const finalArtistId = user.role === 'admin' && artist_id ? artist_id : user.id;
-    // Fetch artist display name from artists table first (correct name like "Fluffy_Drawing")
-    // Fall back to profiles.name only if no artist record exists
-    const { data: artistRecord } = await supabase.from('artists').select('name, artist_slug').eq('user_id', finalArtistId).single();
-    const { data: profileRecord } = artistRecord ? { data: null } : await supabase.from('profiles').select('name, artist_slug').eq('id', finalArtistId).single();
-    const artistName = artistRecord?.name || profileRecord?.name || '';
-    const artistSlug = artistRecord?.artist_slug || profileRecord?.artist_slug || '';
+    // Artists are stored in profiles table (role='artist')
+    // Use artist_slug as display name if set, otherwise use name
+    const { data: artistProfile } = await supabase
+      .from('profiles')
+      .select('name, artist_slug')
+      .eq('id', finalArtistId)
+      .single();
+    // Prefer artist_slug as the display name (e.g. "Fluffy_Drawing"), fall back to name
+    const artistName = artistProfile?.artist_slug || artistProfile?.name || '';
+    const artistSlug = artistProfile?.artist_slug || '';
     const { data, error } = await supabase.from('products').insert({ title, slug, price: parseFloat(price), original_price: original_price ? parseFloat(original_price) : null, artist_id: finalArtistId, artist_name: artistName, artist_slug: artistSlug, category, description, rich_description: rich_description || null, image, cover_image_url: cover_image_url || null, type: finalType, is_physical: Boolean(is_physical), is_digital: Boolean(is_digital), pages: parseInt(pages) || 0, tags, status, is_new: true, active: true, digital_download_url: digital_download_url || null, download_instruction: download_instruction || null, physical_stock: parseInt(physical_stock) || 0, shipping_required: Boolean(shipping_required), shipping_note: shipping_note || '', variants: [] }).select().single();
     if (error) return json(res, 400, { error: error.message });
     return json(res, 201, data);
