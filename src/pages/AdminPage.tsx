@@ -167,7 +167,7 @@ function ProductsTab() {
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
-  const [category, setCategory] = useState('');
+  const [categories_sel, setCategories_sel] = useState<string[]>([]);
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('🎨');
   const [coverImageUrl, setCoverImageUrl] = useState('');
@@ -204,7 +204,7 @@ function ProductsTab() {
   useEffect(()=>{load();},[load]);
 
   const resetForm = () => {
-    setTitle(''); setPrice(''); setOriginalPrice(''); setCategory('');
+    setTitle(''); setPrice(''); setOriginalPrice(''); setCategories_sel([]);
     setDescription(''); setImage('🎨'); setCoverImageUrl(''); setType('digital');
     setPages(''); setTags(''); setStatus('published'); setDigitalDownloadUrl('');
     setDownloadInstruction(''); setPhysicalStock('0'); setShippingRequired(false); setShippingNote('');
@@ -214,7 +214,7 @@ function ProductsTab() {
 
   const startEdit = (pr:any) => {
     setTitle(pr.title||''); setPrice(String(pr.price||'')); setOriginalPrice(String(pr.original_price||''));
-    setCategory(pr.category||''); setDescription(pr.description||''); setImage(pr.image||'🎨');
+    setCategories_sel(pr.category ? (Array.isArray(pr.category) ? pr.category : [pr.category]) : []); setDescription(pr.description||''); setImage(pr.image||'🎨');
     setCoverImageUrl(pr.cover_image_url||''); setType(pr.type||'digital'); setPages(String(pr.pages||''));
     setTags((pr.tags||[]).join(', ')); setStatus(pr.status||'published');
     setDigitalDownloadUrl(pr.digital_download_url||''); setDownloadInstruction(pr.download_instruction||'');
@@ -232,9 +232,9 @@ function ProductsTab() {
   };
 
   const save = async () => {
-    if (!title||!price||!category){setMsg('⚠️ Title, price and category required.');return;}
+    if (!title||!priceTHB||!categories_sel.length){setMsg('⚠️ กรุณาใส่ชื่อ ราคา และหมวดหมู่ / Title, price and category required.');return;}
     setSaving(true); setMsg('');
-    const body:any = { title, price:parseFloat(price)||0, category, description,
+    const body:any = { title, price:parseFloat(priceTHB)||0, category:categories_sel[0]||'', categories:categories_sel, description,
       rich_description:richBlocks.length?richBlocks:null, image,
       cover_image_url:coverImageUrl||null,
       is_digital:isDigital, is_physical:isPhysical,
@@ -297,10 +297,14 @@ function ProductsTab() {
             <div>
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Category *</label>
               <div style={{display:'flex',gap:6,marginBottom:6}}>
-                <select value={category} onChange={e=>setCategory(e.target.value)} style={{flex:1,padding:'9px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit'}}>
-                  <option value="">Select category...</option>
-                  {categories.map(cat=><option key={cat} value={cat}>{cat}</option>)}
-                </select>
+                <div style={{flex:1,display:'flex',flexWrap:'wrap' as const,gap:7,padding:'8px 0'}}>
+                  {categories.map(cat=>(
+                    <label key={cat} style={{display:'flex',alignItems:'center',gap:5,cursor:'pointer',background:categories_sel.includes(cat)?P+'15':'#f9fafb',border:`1.5px solid ${categories_sel.includes(cat)?P:'#e5e7eb'}`,borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,color:categories_sel.includes(cat)?P:'#374151',transition:'all 0.1s'}}>
+                      <input type="checkbox" checked={categories_sel.includes(cat)} onChange={e=>{setCategories_sel(prev=>e.target.checked?[...prev,cat]:prev.filter(c=>c!==cat));}} style={{accentColor:P,width:13,height:13}} />
+                      {cat}
+                    </label>
+                  ))}
+                </div>
                 <button type="button" onClick={()=>setShowCatMgr(x=>!x)} style={{padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',background:showCatMgr?'#fdf2f8':'white',cursor:'pointer',fontSize:12,color:P,fontWeight:700}}>⚙️</button>
               </div>
               {showCatMgr&&(
@@ -331,16 +335,16 @@ function ProductsTab() {
                 {artists.map((a:any)=><option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
             </div>
-            <div>
-              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:8}}>Product Type</label>
-              <div style={{display:'flex',gap:16}}>
-                <label style={{display:'flex',gap:6,alignItems:'center',cursor:'pointer',fontSize:13,fontWeight:600,color:'#374151'}}>
-                  <input type="checkbox" checked={isDigital} onChange={e=>setIsDigital(e.target.checked)} style={{width:16,height:16,accentColor:P}} />
-                  ⬇️ Digital
+            <div style={{gridColumn:'1/-1'}}>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:10}}>ประเภทสินค้า / Product Type</label>
+              <div style={{display:'flex',gap:12,flexWrap:'wrap' as const}}>
+                <label style={{display:'flex',gap:7,alignItems:'center',cursor:'pointer',background:isDigital?'#dbeafe':'#f9fafb',border:`2px solid ${isDigital?'#3b82f6':'#e5e7eb'}`,borderRadius:12,padding:'10px 18px',fontSize:13,fontWeight:700,color:isDigital?'#1d4ed8':'#374151',transition:'all 0.1s'}}>
+                  <input type="checkbox" checked={isDigital} onChange={e=>setIsDigital(e.target.checked)} style={{width:16,height:16,accentColor:'#3b82f6'}} />
+                  ⬇️ ไฟล์ดิจิทัล / Digital File
                 </label>
-                <label style={{display:'flex',gap:6,alignItems:'center',cursor:'pointer',fontSize:13,fontWeight:600,color:'#374151'}}>
-                  <input type="checkbox" checked={isPhysical} onChange={e=>setIsPhysical(e.target.checked)} style={{width:16,height:16,accentColor:P}} />
-                  📦 Physical
+                <label style={{display:'flex',gap:7,alignItems:'center',cursor:'pointer',background:isPhysical?'#d1fae5':'#f9fafb',border:`2px solid ${isPhysical?'#10b981':'#e5e7eb'}`,borderRadius:12,padding:'10px 18px',fontSize:13,fontWeight:700,color:isPhysical?'#065f46':'#374151',transition:'all 0.1s'}}>
+                  <input type="checkbox" checked={isPhysical} onChange={e=>setIsPhysical(e.target.checked)} style={{width:16,height:16,accentColor:'#10b981'}} />
+                  📦 หนังสือจริง / Physical Book
                 </label>
               </div>
             </div>
@@ -354,18 +358,35 @@ function ProductsTab() {
             {inp('Emoji Icon', image, setImage, '🎨')}
             {inp('Pages', pages, setPages, '30', 'number')}
             <div style={{gridColumn:'1/-1'}}><ImageUpload label="Cover Image" value={coverImageUrl} onChange={setCoverImageUrl} folder="products" hint="Recommended: 800×600px" /></div>
-            {isDigital&&<>
-              <div style={{gridColumn:'1/-1'}}>{inp('Download URL (Google Drive or direct)', digitalDownloadUrl, setDigitalDownloadUrl, 'https://drive.google.com/...')}</div>
-              <div style={{gridColumn:'1/-1'}}>{inp('Download Instructions', downloadInstruction, setDownloadInstruction, 'How to access your download...')}</div>
-            </>}
-            {isPhysical&&<>
-              {inp('Stock Quantity', physicalStock, setPhysicalStock, '0', 'number')}
-              {inp('Shipping Note', shippingNote, setShippingNote, 'Weight, size, delivery estimate...')}
-              <div style={{display:'flex',alignItems:'center',gap:8,paddingTop:22}}>
-                <input type="checkbox" checked={shippingRequired} onChange={e=>setShippingRequired(e.target.checked)} id="ship" style={{width:16,height:16,accentColor:P}} />
-                <label htmlFor="ship" style={{fontSize:13,fontWeight:700,color:'#374151',cursor:'pointer'}}>Shipping Required</label>
+            {isDigital&&(
+              <div style={{gridColumn:'1/-1',background:'#eff6ff',border:'1.5px solid #bfdbfe',borderRadius:14,padding:'16px 18px'}}>
+                <div style={{fontSize:13,fontWeight:800,color:'#1d4ed8',marginBottom:12}}>⬇️ Digital File Settings</div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                  {inp('ราคาไฟล์ดิจิทัล (THB ฿)', priceTHB, setPriceTHB, '149', 'number')}
+                  {inp('Download URL', digitalDownloadUrl, setDigitalDownloadUrl, 'https://drive.google.com/...')}
+                </div>
+                <div style={{marginTop:8}}>{inp('Download Instructions', downloadInstruction, setDownloadInstruction, 'วิธีดาวน์โหลดไฟล์ / How to access download...', false)}</div>
+                <div style={{marginTop:8,fontSize:12,color:'#1d4ed8',background:'#dbeafe',borderRadius:8,padding:'8px 12px'}}>
+                  💡 ลูกค้าจะได้รับลิงค์ดาวน์โหลดทางอีเมลหลังจากแอดมินยืนยันการชำระเงิน
+                </div>
               </div>
-            </>}
+            )}
+            {isPhysical&&(
+              <div style={{gridColumn:'1/-1',background:'#f0fdf4',border:'1.5px solid #bbf7d0',borderRadius:14,padding:'16px 18px'}}>
+                <div style={{fontSize:13,fontWeight:800,color:'#065f46',marginBottom:12}}>📦 Physical Book Settings</div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:8}}>
+                  {inp('Stock Quantity', physicalStock, setPhysicalStock, '0', 'number')}
+                  {inp('Shipping Note', shippingNote, setShippingNote, 'น้ำหนัก/ขนาด/ระยะเวลาจัดส่ง', false)}
+                </div>
+                <div style={{fontSize:12,color:'#065f46',background:'#dcfce7',borderRadius:8,padding:'8px 12px',marginBottom:8}}>
+                  💡 เพิ่ม Variant ด้านล่างสำหรับรูปแบบต่างๆ เช่น สันห่วงปกติ / สันห่วงเปิดบน พร้อมราคาแต่ละแบบ
+                </div>
+                <label style={{display:'flex',gap:8,alignItems:'center',cursor:'pointer',fontSize:12,fontWeight:600,color:'#374151'}}>
+                  <input type="checkbox" checked={shippingRequired} onChange={e=>setShippingRequired(e.target.checked)} style={{width:14,height:14,accentColor:'#10b981'}} />
+                  ต้องจัดส่ง / Shipping Required
+                </label>
+              </div>
+            )}
             <div style={{gridColumn:'1/-1'}}>
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Description (EN)</label>
               <textarea value={description} onChange={e=>setDescription(e.target.value)} rows={3}
@@ -405,7 +426,7 @@ function ProductsTab() {
               <td style={{padding:'14px 16px',fontWeight:700,color:'#111827',fontSize:14}}>{pr.title}</td>
               <td style={{padding:'14px 16px',fontSize:13,color:'#6b7280'}}>{pr.artist_name||pr.artistName}</td>
               <td style={{padding:'14px 16px'}}><Badge color={P} bg="#fce7f3" text={pr.category}/></td>
-              <td style={{padding:'14px 16px',fontWeight:800,color:'#111827',fontSize:14}}>${pr.price}</td>
+              <td style={{padding:'14px 16px',fontWeight:800,color:'#111827',fontSize:14}}>฿{pr.price_thb > 0 ? Number(pr.price_thb).toLocaleString('th-TH') : pr.price_thb || '—'}</td>
               <td style={{padding:'14px 16px'}}><Badge color={pr.status==='published'?'#059669':'#6b7280'} bg={pr.status==='published'?'#d1fae5':'#f3f4f6'} text={pr.status==='published'?'Active':'Draft'}/></td>
               <td style={{padding:'14px 16px'}}>
                 <div style={{display:'flex',gap:6}}>

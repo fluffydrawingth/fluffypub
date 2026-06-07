@@ -14,21 +14,36 @@ module.exports = async function handler(req, res) {
       const user = await requireAuth(req, res);
       if (!user) return;
       const body = req.body || {};
-      const updates = { updated_at: new Date().toISOString() };
       const fields = ['name','bio','first_name','last_name','phone','delivery_email','shipping_address','province','postal_code','preferred_lang'];
+      const updates = { updated_at: new Date().toISOString() };
       fields.forEach(f => { if (body[f] !== undefined) updates[f] = body[f]; });
-      console.log('[users PUT] updating user', user.id, 'fields:', Object.keys(updates));
-      // upsert: creates profile row if it doesn't exist yet
-      const upsertData = { id: user.id, email: user.email, ...updates };
+      console.log('[users PUT] user:', user.id, 'updating:', JSON.stringify(updates));
+
+      // upsert: creates profile row if missing, updates if exists
+      const upsertData = { id: user.id, email: user.email, role: user.role || 'customer', ...updates };
       const { data, error } = await supabase
         .from('profiles')
         .upsert(upsertData, { onConflict: 'id' })
         .select('id,email,name,role,bio,artist_slug,favorites,first_name,last_name,phone,delivery_email,shipping_address,province,postal_code,preferred_lang')
         .single();
+
       if (error) {
-        console.error('[users PUT] error:', error.message, error.details, 'data:', JSON.stringify(upsertData));
-        return json(res, 400, { error: error.message });
+        console.error('[users PUT] UPSERT ERROR:', error.code, error.message, error.details, error.hint);
+        // Fallback: try plain update
+        const { data: d2, error: e2 } = await supabase
+          .from('profiles')
+          .update(updates)
+          .eq('id', user.id)
+          .select('id,email,name,role,bio,artist_slug,favorites,first_name,last_name,phone,delivery_email,shipping_address,province,postal_code,preferred_lang')
+          .single();
+        if (e2) {
+          console.error('[users PUT] UPDATE FALLBACK ERROR:', e2.code, e2.message, e2.hint);
+          return json(res, 400, { error: e2.message, code: e2.code });
+        }
+        console.log('[users PUT] fallback update succeeded');
+        return json(res, 200, d2);
       }
+      console.log('[users PUT] upsert succeeded, returning:', JSON.stringify(data));
       return json(res, 200, data);
     }
   }
