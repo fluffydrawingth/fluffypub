@@ -57,6 +57,8 @@ function OrdersTab({p,theme}:any) {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any>(null);
   const [slipUploading, setSlipUploading] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<Record<string,string>>({});  // keyed by order id
+  const [qrLoading, setQrLoading] = useState<Record<string,boolean>>({});
   const { tRaw, lang } = useLang();
   const STATUS_COLORS: Record<string,string> = {
     pending_payment:'#fef3c7', paid:'#d1fae5', packing:'#dbeafe', shipped:'#e0e7ff', delivered:'#d1fae5', cancelled:'#fee2e2',
@@ -83,6 +85,20 @@ function OrdersTab({p,theme}:any) {
     if (data.error) { alert(tRaw(`ไม่สามารถยกเลิก: ${data.error}`, `Cannot cancel: ${data.error}`)); return; }
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled', cancelled_at: data.cancelled_at } : o));
     if (selected?.id === orderId) setSelected((s: any) => ({ ...s, status: 'cancelled' }));
+  };
+
+  const loadQR = async (orderId: string, amtTHB: number) => {
+    if (qrDataUrl[orderId] || qrLoading[orderId] || !amtTHB) return;
+    setQrLoading(prev => ({ ...prev, [orderId]: true }));
+    try {
+      const token = localStorage.getItem('fluffy_token') || '';
+      const r = await fetch(`/api/promptpay?amount=${amtTHB}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const d = await r.json();
+      if (d.qrDataUrl) setQrDataUrl(prev => ({ ...prev, [orderId]: d.qrDataUrl }));
+    } catch {}
+    setQrLoading(prev => ({ ...prev, [orderId]: false }));
   };
 
   const uploadSlip = async (orderId: string, file: File) => {
@@ -199,26 +215,70 @@ function OrdersTab({p,theme}:any) {
         🚚 {selected.shipping_provider}: {selected.tracking_number}
       </div>}
 
-      {/* Slip upload */}
-      {selected.status==='pending_payment'&&<div style={{marginBottom:14}}>
-        <div style={{fontWeight:700,fontSize:13,color:'#374151',marginBottom:8}}>{tRaw('อัปโหลดสลิปการโอนเงิน','Upload Payment Slip')}</div>
-        {selected.slip_url?(
-          <div style={{background:'#d1fae5',borderRadius:10,padding:'10px 14px',fontSize:13,color:'#065f46',fontWeight:600}}>✅ {tRaw('อัปโหลดสลิปแล้ว','Slip uploaded')}</div>
-        ):(
-          <>
-            <label style={{display:'block',cursor:'pointer',marginBottom:10}}>
-              <div style={{background:p+'10',border:`2px dashed ${p}40`,borderRadius:12,padding:14,textAlign:'center' as const,fontSize:13,color:p,fontWeight:600}}>
-                {slipUploading?'⏳ ...':'📷 '+tRaw('อัปโหลดสลิป','Upload slip')}
+      {/* Payment section — pending_payment only */}
+      {selected.status==='pending_payment'&&(()=>{
+        const payAmt = selected.total_thb || selected.total_amount || (parseFloat(selected.total||'0')*35);
+        // Trigger QR load when this section renders
+        if (!selected.slip_url && payAmt && !qrDataUrl[selected.id] && !qrLoading[selected.id]) {
+          loadQR(selected.id, payAmt);
+        }
+        return (
+          <div style={{marginBottom:14}}>
+            {selected.slip_url ? (
+              /* Slip already uploaded */
+              <div>
+                <div style={{background:'#d1fae5',borderRadius:12,padding:'12px 14px',marginBottom:10,fontSize:13,color:'#065f46',fontWeight:700}}>
+                  ✅ {tRaw('อัปโหลดสลิปแล้ว — รอแอดมินยืนยัน','Slip uploaded — waiting for admin confirmation')}
+                </div>
+                <img src={selected.slip_url} alt="slip" style={{width:'100%',borderRadius:10,border:'1px solid #e5e7eb'}} />
               </div>
-              <input type="file" accept="image/*" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)uploadSlip(selected.id,f);}} />
-            </label>
-            <button onClick={()=>cancelOrder(selected.id)}
-              style={{width:'100%',padding:'10px',background:'#fef2f2',border:'1.5px solid #fca5a5',color:'#dc2626',borderRadius:12,cursor:'pointer',fontSize:13,fontWeight:700,fontFamily:theme.fontFamily}}>
-              ✕ {tRaw('ยกเลิกคำสั่งซื้อ','Cancel Order')}
-            </button>
-          </>
-        )}
-      </div>}
+            ) : (
+              /* No slip yet — show QR + upload + cancel */
+              <div>
+                {/* PromptPay QR */}
+                <div style={{background:'white',border:'1.5px solid #e5e7eb',borderRadius:16,padding:20,textAlign:'center' as const,marginBottom:12}}>
+                  <div style={{fontWeight:800,fontSize:14,color:theme.textColor,marginBottom:4}}>💳 PromptPay</div>
+                  <div style={{fontSize:12,color:'#64748b',marginBottom:12}}>{tRaw('สแกนด้วยแอปธนาคารเพื่อชำระเงิน','Scan with your banking app to pay')}</div>
+                  {qrLoading[selected.id] ? (
+                    <div style={{width:180,height:180,margin:'0 auto',background:'#f3f4f6',borderRadius:12,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28}}>⏳</div>
+                  ) : qrDataUrl[selected.id] ? (
+                    <img src={qrDataUrl[selected.id]} alt="PromptPay QR" style={{width:180,height:180,margin:'0 auto',display:'block',borderRadius:8}} />
+                  ) : (
+                    <div style={{background:'#fef3c7',borderRadius:10,padding:'10px 14px',fontSize:12,color:'#92400e'}}>
+                      {tRaw('ไม่พบ QR — ติดต่อแอดมิน','QR unavailable — contact admin')}
+                    </div>
+                  )}
+                  {payAmt > 0 && <div style={{marginTop:10,fontSize:20,fontWeight:900,color:theme.textColor}}>฿{Number(payAmt).toLocaleString('th-TH')}</div>}
+                </div>
+
+                {/* Payment instructions */}
+                <div style={{background:'#f9fafb',borderRadius:12,padding:'12px 14px',marginBottom:10,fontSize:12,color:'#374151',lineHeight:1.7}}>
+                  <div style={{fontWeight:700,marginBottom:6}}>{tRaw('วิธีชำระเงิน','Payment Steps')}</div>
+                  {['1. สแกน QR ด้วยแอปธนาคาร / Scan QR with banking app',
+                    `2. โอนเงิน ฿${Number(payAmt).toLocaleString('th-TH')} / Transfer ฿${Number(payAmt).toLocaleString('th-TH')}`,
+                    '3. ถ่ายสลิป แล้วอัปโหลดด้านล่าง / Screenshot slip and upload below',
+                    '4. รอการยืนยัน / Wait for confirmation',
+                  ].map((s,i) => <div key={i}>{s}</div>)}
+                </div>
+
+                {/* Upload slip */}
+                <label style={{display:'block',cursor:'pointer',marginBottom:8}}>
+                  <div style={{background:p+'10',border:`2px dashed ${p}50`,borderRadius:12,padding:'12px 14px',textAlign:'center' as const,fontSize:13,color:p,fontWeight:700}}>
+                    {slipUploading ? '⏳ '+tRaw('กำลังอัปโหลด...','Uploading...') : '📷 '+tRaw('อัปโหลดสลิปการโอนเงิน','Upload Payment Slip')}
+                  </div>
+                  <input type="file" accept="image/*" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)uploadSlip(selected.id,f);}} />
+                </label>
+
+                {/* Cancel */}
+                <button onClick={()=>cancelOrder(selected.id)}
+                  style={{width:'100%',padding:'9px',background:'#fef2f2',border:'1.5px solid #fca5a5',color:'#dc2626',borderRadius:10,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:theme.fontFamily}}>
+                  ✕ {tRaw('ยกเลิกคำสั่งซื้อ','Cancel Order')}
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Download links */}
       {(selected.items||[]).filter((i:any)=>i.digital_download_url).map((i:any,idx:number)=>(
