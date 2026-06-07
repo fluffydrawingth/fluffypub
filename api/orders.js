@@ -104,7 +104,7 @@ module.exports = async function handler(req, res) {
         // SNAPSHOT — these come from cart, never recalculated
         optionId: cartItem.optionId || '',
         optionName: cartItem.optionName || '',
-        optionType: cartItem.optionType || 'physical',  // 'digital' | 'physical'
+        optionType: cartItem.optionType || 'digital',  // NEVER default - must come from cart
         unitPriceTHB,
         qty,
         lineTotalTHB: unitPriceTHB * qty,
@@ -118,6 +118,8 @@ module.exports = async function handler(req, res) {
     const shipping_thb = shippingFromCart || 0;
     const grand_total_thb = total_thb || (subtotal_thb + shipping_thb);
     const hasPhysical = orderItems.some(i => i.optionType === 'physical');
+    // Shipping based on physical qty from cart (already calculated correctly)
+    const physicalQtyFromCart = orderItems.filter(i => i.optionType === 'physical').reduce((s, i) => s + i.qty, 0);
 
     const authUser = await getUser(req);
     const { data: order, error } = await supabase.from('orders').insert({

@@ -153,24 +153,28 @@ function OrdersTab({p,theme}:any) {
           const optionType = i.optionType || (i.type==='digital'?'digital':'physical');
           const optionName = i.optionName || i.variant?.name || '';
           const qty = i.qty || 1;
-          const unitPrice = i.unitPriceTHB || i.price_thb || 0;
+          const unitPrice = i.unitPriceTHB || i.price_thb || (i.price ? Math.round(i.price*35) : 0);
           const lineTotal = i.lineTotalTHB || (unitPrice * qty);
+          const isDigital = optionType === 'digital';
           return (
-            <div key={idx} style={{display:'flex',gap:10,alignItems:'flex-start',marginBottom:10,background:'#f9fafb',borderRadius:10,padding:'8px 10px'}}>
-              <span style={{fontSize:24,flexShrink:0}}>{i.image}</span>
-              <div style={{flex:1}}>
-                <div style={{fontWeight:700,color:'#1e293b',fontSize:14}}>{i.title}</div>
-                <div style={{display:'flex',gap:5,marginTop:3,flexWrap:'wrap' as const}}>
-                  <span style={{fontSize:10,fontWeight:700,background:optionType==='digital'?'#dbeafe':'#d1fae5',color:optionType==='digital'?'#1d4ed8':'#065f46',borderRadius:6,padding:'1px 7px'}}>
-                    {optionType==='digital'?'⬇️ Digital':'📦 Physical'}
-                  </span>
-                  {optionName&&<span style={{fontSize:10,color:p,fontWeight:600}}>{optionName}</span>}
-                  {qty>1&&<span style={{fontSize:10,color:'#6b7280'}}>×{qty}</span>}
+            <div key={idx} style={{background:'#f9fafb',borderRadius:10,padding:'10px 12px',marginBottom:8,border:`1px solid ${isDigital?'#bfdbfe':'#bbf7d0'}`}}>
+              <div style={{display:'flex',gap:10,alignItems:'flex-start'}}>
+                <span style={{fontSize:22,flexShrink:0}}>{i.image}</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,color:'#1e293b',fontSize:14,marginBottom:3}}>{i.title}</div>
+                  {/* Variant name on its own line */}
+                  {optionName&&<div style={{fontSize:12,color:p,fontWeight:600,marginBottom:4}}>📌 {optionName}</div>}
+                  <div style={{display:'flex',gap:5,flexWrap:'wrap' as const}}>
+                    <span style={{fontSize:10,fontWeight:700,background:isDigital?'#dbeafe':'#d1fae5',color:isDigital?'#1d4ed8':'#065f46',borderRadius:6,padding:'1px 7px'}}>
+                      {isDigital?'⬇️ Digital':'📦 Physical'}
+                    </span>
+                    <span style={{fontSize:10,color:'#6b7280'}}>Qty: {qty}</span>
+                  </div>
                 </div>
-              </div>
-              <div style={{textAlign:'right' as const,flexShrink:0}}>
-                <div style={{fontWeight:800,color:'#1e293b',fontSize:13}}>฿{Number(lineTotal).toLocaleString('th-TH')}</div>
-                {qty>1&&<div style={{fontSize:10,color:'#9ca3af'}}>฿{Number(unitPrice).toLocaleString('th-TH')} ×{qty}</div>}
+                <div style={{textAlign:'right' as const,flexShrink:0}}>
+                  <div style={{fontWeight:800,color:'#1e293b',fontSize:13}}>฿{Number(lineTotal).toLocaleString('th-TH')}</div>
+                  {qty>1&&<div style={{fontSize:10,color:'#9ca3af'}}>฿{Number(unitPrice).toLocaleString('th-TH')} ×{qty}</div>}
+                </div>
               </div>
             </div>
           );

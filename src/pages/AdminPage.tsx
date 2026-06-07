@@ -642,37 +642,37 @@ function OrdersTab() {
             <div style={{borderTop:'1px solid #f3f4f6',borderBottom:'1px solid #f3f4f6',padding:'10px 0',marginBottom:12}}>
               <div style={{fontSize:11,fontWeight:700,color:'#9ca3af',marginBottom:8}}>PRODUCTS</div>
               {(selected.items||[]).map((i:any,idx:number)=>{
-                // Read EXACTLY from order snapshot — never infer from product data
-                const optionType: 'digital'|'physical' = i.optionType || (i.type==='digital' ? 'digital' : 'physical');
+                // Read from snapshot fields — support both old and new order formats
+                const optionType: string = i.optionType || (i.type==='digital' ? 'digital' : i.type==='both' ? 'both' : 'physical');
                 const optionName = i.optionName || i.variant?.name || '';
                 const qty = i.qty || 1;
-                const unitPrice = i.unitPriceTHB || i.price_thb || (i.price ? i.price*35 : 0);
+                const unitPrice = i.unitPriceTHB || i.price_thb || (i.price ? Math.round(i.price*35) : 0);
                 const lineTotal = i.lineTotalTHB || (unitPrice * qty);
                 const isDigital = optionType === 'digital';
 
                 return (
-                  <div key={idx} style={{background:'#f9fafb',borderRadius:10,padding:'10px 12px',marginBottom:6,border:`1px solid ${isDigital?'#bfdbfe':'#bbf7d0'}`}}>
+                  <div key={idx} style={{background:'#f9fafb',borderRadius:10,padding:'10px 12px',marginBottom:6,border:`1.5px solid ${isDigital?'#bfdbfe':'#bbf7d0'}`}}>
                     <div style={{display:'flex',alignItems:'flex-start',gap:8}}>
                       <span style={{fontSize:18,flexShrink:0}}>{i.image}</span>
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:13,color:'#111827',fontWeight:700,lineHeight:1.3}}>{i.title}</div>
-                        <div style={{display:'flex',gap:5,marginTop:5,flexWrap:'wrap' as const,alignItems:'center'}}>
-                          {/* Type — from snapshot */}
+                        <div style={{fontSize:13,color:'#111827',fontWeight:700,lineHeight:1.3,marginBottom:5}}>{i.title}</div>
+                        {/* Variant / option name row */}
+                        {optionName && (
+                          <div style={{fontSize:12,color:'#374151',fontWeight:600,marginBottom:4}}>
+                            📌 {optionName}
+                          </div>
+                        )}
+                        <div style={{display:'flex',gap:5,flexWrap:'wrap' as const,alignItems:'center'}}>
                           <span style={{fontSize:11,fontWeight:700,background:isDigital?'#dbeafe':'#d1fae5',color:isDigital?'#1d4ed8':'#065f46',borderRadius:6,padding:'2px 8px'}}>
                             {isDigital ? '⬇️ Digital' : '📦 Physical'}
                           </span>
-                          {/* Variant/option name — from snapshot */}
-                          {optionName && <span style={{fontSize:11,fontWeight:600,background:P+'15',color:P,borderRadius:6,padding:'2px 8px'}}>{optionName}</span>}
-                          {/* Quantity */}
-                          <span style={{fontSize:11,color:'#6b7280'}}>×{qty}</span>
+                          <span style={{fontSize:11,color:'#6b7280',fontWeight:600}}>Qty: {qty}</span>
                         </div>
                       </div>
-                      {/* Price breakdown */}
-                      <div style={{textAlign:'right' as const,flexShrink:0}}>
-                        <div style={{fontWeight:800,color:'#111827',fontSize:13}}>
-                          ฿{Number(lineTotal).toLocaleString('th-TH')}
-                        </div>
-                        {qty>1&&<div style={{fontSize:10,color:'#9ca3af'}}>฿{Number(unitPrice).toLocaleString('th-TH')} ×{qty}</div>}
+                      {/* Price */}
+                      <div style={{textAlign:'right' as const,flexShrink:0,paddingTop:2}}>
+                        <div style={{fontWeight:800,color:'#111827',fontSize:14}}>฿{Number(lineTotal).toLocaleString('th-TH')}</div>
+                        {qty>1&&<div style={{fontSize:10,color:'#9ca3af'}}>฿{Number(unitPrice).toLocaleString('th-TH')} × {qty}</div>}
                       </div>
                     </div>
                   </div>
