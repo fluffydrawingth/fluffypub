@@ -46,7 +46,7 @@ export default function AccountPage() {
 
         {tab==='orders' && <OrdersTab p={p} theme={theme} />}
         {tab==='favorites' && <FavoritesTab p={p} theme={theme} navigate={navigate} />}
-        {tab==='profile' && <ProfileTab user={user} p={p} theme={theme} refreshUser={refreshUser} />}
+        {tab==='profile' && <ProfileTab key={user.id} user={user} p={p} theme={theme} refreshUser={refreshUser} />}
       </div>
     </div>
   );

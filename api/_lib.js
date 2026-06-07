@@ -27,13 +27,29 @@ async function getUser(req) {
     // Check expiry
     if (payload.exp && Date.now() / 1000 > payload.exp) return null;
     
-    // Get profile from DB using service role
-    const { data: profile } = await supabase
+    // Get profile from DB — upsert creates row if missing (guarantees per-user row)
+    const email = payload.email || '';
+    const { data: profile, error: fetchErr } = await supabase
       .from('profiles')
       .select('id, email, name, role, bio, artist_slug, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
       .eq('id', userId)
       .single();
-    return profile;
+
+    if (profile) return profile;
+
+    // No profile row — create one now (first login or missing row)
+    const { data: created } = await supabase
+      .from('profiles')
+      .upsert({
+        id: userId,
+        email: email,
+        name: payload.user_metadata?.name || email.split('@')[0] || '',
+        role: 'customer',
+      }, { onConflict: 'id' })
+      .select('id, email, name, role, bio, artist_slug, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
+      .single();
+
+    return created || { id: userId, email, name: email.split('@')[0], role: 'customer' };
   } catch (e) {
     console.error('getUser error:', e.message);
     return null;

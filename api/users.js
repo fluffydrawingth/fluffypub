@@ -19,12 +19,19 @@ module.exports = async function handler(req, res) {
       fields.forEach(f => { if (body[f] !== undefined) updates[f] = body[f]; });
       console.log('[users PUT] user:', user.id, 'updating:', JSON.stringify(updates));
 
-      // upsert: creates profile row if missing, updates if exists
-      const upsertData = { id: user.id, email: user.email, role: user.role || 'customer', ...updates };
+      // upsert keyed by user.id (auth.users.id) — NEVER by email
+      // Each user always has exactly one profile row
+      const upsertData = {
+        id: user.id,          // primary key = auth user id
+        email: user.email,
+        role: user.role || 'customer',
+        ...updates,
+      };
+      const PROFILE_SELECT = 'id,email,name,role,bio,artist_slug,favorites,first_name,last_name,phone,delivery_email,shipping_address,province,postal_code,preferred_lang';
       const { data, error } = await supabase
         .from('profiles')
         .upsert(upsertData, { onConflict: 'id' })
-        .select('id,email,name,role,bio,artist_slug,favorites,first_name,last_name,phone,delivery_email,shipping_address,province,postal_code,preferred_lang')
+        .select(PROFILE_SELECT)
         .single();
 
       if (error) {
@@ -34,7 +41,7 @@ module.exports = async function handler(req, res) {
           .from('profiles')
           .update(updates)
           .eq('id', user.id)
-          .select('id,email,name,role,bio,artist_slug,favorites,first_name,last_name,phone,delivery_email,shipping_address,province,postal_code,preferred_lang')
+          .select(PROFILE_SELECT)
           .single();
         if (e2) {
           console.error('[users PUT] UPDATE FALLBACK ERROR:', e2.code, e2.message, e2.hint);
