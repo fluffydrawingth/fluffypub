@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
-import { useCart } from '../lib/cart';
+import ProductCard from '../components/ProductCard';
 
 export default function ArtistProfilePage({ slug }: { slug: string }) {
   const { theme } = useTheme();
   const { navigate } = useRouter();
-  const { add } = useCart();
+
   const [artist, setArtist] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const p = theme.primaryColor;
@@ -77,23 +77,9 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
         {(artist.products||[]).length === 0 ? (
           <div style={{ textAlign:'center', padding:'40px', color:'#9ca3af', background:'white', borderRadius:16 }}>No products yet</div>
         ) : (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:20 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:20 }}>
             {(artist.products||[]).map((pr:any) => (
-              <div key={pr.id} style={{ background:'white', borderRadius:18, overflow:'hidden', boxShadow:'0 2px 10px rgba(0,0,0,0.06)', border:`1px solid ${p}12`, cursor:'pointer', transition:'transform 0.15s' }}
-                onClick={()=>navigate(`/products/${pr.slug}`)}
-                onMouseEnter={e=>(e.currentTarget.style.transform='translateY(-3px)')}
-                onMouseLeave={e=>(e.currentTarget.style.transform='translateY(0)')}>
-                <div style={{ height:120, background:`linear-gradient(135deg,${p}15,${theme.bgColor2})`, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  {pr.cover_image_url ? <img src={pr.cover_image_url} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={pr.title} /> : <span style={{ fontSize:48 }}>{pr.image}</span>}
-                </div>
-                <div style={{ padding:'14px 16px' }}>
-                  <div style={{ fontWeight:800, color:theme.textColor, fontSize:14, marginBottom:4 }}>{pr.title}</div>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <span style={{ fontWeight:900, color:p, fontSize:16 }}>${pr.price}</span>
-                    <button onClick={e=>{e.stopPropagation();add({id:pr.id,title:pr.title,price:pr.price,image:pr.image,artist:artist.name,slug:pr.slug});}} style={{ background:p, color:'white', border:'none', cursor:'pointer', padding:'5px 12px', borderRadius:10, fontSize:11, fontWeight:700, fontFamily:theme.fontFamily }}>+ Cart</button>
-                  </div>
-                </div>
-              </div>
+              <ProductCard key={pr.id} product={{ ...pr, artistName: artist.name }} />
             ))}
           </div>
         )}

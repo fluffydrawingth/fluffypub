@@ -14,7 +14,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const { lang, t, tRaw } = useLang();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'details'|'reviews'>('details');
+
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
   const [variantError, setVariantError] = useState('');
   const [allProducts, setAllProducts] = useState<any[]>([]);
@@ -152,11 +152,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               {title}
             </h1>
 
-            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
-              <span style={{color:'#f59e0b',fontSize:13}}>{'★'.repeat(Math.min(5,Math.round(product.rating||0)))}</span>
-              <span style={{fontWeight:700,color:theme.textColor,fontSize:12}}>{product.rating||0}</span>
-              <span style={{color:'#888',fontSize:11}}>({product.reviews||0})</span>
-            </div>
+
 
             {/* Type badges — from DB only */}
             <div style={{display:'flex',gap:6,marginBottom:12,flexWrap:'wrap' as const}}>
@@ -233,15 +229,14 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
         {/* Details / Reviews */}
         <div style={{background:'white',borderRadius:20,marginTop:16,overflow:'hidden',boxShadow:'0 4px 24px rgba(0,0,0,0.06)'}}>
           <div className="pd-tabs-row" style={{borderBottom:`2px solid ${p}15`}}>
-            {(['details','reviews'] as const).map(tab => (
-              <button key={tab} onClick={()=>setActiveTab(tab)} style={{padding:'14px 24px',border:'none',cursor:'pointer',background:activeTab===tab?p+'10':'transparent',color:activeTab===tab?p:theme.textColor+'88',fontWeight:activeTab===tab?800:600,fontSize:13,borderBottom:activeTab===tab?`3px solid ${p}`:'3px solid transparent',fontFamily:theme.fontFamily,whiteSpace:'nowrap' as const}}>
+            {(['details'] as const).map(tab => (
+              <button key={tab} style={{padding:'14px 24px',border:'none',background:p+'10',color:p,fontWeight:800,fontSize:13,borderBottom:`3px solid ${p}`,fontFamily:theme.fontFamily,whiteSpace:'nowrap' as const}}>
                 {tab==='details' ? tRaw('📋 รายละเอียด','📋 Details') : `⭐ ${tRaw('รีวิว','Reviews')} (${product.reviews||0})`}
               </button>
             ))}
           </div>
           <div style={{padding:'20px 18px'}}>
-            {activeTab === 'details' ? (
-              <div>
+            <div>
                 {product.rich_description && Array.isArray(product.rich_description) && product.rich_description.length > 0
                   ? <RichDescRenderer blocks={product.rich_description} />
                   : description
@@ -253,24 +248,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                   {isDigital && <div style={{display:'flex',justifyContent:'space-between',borderBottom:`1px solid ${p}15`,paddingBottom:8}}><span style={{color:theme.textColor+'88',fontWeight:600,fontSize:13}}>{tRaw('รูปแบบ','Type')}</span><span style={{color:theme.textColor,fontWeight:700,fontSize:13}}>{t('digital')}</span></div>}
                   {isPhysical && <div style={{display:'flex',justifyContent:'space-between',borderBottom:`1px solid ${p}15`,paddingBottom:8}}><span style={{color:theme.textColor+'88',fontWeight:600,fontSize:13}}>{tRaw('รูปแบบ','Format')}</span><span style={{color:theme.textColor,fontWeight:700,fontSize:13}}>{t('physical')}</span></div>}
                 </div>
-              </div>
-            ) : (
-              <div style={{display:'flex',flexDirection:'column' as const,gap:16}}>
-                {[
-                  {a:'Sophie M.',r:5,tx:tRaw('สวยมากเลย! ชอบมากค่ะ 🌸','Absolutely stunning! Love it! 🌸'),d:tRaw('2 วันที่แล้ว','2 days ago'),av:'🌸'},
-                  {a:'Emma K.',r:5,tx:tRaw('ทำร่วมกับลูกสาวได้เลย ระดับดีมาก','Great with my daughter!'),d:tRaw('1 สัปดาห์','1 week ago'),av:'🎨'},
-                ].map((r,i) => (
-                  <div key={i} style={{borderBottom:`1px solid ${p}10`,paddingBottom:16}}>
-                    <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
-                      <span style={{fontSize:26}}>{r.av}</span>
-                      <div><div style={{fontWeight:800,color:theme.textColor,fontSize:14}}>{r.a}</div><div style={{color:'#f59e0b',fontSize:12}}>{'★'.repeat(r.r)}</div></div>
-                      <span style={{marginLeft:'auto',fontSize:11,color:'#aaa'}}>{r.d}</span>
-                    </div>
-                    <p style={{color:theme.textColor+'cc',fontSize:13,lineHeight:1.6,margin:0}}>{r.tx}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+            </div>
           </div>
         </div>
 

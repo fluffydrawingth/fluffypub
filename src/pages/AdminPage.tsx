@@ -188,7 +188,7 @@ function ProductsTab() {
   const [titleTh, setTitleTh] = useState('');
   const [titleEn, setTitleEn] = useState('');
   const [priceTHB, setPriceTHB] = useState('');
-  const [priceUSD, setPriceUSD] = useState('');
+
   const [descTh, setDescTh] = useState('');
 
   const [categories, setCategories] = useState<string[]>(['Animals','Fantasy','Botanicals','Mandala','Kawaii','Seasonal']);
@@ -225,7 +225,7 @@ function ProductsTab() {
     setRichBlocks(Array.isArray(pr.rich_description) ? pr.rich_description : []);
     setVariants(Array.isArray(pr.variants) ? pr.variants : []);
     setTitleTh(pr.title_th||''); setTitleEn(pr.title_en||'');
-    setPriceTHB(String(pr.price_thb||'')); setPriceUSD(String(pr.price_usd||''));
+    setPriceTHB(String(pr.price_thb||''));
     setDescTh(pr.description_th||'');
     setEditingId(pr.id);
     setShowForm(true);
@@ -250,7 +250,6 @@ function ProductsTab() {
       variants:variants,
       title_th:titleTh||null, title_en:titleEn||null,
       price_thb:priceTHB?parseFloat(priceTHB):null,
-      price_usd:priceUSD?parseFloat(priceUSD):null,
       description_th:descTh||null };
     if (originalPrice) body.original_price = parseFloat(originalPrice);
     const result = editingId ? await api.updateProduct(editingId, body) : await api.createProduct(body);
@@ -293,10 +292,8 @@ function ProductsTab() {
             <div style={{gridColumn:'1/-1'}}>{inp('Title (EN) *', title, setTitle, 'Product title in English')}</div>
             {inp('Title (TH)', titleTh, setTitleTh, 'ชื่อสินค้าภาษาไทย')}
             {inp('Title (EN fallback)', titleEn, setTitleEn, 'English title fallback')}
-            {inp('Selling Price THB ฿ *', priceTHB, setPriceTHB, '350', 'number')}
-            {inp('Selling Price USD $', priceUSD, setPriceUSD, '9.99', 'number')}
-            {inp('Compare Price THB ฿', originalPrice, setOriginalPrice, '490', 'number')}
-            {inp('Compare Price USD $', price, setPrice, '14.99', 'number')}
+            {inp('ราคาขาย (THB ฿) *', priceTHB, setPriceTHB, '350', 'number')}
+            {inp('ราคาเปรียบเทียบ (THB ฿)', originalPrice, setOriginalPrice, '490', 'number')}
             <div>
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Category *</label>
               <div style={{display:'flex',gap:6,marginBottom:6}}>
@@ -1171,7 +1168,7 @@ function FooterCMSEditor({ footer, onFooterChange }: { footer: FooterConfig; onF
 function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v: any[]) => void }) {
   const vuid = () => Math.random().toString(36).slice(2, 9);
 
-  const add = () => onChange([...variants, { id: vuid(), name: '', price_thb: '', price_usd: '', enabled: true, stock: '' }]);
+  const add = () => onChange([...variants, { id: vuid(), name: '', price_thb: '', enabled: true, stock: '' }]);
   const update = (id: string, key: string, val: any) => onChange(variants.map(v => v.id === id ? { ...v, [key]: val } : v));
   const del = (id: string) => onChange(variants.filter(v => v.id !== id));
   const move = (i: number, dir: number) => {
@@ -1197,7 +1194,7 @@ function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v:
 
       {variants.map((v, i) => (
         <div key={v.id} style={{ background: '#f9fafb', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 100px 60px auto auto auto', gap: 6, alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 60px auto auto auto', gap: 6, alignItems: 'center' }}>
             <input
               value={v.name}
               onChange={e => update(v.id, 'name', e.target.value)}
@@ -1212,12 +1209,7 @@ function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v:
                 style={{ padding: '7px 6px 7px 18px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 12, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const }}
                 onFocus={e => e.target.style.borderColor = P} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
             </div>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: 12 }}>$</span>
-              <input type="number" value={v.price_usd||''} onChange={e => update(v.id, 'price_usd', e.target.value)} placeholder="USD"
-                style={{ padding: '7px 6px 7px 16px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 12, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const }}
-                onFocus={e => e.target.style.borderColor = P} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
-            </div>
+
             <label style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer', fontSize: 11, color: '#374151' }}>
               <input type="checkbox" checked={v.enabled !== false} onChange={e => update(v.id, 'enabled', e.target.checked)} style={{ accentColor: P }} />
               On
