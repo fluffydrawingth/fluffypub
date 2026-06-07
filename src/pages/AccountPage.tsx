@@ -279,7 +279,6 @@ function FavoritesTab({p,theme,navigate}:any) {
 
 function ProfileTab({user,p,theme,refreshUser}:any) {
   const { tRaw } = useLang();
-  // Start empty — useEffect below fills them when user data loads/changes
   const [firstName, setFirstName]       = useState('');
   const [lastName, setLastName]         = useState('');
   const [deliveryEmail, setDeliveryEmail] = useState('');
@@ -289,28 +288,63 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
   const [postalCode, setPostalCode]     = useState('');
   const [country, setCountry]           = useState('Thailand');
   const [saving, setSaving]             = useState(false);
-
-  // Sync fields whenever user data changes (including after save + refreshUser)
-  useEffect(() => {
-    if (!user) return;
-    setFirstName(user.first_name || '');
-    setLastName(user.last_name || '');
-    setDeliveryEmail(user.delivery_email || user.email || '');
-    setPhone(user.phone || '');
-    const sa = user.shipping_address || {};
-    setAddr(sa.address || '');
-    setProvince(user.province || sa.province || '');
-    setPostalCode(user.postal_code || sa.postal_code || sa.zip || '');
-    setCountry(sa.country || 'Thailand');
-  }, [user?.id, user?.first_name, user?.last_name, user?.phone, user?.province, user?.postal_code, user?.delivery_email]);
   const [msg, setMsg]                   = useState('');
+  const [loaded, setLoaded]             = useState(false);
+
+  // Load profile DIRECTLY from API on mount — bypass auth cache entirely
+  useEffect(() => {
+    const token = localStorage.getItem('fluffy_token');
+    if (!token) return;
+
+    Promise.all([
+      fetch('/api/users?action=me', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch('/api/orders?action=my', { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => []),
+    ]).then(([profile, orders]) => {
+      if (profile.error) { setLoaded(true); return; }
+
+      // Use profile fields if they exist
+      let fn = profile.first_name || '';
+      let ln = profile.last_name || '';
+      let ph = profile.phone || '';
+      let em = profile.delivery_email || profile.email || '';
+      let ad = profile.shipping_address?.address || '';
+      let pv = profile.province || profile.shipping_address?.province || '';
+      let pc = profile.postal_code || profile.shipping_address?.postal_code || '';
+      let co = profile.shipping_address?.country || 'Thailand';
+
+      // If profile is empty, fall back to most recent order's shipping info
+      if (!fn && !ph && !ad && Array.isArray(orders) && orders.length > 0) {
+        const latest = orders[0];
+        const sa = latest.shipping_address || {};
+        if (!fn) fn = latest.customer_name?.split(' ')[0] || '';
+        if (!ln) ln = latest.customer_name?.split(' ').slice(1).join(' ') || '';
+        if (!ph) ph = latest.customer_phone || '';
+        if (!em) em = latest.customer_email || profile.email || '';
+        if (!ad) ad = sa.address || '';
+        if (!pv) pv = sa.province || '';
+        if (!pc) pc = sa.postal_code || '';
+        if (!co) co = sa.country || 'Thailand';
+      }
+
+      setFirstName(fn);
+      setLastName(ln);
+      setDeliveryEmail(em);
+      setPhone(ph);
+      setAddr(ad);
+      setProvince(pv);
+      setPostalCode(pc);
+      setCountry(co);
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, []);
 
   const save = async () => {
     setSaving(true); setMsg('');
     try {
+      const token = localStorage.getItem('fluffy_token') || '';
       const fullName = `${firstName} ${lastName}`.trim();
-      const result = await api.updateMe({
-        name: fullName || user.name,
+      const payload = {
+        name: fullName || user?.name || '',
         first_name: firstName,
         last_name: lastName,
         delivery_email: deliveryEmail,
@@ -318,19 +352,32 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
         province,
         postal_code: postalCode,
         shipping_address: { address: addr, province, postal_code: postalCode, country },
+      };
+      // Save directly to API with token
+      const res = await fetch('/api/users?action=me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload),
       });
+      const result = await res.json();
       if (result?.error) {
-        setMsg(`⚠️ Error: ${result.error}`);
+        setMsg(`⚠️ ${result.error}`);
         setSaving(false);
         return;
       }
+      // Update localStorage so auth context has fresh data
+      try {
+        const stored = localStorage.getItem('fluffy_user');
+        const merged = stored ? { ...JSON.parse(stored), ...result } : result;
+        localStorage.setItem('fluffy_user', JSON.stringify(merged));
+      } catch {}
       await refreshUser();
       setMsg('✓ บันทึกแล้ว / Profile saved!');
     } catch (e: any) {
       setMsg(`⚠️ ${e.message}`);
     }
     setSaving(false);
-    setTimeout(()=>setMsg(''),4000);
+    setTimeout(() => setMsg(''), 5000);
   };
 
   const inp = (label:string, val:string, set:(v:string)=>void, type='text', disabled=false) => (

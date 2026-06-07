@@ -112,6 +112,23 @@ export default function CheckoutPage() {
       clear();
       setOrder(result);
       setStep('payment');
+      // Save customer info back to profile for future use
+      if (user) {
+        const token = localStorage.getItem('fluffy_token') || '';
+        fetch('/api/users?action=me', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            first_name: firstName,
+            last_name: lastName,
+            delivery_email: email,
+            phone: phone || undefined,
+            province: province || undefined,
+            postal_code: postalCode || undefined,
+            shipping_address: hasPhysical ? { address, province, postal_code: postalCode, country: 'Thailand' } : undefined,
+          }),
+        }).catch(() => {}); // fire and forget
+      }
     } catch (e: any) {
       console.error('[checkout]', e);
       setError(tRaw('เกิดข้อผิดพลาด กรุณาลองใหม่','Something went wrong. Please try again.'));

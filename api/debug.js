@@ -1,38 +1,41 @@
-const { createClient } = require('@supabase/supabase-js');
+// /api/debug — check profile data in DB (admin only)
+const { supabase, requireAuth, getUser, json } = require('./_lib');
 
 module.exports = async function handler(req, res) {
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
+  if (req.method === 'GET') {
+    const user = await getUser(req);
+    if (!user) return json(res, 401, { error: 'Not authenticated' });
 
-  const token = (req.headers['authorization'] || '').replace('Bearer ', '');
-  
-  if (!token) {
-    return res.status(200).json({ message: 'No token. Add Authorization header.' });
+    // Check what columns exist in profiles
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    return json(res, 200, {
+      userId: user.id,
+      profileRaw: profile,
+      profileError: error?.message,
+      columnsFound: profile ? Object.keys(profile) : [],
+      hasFirstName: profile ? 'first_name' in profile : false,
+      hasProvince: profile ? 'province' in profile : false,
+    });
   }
 
-  // Get user from token
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  
-  if (authError || !user) {
-    return res.status(200).json({ step: 'auth_failed', error: authError?.message, token_prefix: token.slice(0,20) });
+  // POST: force-save profile fields
+  if (req.method === 'POST') {
+    const user = await getUser(req);
+    if (!user) return json(res, 401, { error: 'Not authenticated' });
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .upsert({ id: user.id, email: user.email, role: 'customer', ...req.body }, { onConflict: 'id' })
+      .select('*')
+      .single();
+
+    return json(res, error ? 400 : 200, { data, error: error?.message, hint: error?.hint });
   }
 
-  // Get profile
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, email, name, role')
-    .eq('id', user.id)
-    .single();
-
-  return res.status(200).json({
-    user_id: user.id,
-    user_email: user.email,
-    profile_found: !!profile,
-    profile_role: profile?.role,
-    profile_error: profileError?.message,
-    url: process.env.SUPABASE_URL?.slice(0, 40),
-  });
+  return json(res, 405, { error: 'Method not allowed' });
 };
