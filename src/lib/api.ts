@@ -36,7 +36,19 @@ export const api = {
   updateOrder: (id: string, data: any) => fetch(`/api/orders?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify({ status: data.status, tracking_number: data.trackingNumber, shipping_provider: data.shippingProvider }) }).then(r => r.json()).then(normalizeOrder),
 
   // Users
-  updateMe: (data: any) => fetch('/api/users?action=me', { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  updateMe: async (data: any) => {
+    const res = await fetch('/api/users?action=me', { method: 'PUT', headers: h(), body: JSON.stringify(data) });
+    const updated = await res.json();
+    // Update localStorage immediately so fields persist even before refreshUser
+    if (!updated.error) {
+      try {
+        const stored = localStorage.getItem('fluffy_user');
+        const merged = stored ? { ...JSON.parse(stored), ...updated } : updated;
+        localStorage.setItem('fluffy_user', JSON.stringify(merged));
+      } catch {}
+    }
+    return updated;
+  },
   allUsers: () => fetch('/api/users', { headers: h() }).then(r => r.json()),
   getFavorites: () => fetch('/api/users?action=favorites', { headers: h() }).then(r => r.json()),
   addFavorite: (id: string) => fetch(`/api/users?action=favorites&productId=${id}`, { method: 'POST', headers: h() }).then(r => r.json()),

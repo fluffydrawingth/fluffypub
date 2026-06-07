@@ -273,15 +273,30 @@ function FavoritesTab({p,theme,navigate}:any) {
 
 function ProfileTab({user,p,theme,refreshUser}:any) {
   const { tRaw } = useLang();
-  const [firstName, setFirstName]       = useState(user.first_name || '');
-  const [lastName, setLastName]         = useState(user.last_name || '');
-  const [deliveryEmail, setDeliveryEmail] = useState(user.delivery_email || user.email || '');
-  const [phone, setPhone]               = useState(user.phone || '');
-  const [addr, setAddr]                 = useState(user.shipping_address?.address || '');
-  const [province, setProvince]         = useState(user.province || user.shipping_address?.province || '');
-  const [postalCode, setPostalCode]     = useState(user.postal_code || user.shipping_address?.postal_code || user.shipping_address?.zip || '');
-  const [country, setCountry]           = useState(user.shipping_address?.country || 'Thailand');
+  // Start empty — useEffect below fills them when user data loads/changes
+  const [firstName, setFirstName]       = useState('');
+  const [lastName, setLastName]         = useState('');
+  const [deliveryEmail, setDeliveryEmail] = useState('');
+  const [phone, setPhone]               = useState('');
+  const [addr, setAddr]                 = useState('');
+  const [province, setProvince]         = useState('');
+  const [postalCode, setPostalCode]     = useState('');
+  const [country, setCountry]           = useState('Thailand');
   const [saving, setSaving]             = useState(false);
+
+  // Sync fields whenever user data changes (including after save + refreshUser)
+  useEffect(() => {
+    if (!user) return;
+    setFirstName(user.first_name || '');
+    setLastName(user.last_name || '');
+    setDeliveryEmail(user.delivery_email || user.email || '');
+    setPhone(user.phone || '');
+    const sa = user.shipping_address || {};
+    setAddr(sa.address || '');
+    setProvince(user.province || sa.province || '');
+    setPostalCode(user.postal_code || sa.postal_code || sa.zip || '');
+    setCountry(sa.country || 'Thailand');
+  }, [user?.id, user?.first_name, user?.last_name, user?.phone, user?.province, user?.postal_code, user?.delivery_email]);
   const [msg, setMsg]                   = useState('');
 
   const save = async () => {
