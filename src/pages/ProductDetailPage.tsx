@@ -70,6 +70,11 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const displayOriginalPrice = lang === 'th'
     ? (originalPriceTHB > 0 ? `฿${originalPriceTHB.toLocaleString('th-TH')}` : null)
     : (originalPriceUSD > 0 ? `$${originalPriceUSD.toFixed(2)}` : null);
+  const discountPct = lang === 'th' && thbPrice > 0 && originalPriceTHB > thbPrice
+    ? Math.round((1 - thbPrice / originalPriceTHB) * 100)
+    : lang === 'en' && usdPrice > 0 && originalPriceUSD > usdPrice
+      ? Math.round((1 - usdPrice / originalPriceUSD) * 100)
+      : null;
   const cartKey = product.id + (selectedVariant?.id || '');
   const inCart = items.some(i => (i.id + ((i as any).variant?.id || '')) === cartKey);
   const title = (lang==='th'&&product.title_th)?product.title_th:product.title;
