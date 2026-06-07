@@ -234,6 +234,62 @@ module.exports = async function handler(req, res) {
     return json(res, 200, data);
   }
 
+  // POST cancel order (customer — only if pending_payment and no slip uploaded)
+  if (req.method === 'POST' && action === 'cancel' && id) {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+    const { data: order } = await supabase.from('orders').select('*').eq('id', id).single();
+    if (!order) return json(res, 404, { error: 'Order not found' });
+    // Only owner or admin can cancel
+    if (order.user_id !== user.id && user.role !== 'admin') return json(res, 403, { error: 'Forbidden' });
+    // Block cancel if slip uploaded or already paid/processing
+    if (order.slip_url) return json(res, 400, { error: 'Cannot cancel: payment slip already uploaded.' });
+    if (['paid','packing','shipped','delivered'].includes(order.status)) return json(res, 400, { error: `Cannot cancel: order is already ${order.status}.` });
+    const { data, error } = await supabase.from('orders')
+      .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', id).select().single();
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, data);
+  }
+
+  // POST send payment reminder (admin)
+  if (req.method === 'POST' && action === 'reminder') {
+    const user = await requireAuth(req, res, ['admin']);
+    if (!user) return;
+    const { orderIds } = req.body || {};
+    if (!orderIds?.length) return json(res, 400, { error: 'orderIds required' });
+    const SITE = process.env.SITE_URL || 'https://fluffypub.vercel.app';
+    const results = [];
+    for (const oid of orderIds) {
+      const { data: order } = await supabase.from('orders').select('*').eq('id', oid).single();
+      if (!order) { results.push({ id: oid, error: 'Not found' }); continue; }
+      // Send reminder email
+      const ref = (order.id || '').slice(-8).toUpperCase();
+      const amt = order.total_thb || order.total_amount || (parseFloat(order.total || '0') * 35);
+      await sendEmail(
+        order.customer_email,
+        `⏰ แจ้งเตือน: รอชำระเงินคำสั่งซื้อ #${ref} — Fluffy Pub`,
+        `<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:20px">
+          <h2>⏰ แจ้งเตือนการชำระเงิน</h2>
+          <p>คำสั่งซื้อของคุณ <strong>#${ref}</strong> ยังรอการชำระเงินอยู่</p>
+          <p>ยอดชำระ: <strong>฿${Number(amt).toLocaleString('th-TH')}</strong></p>
+          <h3>วิธีชำระเงิน:</h3>
+          <ol>
+            <li>โอนเงินผ่าน PromptPay ตามยอดที่ระบุ</li>
+            <li>ถ่ายรูปสลิปการโอนเงิน</li>
+            <li>อัปโหลดสลิปที่: <a href="${SITE}/#/account/orders">${SITE}/#/account/orders</a></li>
+          </ol>
+          <p><em>หากชำระเงินแล้ว กรุณาอัปโหลดสลิป หรือติดต่อแอดมินพร้อมระบุเลขที่คำสั่งซื้อ #${ref}</em></p>
+          <hr/><p style="color:#888;font-size:12px">Fluffy Pub 🌸</p>
+        </div>`
+      );
+      // Mark reminder sent
+      await supabase.from('orders').update({ payment_reminder_sent_at: new Date().toISOString() }).eq('id', oid);
+      results.push({ id: oid, sent: true });
+    }
+    return json(res, 200, { results });
+  }
+
   // DELETE order (admin)
   if (req.method === 'DELETE' && id) {
     const user = await requireAuth(req, res, ['admin']);

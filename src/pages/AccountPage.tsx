@@ -72,6 +72,19 @@ function OrdersTab({p,theme}:any) {
 
   useEffect(() => { api.myOrders().then(o=>{ setOrders(Array.isArray(o)?o:[]); setLoading(false); }); }, []);
 
+  const cancelOrder = async (orderId: string) => {
+    if (!confirm(tRaw('ยืนยันการยกเลิกคำสั่งซื้อ?', 'Cancel this order?'))) return;
+    const token = localStorage.getItem('fluffy_token') || '';
+    const res = await fetch(`/api/orders?action=cancel&id=${orderId}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (data.error) { alert(tRaw(`ไม่สามารถยกเลิก: ${data.error}`, `Cannot cancel: ${data.error}`)); return; }
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'cancelled', cancelled_at: data.cancelled_at } : o));
+    if (selected?.id === orderId) setSelected((s: any) => ({ ...s, status: 'cancelled' }));
+  };
+
   const uploadSlip = async (orderId: string, file: File) => {
     setSlipUploading(true);
     try {
@@ -172,12 +185,18 @@ function OrdersTab({p,theme}:any) {
         {selected.slip_url?(
           <div style={{background:'#d1fae5',borderRadius:10,padding:'10px 14px',fontSize:13,color:'#065f46',fontWeight:600}}>✅ {tRaw('อัปโหลดสลิปแล้ว','Slip uploaded')}</div>
         ):(
-          <label style={{display:'block',cursor:'pointer'}}>
-            <div style={{background:p+'10',border:`2px dashed ${p}40`,borderRadius:12,padding:14,textAlign:'center' as const,fontSize:13,color:p,fontWeight:600}}>
-              {slipUploading?'⏳ ...':'📷 '+tRaw('อัปโหลดสลิป','Upload slip')}
-            </div>
-            <input type="file" accept="image/*" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)uploadSlip(selected.id,f);}} />
-          </label>
+          <>
+            <label style={{display:'block',cursor:'pointer',marginBottom:10}}>
+              <div style={{background:p+'10',border:`2px dashed ${p}40`,borderRadius:12,padding:14,textAlign:'center' as const,fontSize:13,color:p,fontWeight:600}}>
+                {slipUploading?'⏳ ...':'📷 '+tRaw('อัปโหลดสลิป','Upload slip')}
+              </div>
+              <input type="file" accept="image/*" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)uploadSlip(selected.id,f);}} />
+            </label>
+            <button onClick={()=>cancelOrder(selected.id)}
+              style={{width:'100%',padding:'10px',background:'#fef2f2',border:'1.5px solid #fca5a5',color:'#dc2626',borderRadius:12,cursor:'pointer',fontSize:13,fontWeight:700,fontFamily:theme.fontFamily}}>
+              ✕ {tRaw('ยกเลิกคำสั่งซื้อ','Cancel Order')}
+            </button>
+          </>
         )}
       </div>}
 

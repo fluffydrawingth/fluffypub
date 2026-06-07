@@ -455,9 +455,31 @@ function OrdersTab() {
   const [marking, setMarking] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [msg, setMsg] = useState('');
+  const [reminderIds, setReminderIds] = useState<string[]>([]);
+  const [sendingReminder, setSendingReminder] = useState(false);
 
   const load = () => api.allOrders().then(o=>setOrders(Array.isArray(o)?o:[]));
   useEffect(()=>{load();},[]);
+
+  const sendReminders = async () => {
+    if (!reminderIds.length) return;
+    setSendingReminder(true);
+    const token = localStorage.getItem('fluffy_token') || '';
+    const res = await fetch('/api/orders?action=reminder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ orderIds: reminderIds }),
+    });
+    const data = await res.json();
+    if (data.error) { setMsg('⚠️ ' + data.error); }
+    else {
+      setOrders(prev => prev.map(o => reminderIds.includes(o.id) ? { ...o, payment_reminder_sent_at: new Date().toISOString() } : o));
+      setReminderIds([]);
+      setMsg('✓ Sent reminders to ' + reminderIds.length + ' order(s)');
+    }
+    setSendingReminder(false);
+    setTimeout(() => setMsg(''), 4000);
+  };
 
   const select = (o:any) => {
     setSelected(o);
@@ -525,6 +547,33 @@ function OrdersTab() {
         <h1 style={{fontSize:24,fontWeight:900,color:'#111827',margin:0}}>Orders ({filteredOrders.length})</h1>
       </div>
 
+      {/* Reminder panel */}
+      {(()=>{
+        const now = Date.now();
+        const eligible = orders.filter(o => o.status==='pending_payment' && !o.slip_url && (now - new Date(o.created_at).getTime()) > 48*60*60*1000);
+        if (!eligible.length) return null;
+        return (
+          <div style={{background:'#fef3c7',border:'1.5px solid #fcd34d',borderRadius:14,padding:'12px 16px',marginBottom:16,display:'flex',alignItems:'center',gap:12,flexWrap:'wrap' as const}}>
+            <span style={{fontSize:13,color:'#92400e',fontWeight:700}}>⏰ {eligible.length} order(s) pending 48h+ without slip</span>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap' as const,flex:1}}>
+              {eligible.map((o:any)=>(
+                <label key={o.id} style={{display:'flex',gap:5,alignItems:'center',cursor:'pointer',fontSize:12,color:'#92400e',fontWeight:600,background:'white',borderRadius:8,padding:'3px 8px',border:'1px solid #fcd34d'}}>
+                  <input type="checkbox" checked={reminderIds.includes(o.id)} onChange={e=>setReminderIds(prev=>e.target.checked?[...prev,o.id]:prev.filter(x=>x!==o.id))} style={{accentColor:'#d97706'}} />
+                  #{(o.id||'').slice(-6).toUpperCase()}{o.payment_reminder_sent_at?' (reminded)':''}
+                </label>
+              ))}
+            </div>
+            <div style={{display:'flex',gap:8,alignItems:'center'}}>
+              {msg&&<span style={{fontSize:12,color:'#059669',fontWeight:600}}>{msg}</span>}
+              <button onClick={sendReminders} disabled={!reminderIds.length||sendingReminder}
+                style={{background:reminderIds.length?'#d97706':'#e5e7eb',color:reminderIds.length?'white':'#9ca3af',border:'none',cursor:reminderIds.length&&!sendingReminder?'pointer':'not-allowed',padding:'8px 14px',borderRadius:10,fontSize:12,fontWeight:700,fontFamily:'inherit'}}>
+                {sendingReminder?'Sending...':'📧 Send Reminder'}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Status filter tabs */}
       <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap' as const}}>
         {FILTER_TABS.map(ft=>{
@@ -558,7 +607,8 @@ function OrdersTab() {
                   <td style={{padding:'11px 12px',fontWeight:800,color:'#111827',fontSize:13}}>฿{Number(thb).toLocaleString('th-TH')}</td>
                   <td style={{padding:'11px 12px'}}><Badge color={c} bg={bg} text={STATUS_TEXT[o.status]||o.status}/></td>
                   <td style={{padding:'11px 12px'}}>
-                    <button onClick={e=>{e.stopPropagation();deleteOrder(o.id);}} disabled={deleting} style={{background:'none',border:'none',cursor:'pointer',color:'#fca5a5',fontSize:14,padding:4}}>🗑</button>
+                    {o.payment_reminder_sent_at&&<span style={{fontSize:10,background:'#fef3c7',color:'#92400e',borderRadius:6,padding:'2px 6px',fontWeight:600,whiteSpace:'nowrap' as const}}>reminded</span>}
+                  <button onClick={e=>{e.stopPropagation();deleteOrder(o.id);}} disabled={deleting} style={{background:'none',border:'none',cursor:'pointer',color:'#fca5a5',fontSize:14,padding:4}}>🗑</button>
                   </td>
                 </tr>
               );
