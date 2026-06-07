@@ -1,84 +1,81 @@
 import React, { createContext, useContext, useState } from 'react';
 
-export interface CartVariant {
-  id: string;
-  name: string;
-  price_thb?: number;
-}
-
 export interface CartItem {
   id: string;
   title: string;
-  price_thb: number;
   image: string;
   artist: string;
   slug?: string;
-  type?: string;
-  variant?: CartVariant;
+  // Option (variant or digital)
+  optionId: string;          // variant.id or 'digital'
+  optionName: string;        // e.g. "สันห่วงปกติ" or "Digital file"
+  optionType: 'physical' | 'digital';
+  unitPriceTHB: number;
   qty: number;
 }
 
 interface CartCtx {
   items: CartItem[];
   add: (item: Omit<CartItem, 'qty'>) => void;
-  remove: (id: string, variantId?: string) => void;
-  setQty: (id: string, variantId: string | undefined, qty: number) => void;
+  increment: (id: string, optionId: string) => void;
+  decrement: (id: string, optionId: string) => void;
+  remove: (id: string, optionId: string) => void;
   clear: () => void;
   subtotalTHB: number;
   shippingTHB: number;
   totalTHB: number;
-  count: number;
+  totalCount: number;
 }
 
 const CartContext = createContext<CartCtx>({
-  items: [], add: ()=>{}, remove: ()=>{}, setQty: ()=>{}, clear: ()=>{},
-  subtotalTHB: 0, shippingTHB: 0, totalTHB: 0, count: 0,
+  items: [], add: ()=>{}, increment: ()=>{}, decrement: ()=>{}, remove: ()=>{}, clear: ()=>{},
+  subtotalTHB: 0, shippingTHB: 0, totalTHB: 0, totalCount: 0,
 });
+
+const key = (id: string, optionId: string) => `${id}::${optionId}`;
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
   const add = (item: Omit<CartItem, 'qty'>) => setItems(prev => {
-    const key = item.id + (item.variant?.id || '');
-    const existing = prev.find(i => (i.id + (i.variant?.id || '')) === key);
-    if (existing) {
-      // Increment qty if already in cart
-      return prev.map(i => (i.id + (i.variant?.id || '')) === key ? { ...i, qty: i.qty + 1 } : i);
+    const k = key(item.id, item.optionId);
+    if (prev.find(i => key(i.id, i.optionId) === k)) {
+      return prev.map(i => key(i.id, i.optionId) === k ? { ...i, qty: i.qty + 1 } : i);
     }
     return [...prev, { ...item, qty: 1 }];
   });
 
-  const remove = (id: string, variantId?: string) => setItems(prev =>
-    prev.filter(i => !(i.id === id && (i.variant?.id || '') === (variantId || '')))
+  const increment = (id: string, optionId: string) => setItems(prev =>
+    prev.map(i => key(i.id, i.optionId) === key(id, optionId) ? { ...i, qty: i.qty + 1 } : i)
   );
 
-  const setQty = (id: string, variantId: string | undefined, qty: number) => {
-    if (qty <= 0) { remove(id, variantId); return; }
-    setItems(prev => prev.map(i =>
-      i.id === id && (i.variant?.id || '') === (variantId || '') ? { ...i, qty } : i
-    ));
-  };
+  const decrement = (id: string, optionId: string) => setItems(prev => {
+    const k = key(id, optionId);
+    return prev.flatMap(i => {
+      if (key(i.id, i.optionId) !== k) return [i];
+      return i.qty <= 1 ? [] : [{ ...i, qty: i.qty - 1 }];
+    });
+  });
+
+  const remove = (id: string, optionId: string) => setItems(prev =>
+    prev.filter(i => key(i.id, i.optionId) !== key(id, optionId))
+  );
 
   const clear = () => setItems([]);
 
-  // Subtotal: sum (effective price × qty)
-  const subtotalTHB = items.reduce((s, i) => {
-    const p = (i.variant?.price_thb != null && i.variant.price_thb > 0)
-      ? i.variant.price_thb : i.price_thb;
-    return s + Math.round(Number(p) || 0) * i.qty;
-  }, 0);
+  const subtotalTHB = items.reduce((s, i) => s + i.unitPriceTHB * i.qty, 0);
 
-  // Shipping: count total physical books across all qty
-  const physicalCount = items
-    .filter(i => i.type === 'physical')
+  // Shipping: total qty of physical items
+  const physicalQty = items
+    .filter(i => i.optionType === 'physical')
     .reduce((s, i) => s + i.qty, 0);
-  const shippingTHB = physicalCount === 1 ? 25 : 0;
+  const shippingTHB = physicalQty === 0 ? 0 : physicalQty === 1 ? 25 : 0;
 
   const totalTHB = subtotalTHB + shippingTHB;
-  const count = items.reduce((s, i) => s + i.qty, 0);
+  const totalCount = items.reduce((s, i) => s + i.qty, 0);
 
   return (
-    <CartContext.Provider value={{ items, add, remove, setQty, clear, subtotalTHB, shippingTHB, totalTHB, count }}>
+    <CartContext.Provider value={{ items, add, increment, decrement, remove, clear, subtotalTHB, shippingTHB, totalTHB, totalCount }}>
       {children}
     </CartContext.Provider>
   );

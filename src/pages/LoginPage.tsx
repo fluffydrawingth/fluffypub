@@ -11,7 +11,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState<'customer'|'artist'>('customer');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [busy, setBusy] = useState(false);
@@ -54,7 +53,7 @@ export default function LoginPage() {
     } else {
       if (!name || !email || !password) { setError('All fields required.'); setBusy(false); return; }
       if (password.length < 6) { setError('Password must be at least 6 characters.'); setBusy(false); return; }
-      const result = await register(name, email, password, role);
+      const result = await register(name, email, password, 'customer');
       if (result.success) {
         setSuccess('✅ Account created! Check your email for a confirmation link before logging in.');
         setTab('login'); setPassword('');
