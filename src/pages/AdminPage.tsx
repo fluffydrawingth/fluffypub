@@ -196,7 +196,7 @@ function ProductsTab() {
   const [showCatMgr, setShowCatMgr] = useState(false);
 
   const load = useCallback(() => {
-    fetch('/api/products',{headers:{Authorization:`Bearer ${sessionStorage.getItem('fluffy_token')}`}})
+    fetch('/api/products',{headers:{Authorization:`Bearer ${localStorage.getItem('fluffy_token')}`}})
       .then(r=>r.json()).then(d=>setProducts(Array.isArray(d)?d:[]));
     api.getArtists().then((a:any)=>setArtists(Array.isArray(a)?a:[]));
   }, []);
@@ -456,7 +456,7 @@ function OrdersTab() {
   const markPaid = async () => {
     if (!selected) return; setMarking(true);
     try {
-      const token = sessionStorage.getItem('fluffy_token');
+      const token = localStorage.getItem('fluffy_token');
       const r = await fetch(`/api/orders?action=pay&id=${selected.id}`,{method:'POST',headers:{Authorization:`Bearer ${token}`}});
       const updated = await r.json();
       if (updated.error) setMsg('⚠️ '+updated.error);

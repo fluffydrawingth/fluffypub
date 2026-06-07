@@ -1,4 +1,4 @@
-const getToken = () => sessionStorage.getItem('fluffy_token') || '';
+const getToken = () => localStorage.getItem('fluffy_token') || '';
 const h = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` });
 
 function normalize(p: any) {
@@ -57,7 +57,7 @@ export const api = {
     fetch('/api/upload', { method: 'POST', headers: h(), body: JSON.stringify({ fileName, fileType, folder }) }).then(r => r.json()),
 
   uploadFile: async (file: File, folder = 'uploads') => {
-    const token = sessionStorage.getItem('fluffy_token') || '';
+    const token = localStorage.getItem('fluffy_token') || '';
     try {
       const metaRes = await fetch('/api/upload', {
         method: 'POST',

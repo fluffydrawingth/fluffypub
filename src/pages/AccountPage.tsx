@@ -82,7 +82,7 @@ function OrdersTab({p,theme}:any) {
         return;
       }
       console.log('[slip upload] uploaded to:', result.publicUrl);
-      const token = sessionStorage.getItem('fluffy_token');
+      const token = localStorage.getItem('fluffy_token');
       const saveRes = await fetch(`/api/orders?action=slip&id=${orderId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token||''}` },

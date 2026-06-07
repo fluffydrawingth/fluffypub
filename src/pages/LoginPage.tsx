@@ -95,13 +95,7 @@ export default function LoginPage() {
 
         {tab==='register' && <>
           {inp(name, setName, 'Full Name')}
-          <div style={{ display:'flex', gap:8, marginBottom:14 }}>
-            {(['customer','artist'] as const).map(r=>(
-              <button key={r} onClick={()=>setRole(r)} style={{ flex:1, padding:'10px', borderRadius:12, border:`2px solid ${role===r?p:p+'30'}`, background:role===r?p+'12':'white', color:role===r?p:theme.textColor+'88', cursor:'pointer', fontSize:13, fontWeight:700, fontFamily:theme.fontFamily }}>
-                {r==='customer'?'🛒 Customer':'🎨 Artist'}
-              </button>
-            ))}
-          </div>
+
         </>}
 
         {inp(email, setEmail, 'Email address', 'email')}

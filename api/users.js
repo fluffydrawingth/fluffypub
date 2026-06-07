@@ -18,14 +18,15 @@ module.exports = async function handler(req, res) {
       const fields = ['name','bio','first_name','last_name','phone','delivery_email','shipping_address','province','postal_code','preferred_lang'];
       fields.forEach(f => { if (body[f] !== undefined) updates[f] = body[f]; });
       console.log('[users PUT] updating user', user.id, 'fields:', Object.keys(updates));
+      // upsert: creates profile row if it doesn't exist yet
+      const upsertData = { id: user.id, email: user.email, ...updates };
       const { data, error } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('id', user.id)
+        .upsert(upsertData, { onConflict: 'id' })
         .select('id,email,name,role,bio,artist_slug,favorites,first_name,last_name,phone,delivery_email,shipping_address,province,postal_code,preferred_lang')
         .single();
       if (error) {
-        console.error('[users PUT] error:', error.message, error.details);
+        console.error('[users PUT] error:', error.message, error.details, 'data:', JSON.stringify(upsertData));
         return json(res, 400, { error: error.message });
       }
       return json(res, 200, data);

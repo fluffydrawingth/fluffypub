@@ -92,7 +92,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setTheme = (t: ThemeConfig) => setThemeState(t);
 
   const saveTheme = async (t: ThemeConfig) => {
-    const token = sessionStorage.getItem('fluffy_token');
+    const token = localStorage.getItem('fluffy_token');
     setThemeState(t);
     await fetch('/api/theme', { method:'PUT', headers:{'Content-Type':'application/json', ...(token?{Authorization:`Bearer ${token}`}:{})}, body: JSON.stringify(t) });
   };

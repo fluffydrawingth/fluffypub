@@ -52,7 +52,7 @@ export default function CheckoutPage() {
     if (amt <= 0) return;
     setQrLoading(true);
     fetch(`/api/promptpay?amount=${amt}`, {
-      headers: { Authorization: `Bearer ${sessionStorage.getItem('fluffy_token') || ''}` },
+      headers: { Authorization: `Bearer ${localStorage.getItem('fluffy_token') || ''}` },
     }).then(r => r.json()).then(d => {
       if (d.qrDataUrl) setQrDataUrl(d.qrDataUrl);
       else console.error('[QR]', d.error);
@@ -125,7 +125,7 @@ export default function CheckoutPage() {
     try {
       const up = await api.uploadFile(file, 'slips');
       if (up.error) { alert(tRaw('อัปโหลดไม่สำเร็จ: ','Upload failed: ') + up.error); setSlipBusy(false); return; }
-      const tok = sessionStorage.getItem('fluffy_token') || '';
+      const tok = localStorage.getItem('fluffy_token') || '';
       const res = await fetch(`/api/orders?action=slip&id=${order.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },

@@ -52,21 +52,21 @@ function decodeJwt(token: string): any {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [token, setToken] = useState<string | null>(() => sessionStorage.getItem(TOKEN_KEY));
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(true);
 
   const refreshUser = async () => {
-    const t = sessionStorage.getItem(TOKEN_KEY);
+    const t = localStorage.getItem(TOKEN_KEY);
     if (!t) { setUser(null); setLoading(false); return; }
 
-    // Always fetch fresh from API (never return stale sessionStorage cache)
+    // Always fetch fresh from API (never return stale localStorage cache)
     // This ensures profile saves persist immediately
     try {
       const r = await fetch('/api/auth?action=me', { headers: { Authorization: `Bearer ${t}` } });
       if (r.ok) {
         const u = await r.json();
         if (u.email === ADMIN_EMAIL) u.role = 'admin';
-        sessionStorage.setItem(USER_KEY, JSON.stringify(u));
+        localStorage.setItem(USER_KEY, JSON.stringify(u));
         setUser(u);
         setLoading(false);
         return;
@@ -79,11 +79,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const email = payload.email;
       const role: UserRole = email === ADMIN_EMAIL ? 'admin' : 'customer';
       const u: AuthUser = { id: payload.sub, email, name: payload.user_metadata?.name || email.split('@')[0], role };
-      sessionStorage.setItem(USER_KEY, JSON.stringify(u));
+      localStorage.setItem(USER_KEY, JSON.stringify(u));
       setUser(u);
     } else {
-      sessionStorage.removeItem(TOKEN_KEY);
-      sessionStorage.removeItem(USER_KEY);
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
       setToken(null);
       setUser(null);
     }
@@ -103,8 +103,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (r.ok && d.success) {
         // Force admin role for admin email
         if (d.user && d.user.email === ADMIN_EMAIL) d.user.role = 'admin';
-        sessionStorage.setItem(TOKEN_KEY, d.token);
-        sessionStorage.setItem(USER_KEY, JSON.stringify(d.user));
+        localStorage.setItem(TOKEN_KEY, d.token);
+        localStorage.setItem(USER_KEY, JSON.stringify(d.user));
         setToken(d.token);
         setUser(d.user);
         return { success: true };
@@ -127,10 +127,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    const t = sessionStorage.getItem(TOKEN_KEY);
+    const t = localStorage.getItem(TOKEN_KEY);
     if (t) await fetch('/api/auth?action=logout', { method: 'POST', headers: { Authorization: `Bearer ${t}` } }).catch(() => {});
-    sessionStorage.removeItem(TOKEN_KEY);
-    sessionStorage.removeItem(USER_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
     setToken(null);
     setUser(null);
   };
@@ -151,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updatePassword = async (newPassword: string) => {
     try {
-      const t = sessionStorage.getItem(TOKEN_KEY);
+      const t = localStorage.getItem(TOKEN_KEY);
       const r = await fetch('/api/auth?action=update-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
