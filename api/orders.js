@@ -130,21 +130,24 @@ module.exports = async function handler(req, res) {
       customer_phone: customerPhone || null,
       shipping_address: shippingAddress || null,
       items: orderItems,
-      subtotal: subtotal_usd,
-      subtotal_thb,
-      discount: Math.round(subtotal_usd * discount_pct * 100) / 100,
-      total: final_usd,
-      total_thb: total_thb || grand_total_thb,
-      total_amount: total_thb || grand_total_thb,
+      // Required NOT NULL columns (original schema)
+      subtotal: subtotal_thb || grand_total_thb,
+      total: grand_total_thb,
+      discount: 0,
+      // THB columns (added via migration)
+      subtotal_thb: subtotal_thb || 0,
       shipping_thb: shipping_thb,
-      grand_total_thb: grand_total_thb,
-      total_amount: total_thb || final_thb,
+      total_thb: grand_total_thb,
+      total_amount: grand_total_thb,
       promo_code: promoCode || null,
       status: 'pending_payment',
       payment_status: 'pending',
       type: hasPhysical ? 'physical' : 'digital',
     }).select().single();
-    if (error) return json(res, 400, { error: error.message });
+    if (error) {
+      console.error('[orders POST] INSERT ERROR:', error.code, error.message, error.details, error.hint);
+      return json(res, 400, { error: error.message, code: error.code, hint: error.hint });
+    }
     // Send confirmation emails
     const SITE = process.env.SITE_URL || 'https://fluffypub.vercel.app';
     const orderRef = (order.id || '').slice(-8).toUpperCase();

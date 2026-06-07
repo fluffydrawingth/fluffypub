@@ -138,8 +138,8 @@ export default function CheckoutPage() {
         }).catch(() => {}); // fire and forget
       }
     } catch (e: any) {
-      console.error('[checkout]', e);
-      setError(tRaw('เกิดข้อผิดพลาด กรุณาลองใหม่','Something went wrong. Please try again.'));
+      console.error('[checkout] error:', e.message, e);
+      setError(e.message || tRaw('เกิดข้อผิดพลาด กรุณาลองใหม่','Something went wrong. Please try again.'));
     }
     setBusy(false);
   };
