@@ -28,7 +28,10 @@ module.exports = async function handler(req, res) {
     if (!user) return;
     const { title, price, category, description = '', rich_description, image = '🎨', cover_image_url, type, is_physical = false, is_digital = true, pages = 0, tags = [], original_price, status = 'published', digital_download_url, download_instruction, physical_stock = 0, shipping_required = false, shipping_note = '', artist_id } = req.body || {};
     // derive type from checkboxes if not provided
-    const finalType = type || (is_physical && is_digital ? 'both' : is_physical ? 'physical' : 'digital');
+    // DB constraint: type only allows 'digital' or 'physical'
+    // Use is_physical/is_digital boolean fields for 'both' products
+    const finalType = type && (type === 'digital' || type === 'physical') ? type
+      : is_physical ? 'physical' : 'digital';
     if (!title || !price || !category) return json(res, 400, { error: 'title, price, category required' });
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36);
     const finalArtistId = user.role === 'admin' && artist_id ? artist_id : user.id;
@@ -53,7 +56,8 @@ module.exports = async function handler(req, res) {
     if (updates.is_physical !== undefined || updates.is_digital !== undefined) {
       const ip = updates.is_physical !== undefined ? Boolean(updates.is_physical) : false;
       const id = updates.is_digital !== undefined ? Boolean(updates.is_digital) : true;
-      updates.type = ip && id ? 'both' : ip ? 'physical' : 'digital';
+      // DB only allows 'digital' or 'physical'; use is_physical/is_digital for 'both'
+      updates.type = ip ? 'physical' : 'digital';
     }
     const { data, error } = await supabase.from('products').update(updates).eq('id', id).select().single();
     if (error) return json(res, 400, { error: error.message });

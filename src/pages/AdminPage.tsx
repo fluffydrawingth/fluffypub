@@ -234,11 +234,11 @@ function ProductsTab() {
   const save = async () => {
     if (!title||!priceTHB||!categories_sel.length){setMsg('⚠️ กรุณาใส่ชื่อ ราคา และหมวดหมู่ / Title, price and category required.');return;}
     setSaving(true); setMsg('');
-    const body:any = { title, price:parseFloat(priceTHB)||0, category:categories_sel[0]||'', categories:categories_sel, description,
+    const body:any = { title, price:parseFloat(priceTHB)||0, category:categories_sel[0]||'', description,
       rich_description:richBlocks.length?richBlocks:null, image,
       cover_image_url:coverImageUrl||null,
       is_digital:isDigital, is_physical:isPhysical,
-      type:isPhysical&&isDigital?'both':isPhysical?'physical':'digital',
+      type:isPhysical?'physical':'digital', // DB only allows 'digital' or 'physical'
       pages:parseInt(pages)||0,
       tags:tags.split(',').map((t:string)=>t.trim()).filter(Boolean), status,
       digital_download_url:isDigital?(digitalDownloadUrl||null):null,
