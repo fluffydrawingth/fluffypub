@@ -62,6 +62,7 @@ export default function AdminPage() {
         {tab==='products'  && <ProductsTab />}
         {tab==='orders'    && <OrdersTab />}
         {tab==='artists'   && <ArtistsTab />}
+        {tab==='pages'     && <PagesCMSTab />}
         {tab==='theme'     && <ThemeTab />}
         {tab==='lang'      && <LanguageCMSTab />}
       </div>
@@ -1013,6 +1014,158 @@ function TF({label,val,set}:{label:string,val:string,set:(v:string)=>void}) {
 }
 
 // ── Theme & CMS ─────────────────────────────────────────────────────────────
+function PagesCMSTab() {
+  const P = useThemeColor();
+  const card = { background:'white', borderRadius:16, boxShadow:'0 2px 10px rgba(0,0,0,0.06)' };
+  const [pgs, setPgs] = useState<any[]>([]);
+  const [editing, setEditing] = useState<any>(null);
+  const [title, setTitle] = useState('');
+  const [slug, setSlug] = useState('');
+  const [content, setContent] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [status, setStatus] = useState('draft');
+  const [msg, setMsg] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [loadErr, setLoadErr] = useState('');
+
+  const tok = () => localStorage.getItem('fluffy_token') || '';
+  const load = async () => {
+    setLoadErr('');
+    try {
+      const r = await fetch('/api/pages', { headers:{ Authorization:`Bearer ${tok()}` } });
+      const d = await r.json();
+      if (d.error) { setLoadErr('API error: ' + d.error); return; }
+      if (!Array.isArray(d)) { setLoadErr('Unexpected response: ' + JSON.stringify(d).slice(0,100)); return; }
+      setPgs(d);
+    } catch(e:any) { setLoadErr('Fetch failed: ' + e.message); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const startNew  = () => { setEditing({}); setTitle(''); setSlug(''); setContent(''); setImageUrl(''); setStatus('draft'); setMsg(''); };
+  const startEdit = (p:any) => { setEditing(p); setTitle(p.title); setSlug(p.slug); setContent(p.content||''); setImageUrl(p.image_url||''); setStatus(p.status); setMsg(''); };
+  const cancel    = () => { setEditing(null); setMsg(''); };
+
+  const save = async () => {
+    if (!title.trim() || !slug.trim()) { setMsg('⚠️ Title and slug required'); return; }
+    setSaving(true); setMsg('');
+    const body = { title:title.trim(), slug:slug.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-'), content, image_url:imageUrl||null, status };
+    const url  = editing?.id ? `/api/pages?id=${editing.id}` : '/api/pages';
+    const meth = editing?.id ? 'PUT' : 'POST';
+    const res  = await fetch(url, { method:meth, headers:{'Content-Type':'application/json', Authorization:`Bearer ${tok()}`}, body:JSON.stringify(body) }).then(r=>r.json());
+    if (res.error) { setMsg('⚠️ ' + res.error); setSaving(false); return; }
+    setMsg('✓ Saved!');
+    await load();
+    setTimeout(cancel, 1000);
+    setSaving(false);
+  };
+
+  const del = async (id:string, t:string) => {
+    if (!confirm(`Delete "${t}"?`)) return;
+    await fetch(`/api/pages?id=${id}`, { method:'DELETE', headers:{ Authorization:`Bearer ${tok()}` } });
+    load();
+  };
+
+  const toggle = async (p:any) => {
+    const s = p.status==='published' ? 'draft' : 'published';
+    await fetch(`/api/pages?id=${p.id}`, { method:'PUT', headers:{'Content-Type':'application/json', Authorization:`Bearer ${tok()}`}, body:JSON.stringify({status:s}) });
+    load();
+  };
+
+  const F = (label:string, val:string, set:(v:string)=>void, ph='', area=false) => (
+    <div style={{marginBottom:12}}>
+      <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>{label}</label>
+      {area
+        ? <textarea value={val} onChange={e=>set(e.target.value)} placeholder={ph} rows={12}
+            style={{width:'100%',padding:'10px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',resize:'vertical' as const,boxSizing:'border-box' as const}}
+            onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+        : <input value={val} onChange={e=>set(e.target.value)} placeholder={ph}
+            style={{width:'100%',padding:'10px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+            onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+      }
+    </div>
+  );
+
+  if (editing !== null) return (
+    <div style={{padding:28,maxWidth:720}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+        <h1 style={{fontSize:22,fontWeight:900,color:'#111827',margin:0}}>{editing?.id ? 'Edit Page' : 'New Page'}</h1>
+        <button onClick={cancel} style={{background:'#f3f4f6',border:'none',cursor:'pointer',padding:'8px 16px',borderRadius:10,fontSize:13,fontWeight:600}}>✕ Cancel</button>
+      </div>
+      <div style={{...card,padding:24}}>
+        {F('Title *', title, setTitle, 'About Us')}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+          <div>
+            {F('Slug *', slug, setSlug, 'about-us')}
+            <div style={{fontSize:11,color:'#6b7280',marginTop:-8,marginBottom:12}}>
+              URL: /pages/{slug||'your-slug'}
+              {title&&!slug&&<button type="button" onClick={()=>setSlug(title.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,''))} style={{marginLeft:8,background:'none',border:'none',cursor:'pointer',color:P,fontSize:11,fontWeight:600}}>Auto</button>}
+            </div>
+          </div>
+          <div style={{marginBottom:12}}>
+            <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Status</label>
+            <select value={status} onChange={e=>setStatus(e.target.value)} style={{width:'100%',padding:'10px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit'}}>
+              <option value="draft">📝 Draft</option>
+              <option value="published">✅ Published</option>
+            </select>
+          </div>
+        </div>
+        {F('Image URL (optional)', imageUrl, setImageUrl, 'https://...')}
+        {F('Content', content, setContent, 'Write your page content here...', true)}
+        {msg&&<div style={{marginBottom:12,fontSize:13,fontWeight:600,color:msg.startsWith('✓')?'#059669':'#dc2626'}}>{msg}</div>}
+        <button onClick={save} disabled={saving} style={{padding:'12px 28px',background:saving?P+'88':P,color:'white',border:'none',cursor:'pointer',borderRadius:12,fontSize:14,fontWeight:700,fontFamily:'inherit'}}>
+          {saving?'Saving...':'💾 Save Page'}
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{padding:28}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+        <h1 style={{fontSize:22,fontWeight:900,color:'#111827',margin:0}}>Pages ({pgs.length})</h1>
+        <button onClick={startNew} style={{background:P,color:'white',border:'none',cursor:'pointer',padding:'10px 20px',borderRadius:20,fontSize:14,fontWeight:700,fontFamily:'inherit',boxShadow:`0 4px 14px ${P}44`}}>+ Add Page</button>
+      </div>
+      {loadErr&&<div style={{background:'#fef2f2',border:'1.5px solid #fca5a5',borderRadius:12,padding:'12px 16px',marginBottom:16,fontSize:13,color:'#dc2626',fontWeight:600}}>
+        ⚠️ {loadErr}
+        <button onClick={load} style={{marginLeft:12,background:'none',border:'none',cursor:'pointer',color:P,fontWeight:700,fontSize:12}}>Retry</button>
+      </div>}
+      <div style={{...card,overflow:'hidden'}}>
+        {!loadErr&&pgs.length===0?(
+          <div style={{textAlign:'center' as const,padding:'48px',color:'#9ca3af'}}>
+            No pages yet. Click "+ Add Page" to create your first page.<br/>
+            <small style={{color:'#d97706'}}>If this keeps appearing, run the SQL in Supabase to create the pages table.</small>
+          </div>
+        ):(
+          <table style={{width:'100%',borderCollapse:'collapse'}}>
+            <thead><tr style={{borderBottom:'2px solid #f3f4f6',background:'#fafafa'}}>
+              {['Title','Slug','Status','Updated',''].map(h=><th key={h} style={{textAlign:'left' as const,padding:'11px 16px',fontSize:11,color:'#9ca3af',fontWeight:700}}>{h}</th>)}
+            </tr></thead>
+            <tbody>{pgs.map(p=>(
+              <tr key={p.id} style={{borderBottom:'1px solid #f9fafb'}}
+                onMouseEnter={e=>e.currentTarget.style.background='#fafafa'}
+                onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                <td style={{padding:'12px 16px',fontWeight:700,color:'#111827',fontSize:14}}>{p.title}</td>
+                <td style={{padding:'12px 16px',fontSize:12,color:'#6b7280',fontFamily:'monospace'}}>/pages/{p.slug}</td>
+                <td style={{padding:'12px 16px'}}>
+                  <button onClick={()=>toggle(p)} style={{padding:'4px 12px',borderRadius:20,border:'none',cursor:'pointer',fontSize:11,fontWeight:700,background:p.status==='published'?'#d1fae5':'#f3f4f6',color:p.status==='published'?'#065f46':'#6b7280'}}>
+                    {p.status==='published'?'✅ Published':'📝 Draft'}
+                  </button>
+                </td>
+                <td style={{padding:'12px 16px',fontSize:11,color:'#9ca3af'}}>{new Date(p.updated_at||p.created_at).toLocaleDateString('th-TH')}</td>
+                <td style={{padding:'12px 16px',display:'flex',gap:6}}>
+                  <button onClick={()=>startEdit(p)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:600}}>Edit</button>
+                  <a href={`/#/pages/${p.slug}`} target="_blank" rel="noreferrer" style={{padding:'5px 12px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:600,textDecoration:'none',color:'#374151'}}>View</a>
+                  <button onClick={()=>del(p.id,p.title)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:12,fontWeight:600,color:'#ef4444'}}>Delete</button>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ThemeTab() {
   const { theme, saveTheme } = useTheme();
   // Initialize draft ONCE from theme — do NOT reinitialize on every render
