@@ -3,7 +3,14 @@ const h = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${
 
 function normalize(p: any) {
   if (!p) return p;
-  return { ...p, artistName: p.artist_name || p.artistName || '', artistSlug: p.artist_slug || p.artistSlug || '', originalPrice: p.original_price ?? p.originalPrice, isNew: p.is_new ?? p.isNew, cover_image_url: p.cover_image_url || null };
+  // Clean artist name: never show slug format (hyphens/underscores) as display name
+  const rawName = p.artist_name || p.artistName || '';
+  const slug = p.artist_slug || p.artistSlug || '';
+  // If name looks like a slug (no spaces, has hyphens/underscores), format it
+  const artistName = rawName.includes('-') || (rawName.includes('_') && !rawName.includes(' '))
+    ? rawName.replace(/[-_]/g, ' ').replace(/\b\w/g, (ch: string) => ch.toUpperCase())
+    : rawName;
+  return { ...p, artistName, artistSlug: slug, originalPrice: p.original_price ?? p.originalPrice, isNew: p.is_new ?? p.isNew, cover_image_url: p.cover_image_url || null };
 }
 function normalizeOrder(o: any) {
   if (!o) return o;

@@ -100,8 +100,12 @@ function FeaturedSection({ products }: { products: any[] }) {
           <span style={{ fontSize:13, fontWeight:700, color:theme.primaryColor, letterSpacing:1, textTransform:'uppercase' as const }}>✨ Handpicked for You</span>
           <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 12px', fontFamily:theme.fontFamily }}>Featured Collections</h2>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:24 }}>
-          {products.map(p => <ProductCard key={p.id} product={p} />)}
+        <div style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
+          {products.map(p => (
+            <div key={p.id} style={{ width: 'min(100%, 260px)', flexShrink: 0, flexGrow: 0 }}>
+              <ProductCard product={p} />
+            </div>
+          ))}
         </div>
         <div style={{ textAlign:'center', marginTop:40 }}>
           <button onClick={()=>navigate('/products')} style={{ background:'transparent', border:`2px solid ${theme.primaryColor}`, color:theme.primaryColor, cursor:'pointer', padding:'12px 32px', borderRadius:24, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily }}>View All Books →</button>
@@ -138,7 +142,7 @@ function CategoriesSection({ allProducts }: { allProducts: any[] }) {
           <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, fontFamily:theme.fontFamily }}>Browse by Category 🎨</h2>
           <p style={{ color:theme.textColor+'88', fontSize:16 }}>Find your perfect coloring style</p>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:16 }}>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:16, justifyContent:'center' }}>
           {catsWithProducts.map(cat => {
             const count = catCounts[cat.name] || 0;
             return (

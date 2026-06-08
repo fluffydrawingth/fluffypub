@@ -42,8 +42,8 @@ module.exports = async function handler(req, res) {
       .select('name, artist_slug')
       .eq('id', finalArtistId)
       .single();
-    // Prefer artist_slug as the display name (e.g. "Fluffy_Drawing"), fall back to name
-    const artistName = artistProfile?.artist_slug || artistProfile?.name || '';
+    // Use artist.name as display name (e.g. "Fluffy Drawing"), slug only for URL routing
+    const artistName = artistProfile?.name || artistProfile?.artist_slug || '';
     const artistSlug = artistProfile?.artist_slug || '';
     const { data, error } = await supabase.from('products').insert({ title, slug, price: parseFloat(price), original_price: original_price ? parseFloat(original_price) : null, artist_id: finalArtistId, artist_name: artistName, artist_slug: artistSlug, category, categories: categories && categories.length ? categories : (category ? [category] : []), description, rich_description: rich_description || null, image, cover_image_url: cover_image_url || null, type: finalType, is_physical: Boolean(is_physical), is_digital: Boolean(is_digital), pages: parseInt(pages) || 0, tags, status, is_new: true, active: true, digital_download_url: digital_download_url || null, download_instruction: download_instruction || null, physical_stock: parseInt(physical_stock) || 0, shipping_required: Boolean(shipping_required), shipping_note: shipping_note || '', variants: [] }).select().single();
     if (error) return json(res, 400, { error: error.message });
