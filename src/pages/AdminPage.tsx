@@ -1154,7 +1154,8 @@ function PagesCMSTab() {
                 <td style={{padding:'12px 16px',fontSize:11,color:'#9ca3af'}}>{new Date(p.updated_at||p.created_at).toLocaleDateString('th-TH')}</td>
                 <td style={{padding:'12px 16px',display:'flex',gap:6}}>
                   <button onClick={()=>startEdit(p)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:600}}>Edit</button>
-                  <a href={`/#/pages/${p.slug}`} target="_blank" rel="noreferrer" style={{padding:'5px 12px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:600,textDecoration:'none',color:'#374151'}}>View</a>
+                  <a href={`/#/pages/${p.slug}`} target="_blank" rel="noreferrer" style={{padding:'5px 12px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:600,textDecoration:'none',color:'#374151'}}>👁 View</a>
+                  <button onClick={()=>{navigator.clipboard.writeText(`${window.location.origin}/#/pages/${p.slug}`);}} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:600,color:'#374151'}}>📋 Copy URL</button>
                   <button onClick={()=>del(p.id,p.title)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:12,fontWeight:600,color:'#ef4444'}}>Delete</button>
                 </td>
               </tr>
@@ -1313,7 +1314,10 @@ function FooterCMSEditor({ footer, onFooterChange }: { footer: FooterConfig; onF
   const [copyright, setCopyright]     = useState(footer.copyright || '');
   const [trustBadges, setTrustBadges] = useState(footer.trustBadges || '');
   const [cmsPages, setCmsPages] = useState<any[]>([]);
-  useEffect(() => { api.getPages().then((d:any) => setCmsPages(Array.isArray(d) ? d.filter((p:any) => p.status === 'published') : [])); }, []);
+  useEffect(() => {
+    api.getPages().then((d:any) => setCmsPages(Array.isArray(d) ? d.filter((p:any) => p.status==='published') : []));
+  }, []);
+
   const [editingCol, setEditingCol]   = useState<string | null>(null);
   const [editingLink, setEditingLink] = useState<{ colId: string; linkId: string } | null>(null);
 
