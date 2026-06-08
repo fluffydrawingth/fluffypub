@@ -203,8 +203,6 @@ function ProductsTab() {
       .then(r => r.json())
       .then(d => { if (Array.isArray(d)) setCategories(d.map((c:any) => c.name)); });
   }, []);
-  const [newCat, setNewCat] = useState('');
-  const [showCatMgr, setShowCatMgr] = useState(false);
 
   const load = useCallback(() => {
     fetch('/api/products',{headers:{Authorization:`Bearer ${localStorage.getItem('fluffy_token')}`}})
@@ -308,37 +306,18 @@ function ProductsTab() {
             {inp('ราคาเปรียบเทียบ (THB ฿)', originalPrice, setOriginalPrice, '490', 'number')}
             <div>
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Category *</label>
-              <div style={{display:'flex',gap:6,marginBottom:6}}>
-                <div style={{flex:1,display:'flex',flexWrap:'wrap' as const,gap:7,padding:'8px 0'}}>
-                  {categories.map(cat=>(
-                    <label key={cat} style={{display:'flex',alignItems:'center',gap:5,cursor:'pointer',background:categories_sel.includes(cat)?P+'15':'#f9fafb',border:`1.5px solid ${categories_sel.includes(cat)?P:'#e5e7eb'}`,borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,color:categories_sel.includes(cat)?P:'#374151',transition:'all 0.1s'}}>
-                      <input type="checkbox" checked={categories_sel.includes(cat)} onChange={e=>{setCategories_sel(prev=>e.target.checked?[...prev,cat]:prev.filter(c=>c!==cat));}} style={{accentColor:P,width:13,height:13}} />
-                      {cat}
-                    </label>
-                  ))}
-                </div>
-                <button type="button" onClick={()=>setShowCatMgr(x=>!x)} style={{padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',background:showCatMgr?'#fdf2f8':'white',cursor:'pointer',fontSize:12,color:P,fontWeight:700}}>⚙️</button>
-              </div>
-              {showCatMgr&&(
-                <div style={{background:'#fdf2f8',borderRadius:10,padding:12,marginBottom:8}}>
-                  <div style={{fontSize:11,fontWeight:700,color:P,marginBottom:8}}>Manage Categories</div>
-                  <div style={{display:'flex',gap:6,marginBottom:8}}>
-                    <input value={newCat} onChange={e=>setNewCat(e.target.value)} placeholder="New category name..."
-                      style={{flex:1,padding:'7px 10px',borderRadius:8,border:`1.5px solid ${P}30`,fontSize:12,outline:'none',fontFamily:'inherit'}}
-                      onKeyDown={e=>{if(e.key==='Enter'&&newCat.trim()){setCategories(cats=>[...cats,newCat.trim()]);setNewCat('');}}}
-                    />
-                    <button type="button" onClick={()=>{if(newCat.trim()){setCategories(cats=>[...cats,newCat.trim()]);setNewCat('');}}} style={{padding:'7px 12px',borderRadius:8,border:'none',background:P,color:'white',cursor:'pointer',fontSize:12,fontWeight:700}}>Add</button>
-                  </div>
-                  <div style={{display:'flex',flexWrap:'wrap' as const,gap:6}}>
-                    {categories.map(cat=>(
-                      <span key={cat} style={{background:'white',border:`1px solid ${P}30`,borderRadius:20,padding:'3px 10px',fontSize:11,fontWeight:600,color:'#374151',display:'flex',alignItems:'center',gap:4}}>
+              <div style={{display:'flex',flexWrap:'wrap' as const,gap:7,padding:'4px 0',marginBottom:6}}>
+                  {categories.length === 0
+                    ? <div style={{fontSize:12,color:'#f59e0b',fontWeight:600}}>⚠️ No categories yet — go to Admin → 🏷️ Categories to add some.</div>
+                    : categories.map(cat=>(
+                      <label key={cat} style={{display:'flex',alignItems:'center',gap:5,cursor:'pointer',background:categories_sel.includes(cat)?P+'15':'#f9fafb',border:`1.5px solid ${categories_sel.includes(cat)?P:'#e5e7eb'}`,borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,color:categories_sel.includes(cat)?P:'#374151',transition:'all 0.1s'}}>
+                        <input type="checkbox" checked={categories_sel.includes(cat)} onChange={e=>{setCategories_sel(prev=>e.target.checked?[...prev,cat]:prev.filter(c=>c!==cat));}} style={{accentColor:P,width:13,height:13}} />
                         {cat}
-                        <button type="button" onClick={()=>setCategories(cats=>cats.filter(c=>c!==cat))} style={{background:'none',border:'none',cursor:'pointer',color:'#ef4444',fontSize:12,padding:0,lineHeight:1}}>✕</button>
-                      </span>
-                    ))}
-                  </div>
+                      </label>
+                    ))
+                  }
                 </div>
-              )}
+
             </div>
             <div>
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Artist</label>
