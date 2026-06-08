@@ -54,19 +54,25 @@ module.exports = async function handler(req, res) {
         artist_status,
       }).eq('id', artistId);
     } else {
-      // Create profile directly without auth user — do NOT insert null email (violates NOT NULL)
-      const noEmailRecord = {
-        id: require('crypto').randomUUID(),
+      // No email — create auth user with a placeholder email (never used for login)
+      // profiles.id must reference auth.users.id, so we must create an auth user first
+      const placeholderEmail = `artist-${artist_slug}-${Date.now()}@noemail.fluffypub.internal`;
+      const tempPassword = Math.random().toString(36).slice(-10) + 'Aa1!';
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: placeholderEmail,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: { name, role: 'artist' },
+      });
+      if (authError) return json(res, 400, { error: authError.message });
+      artistId = authData.user.id;
+      // Update the profile row created by the trigger
+      await supabase.from('profiles').update({
         name, artist_slug, bio: bio || '', role: 'artist',
         avatar_url: avatar_url || null, cover_image_url: cover_image_url || null,
         website: website || null, social_links: social_links || null,
         artist_status,
-      };
-      // Only add email field if a real email value was provided
-      if (email && email.trim()) noEmailRecord.email = email.trim();
-      const { data: profile, error } = await supabase.from('profiles').insert(noEmailRecord).select().single();
-      if (error) return json(res, 400, { error: error.message });
-      return json(res, 201, profile);
+      }).eq('id', artistId);
     }
 
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', artistId).single();
