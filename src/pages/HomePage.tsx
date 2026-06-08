@@ -121,10 +121,11 @@ function CategoriesSection({ allProducts }: { allProducts: any[] }) {
     api.getCategories().then((d: any) => { if (Array.isArray(d)) setCategories(d); });
   }, []);
 
-  // Real counts from products
+  // Real counts from products — use categories array if available
   const catCounts: Record<string, number> = {};
   allProducts.forEach((p: any) => {
-    if (p.category) catCounts[p.category] = (catCounts[p.category] || 0) + 1;
+    const cats: string[] = p.categories && p.categories.length ? p.categories : (p.category ? [p.category] : []);
+    cats.forEach((cat: string) => { catCounts[cat] = (catCounts[cat] || 0) + 1; });
   });
 
   const catsWithProducts = categories.filter(c => (catCounts[c.name] || 0) > 0);

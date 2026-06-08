@@ -23,12 +23,18 @@ export default function ProductsPage() {
 
   // Build category tabs from DB + "All"
   const catCounts = allProducts.reduce((acc: Record<string, number>, prod: any) => {
-    if (prod.category) acc[prod.category] = (acc[prod.category] || 0) + 1;
+    // Count from categories array if available, else fall back to category string
+    const cats: string[] = prod.categories && prod.categories.length ? prod.categories : (prod.category ? [prod.category] : []);
+    cats.forEach((cat: string) => { acc[cat] = (acc[cat] || 0) + 1; });
     return acc;
   }, {});
 
   let filtered = allProducts.filter(prod => {
-    if (category !== 'All' && prod.category !== category) return false;
+    if (category !== 'All') {
+      // Match if primary category OR any of the categories array matches
+      const prodCats: string[] = prod.categories && prod.categories.length ? prod.categories : (prod.category ? [prod.category] : []);
+      if (!prodCats.includes(category)) return false;
+    }
     if (search && !prod.title?.toLowerCase().includes(search.toLowerCase()) &&
         !(prod.artistName || prod.artist_name || '').toLowerCase().includes(search.toLowerCase())) return false;
     return true;

@@ -219,7 +219,8 @@ function ProductsTab() {
 
   const startEdit = (pr:any) => {
     setTitle(pr.title||''); setPrice(String(pr.price||'')); setOriginalPrice(String(pr.original_price||''));
-    setCategories_sel(pr.category ? (Array.isArray(pr.category) ? pr.category : [pr.category]) : []); setDescription(pr.description||''); setImage(pr.image||'🎨');
+    // Load from categories array if available, else fall back to single category field
+    setCategories_sel(pr.categories && pr.categories.length ? pr.categories : (pr.category ? [pr.category] : [])); setDescription(pr.description||''); setImage(pr.image||'🎨');
     setCoverImageUrl(pr.cover_image_url||''); setType(pr.type||'digital'); setPages(String(pr.pages||''));
     setTags((pr.tags||[]).join(', ')); setStatus(pr.status||'published');
     setDigitalDownloadUrl(pr.digital_download_url||''); setDownloadInstruction(pr.download_instruction||'');
@@ -239,7 +240,7 @@ function ProductsTab() {
   const save = async () => {
     if (!title||!priceTHB||!categories_sel.length){setMsg('⚠️ กรุณาใส่ชื่อ ราคา และหมวดหมู่ / Title, price and category required.');return;}
     setSaving(true); setMsg('');
-    const body:any = { title, price:parseFloat(priceTHB)||0, category:categories_sel[0]||'', description,
+    const body:any = { title, price:parseFloat(priceTHB)||0, category:categories_sel[0]||'', categories:categories_sel, description,
       rich_description:richBlocks.length?richBlocks:null, image,
       cover_image_url:coverImageUrl||null,
       is_digital:isDigital, is_physical:isPhysical,
@@ -430,7 +431,13 @@ function ProductsTab() {
               <td style={{padding:'14px 16px',width:52,fontSize:28}}>{pr.cover_image_url?<img src={pr.cover_image_url} style={{width:36,height:36,borderRadius:8,objectFit:'cover'}}/>:pr.image}</td>
               <td style={{padding:'14px 16px',fontWeight:700,color:'#111827',fontSize:14}}>{pr.title}</td>
               <td style={{padding:'14px 16px',fontSize:13,color:'#6b7280'}}>{pr.artist_name||pr.artistName}</td>
-              <td style={{padding:'14px 16px'}}><Badge color={P} bg="#fce7f3" text={pr.category}/></td>
+              <td style={{padding:'14px 16px'}}>
+                <div style={{display:'flex',gap:4,flexWrap:'wrap' as const}}>
+                  {(pr.categories && pr.categories.length ? pr.categories : (pr.category ? [pr.category] : [])).map((cat:string) => (
+                    <Badge key={cat} color={P} bg="#fce7f3" text={cat} />
+                  ))}
+                </div>
+              </td>
               <td style={{padding:'14px 16px',fontWeight:800,color:'#111827',fontSize:14}}>฿{pr.price_thb > 0 ? Number(pr.price_thb).toLocaleString('th-TH') : pr.price_thb || '—'}</td>
               <td style={{padding:'14px 16px'}}><Badge color={pr.status==='published'?'#059669':'#6b7280'} bg={pr.status==='published'?'#d1fae5':'#f3f4f6'} text={pr.status==='published'?'Active':'Draft'}/></td>
               <td style={{padding:'14px 16px'}}>
