@@ -10,7 +10,7 @@ import { api } from '../lib/api';
 import ImageCropEditor from '../components/ImageCropEditor';
 
 const ADMIN_EMAIL = 'fluffydrawing.th@gmail.com';
-type Tab = 'dashboard'|'products'|'orders'|'artists'|'theme';
+type Tab = 'dashboard'|'products'|'orders'|'artists'|'pages'|'theme'|'lang';
 
 function NavItem({icon,label,active,onClick}:any) {
   return (
