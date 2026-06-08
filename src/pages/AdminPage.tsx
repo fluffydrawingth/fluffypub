@@ -1048,14 +1048,21 @@ function PagesCMSTab() {
   const save = async () => {
     if (!title.trim() || !slug.trim()) { setMsg('⚠️ Title and slug required'); return; }
     setSaving(true); setMsg('');
-    const body = { title:title.trim(), slug:slug.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-'), content, image_url:imageUrl||null, status };
+    const cleanSlug = slug.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-');
+    const body = { title:title.trim(), slug:cleanSlug, content, image_url:imageUrl||null, status };
     const url  = editing?.id ? `/api/pages?id=${editing.id}` : '/api/pages';
     const meth = editing?.id ? 'PUT' : 'POST';
-    const res  = await fetch(url, { method:meth, headers:{'Content-Type':'application/json', Authorization:`Bearer ${tok()}`}, body:JSON.stringify(body) }).then(r=>r.json());
-    if (res.error) { setMsg('⚠️ ' + res.error); setSaving(false); return; }
-    setMsg('✓ Saved!');
-    await load();
-    setTimeout(cancel, 1000);
+    let result: any;
+    try {
+      const r = await fetch(url, { method:meth, headers:{'Content-Type':'application/json', Authorization:`Bearer ${tok()}`}, body:JSON.stringify(body) });
+      result = await r.json();
+    } catch(e:any) { setMsg('⚠️ Network error: ' + e.message); setSaving(false); return; }
+    if (result.error) { setMsg('⚠️ ' + result.error + (result.hint ? ' — ' + result.hint : '')); setSaving(false); return; }
+    // Update editing state with saved data so form reflects DB state
+    setEditing(result);
+    setSlug(result.slug); // slug may have been cleaned by API
+    setMsg('✓ Saved successfully!');
+    await load(); // refresh list in background
     setSaving(false);
   };
 
