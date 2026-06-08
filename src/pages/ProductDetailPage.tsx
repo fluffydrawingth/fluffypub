@@ -24,9 +24,17 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
   useEffect(() => {
     api.getProduct(slug).then(p => {
-      if (!p?.error) { setProduct(p); }
+      if (p?.error) {
+        console.error('[ProductDetailPage] API error:', p.error, 'slug:', slug);
+        setLoading(false);
+        return;
+      }
+      setProduct(p);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(e => {
+      console.error('[ProductDetailPage] fetch error:', e.message, 'slug:', slug);
+      setLoading(false);
+    });
   }, [slug]);
 
   useEffect(() => {
