@@ -8,6 +8,7 @@ import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
 import ImageCropEditor from '../components/ImageCropEditor';
+import HtmlEditor from '../components/HtmlEditor';
 
 const ADMIN_EMAIL = 'fluffydrawing.th@gmail.com';
 type Tab = 'dashboard'|'products'|'orders'|'artists'|'pages'|'theme'|'lang';
@@ -1117,7 +1118,10 @@ function PagesCMSTab() {
           </div>
         </div>
         {F('Image URL (optional)', imageUrl, setImageUrl, 'https://...')}
-        {F('Content', content, setContent, 'Write your page content here...', true)}
+        <div style={{marginBottom:12}}>
+          <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Content</label>
+          <HtmlEditor value={content} onChange={setContent} />
+        </div>
         {msg&&<div style={{marginBottom:12,fontSize:13,fontWeight:600,color:msg.startsWith('✓')?'#059669':'#dc2626'}}>{msg}</div>}
         <button onClick={save} disabled={saving} style={{padding:'12px 28px',background:saving?P+'88':P,color:'white',border:'none',cursor:'pointer',borderRadius:12,fontSize:14,fontWeight:700,fontFamily:'inherit'}}>
           {saving?'Saving...':'💾 Save Page'}

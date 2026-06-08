@@ -42,9 +42,22 @@ export default function CmsPage({ slug }: { slug: string }) {
         <div style={{ fontSize: 12, color: theme.textColor + '55', marginBottom: 32 }}>
           {new Date(page.updated_at || page.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
-        <div style={{ fontSize: 16, lineHeight: 1.9, color: theme.textColor + 'dd', whiteSpace: 'pre-wrap' as const }}>
-          {page.content}
-        </div>
+        <div
+          className="cms-body"
+          style={{ fontSize: 16, lineHeight: 1.9, color: theme.textColor + 'dd' }}
+          dangerouslySetInnerHTML={{ __html: page.content || '' }}
+        />
+        <style>{`
+          .cms-body img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
+          .cms-body h1 { font-size: 28px; font-weight: 900; margin: 24px 0 12px; }
+          .cms-body h2 { font-size: 22px; font-weight: 800; margin: 20px 0 10px; }
+          .cms-body h3 { font-size: 18px; font-weight: 700; margin: 16px 0 8px; }
+          .cms-body ul, .cms-body ol { padding-left: 24px; margin: 10px 0; }
+          .cms-body li { margin: 4px 0; }
+          .cms-body a { color: ${theme.primaryColor}; }
+          .cms-body strong { font-weight: 700; }
+          .cms-body em { font-style: italic; }
+        `}</style>
       </div>
     </div>
   );
