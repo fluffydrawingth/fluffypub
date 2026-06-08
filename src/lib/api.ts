@@ -100,6 +100,8 @@ export const api = {
   },
 
   // Theme
+  getPages: () => fetch('/api/pages', { headers: h() }).then(r => r.json()),
+  getPage: (slug: string) => fetch(`/api/pages?slug=${slug}`).then(r => r.json()),
   getTheme: () => fetch('/api/theme').then(r => r.json()),
   saveTheme: (data: any) => fetch('/api/theme', { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
 };

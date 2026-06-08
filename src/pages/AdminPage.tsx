@@ -48,6 +48,7 @@ export default function AdminPage() {
           <NavItem icon="📚" label="Products"  active={tab==='products'}  onClick={()=>setTab('products')} />
           <NavItem icon="📦" label="Orders"    active={tab==='orders'}    onClick={()=>setTab('orders')} />
           <NavItem icon="🎨" label="Artists"   active={tab==='artists'}   onClick={()=>setTab('artists')} />
+          <NavItem icon="📄" label="Pages"      active={tab==='pages'}   onClick={()=>setTab('pages')} />
           <NavItem icon="✨" label="Theme & CMS" active={tab==='theme'}   onClick={()=>setTab('theme')} />
           <NavItem icon="🌐" label="Language CMS" active={tab==='lang'}    onClick={()=>setTab('lang')} />
         </nav>
@@ -1158,6 +1159,8 @@ function FooterCMSEditor({ footer, onFooterChange }: { footer: FooterConfig; onF
   const [description, setDescription] = useState(footer.description || '');
   const [copyright, setCopyright]     = useState(footer.copyright || '');
   const [trustBadges, setTrustBadges] = useState(footer.trustBadges || '');
+  const [cmsPages, setCmsPages] = useState<any[]>([]);
+  useEffect(() => { api.getPages().then((d:any) => setCmsPages(Array.isArray(d) ? d.filter((p:any) => p.status === 'published') : [])); }, []);
   const [editingCol, setEditingCol]   = useState<string | null>(null);
   const [editingLink, setEditingLink] = useState<{ colId: string; linkId: string } | null>(null);
 
