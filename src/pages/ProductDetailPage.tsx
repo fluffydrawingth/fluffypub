@@ -116,15 +116,24 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
         {/* Main card */}
         <div className="pd-grid" style={{background:'white',borderRadius:20,overflow:'hidden',boxShadow:'0 4px 24px rgba(0,0,0,0.07)'}}>
           {/* Image */}
-          <div className="pd-img" style={{background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`,position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',fontSize:90}}>
+          <div className="pd-img" style={{background:`linear-gradient(135deg,${theme.bgColor},white)`,position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',fontSize:90,padding:8}}>
             {product.cover_image_url
-              ? <img src={product.cover_image_url} alt={title} style={{width:'100%',height:'100%',objectFit:'cover',position:'absolute',inset:0}} />
+              ? <img src={product.cover_image_url} alt={title} style={{width:'100%',height:'100%',objectFit:'contain',position:'absolute',inset:0}} />
               : <span>{product.image}</span>}
           </div>
 
           {/* Info */}
           <div className="pd-info">
-            <div style={{fontSize:12,color:p,fontWeight:700,marginBottom:8}}>{product.artistName||product.artist_name||product.artist} · {product.category}</div>
+            <div style={{fontSize:12,color:p,fontWeight:700,marginBottom:8}}>
+              {(product.artistName||product.artist_name||product.artist) ? (
+                <button onClick={()=>navigate(`/artists/${product.artist_slug||product.artistSlug||''}`)}
+                  style={{background:'none',border:'none',cursor:'pointer',color:p,fontWeight:700,fontSize:12,padding:0,fontFamily:theme.fontFamily}}>
+                  {product.artistName||product.artist_name||product.artist}
+                </button>
+              ) : null}
+              {(product.artistName||product.artist_name) && product.category ? ' · ' : ''}
+              {product.category}
+            </div>
             <h1 style={{fontSize:24,fontWeight:900,color:theme.textColor,margin:'0 0 12px',lineHeight:1.25}}>{title}</h1>
 
             {/* Type badges */}

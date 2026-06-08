@@ -112,25 +112,23 @@ function FeaturedSection({ products }: { products: any[] }) {
 }
 
 // ── Categories ────────────────────────────────────────────────────────────────
-const CATEGORY_EMOJIS: Record<string, string> = {
-  Animals:'🐰', Fantasy:'🌙', Botanicals:'🌿', Mandala:'🔮',
-  Kawaii:'🍓', Seasonal:'❄️', default:'🎨',
-};
-
 function CategoriesSection({ allProducts }: { allProducts: any[] }) {
   const { theme } = useTheme();
   const { navigate } = useRouter();
+  const [categories, setCategories] = React.useState<any[]>([]);
 
-  // Build real category counts from actual products
-  const catMap: Record<string, number> = {};
+  useEffect(() => {
+    api.getCategories().then((d: any) => { if (Array.isArray(d)) setCategories(d); });
+  }, []);
+
+  // Real counts from products
+  const catCounts: Record<string, number> = {};
   allProducts.forEach((p: any) => {
-    if (p.category) catMap[p.category] = (catMap[p.category] || 0) + 1;
+    if (p.category) catCounts[p.category] = (catCounts[p.category] || 0) + 1;
   });
-  const cats = Object.entries(catMap)
-    .filter(([, count]) => count > 0)
-    .sort((a, b) => b[1] - a[1]);
 
-  if (cats.length === 0) return null;
+  const catsWithProducts = categories.filter(c => (catCounts[c.name] || 0) > 0);
+  if (catsWithProducts.length === 0) return null;
 
   return (
     <section style={{ padding:'64px 24px', background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})` }}>
@@ -140,17 +138,24 @@ function CategoriesSection({ allProducts }: { allProducts: any[] }) {
           <p style={{ color:theme.textColor+'88', fontSize:16 }}>Find your perfect coloring style</p>
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:16 }}>
-          {cats.map(([name, count]) => (
-            <button key={name} onClick={()=>navigate('/products')}
-              style={{ background:'white', border:`1.5px solid ${theme.primaryColor}20`, borderRadius:20, padding:'28px 16px', cursor:'pointer', textAlign:'center' as const, fontFamily:theme.fontFamily }}
-              onMouseEnter={e=>{(e.currentTarget as any).style.transform='translateY(-4px)';(e.currentTarget as any).style.boxShadow=`0 8px 24px ${theme.primaryColor}25`;}}
-              onMouseLeave={e=>{(e.currentTarget as any).style.transform='none';(e.currentTarget as any).style.boxShadow='none';}}
-            >
-              <div style={{ fontSize:40, marginBottom:10 }}>{CATEGORY_EMOJIS[name] || CATEGORY_EMOJIS.default}</div>
-              <div style={{ fontSize:15, fontWeight:800, color:theme.textColor }}>{name}</div>
-              <div style={{ fontSize:12, color:theme.primaryColor, fontWeight:600, marginTop:4 }}>{count} book{count !== 1 ? 's' : ''}</div>
-            </button>
-          ))}
+          {catsWithProducts.map(cat => {
+            const count = catCounts[cat.name] || 0;
+            return (
+              <button key={cat.name} onClick={()=>navigate('/products')}
+                style={{ background:'white', border:`1.5px solid ${theme.primaryColor}20`, borderRadius:20, padding:'28px 16px', cursor:'pointer', textAlign:'center' as const, fontFamily:theme.fontFamily }}
+                onMouseEnter={e=>{(e.currentTarget as any).style.transform='translateY(-4px)';(e.currentTarget as any).style.boxShadow=`0 8px 24px ${theme.primaryColor}25`;}}
+                onMouseLeave={e=>{(e.currentTarget as any).style.transform='none';(e.currentTarget as any).style.boxShadow='none';}}
+              >
+                <div style={{ fontSize:40, marginBottom:10, display:'flex', justifyContent:'center', alignItems:'center' }}>
+                  {cat.icon_type === 'image' && cat.icon
+                    ? <img src={cat.icon} alt={cat.name} style={{ width:48, height:48, objectFit:'cover', borderRadius:10 }} />
+                    : <span>{cat.icon || '🎨'}</span>}
+                </div>
+                <div style={{ fontSize:15, fontWeight:800, color:theme.textColor }}>{cat.name}</div>
+                <div style={{ fontSize:12, color:theme.primaryColor, fontWeight:600, marginTop:4 }}>{count} book{count !== 1 ? 's' : ''}</div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -203,6 +208,7 @@ function ArtistsSection() {
 // ── Newsletter ────────────────────────────────────────────────────────────────
 function NewsletterSection() {
   const { theme } = useTheme();
+  if (theme.showNewsletter === false) return null;
   const [email, setEmail] = React.useState('');
   const [submitted, setSubmitted] = React.useState(false);
   const p = theme.primaryColor;

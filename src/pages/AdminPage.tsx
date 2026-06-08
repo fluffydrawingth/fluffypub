@@ -11,7 +11,7 @@ import ImageCropEditor from '../components/ImageCropEditor';
 import HtmlEditor from '../components/HtmlEditor';
 
 const ADMIN_EMAIL = 'fluffydrawing.th@gmail.com';
-type Tab = 'dashboard'|'products'|'orders'|'artists'|'pages'|'theme'|'lang';
+type Tab = 'dashboard'|'products'|'orders'|'artists'|'categories'|'pages'|'theme'|'lang';
 
 function NavItem({icon,label,active,onClick}:any) {
   return (
@@ -49,6 +49,7 @@ export default function AdminPage() {
           <NavItem icon="📚" label="Products"  active={tab==='products'}  onClick={()=>setTab('products')} />
           <NavItem icon="📦" label="Orders"    active={tab==='orders'}    onClick={()=>setTab('orders')} />
           <NavItem icon="🎨" label="Artists"   active={tab==='artists'}   onClick={()=>setTab('artists')} />
+          <NavItem icon="🏷️" label="Categories" active={tab==='categories'} onClick={()=>setTab('categories')} />
           <NavItem icon="📄" label="Pages"      active={tab==='pages'}   onClick={()=>setTab('pages')} />
           <NavItem icon="✨" label="Theme & CMS" active={tab==='theme'}   onClick={()=>setTab('theme')} />
           <NavItem icon="🌐" label="Language CMS" active={tab==='lang'}    onClick={()=>setTab('lang')} />
@@ -63,6 +64,7 @@ export default function AdminPage() {
         {tab==='products'  && <ProductsTab />}
         {tab==='orders'    && <OrdersTab />}
         {tab==='artists'   && <ArtistsTab />}
+        {tab==='categories' && <CategoriesTab />}
         {tab==='pages'     && <PagesCMSTab />}
         {tab==='theme'     && <ThemeTab />}
         {tab==='lang'      && <LanguageCMSTab />}
@@ -1015,6 +1017,177 @@ function TF({label,val,set}:{label:string,val:string,set:(v:string)=>void}) {
 }
 
 // ── Theme & CMS ─────────────────────────────────────────────────────────────
+function CategoriesTab() {
+  const P = '#f472b6';
+  const card = { background:'white', borderRadius:16, boxShadow:'0 2px 10px rgba(0,0,0,0.06)' };
+  const [cats, setCats] = useState<any[]>([]);
+  const [editing, setEditing] = useState<any>(null);
+  const [name, setName]     = useState('');
+  const [slug, setSlug]     = useState('');
+  const [icon, setIcon]     = useState('🎨');
+  const [iconType, setIconType] = useState<'emoji'|'image'>('emoji');
+  const [active, setActive] = useState(true);
+  const [sortOrder, setSortOrder] = useState('0');
+  const [msg, setMsg]       = useState('');
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const tok = () => localStorage.getItem('fluffy_token') || '';
+  const load = async () => {
+    const r = await fetch('/api/categories', { headers:{ Authorization:`Bearer ${tok()}` } });
+    const d = await r.json();
+    setCats(Array.isArray(d) ? d : []);
+  };
+  useEffect(() => { load(); }, []);
+
+  const startNew  = () => { setEditing({}); setName(''); setSlug(''); setIcon('🎨'); setIconType('emoji'); setActive(true); setSortOrder('0'); setMsg(''); };
+  const startEdit = (ct:any) => { setEditing(ct); setName(ct.name); setSlug(ct.slug); setIcon(ct.icon||'🎨'); setIconType(ct.icon_type||'emoji'); setActive(ct.active); setSortOrder(String(ct.sort_order||0)); setMsg(''); };
+  const cancel    = () => { setEditing(null); setMsg(''); };
+
+  const uploadIcon = async (file: File) => {
+    setUploading(true);
+    const result = await api.uploadFile(file, 'categories');
+    setUploading(false);
+    if (result.error) { alert('Upload failed: ' + result.error); return; }
+    setIcon(result.publicUrl);
+    setIconType('image');
+  };
+
+  const save = async () => {
+    if (!name.trim()) { setMsg('⚠️ Name required'); return; }
+    setSaving(true); setMsg('');
+    const body = { name:name.trim(), slug:slug.trim()||name.trim().toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,''), icon, icon_type:iconType, active, sort_order:parseInt(sortOrder)||0 };
+    const url  = editing?.id ? `/api/categories?id=${editing.id}` : '/api/categories';
+    const meth = editing?.id ? 'PUT' : 'POST';
+    const res  = await fetch(url, { method:meth, headers:{'Content-Type':'application/json',Authorization:`Bearer ${tok()}`}, body:JSON.stringify(body) }).then(r=>r.json());
+    if (res.error) { setMsg('⚠️ ' + res.error); setSaving(false); return; }
+    setMsg('✓ Saved!'); await load(); setTimeout(cancel, 1000); setSaving(false);
+  };
+
+  const del = async (id:string, n:string) => {
+    if (!confirm(`Delete "${n}"?`)) return;
+    await fetch(`/api/categories?id=${id}`, { method:'DELETE', headers:{ Authorization:`Bearer ${tok()}` } });
+    load();
+  };
+
+  const toggleActive = async (ct:any) => {
+    await fetch(`/api/categories?id=${ct.id}`, { method:'PUT', headers:{'Content-Type':'application/json',Authorization:`Bearer ${tok()}`}, body:JSON.stringify({ active:!ct.active }) });
+    load();
+  };
+
+  const inp = (label:string, val:string, set:(v:string)=>void, ph='', type='text') => (
+    <div style={{marginBottom:12}}>
+      <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>{label}</label>
+      <input type={type} value={val} onChange={e=>set(e.target.value)} placeholder={ph}
+        style={{width:'100%',padding:'10px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+        onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+    </div>
+  );
+
+  if (editing !== null) return (
+    <div style={{padding:28,maxWidth:520}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+        <h1 style={{fontSize:22,fontWeight:900,color:'#111827',margin:0}}>{editing?.id ? 'Edit Category' : 'New Category'}</h1>
+        <button onClick={cancel} style={{background:'#f3f4f6',border:'none',cursor:'pointer',padding:'8px 16px',borderRadius:10,fontSize:13,fontWeight:600}}>✕ Cancel</button>
+      </div>
+      <div style={{...card,padding:24}}>
+        {inp('Category Name *', name, setName, 'Animals')}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 80px',gap:12}}>
+          {inp('Slug', slug, setSlug, 'animals')}
+          {inp('Sort Order', sortOrder, setSortOrder, '0', 'number')}
+        </div>
+        {/* Icon */}
+        <div style={{marginBottom:12}}>
+          <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Icon</label>
+          <div style={{display:'flex',gap:8,marginBottom:8}}>
+            <button type="button" onClick={()=>setIconType('emoji')} style={{padding:'7px 14px',borderRadius:8,border:`1.5px solid ${iconType==='emoji'?P:'#e5e7eb'}`,background:iconType==='emoji'?P+'10':'white',cursor:'pointer',fontSize:12,fontWeight:600,color:iconType==='emoji'?P:'#374151'}}>
+              😀 Emoji
+            </button>
+            <button type="button" onClick={()=>setIconType('image')} style={{padding:'7px 14px',borderRadius:8,border:`1.5px solid ${iconType==='image'?P:'#e5e7eb'}`,background:iconType==='image'?P+'10':'white',cursor:'pointer',fontSize:12,fontWeight:600,color:iconType==='image'?P:'#374151'}}>
+              🖼️ Image
+            </button>
+          </div>
+          {iconType==='emoji'
+            ? <input value={icon} onChange={e=>setIcon(e.target.value)} placeholder="🎨"
+                style={{width:80,padding:'10px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:24,textAlign:'center' as const,outline:'none'}} />
+            : <div style={{display:'flex',gap:10,alignItems:'center'}}>
+                {icon && iconType==='image' && <img src={icon} alt="" style={{width:48,height:48,borderRadius:8,objectFit:'cover',border:'1px solid #e5e7eb'}} />}
+                <label style={{cursor:'pointer',padding:'8px 14px',borderRadius:8,border:`1.5px solid ${P}`,background:'#fdf2f8',color:P,fontSize:12,fontWeight:700}}>
+                  {uploading?'⏳ Uploading...':'📤 Upload Image'}
+                  <input type="file" accept="image/*" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)uploadIcon(f);}} />
+                </label>
+              </div>
+          }
+        </div>
+        <div style={{marginBottom:14,display:'flex',alignItems:'center',gap:8}}>
+          <input type="checkbox" checked={active} onChange={e=>setActive(e.target.checked)} id="cat-active" style={{width:15,height:15,accentColor:P}} />
+          <label htmlFor="cat-active" style={{fontSize:13,fontWeight:700,color:'#374151',cursor:'pointer'}}>Active (visible on site)</label>
+        </div>
+        {/* Preview */}
+        <div style={{background:'#f9fafb',borderRadius:12,padding:'12px 16px',marginBottom:14,display:'flex',alignItems:'center',gap:12}}>
+          <div style={{fontSize:32}}>
+            {iconType==='image'&&icon ? <img src={icon} alt="" style={{width:40,height:40,borderRadius:8,objectFit:'cover'}} /> : <span>{icon||'🎨'}</span>}
+          </div>
+          <div>
+            <div style={{fontWeight:700,color:'#111827'}}>{name||'Category Name'}</div>
+            <div style={{fontSize:11,color:'#9ca3af'}}>/categories/{slug||'slug'}</div>
+          </div>
+          <span style={{marginLeft:'auto',fontSize:11,fontWeight:700,background:active?'#d1fae5':'#f3f4f6',color:active?'#065f46':'#9ca3af',borderRadius:20,padding:'2px 10px'}}>{active?'Active':'Inactive'}</span>
+        </div>
+        {msg&&<div style={{marginBottom:10,fontSize:13,fontWeight:600,color:msg.startsWith('✓')?'#059669':'#dc2626'}}>{msg}</div>}
+        <button onClick={save} disabled={saving} style={{padding:'11px 24px',background:saving?P+'88':P,color:'white',border:'none',cursor:'pointer',borderRadius:12,fontSize:14,fontWeight:700,fontFamily:'inherit'}}>
+          {saving?'Saving...':'💾 Save Category'}
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{padding:28}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+        <h1 style={{fontSize:22,fontWeight:900,color:'#111827',margin:0}}>Categories ({cats.length})</h1>
+        <button onClick={startNew} style={{background:P,color:'white',border:'none',cursor:'pointer',padding:'10px 20px',borderRadius:20,fontSize:14,fontWeight:700,fontFamily:'inherit',boxShadow:`0 4px 14px ${P}44`}}>+ Add Category</button>
+      </div>
+      <p style={{fontSize:13,color:'#6b7280',marginBottom:16}}>Categories are used on the shop page and homepage. Add categories here, then assign products to them.</p>
+      <div style={{...card,overflow:'hidden'}}>
+        {cats.length===0 ? (
+          <div style={{textAlign:'center' as const,padding:'48px',color:'#9ca3af'}}>
+            No categories yet. Click "+ Add Category" to create your first.<br/>
+            <small style={{color:'#d97706'}}>Tip: Create categories matching your existing products (Animals, Kawaii, Fantasy, etc.)</small>
+          </div>
+        ) : (
+          <table style={{width:'100%',borderCollapse:'collapse'}}>
+            <thead><tr style={{borderBottom:'2px solid #f3f4f6',background:'#fafafa'}}>
+              {['Icon','Name','Slug','Order','Status',''].map(h=><th key={h} style={{textAlign:'left' as const,padding:'11px 14px',fontSize:11,color:'#9ca3af',fontWeight:700}}>{h}</th>)}
+            </tr></thead>
+            <tbody>{cats.map(ct=>(
+              <tr key={ct.id} style={{borderBottom:'1px solid #f9fafb'}}
+                onMouseEnter={e=>e.currentTarget.style.background='#fafafa'}
+                onMouseLeave={e=>e.currentTarget.style.background='white'}>
+                <td style={{padding:'10px 14px',fontSize:24}}>
+                  {ct.icon_type==='image'&&ct.icon ? <img src={ct.icon} alt="" style={{width:32,height:32,borderRadius:6,objectFit:'cover'}} /> : <span>{ct.icon}</span>}
+                </td>
+                <td style={{padding:'10px 14px',fontWeight:700,color:'#111827',fontSize:14}}>{ct.name}</td>
+                <td style={{padding:'10px 14px',fontSize:12,color:'#6b7280',fontFamily:'monospace'}}>{ct.slug}</td>
+                <td style={{padding:'10px 14px',fontSize:13,color:'#374151'}}>{ct.sort_order}</td>
+                <td style={{padding:'10px 14px'}}>
+                  <button onClick={()=>toggleActive(ct)} style={{padding:'3px 10px',borderRadius:20,border:'none',cursor:'pointer',fontSize:11,fontWeight:700,background:ct.active?'#d1fae5':'#f3f4f6',color:ct.active?'#065f46':'#9ca3af'}}>
+                    {ct.active?'✅ Active':'⬜ Inactive'}
+                  </button>
+                </td>
+                <td style={{padding:'10px 14px',display:'flex',gap:6}}>
+                  <button onClick={()=>startEdit(ct)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:600}}>Edit</button>
+                  <button onClick={()=>del(ct.id,ct.name)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:12,fontWeight:600,color:'#ef4444'}}>Delete</button>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function PagesCMSTab() {
   const P = '#f472b6'; // module-level primary color constant
   const card = { background:'white', borderRadius:16, boxShadow:'0 2px 10px rgba(0,0,0,0.06)' };
@@ -1307,6 +1480,14 @@ function ThemeTab() {
           <div style={{borderRadius:12,overflow:'hidden'}}><div style={{background:draft.bannerBg,color:'white',textAlign:'center' as const,padding:'11px',fontSize:13,fontWeight:600}}>{draft.bannerText}</div></div>
         </>)}
         {section==='pages'&&(<>
+          {/* Newsletter toggle */}
+          <div style={{marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
+            <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:13,fontWeight:700,color:'#374151'}}>
+              <input type="checkbox" checked={draft.showNewsletter||false} onChange={e=>setDraft((d:any)=>({...d,showNewsletter:e.target.checked}))} style={{width:16,height:16,accentColor:P}} />
+              Show Newsletter Section on Homepage
+            </label>
+            <span style={{fontSize:11,color:'#9ca3af'}}>(hidden by default)</span>
+          </div>
           {/* Featured Products picker */}
           <FeaturedProductsPicker draft={draft} setDraft={setDraft} />
           <h2 style={{fontSize:20,fontWeight:900,color:'#111827',marginBottom:8}}>Page Sections</h2>

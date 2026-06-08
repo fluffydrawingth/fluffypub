@@ -100,6 +100,8 @@ export const api = {
   },
 
   // Theme
+  getCategories: () => fetch('/api/categories').then(r => r.json()),
+  getAdminCategories: () => fetch('/api/categories', { headers: h() }).then(r => r.json()),
   getPages: () => fetch('/api/pages', { headers: h() }).then(r => r.json()),
   getPage: (slug: string) => fetch(`/api/pages?slug=${slug}`).then(r => r.json()),
   getTheme: () => fetch('/api/theme').then(r => r.json()),

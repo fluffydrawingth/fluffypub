@@ -31,6 +31,7 @@ export interface ThemeConfig {
   bgImageCrop: any | null; sections: string[];
   heroStats: { value: string; label: string }[];
   featuredProductIds: string[];
+  showNewsletter: boolean;
   footer: FooterConfig;
 }
 
@@ -74,6 +75,7 @@ const DEFAULT: ThemeConfig = {
     { value:'4.9★', label:'Rating' },
   ],
   featuredProductIds:[],
+  showNewsletter: false,
   footer: DEFAULT_FOOTER,
 };
 
