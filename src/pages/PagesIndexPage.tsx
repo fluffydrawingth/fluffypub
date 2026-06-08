@@ -1,0 +1,65 @@
+import React, { useEffect, useState } from 'react';
+import { useTheme } from '../lib/theme';
+import { useRouter } from '../lib/router';
+
+export default function PagesIndexPage() {
+  const { theme } = useTheme();
+  const { navigate } = useRouter();
+  const [pages, setPages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const p = theme.primaryColor;
+
+  useEffect(() => {
+    fetch('/api/pages')
+      .then(r => r.json())
+      .then(d => { setPages(Array.isArray(d) ? d : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return (
+    <div style={{ minHeight:'60vh', display:'flex', alignItems:'center', justifyContent:'center', fontSize:32 }}>⏳</div>
+  );
+
+  return (
+    <div style={{ fontFamily:theme.fontFamily, background:theme.bgColor, minHeight:'70vh' }}>
+      <div style={{ maxWidth:900, margin:'0 auto', padding:'48px 20px' }}>
+        <h1 style={{ fontSize:32, fontWeight:900, color:theme.textColor, margin:'0 0 8px' }}>Blog & Pages</h1>
+        <p style={{ color:theme.textColor+'88', marginBottom:40, fontSize:16 }}>Articles, updates, and more from Fluffy Pub.</p>
+
+        {pages.length === 0 ? (
+          <div style={{ textAlign:'center' as const, padding:'80px 24px', color:theme.textColor+'66' }}>
+            <div style={{ fontSize:56, marginBottom:16 }}>📄</div>
+            <h3 style={{ fontWeight:800, color:theme.textColor }}>No posts yet</h3>
+            <p>Check back soon for updates!</p>
+          </div>
+        ) : (
+          <div style={{ display:'flex', flexDirection:'column' as const, gap:24 }}>
+            {pages.map(pg => (
+              <div key={pg.id}
+                onClick={() => navigate(`/pages/${pg.slug}`)}
+                style={{ background:'white', borderRadius:16, overflow:'hidden', display:'flex', cursor:'pointer', boxShadow:'0 2px 12px rgba(0,0,0,0.06)', border:`1px solid ${p}15`, transition:'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${p}15`; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; }}
+              >
+                {pg.image_url && (
+                  <img src={pg.image_url} alt={pg.title}
+                    style={{ width:200, height:140, objectFit:'cover', flexShrink:0 }} />
+                )}
+                <div style={{ padding:'20px 24px', flex:1 }}>
+                  <h2 style={{ fontSize:18, fontWeight:800, color:theme.textColor, margin:'0 0 8px', lineHeight:1.3 }}>{pg.title}</h2>
+                  {pg.excerpt && <p style={{ fontSize:14, color:theme.textColor+'99', margin:'0 0 12px', lineHeight:1.6 }}>{pg.excerpt}</p>}
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <span style={{ fontSize:12, color:theme.textColor+'55' }}>
+                      {new Date(pg.updated_at || pg.created_at).toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' })}
+                    </span>
+                    <span style={{ fontSize:13, color:p, fontWeight:700 }}>Read More →</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -1166,6 +1166,7 @@ function CategoriesTab() {
                   <button onClick={()=>toggleActive(ct)} style={{padding:'3px 10px',borderRadius:20,border:'none',cursor:'pointer',fontSize:11,fontWeight:700,background:ct.active?'#d1fae5':'#f3f4f6',color:ct.active?'#065f46':'#9ca3af'}}>
                     {ct.active?'✅ Active':'⬜ Inactive'}
                   </button>
+                  {ct.show_on_homepage&&<span style={{fontSize:10,background:'#dbeafe',color:'#1d4ed8',borderRadius:20,padding:'2px 8px',fontWeight:700,marginLeft:4}}>🏠</span>}
                 </td>
                 <td style={{padding:'10px 14px',display:'flex',gap:6}}>
                   <button onClick={()=>startEdit(ct)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:600}}>Edit</button>
@@ -1190,6 +1191,9 @@ function PagesCMSTab() {
   const [content, setContent] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [status, setStatus] = useState('draft');
+  const [excerpt, setExcerpt] = useState('');
+  const [showOnHomepage, setShowOnHomepage] = useState(false);
+  const [sortOrder, setSortOrder] = useState('0');
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState(false);
   const [loadErr, setLoadErr] = useState('');
@@ -1207,15 +1211,15 @@ function PagesCMSTab() {
   };
   useEffect(() => { load(); }, []);
 
-  const startNew  = () => { setEditing({}); setTitle(''); setSlug(''); setContent(''); setImageUrl(''); setStatus('draft'); setMsg(''); };
-  const startEdit = (p:any) => { setEditing(p); setTitle(p.title); setSlug(p.slug); setContent(p.content||''); setImageUrl(p.image_url||''); setStatus(p.status); setMsg(''); };
+  const startNew  = () => { setEditing({}); setTitle(''); setSlug(''); setContent(''); setImageUrl(''); setStatus('draft'); setExcerpt(''); setShowOnHomepage(false); setSortOrder('0'); setMsg(''); };
+  const startEdit = (p:any) => { setEditing(p); setTitle(p.title); setSlug(p.slug); setContent(p.content||''); setImageUrl(p.image_url||''); setStatus(p.status); setExcerpt(p.excerpt||''); setShowOnHomepage(p.show_on_homepage||false); setSortOrder(String(p.sort_order||0)); setMsg(''); };
   const cancel    = () => { setEditing(null); setMsg(''); };
 
   const save = async () => {
     if (!title.trim() || !slug.trim()) { setMsg('⚠️ Title and slug required'); return; }
     setSaving(true); setMsg('');
     const cleanSlug = slug.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-');
-    const body = { title:title.trim(), slug:cleanSlug, content, image_url:imageUrl||null, status };
+    const body = { title:title.trim(), slug:cleanSlug, content, excerpt:excerpt.trim()||null, image_url:imageUrl||null, status, show_on_homepage:showOnHomepage, sort_order:parseInt(sortOrder)||0 };
     const url  = editing?.id ? `/api/pages?id=${editing.id}` : '/api/pages';
     const meth = editing?.id ? 'PUT' : 'POST';
     let result: any;
@@ -1283,6 +1287,19 @@ function PagesCMSTab() {
           </div>
         </div>
         {F('Image URL (optional)', imageUrl, setImageUrl, 'https://...')}
+        {F('Excerpt (optional)', excerpt, setExcerpt, 'Short summary shown on homepage and pages list...')}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 100px',gap:12,marginBottom:12}}>
+          <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:showOnHomepage?P+'10':'#f9fafb',border:`1.5px solid ${showOnHomepage?P:'#e5e7eb'}`,borderRadius:10,padding:'10px 14px',fontSize:13,fontWeight:600,color:showOnHomepage?P:'#374151',transition:'all 0.1s'}}>
+            <input type="checkbox" checked={showOnHomepage} onChange={e=>setShowOnHomepage(e.target.checked)} style={{accentColor:P,width:15,height:15}} />
+            🏠 Show on Homepage
+          </label>
+          <div>
+            <label style={{display:'block',fontSize:11,fontWeight:700,color:'#374151',marginBottom:4}}>Sort Order</label>
+            <input type="number" value={sortOrder} onChange={e=>setSortOrder(e.target.value)} placeholder="0"
+              style={{width:'100%',padding:'10px 13px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+              onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+          </div>
+        </div>
         <div style={{marginBottom:12}}>
           <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Content</label>
           <HtmlEditor value={content} onChange={setContent} />

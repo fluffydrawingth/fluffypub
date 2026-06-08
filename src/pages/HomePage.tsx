@@ -30,6 +30,7 @@ export default function HomePage() {
     categories: <CategoriesSection key="categories" allProducts={allProducts} />,
     artists:    <ArtistsSection key="artists" />,
     newsletter: <NewsletterSection key="newsletter" />,
+    blog: <BlogSection key="blog" />,
   };
 
   return (
@@ -204,6 +205,57 @@ function ArtistsSection() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Blog / Pages Section ─────────────────────────────────────────────────────
+function BlogSection() {
+  const { theme } = useTheme();
+  const { navigate } = useRouter();
+  const [pages, setPages] = React.useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/pages?homepage=1')
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setPages(d); })
+      .catch(() => {});
+  }, []);
+
+  if (pages.length === 0) return null;
+
+  const p = theme.primaryColor;
+  return (
+    <section style={{ padding:'64px 24px', background:'white' }}>
+      <div style={{ maxWidth:1200, margin:'0 auto' }}>
+        <div style={{ textAlign:'center' as const, marginBottom:40 }}>
+          <span style={{ fontSize:13, fontWeight:700, color:p, letterSpacing:1, textTransform:'uppercase' as const }}>📄 From the Blog</span>
+          <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 0', fontFamily:theme.fontFamily }}>Latest Updates</h2>
+        </div>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
+          {pages.map(pg => (
+            <div key={pg.id} onClick={() => navigate(`/pages/${pg.slug}`)}
+              style={{ width:'min(100%,340px)', background:theme.bgColor, borderRadius:16, overflow:'hidden', cursor:'pointer', boxShadow:'0 2px 12px rgba(0,0,0,0.06)', border:`1px solid ${p}15`, transition:'all 0.15s', flexShrink:0 }}
+              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow=`0 8px 24px ${p}20`; }}
+              onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='0 2px 12px rgba(0,0,0,0.06)'; }}
+            >
+              {pg.image_url && (
+                <img src={pg.image_url} alt={pg.title} style={{ width:'100%', height:180, objectFit:'cover', display:'block' }} />
+              )}
+              <div style={{ padding:20 }}>
+                <h3 style={{ fontSize:16, fontWeight:800, color:theme.textColor, margin:'0 0 8px', lineHeight:1.3 }}>{pg.title}</h3>
+                {pg.excerpt && <p style={{ fontSize:13, color:theme.textColor+'88', margin:'0 0 12px', lineHeight:1.6 }}>{pg.excerpt}</p>}
+                <span style={{ fontSize:13, color:p, fontWeight:700 }}>Read More →</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ textAlign:'center' as const, marginTop:32 }}>
+          <button onClick={() => navigate('/pages')} style={{ background:'transparent', border:`2px solid ${p}`, color:p, cursor:'pointer', padding:'11px 28px', borderRadius:24, fontSize:14, fontWeight:700, fontFamily:theme.fontFamily }}>
+            View All Posts →
+          </button>
         </div>
       </div>
     </section>

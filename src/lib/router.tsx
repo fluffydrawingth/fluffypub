@@ -31,6 +31,7 @@ function parse(hash: string): Route {
   if (p[0]==='account') return { path:'/account', params:{ tab:p[1]||'' } };
   if (p[0]==='artist-dashboard') return { path:'/artist-dashboard', params:{ tab:p[1]||'overview' } };
   if (p[0]==='admin') return { path:'/admin', params:{ tab:p[1]||'dashboard' } };
+  if (p[0]==='pages' && !p[1]) return { path:'/pages' };
   if (p[0]==='pages' && p[1]) return { path:'/pages/:slug', params:{ slug:p[1] } };
   return { path:'/' };
 }

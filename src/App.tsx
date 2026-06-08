@@ -18,6 +18,7 @@ import ArtistDashboardPage from './pages/ArtistDashboardPage';
 import ArtistProfilePage from './pages/ArtistProfilePage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import CmsPage from './pages/CmsPage';
+import PagesIndexPage from './pages/PagesIndexPage';
 import { LangProvider } from './lib/lang';
 import { FavoritesProvider } from './lib/favorites';
 
@@ -43,6 +44,7 @@ function AppContent() {
   const page = () => {
     switch (route.path) {
       case '/': return <HomePage />;
+      case '/pages': return <PagesIndexPage />;
       case '/pages/:slug': return <CmsPage slug={route.params?.slug||''} />;
       case '/products': return <ProductsPage />;
       case '/products/:slug': return <ProductDetailPage slug={route.params?.slug||''} />;
