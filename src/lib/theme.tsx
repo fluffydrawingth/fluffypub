@@ -29,6 +29,8 @@ export interface ThemeConfig {
   heroCrop: any | null; mobileHeroCrop: any | null;
   bannerText: string; bannerBg: string; bannerImageCrop: any | null;
   bgImageCrop: any | null; sections: string[];
+  heroStats: { value: string; label: string }[];
+  featuredProductIds: string[];
   footer: FooterConfig;
 }
 
@@ -65,6 +67,13 @@ const DEFAULT: ThemeConfig = {
   heroCrop:null, mobileHeroCrop:null, bannerText:'🌟 Free shipping on orders over $30! Use FLUFFY15 for 15% off 🌸',
   bannerBg:'#f472b6', bannerImageCrop:null, bgImageCrop:null,
   sections:['hero','featured','categories','artists','newsletter'],
+  heroStats:[
+    { value:'500+', label:'Books' },
+    { value:'12K+', label:'Happy Colorists' },
+    { value:'50+',  label:'Artists' },
+    { value:'4.9★', label:'Rating' },
+  ],
+  featuredProductIds:[],
   footer: DEFAULT_FOOTER,
 };
 

@@ -1178,6 +1178,40 @@ function PagesCMSTab() {
   );
 }
 
+function FeaturedProductsPicker({ draft, setDraft }: any) {
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  useEffect(() => { api.getProducts().then((p:any) => setAllProducts(Array.isArray(p)?p:[])); }, []);
+  const ids: string[] = draft.featuredProductIds || [];
+  const toggle = (id: string) => {
+    setDraft((d: any) => {
+      const cur: string[] = d.featuredProductIds || [];
+      return { ...d, featuredProductIds: cur.includes(id) ? cur.filter((x:string)=>x!==id) : [...cur, id] };
+    });
+  };
+  return (
+    <div style={{marginTop:8,marginBottom:16}}>
+      <label style={{display:'block',fontSize:13,fontWeight:700,color:'#374151',marginBottom:4}}>Featured Products on Homepage</label>
+      <p style={{fontSize:12,color:'#6b7280',marginBottom:10}}>Select products to show in "Featured Collections". If none selected, section is hidden.</p>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:8,maxHeight:280,overflowY:'auto',padding:2}}>
+        {allProducts.map((p:any)=>{
+          const sel = ids.includes(p.id);
+          return (
+            <label key={p.id} style={{display:'flex',gap:8,alignItems:'center',cursor:'pointer',background:sel?P+'10':'#f9fafb',border:`1.5px solid ${sel?P:'#e5e7eb'}`,borderRadius:10,padding:'8px 10px',transition:'all 0.1s'}}>
+              <input type="checkbox" checked={sel} onChange={()=>toggle(p.id)} style={{accentColor:P,flexShrink:0}} />
+              <span style={{fontSize:16}}>{p.image}</span>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:12,fontWeight:700,color:'#374151',overflow:'hidden',whiteSpace:'nowrap' as const,textOverflow:'ellipsis'}}>{p.title}</div>
+                <div style={{fontSize:11,color:'#9ca3af'}}>฿{p.price_thb||'—'}</div>
+              </div>
+            </label>
+          );
+        })}
+      </div>
+      {ids.length > 0 && <div style={{marginTop:6,fontSize:12,color:P,fontWeight:600}}>{ids.length} product{ids.length!==1?'s':''} selected</div>}
+    </div>
+  );
+}
+
 function ThemeTab() {
   const { theme, saveTheme } = useTheme();
   // Initialize draft ONCE from theme — do NOT reinitialize on every render
@@ -1273,6 +1307,8 @@ function ThemeTab() {
           <div style={{borderRadius:12,overflow:'hidden'}}><div style={{background:draft.bannerBg,color:'white',textAlign:'center' as const,padding:'11px',fontSize:13,fontWeight:600}}>{draft.bannerText}</div></div>
         </>)}
         {section==='pages'&&(<>
+          {/* Featured Products picker */}
+          <FeaturedProductsPicker draft={draft} setDraft={setDraft} />
           <h2 style={{fontSize:20,fontWeight:900,color:'#111827',marginBottom:8}}>Page Sections</h2>
           <p style={{fontSize:13,color:'#6b7280',marginBottom:20}}>Reorder homepage sections with ↑↓</p>
           {draft.sections?.map((s,i)=>{

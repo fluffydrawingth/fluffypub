@@ -7,17 +7,28 @@ import ProductCard from '../components/ProductCard';
 export default function HomePage() {
   const { theme } = useTheme();
   const [featured, setFeatured] = useState<any[]>([]);
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+
   useEffect(() => {
-    api.getProducts().then(p => {
-      if (Array.isArray(p)) setFeatured(p.filter((x: any) => x.featured).slice(0, 4));
+    api.getProducts().then((p: any[]) => {
+      if (!Array.isArray(p)) return;
+      setAllProducts(p);
+      // Featured: use admin-selected ids first, then fall back to products marked featured
+      const ids: string[] = theme.featuredProductIds || [];
+      if (ids.length > 0) {
+        const selected = ids.map(id => p.find((x: any) => x.id === id)).filter(Boolean);
+        setFeatured(selected);
+      } else {
+        setFeatured(p.filter((x: any) => x.featured).slice(0, 4));
+      }
     });
-  }, []);
+  }, [theme.featuredProductIds]);
 
   const sectionMap: Record<string, React.ReactNode> = {
-    hero: <HeroSection key="hero" />,
-    featured: <FeaturedSection key="featured" products={featured} />,
-    categories: <CategoriesSection key="categories" />,
-    artists: <ArtistsSection key="artists" />,
+    hero:       <HeroSection key="hero" />,
+    featured:   <FeaturedSection key="featured" products={featured} />,
+    categories: <CategoriesSection key="categories" allProducts={allProducts} />,
+    artists:    <ArtistsSection key="artists" />,
     newsletter: <NewsletterSection key="newsletter" />,
   };
 
@@ -28,10 +39,13 @@ export default function HomePage() {
   );
 }
 
+// ── Hero ─────────────────────────────────────────────────────────────────────
 function HeroSection() {
   const { theme } = useTheme();
   const { navigate } = useRouter();
   const p = theme.primaryColor;
+  // Use theme.heroStats if available, otherwise empty (no mock data)
+  const stats = theme.heroStats || [];
   return (
     <section style={{
       background: theme.heroCrop?.croppedDataUrl
@@ -57,39 +71,38 @@ function HeroSection() {
           <button onClick={()=>navigate('/products')} style={{ background:p, color:'white', border:'none', cursor:'pointer', padding:'14px 32px', borderRadius:30, fontSize:17, fontWeight:800, boxShadow:`0 8px 24px ${p}44`, fontFamily:theme.fontFamily }}>Shop Now 🛍️</button>
           <button onClick={()=>navigate('/artists')} style={{ background:'rgba(255,255,255,0.8)', color:theme.textColor, border:`2px solid ${p}40`, cursor:'pointer', padding:'14px 32px', borderRadius:30, fontSize:17, fontWeight:700, fontFamily:theme.fontFamily }}>Meet Artists 🎨</button>
         </div>
-        <div style={{ display:'flex', gap:32, justifyContent:'center', marginTop:48, flexWrap:'wrap' }}>
-          {[['500+','Books'],['12K+','Happy Colorists'],['50+','Artists'],['4.9★','Rating']].map(([n,l])=>(
-            <div key={l} style={{ background:'rgba(255,255,255,0.6)', backdropFilter:'blur(8px)', borderRadius:16, padding:'12px 20px', textAlign:'center', border:`1px solid ${p}20` }}>
-              <div style={{ fontSize:22, fontWeight:900, color:p }}>{n}</div>
-              <div style={{ fontSize:13, color:theme.textColor+'99', fontWeight:600 }}>{l}</div>
-            </div>
-          ))}
-        </div>
+        {/* Hero stats — admin-editable, hidden if empty */}
+        {stats.length > 0 && (
+          <div style={{ display:'flex', gap:32, justifyContent:'center', marginTop:48, flexWrap:'wrap' }}>
+            {stats.map((s: any, i: number) => (
+              <div key={i} style={{ background:'rgba(255,255,255,0.6)', backdropFilter:'blur(8px)', borderRadius:16, padding:'12px 20px', textAlign:'center', border:`1px solid ${p}20` }}>
+                <div style={{ fontSize:22, fontWeight:900, color:p }}>{s.value}</div>
+                <div style={{ fontSize:13, color:theme.textColor+'99', fontWeight:600 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
+// ── Featured Collections ──────────────────────────────────────────────────────
 function FeaturedSection({ products }: { products: any[] }) {
   const { theme } = useTheme();
   const { navigate } = useRouter();
+  // Hide section if no products configured
+  if (products.length === 0) return null;
   return (
     <section style={{ padding:'64px 24px', background:'white' }}>
       <div style={{ maxWidth:1200, margin:'0 auto' }}>
         <div style={{ textAlign:'center', marginBottom:40 }}>
-          <span style={{ fontSize:13, fontWeight:700, color:theme.primaryColor, letterSpacing:1, textTransform:'uppercase' }}>✨ Handpicked for You</span>
+          <span style={{ fontSize:13, fontWeight:700, color:theme.primaryColor, letterSpacing:1, textTransform:'uppercase' as const }}>✨ Handpicked for You</span>
           <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 12px', fontFamily:theme.fontFamily }}>Featured Collections</h2>
-          <p style={{ color:theme.textColor+'88', fontSize:16 }}>Our most beloved coloring books, chosen by the community</p>
         </div>
-        {products.length === 0 ? (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:24 }}>
-            {[1,2,3,4].map(i=><div key={i} style={{ height:320, borderRadius:20, background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, animation:'pulse 2s infinite' }} />)}
-          </div>
-        ) : (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:24 }}>
-            {products.map(p=><ProductCard key={p.id} product={p} />)}
-          </div>
-        )}
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:24 }}>
+          {products.map(p => <ProductCard key={p.id} product={p} />)}
+        </div>
         <div style={{ textAlign:'center', marginTop:40 }}>
           <button onClick={()=>navigate('/products')} style={{ background:'transparent', border:`2px solid ${theme.primaryColor}`, color:theme.primaryColor, cursor:'pointer', padding:'12px 32px', borderRadius:24, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily }}>View All Books →</button>
         </div>
@@ -98,14 +111,27 @@ function FeaturedSection({ products }: { products: any[] }) {
   );
 }
 
-function CategoriesSection() {
+// ── Categories ────────────────────────────────────────────────────────────────
+const CATEGORY_EMOJIS: Record<string, string> = {
+  Animals:'🐰', Fantasy:'🌙', Botanicals:'🌿', Mandala:'🔮',
+  Kawaii:'🍓', Seasonal:'❄️', default:'🎨',
+};
+
+function CategoriesSection({ allProducts }: { allProducts: any[] }) {
   const { theme } = useTheme();
   const { navigate } = useRouter();
-  const cats = [
-    {emoji:'🐰',name:'Animals',count:48},{emoji:'🌙',name:'Fantasy',count:35},
-    {emoji:'🌿',name:'Botanicals',count:29},{emoji:'🔮',name:'Mandala',count:41},
-    {emoji:'🍓',name:'Kawaii',count:55},{emoji:'❄️',name:'Seasonal',count:22},
-  ];
+
+  // Build real category counts from actual products
+  const catMap: Record<string, number> = {};
+  allProducts.forEach((p: any) => {
+    if (p.category) catMap[p.category] = (catMap[p.category] || 0) + 1;
+  });
+  const cats = Object.entries(catMap)
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (cats.length === 0) return null;
+
   return (
     <section style={{ padding:'64px 24px', background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})` }}>
       <div style={{ maxWidth:1200, margin:'0 auto' }}>
@@ -114,15 +140,15 @@ function CategoriesSection() {
           <p style={{ color:theme.textColor+'88', fontSize:16 }}>Find your perfect coloring style</p>
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:16 }}>
-          {cats.map(c=>(
-            <button key={c.name} onClick={()=>navigate('/products')}
-              style={{ background:'white', border:`1.5px solid ${theme.primaryColor}20`, borderRadius:20, padding:'28px 16px', cursor:'pointer', textAlign:'center', fontFamily:theme.fontFamily }}
+          {cats.map(([name, count]) => (
+            <button key={name} onClick={()=>navigate('/products')}
+              style={{ background:'white', border:`1.5px solid ${theme.primaryColor}20`, borderRadius:20, padding:'28px 16px', cursor:'pointer', textAlign:'center' as const, fontFamily:theme.fontFamily }}
               onMouseEnter={e=>{(e.currentTarget as any).style.transform='translateY(-4px)';(e.currentTarget as any).style.boxShadow=`0 8px 24px ${theme.primaryColor}25`;}}
               onMouseLeave={e=>{(e.currentTarget as any).style.transform='none';(e.currentTarget as any).style.boxShadow='none';}}
             >
-              <div style={{ fontSize:40, marginBottom:10 }}>{c.emoji}</div>
-              <div style={{ fontSize:15, fontWeight:800, color:theme.textColor }}>{c.name}</div>
-              <div style={{ fontSize:12, color:theme.primaryColor, fontWeight:600, marginTop:4 }}>{c.count} books</div>
+              <div style={{ fontSize:40, marginBottom:10 }}>{CATEGORY_EMOJIS[name] || CATEGORY_EMOJIS.default}</div>
+              <div style={{ fontSize:15, fontWeight:800, color:theme.textColor }}>{name}</div>
+              <div style={{ fontSize:12, color:theme.primaryColor, fontWeight:600, marginTop:4 }}>{count} book{count !== 1 ? 's' : ''}</div>
             </button>
           ))}
         </div>
@@ -131,12 +157,14 @@ function CategoriesSection() {
   );
 }
 
+// ── Artists ───────────────────────────────────────────────────────────────────
 function ArtistsSection() {
   const { theme } = useTheme();
   const { navigate } = useRouter();
   const [artists, setArtists] = useState<any[]>([]);
-  useEffect(() => { api.getArtists().then(x => setArtists(Array.isArray(x) ? x : [])); }, []);
+  useEffect(() => { api.getArtists().then((x: any) => setArtists(Array.isArray(x) ? x : [])); }, []);
   const AVATARS = ['🎨','🌸','✨','🐰','🌺','💕','🦊','🌈'];
+  if (artists.length === 0) return null;
   return (
     <section style={{ padding:'64px 24px', background:'white' }}>
       <div style={{ maxWidth:1200, margin:'0 auto' }}>
@@ -145,24 +173,26 @@ function ArtistsSection() {
           <p style={{ color:theme.textColor+'88', fontSize:16 }}>Talented creators bringing joy through coloring</p>
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:20 }}>
-          {artists.map((a, idx)=>(
-            <div key={a.id} style={{ background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, borderRadius:20, padding:24, textAlign:'center', border:`1.5px solid ${theme.primaryColor}15`, cursor:'pointer' }}
+          {artists.map((a: any, idx: number) => (
+            <div key={a.id} style={{ background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, borderRadius:20, padding:24, textAlign:'center' as const, border:`1.5px solid ${theme.primaryColor}15`, cursor:'pointer' }}
               onMouseEnter={e=>{(e.currentTarget as any).style.transform='translateY(-4px)';}}
               onMouseLeave={e=>{(e.currentTarget as any).style.transform='none';}}
-              onClick={()=>navigate('/artists')}
+              onClick={()=>navigate(`/artists/${a.artist_slug || a.id}`)}
             >
-              <div style={{ width:72, height:72, borderRadius:'50%', background:'white', margin:'0 auto 16px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, boxShadow:`0 4px 16px ${theme.primaryColor}25` }}>
-                {AVATARS[idx % AVATARS.length]}
+              <div style={{ width:72, height:72, borderRadius:'50%', background:'white', margin:'0 auto 16px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, boxShadow:`0 4px 16px ${theme.primaryColor}25`, overflow:'hidden' }}>
+                {a.avatar_url
+                  ? <img src={a.avatar_url} alt={a.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                  : AVATARS[idx % AVATARS.length]}
               </div>
-              <div style={{ fontSize:17, fontWeight:800, color:theme.textColor, fontFamily:theme.fontFamily }}>{a.name}</div>
+              {/* Use artist display name — prefer name over slug */}
+              <div style={{ fontSize:17, fontWeight:800, color:theme.textColor, fontFamily:theme.fontFamily }}>
+                {a.name || a.artist_slug}
+              </div>
               <div style={{ fontSize:13, color:theme.textColor+'77', margin:'8px 0 12px', lineHeight:1.4 }}>{a.bio || 'Coloring book artist'}</div>
               <div style={{ display:'flex', justifyContent:'center', gap:20 }}>
                 <div><span style={{ fontWeight:700, color:theme.primaryColor }}>{a.productCount || 0}</span><span style={{ fontSize:12, color:'#888', marginLeft:4 }}>books</span></div>
               </div>
             </div>
-          ))}
-          {artists.length === 0 && [1,2,3].map(i=>(
-            <div key={i} style={{ height:220, borderRadius:20, background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})` }} />
           ))}
         </div>
       </div>
@@ -170,13 +200,14 @@ function ArtistsSection() {
   );
 }
 
+// ── Newsletter ────────────────────────────────────────────────────────────────
 function NewsletterSection() {
   const { theme } = useTheme();
   const [email, setEmail] = React.useState('');
   const [submitted, setSubmitted] = React.useState(false);
   const p = theme.primaryColor;
   return (
-    <section style={{ padding:'64px 24px', background:`linear-gradient(135deg,${p}15,${theme.secondaryColor||'#c084fc'}15)`, textAlign:'center' }}>
+    <section style={{ padding:'64px 24px', background:`linear-gradient(135deg,${p}15,${theme.secondaryColor||'#c084fc'}15)`, textAlign:'center' as const }}>
       <div style={{ maxWidth:560, margin:'0 auto' }}>
         <div style={{ fontSize:48, marginBottom:16 }}>💌</div>
         <h2 style={{ fontSize:30, fontWeight:900, color:theme.textColor, fontFamily:theme.fontFamily }}>Join the Fluffy Family!</h2>
@@ -184,7 +215,7 @@ function NewsletterSection() {
         {submitted ? (
           <div style={{ fontSize:20, color:p, fontWeight:700 }}>🎉 You're in! Welcome to the family!</div>
         ) : (
-          <div style={{ display:'flex', gap:12, maxWidth:440, margin:'0 auto', flexWrap:'wrap' }}>
+          <div style={{ display:'flex', gap:12, maxWidth:440, margin:'0 auto', flexWrap:'wrap' as const }}>
             <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com"
               style={{ flex:1, padding:'12px 20px', borderRadius:24, border:`2px solid ${p}30`, outline:'none', fontSize:15, fontFamily:theme.fontFamily, minWidth:200 }}
             />
