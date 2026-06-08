@@ -182,9 +182,9 @@ function ArtistsSection() {
           <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, fontFamily:theme.fontFamily }}>Meet Our Artists 🌟</h2>
           <p style={{ color:theme.textColor+'88', fontSize:16 }}>Talented creators bringing joy through coloring</p>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:20 }}>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:20, justifyContent:'center' }}>
           {artists.map((a: any, idx: number) => (
-            <div key={a.id} style={{ background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, borderRadius:20, padding:24, textAlign:'center' as const, border:`1.5px solid ${theme.primaryColor}15`, cursor:'pointer' }}
+            <div key={a.id} style={{ background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, borderRadius:20, padding:24, textAlign:'center' as const, border:`1.5px solid ${theme.primaryColor}15`, cursor:'pointer', width:240, flexShrink:0 }}
               onMouseEnter={e=>{(e.currentTarget as any).style.transform='translateY(-4px)';}}
               onMouseLeave={e=>{(e.currentTarget as any).style.transform='none';}}
               onClick={()=>navigate(`/artists/${a.artist_slug || a.id}`)}
