@@ -1015,7 +1015,7 @@ function TF({label,val,set}:{label:string,val:string,set:(v:string)=>void}) {
 
 // ── Theme & CMS ─────────────────────────────────────────────────────────────
 function PagesCMSTab() {
-  const P = useThemeColor();
+  const P = '#f472b6'; // module-level primary color constant
   const card = { background:'white', borderRadius:16, boxShadow:'0 2px 10px rgba(0,0,0,0.06)' };
   const [pgs, setPgs] = useState<any[]>([]);
   const [editing, setEditing] = useState<any>(null);
