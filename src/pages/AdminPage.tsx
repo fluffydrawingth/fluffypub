@@ -196,7 +196,13 @@ function ProductsTab() {
 
   const [descTh, setDescTh] = useState('');
 
-  const [categories, setCategories] = useState<string[]>(['Animals','Fantasy','Botanicals','Mandala','Kawaii','Seasonal']);
+  const [categories, setCategories] = useState<string[]>([]);
+  useEffect(() => {
+    // Load categories from DB (admin sees all, including inactive)
+    fetch('/api/categories', { headers: { Authorization: `Bearer ${localStorage.getItem('fluffy_token')||''}` } })
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setCategories(d.map((c:any) => c.name)); });
+  }, []);
   const [newCat, setNewCat] = useState('');
   const [showCatMgr, setShowCatMgr] = useState(false);
 
