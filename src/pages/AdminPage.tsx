@@ -182,18 +182,20 @@ function DashboardTab() {
         ))}
       </div>
 
-      {/* Recent orders */}
+      {/* Recent orders — from selected month */}
       <div style={{...card,padding:20}}>
-        <h3 style={{fontSize:15,fontWeight:800,color:'#111827',margin:'0 0 14px'}}>Recent Orders</h3>
-        {orders.length===0?<div style={{textAlign:'center',padding:'20px',color:'#9ca3af'}}>No orders yet</div>:(
+        <h3 style={{fontSize:15,fontWeight:800,color:'#111827',margin:'0 0 14px'}}>
+          Orders — {['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][selMonth]} {selYear}
+        </h3>
+        {!stats?<div style={{textAlign:'center',padding:'20px',color:'#9ca3af'}}>Loading...</div>:(stats.recentOrders||[]).length===0?<div style={{textAlign:'center',padding:'20px',color:'#9ca3af'}}>No orders this month</div>:(
           <table style={{width:'100%',borderCollapse:'collapse'}}>
-            <thead><tr style={{borderBottom:'2px solid #f3f4f6'}}>{['Order','Customer','Amount','Status','Date'].map(h=><th key={h} style={{textAlign:'left',padding:'8px 10px',fontSize:11,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}</tr></thead>
-            <tbody>{orders.map(o=>{const[c,bg]=STATUS_COLOR[o.status]||['#6b7280','#f1f5f9'];return(
+            <thead><tr style={{borderBottom:'2px solid #f3f4f6'}}>{['Order','Customer','Amount','Status','Date'].map(h=><th key={h} style={{textAlign:'left' as const,padding:'8px 10px',fontSize:11,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}</tr></thead>
+            <tbody>{(stats.recentOrders||[]).map((o:any)=>{const[cl,bg]=STATUS_COLOR[o.status]||['#6b7280','#f1f5f9'];return(
               <tr key={o.id} style={{borderBottom:'1px solid #f9fafb'}}>
                 <td style={{padding:'10px',fontSize:12,fontWeight:700,color:P}}>#{(o.id||'').slice(-8).toUpperCase()}</td>
                 <td style={{padding:'10px',fontSize:12,color:'#374151'}}>{o.customer_name||''}</td>
                 <td style={{padding:'10px',fontWeight:800,color:'#111827',fontSize:12}}>฿{(o.total_thb||o.total_amount||(parseFloat(o.total||'0')*35)).toLocaleString('th-TH')}</td>
-                <td style={{padding:'10px'}}><Badge color={c} bg={bg} text={STATUS_TEXT[o.status]||o.status}/></td>
+                <td style={{padding:'10px'}}><Badge color={cl} bg={bg} text={STATUS_TEXT[o.status]||o.status}/></td>
                 <td style={{padding:'10px',fontSize:11,color:'#9ca3af'}}>{new Date(o.created_at).toLocaleDateString('th-TH')}</td>
               </tr>
             );})}</tbody>
@@ -1780,12 +1782,20 @@ function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v:
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <label style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>
-          Product Variants <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional — each product manages its own variants)</span>
+          Product Variants <span style={{ color: '#9ca3af', fontWeight: 400 }}>(each variant has its own price and stock)</span>
         </label>
         <button onClick={add} style={{ padding: '4px 12px', borderRadius: 8, border: `1.5px solid ${P}`, background: '#fdf2f8', color: P, cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'inherit' }}>+ Add Variant</button>
       </div>
+      {variants.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 64px 44px auto auto auto', gap: 6, padding: '0 0 4px', marginBottom: 4 }}>
+          <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, paddingLeft: 10 }}>VARIANT NAME</span>
+          <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, paddingLeft: 18 }}>PRICE ฿</span>
+          <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, textAlign: 'center' as const }}>STOCK</span>
+          <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700 }}>ON</span>
+        </div>
+      )}
 
       {variants.length === 0 && (
         <div style={{ padding: '12px 16px', background: '#f9fafb', borderRadius: 10, fontSize: 13, color: '#9ca3af', textAlign: 'center' as const }}>
@@ -1795,7 +1805,7 @@ function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v:
 
       {variants.map((v, i) => (
         <div key={v.id} style={{ background: '#f9fafb', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px 60px auto auto auto', gap: 6, alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 64px 44px auto auto auto', gap: 6, alignItems: 'center' }}>
             <input
               value={v.name}
               onChange={e => update(v.id, 'name', e.target.value)}
@@ -1809,6 +1819,19 @@ function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v:
               <input type="number" value={v.price_thb||v.price||''} onChange={e => update(v.id, 'price_thb', e.target.value)} placeholder="THB"
                 style={{ padding: '7px 6px 7px 18px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 12, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const }}
                 onFocus={e => e.target.style.borderColor = P} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+            </div>
+
+            {/* Stock per variant */}
+            <div style={{ position: 'relative' }}>
+              <input type="number" min="0"
+                value={v.stock_quantity !== undefined && v.stock_quantity !== '' ? v.stock_quantity : (v.stock !== undefined && v.stock !== '' ? v.stock : '')}
+                onChange={e => { const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value)||0); update(v.id, 'stock_quantity', val); update(v.id, 'stock', val); }}
+                placeholder="∞"
+                style={{ padding: '7px 6px', borderRadius: 8, border: `1.5px solid ${(v.stock_quantity===0||v.stock===0)?'#fca5a5':'#e5e7eb'}`, fontSize: 12, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const, background: (v.stock_quantity===0||v.stock===0)?'#fef2f2':'white' }}
+                onFocus={e => e.target.style.borderColor = P}
+                onBlur={e => e.target.style.borderColor = (v.stock_quantity===0||v.stock===0)?'#fca5a5':'#e5e7eb'}
+                title="Stock quantity for this variant. Leave empty = unlimited. 0 = out of stock." />
+              {(v.stock_quantity===0||v.stock===0) && <div style={{fontSize:8,color:'#ef4444',fontWeight:700,textAlign:'center' as const,marginTop:1}}>OUT</div>}
             </div>
 
             <label style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer', fontSize: 11, color: '#374151' }}>
