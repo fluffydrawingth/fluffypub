@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { api } from '../lib/api';
 
 interface HtmlEditorProps {
@@ -18,15 +18,41 @@ export default function HtmlEditor({ value, onChange }: HtmlEditorProps) {
   const [btnText, setBtnText] = useState('');
   const [btnUrl, setBtnUrl] = useState('');
   const savedRange = useRef<Range | null>(null);
+  // Track if content was set from outside (e.g. loading a saved page)
+  const lastExternalValue = useRef<string>(value);
+  const isUserTyping = useRef(false);
 
-  const exec = (cmd: string, value?: string) => {
-    editorRef.current?.focus();
-    document.execCommand(cmd, false, value);
-    emit();
-  };
+  // On FIRST mount only — set initial content
+  useEffect(() => {
+    if (editorRef.current && value) {
+      editorRef.current.innerHTML = value;
+      lastExternalValue.current = value;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // empty deps = run once on mount
+
+  // When value changes FROM OUTSIDE (e.g. switching pages to edit),
+  // update the editor — but only if user is not actively typing
+  useEffect(() => {
+    if (!editorRef.current) return;
+    if (value !== lastExternalValue.current && !isUserTyping.current) {
+      editorRef.current.innerHTML = value || '';
+      lastExternalValue.current = value;
+    }
+  }, [value]);
 
   const emit = () => {
-    if (editorRef.current) onChange(editorRef.current.innerHTML);
+    if (editorRef.current) {
+      const html = editorRef.current.innerHTML;
+      lastExternalValue.current = html; // mark as from user, not outside
+      onChange(html);
+    }
+  };
+
+  const exec = (cmd: string, val?: string) => {
+    editorRef.current?.focus();
+    document.execCommand(cmd, false, val);
+    emit();
   };
 
   const saveRange = () => {
@@ -46,7 +72,6 @@ export default function HtmlEditor({ value, onChange }: HtmlEditorProps) {
     emit();
   };
 
-  // Image upload
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -58,7 +83,6 @@ export default function HtmlEditor({ value, onChange }: HtmlEditorProps) {
     e.target.value = '';
   };
 
-  // Link insert
   const openLinkModal = () => {
     saveRange();
     const sel = window.getSelection();
@@ -79,7 +103,6 @@ export default function HtmlEditor({ value, onChange }: HtmlEditorProps) {
     setLinkModal(false);
   };
 
-  // Button insert
   const openBtnModal = () => { saveRange(); setBtnText(''); setBtnUrl(''); setBtnModal(true); };
   const insertButton = () => {
     if (!btnText.trim() || !btnUrl.trim()) return;
@@ -87,21 +110,17 @@ export default function HtmlEditor({ value, onChange }: HtmlEditorProps) {
     setBtnModal(false);
   };
 
-  const btn = (label: string, action: () => void, active = false, title = '') => (
+  const btn = (label: string, action: () => void, title = '') => (
     <button type="button" onMouseDown={e => { e.preventDefault(); action(); }} title={title || label}
-      style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${active ? P : '#e5e7eb'}`, background: active ? P + '15' : 'white', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: active ? P : '#374151', minWidth: 28 }}>
+      style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#374151', minWidth: 28 }}>
       {label}
     </button>
   );
 
   return (
-    <div style={{ border: `1.5px solid #e5e7eb`, borderRadius: 12, overflow: 'hidden', background: 'white' }}
-      onFocus={e => (e.currentTarget.style.borderColor = P)}
-      onBlur={e => (e.currentTarget.style.borderColor = '#e5e7eb')}>
-
+    <div style={{ border: '1.5px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', background: 'white' }}>
       {/* Toolbar */}
       <div style={{ display: 'flex', gap: 4, padding: '8px 10px', borderBottom: '1px solid #f3f4f6', flexWrap: 'wrap' as const, background: '#fafafa' }}>
-        {/* Heading */}
         <select onMouseDown={e => e.preventDefault()} onChange={e => { exec('formatBlock', e.target.value); e.target.value = ''; }}
           style={{ padding: '3px 6px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 11, fontFamily: 'inherit', background: 'white', cursor: 'pointer', color: '#374151' }}>
           <option value="">Heading</option>
@@ -110,45 +129,35 @@ export default function HtmlEditor({ value, onChange }: HtmlEditorProps) {
           <option value="h3">H3</option>
           <option value="p">Paragraph</option>
         </select>
-
         <div style={{ width: 1, background: '#e5e7eb', margin: '0 2px' }} />
-
-        {btn('B', () => exec('bold'), false, 'Bold')}
-        {btn('I', () => exec('italic'), false, 'Italic')}
-        {btn('U', () => exec('underline'), false, 'Underline')}
-
+        {btn('B', () => exec('bold'), 'Bold')}
+        {btn('I', () => exec('italic'), 'Italic')}
+        {btn('U', () => exec('underline'), 'Underline')}
         <div style={{ width: 1, background: '#e5e7eb', margin: '0 2px' }} />
-
         {btn('• List', () => exec('insertUnorderedList'))}
         {btn('1. List', () => exec('insertOrderedList'))}
-
         <div style={{ width: 1, background: '#e5e7eb', margin: '0 2px' }} />
-
         {btn('🔗 Link', openLinkModal)}
         {btn('🔘 Button', openBtnModal)}
-
         <div style={{ width: 1, background: '#e5e7eb', margin: '0 2px' }} />
-
-        {/* Image upload */}
         <label style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#374151' }}>
           {uploading ? '⏳' : '🖼️ Image'}
           <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
         </label>
-
         <div style={{ width: 1, background: '#e5e7eb', margin: '0 2px' }} />
-
         {btn('↩ Undo', () => exec('undo'))}
         {btn('↪ Redo', () => exec('redo'))}
       </div>
 
-      {/* Editor area */}
+      {/* Editor — NO dangerouslySetInnerHTML on re-renders */}
       <div
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
+        onFocus={() => { isUserTyping.current = true; }}
+        onBlur={() => { isUserTyping.current = false; emit(); }}
         onInput={emit}
-        onBlur={emit}
-        dangerouslySetInnerHTML={{ __html: value }}
+        onKeyDown={() => { isUserTyping.current = true; }}
         style={{ minHeight: 240, padding: '14px 16px', fontSize: 14, lineHeight: 1.8, color: '#374151', outline: 'none', fontFamily: 'inherit' }}
       />
 
