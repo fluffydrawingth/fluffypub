@@ -18,6 +18,25 @@ async function sendEmail(to, subject, html) {
   } catch(e) { console.error('Email send failed:', e.message); }
 }
 
+
+// Adjust variant stock for an order's items
+async function adjustStock(items, delta) {
+  if (!items?.length) return;
+  for (const item of items) {
+    if (!item.productId || !item.optionId || item.optionType !== 'physical') continue;
+    const { data: prod } = await supabase.from('products').select('variants').eq('id', item.productId).single();
+    if (!prod?.variants) continue;
+    const variants = prod.variants.map(v => {
+      if (v.id !== item.optionId) return v;
+      const currentStock = v.stock_quantity !== undefined ? Number(v.stock_quantity) : (v.stock !== undefined ? Number(v.stock) : null);
+      if (currentStock === null) return v; // unlimited
+      const newStock = Math.max(0, currentStock + (delta * (item.qty || 1)));
+      return { ...v, stock_quantity: newStock, stock: newStock };
+    });
+    await supabase.from('products').update({ variants }).eq('id', item.productId);
+  }
+}
+
 module.exports = async function handler(req, res) {
   const { action, id } = req.query;
 
@@ -264,11 +283,15 @@ module.exports = async function handler(req, res) {
     // Block cancel if slip uploaded or already paid/processing
     if (order.slip_url) return json(res, 400, { error: 'Cannot cancel: payment slip already uploaded.' });
     if (['paid','packing','shipped','delivered'].includes(order.status)) return json(res, 400, { error: `Cannot cancel: order is already ${order.status}.` });
-    const { data, error } = await supabase.from('orders')
+    const { data: cancelData, error } = await supabase.from('orders')
       .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq('id', id).select().single();
     if (error) return json(res, 400, { error: error.message });
-    return json(res, 200, data);
+    // Restore stock if order was paid
+    if (cancelData.payment_status === 'paid') {
+      await adjustStock(cancelData.items, +1);
+    }
+    return json(res, 200, cancelData);
   }
 
   // POST send payment reminder (admin)

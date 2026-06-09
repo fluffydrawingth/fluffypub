@@ -62,15 +62,17 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const priceTHB = Number(product.price_thb) || 0;
 
   // Build options from product config
-  const options: { id: string; name: string; type: 'physical'|'digital'; price: number }[] = [];
+  const options: { id: string; name: string; type: 'physical'|'digital'; price: number; stock?: number|null; inStock: boolean }[] = [];
   const physicalVariants = (product.variants || []).filter((v: any) => v.enabled !== false);
   physicalVariants.forEach((v: any) => {
     const price = Number(v.price_thb) > 0 ? Number(v.price_thb) : priceTHB;
-    options.push({ id: v.id, name: v.name, type: 'physical', price });
+    const stock = v.stock_quantity !== undefined ? Number(v.stock_quantity) : (v.stock !== undefined ? Number(v.stock) : null);
+    const inStock = stock === null || stock > 0; // null = unlimited
+    options.push({ id: v.id, name: v.name, type: 'physical', price, stock, inStock });
   });
   if (product.is_digital === true || (product.is_digital == null && (product.type === 'digital' || product.type === 'both'))) {
     const dPrice = Number(product.digital_price_thb || product.price_thb) || priceTHB;
-    options.push({ id: 'digital', name: tRaw('ไฟล์ดิจิทัล','Digital file'), type: 'digital', price: dPrice });
+    options.push({ id: 'digital', name: tRaw('ไฟล์ดิจิทัล','Digital file'), type: 'digital', price: dPrice, inStock: true });
   }
 
   // Display price: selected option or base
@@ -86,6 +88,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     const opt = selectedOption || options[0];
     if (!opt) return;
     if (opt.price <= 0) { setOptionError(tRaw('ราคาไม่ถูกต้อง','Price not configured.')); return; }
+    if (!opt.inStock) { setOptionError(tRaw('สินค้าหมด','This option is out of stock.')); return; }
     setOptionError('');
     const k = `${product.id}::${opt.id}`;
     if (items.some(i => `${i.id}::${i.optionId}` === k)) {
@@ -166,12 +169,15 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                 <label style={{display:'block',fontSize:13,fontWeight:700,color:theme.textColor,marginBottom:8}}>{tRaw('เลือกรูปแบบ','Select option')}:</label>
                 <div style={{display:'flex',flexDirection:'column' as const,gap:7}}>
                   {options.map(o => (
-                    <button key={o.id} onClick={()=>{setSelectedOption(o);setOptionError('');}}
-                      style={{padding:'11px 14px',borderRadius:12,cursor:'pointer',textAlign:'left' as const,border:`2px solid ${selectedOption?.id===o.id?p:'#e5e7eb'}`,background:selectedOption?.id===o.id?p+'10':'white',fontFamily:theme.fontFamily,display:'flex',justifyContent:'space-between',alignItems:'center',transition:'all 0.12s'}}>
-                      <span style={{fontSize:14,fontWeight:selectedOption?.id===o.id?700:500,color:theme.textColor}}>
+                    <button key={o.id}
+                      onClick={()=>{ if(!o.inStock) return; setSelectedOption(o); setOptionError(''); }}
+                      disabled={!o.inStock}
+                      style={{padding:'11px 14px',borderRadius:12,cursor:o.inStock?'pointer':'not-allowed',textAlign:'left' as const,border:`2px solid ${!o.inStock?'#e5e7eb':selectedOption?.id===o.id?p:'#e5e7eb'}`,background:!o.inStock?'#f9fafb':selectedOption?.id===o.id?p+'10':'white',fontFamily:theme.fontFamily,display:'flex',justifyContent:'space-between',alignItems:'center',transition:'all 0.12s',opacity:o.inStock?1:0.6}}>
+                      <span style={{fontSize:14,fontWeight:selectedOption?.id===o.id?700:500,color:o.inStock?theme.textColor:'#9ca3af'}}>
                         {selectedOption?.id===o.id && '✓ '}{o.name}
+                        {!o.inStock && <span style={{fontSize:11,color:'#ef4444',marginLeft:8,fontWeight:600}}>Out of stock</span>}
                       </span>
-                      <span style={{fontSize:14,fontWeight:800,color:p}}>฿{o.price.toLocaleString('th-TH')}</span>
+                      <span style={{fontSize:14,fontWeight:800,color:o.inStock?p:'#9ca3af'}}>฿{o.price.toLocaleString('th-TH')}</span>
                     </button>
                   ))}
                 </div>

@@ -85,30 +85,76 @@ const STATUS_TEXT:any  = { pending_payment:'Pending Payment', paid:'Paid', packi
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 function DashboardTab() {
+  const now = new Date();
+  const [selMonth, setSelMonth] = useState(now.getMonth() + 1);
+  const [selYear,  setSelYear]  = useState(now.getFullYear());
   const [stats, setStats] = useState<any>(null);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [, setTab] = useState('dashboard'); // for navigation
-  useEffect(()=>{ api.getAnalytics().then(s=>setStats(s)); api.allOrders().then(o=>setOrders(Array.isArray(o)?o.slice(0,8):[])); },[]);
+  const [exporting, setExporting] = useState(false);
+
+  const loadStats = (month: number, year: number) => {
+    setStats(null);
+    fetch(`/api/analytics?month=${month}&year=${year}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('fluffy_token')||''}` }
+    }).then(r => r.json()).then(setStats);
+  };
+
+  useEffect(() => { loadStats(selMonth, selYear); }, [selMonth, selYear]);
+
+  const exportCsv = async () => {
+    setExporting(true);
+    const token = localStorage.getItem('fluffy_token') || '';
+    const res = await fetch(`/api/analytics?export=1&month=${selMonth}&year=${selYear}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `orders-${selYear}-${String(selMonth).padStart(2,'0')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setExporting(false);
+  };
+
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const years = Array.from({ length: 3 }, (_, i) => now.getFullYear() - i);
 
   const statusCards = stats ? [
-    {label:'Pending Payment',value:stats.byStatus?.pending_payment||0,icon:'⏳',color:'#d97706',bg:'#fef3c7',status:'pending_payment'},
-    {label:'Paid',value:stats.byStatus?.paid||0,icon:'✅',color:'#059669',bg:'#d1fae5',status:'paid'},
-    {label:'Preparing',value:stats.byStatus?.packing||0,icon:'📦',color:'#2563eb',bg:'#dbeafe',status:'packing'},
-    {label:'Shipped',value:stats.byStatus?.shipped||0,icon:'🚚',color:'#7c3aed',bg:'#ede9fe',status:'shipped'},
-    {label:'Delivered',value:stats.byStatus?.delivered||0,icon:'🎉',color:'#059669',bg:'#d1fae5',status:'delivered'},
-    {label:'Cancelled',value:stats.byStatus?.cancelled||0,icon:'❌',color:'#dc2626',bg:'#fee2e2',status:'cancelled'},
+    {label:'Pending',value:stats.byStatus?.pending_payment||0,icon:'⏳',color:'#d97706',bg:'#fef3c7'},
+    {label:'Paid',value:stats.byStatus?.paid||0,icon:'✅',color:'#059669',bg:'#d1fae5'},
+    {label:'Preparing',value:stats.byStatus?.packing||0,icon:'📦',color:'#2563eb',bg:'#dbeafe'},
+    {label:'Shipped',value:stats.byStatus?.shipped||0,icon:'🚚',color:'#7c3aed',bg:'#ede9fe'},
+    {label:'Delivered',value:stats.byStatus?.delivered||0,icon:'🎉',color:'#059669',bg:'#d1fae5'},
+    {label:'Cancelled',value:stats.byStatus?.cancelled||0,icon:'❌',color:'#dc2626',bg:'#fee2e2'},
   ] : [];
 
   const topCards = stats ? [
     {label:'Revenue (THB)',value:`฿${(stats.revenue_thb||0).toLocaleString('th-TH')}`,icon:'💰',color:'#10b981',bg:'#d1fae5'},
-    {label:'Orders Today',value:stats.ordersToday||0,icon:'📅',color:P,bg:'#fce7f3'},
-    {label:'This Month',value:stats.ordersThisMonth||0,icon:'📆',color:'#8b5cf6',bg:'#ede9fe'},
+    {label:'Orders This Period',value:stats.ordersThisMonth||0,icon:'📦',color:P,bg:'#fce7f3'},
     {label:'Total Products',value:stats.totalProducts||0,icon:'📚',color:'#f59e0b',bg:'#fef3c7'},
+    {label:'Customers',value:stats.totalCustomers||0,icon:'👥',color:'#8b5cf6',bg:'#ede9fe'},
   ] : [];
 
   return (
     <div style={{padding:28}}>
-      <h1 style={{fontSize:26,fontWeight:900,color:'#111827',margin:'0 0 20px'}}>Dashboard 📊</h1>
+      {/* Header with month selector + export */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20,flexWrap:'wrap' as const,gap:12}}>
+        <h1 style={{fontSize:26,fontWeight:900,color:'#111827',margin:0}}>Dashboard 📊</h1>
+        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap' as const}}>
+          <select value={selMonth} onChange={e=>setSelMonth(Number(e.target.value))}
+            style={{padding:'8px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',background:'white',cursor:'pointer'}}>
+            {monthNames.map((m,i)=><option key={i} value={i+1}>{m}</option>)}
+          </select>
+          <select value={selYear} onChange={e=>setSelYear(Number(e.target.value))}
+            style={{padding:'8px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',background:'white',cursor:'pointer'}}>
+            {years.map(y=><option key={y} value={y}>{y}</option>)}
+          </select>
+          <button onClick={exportCsv} disabled={exporting||!stats}
+            style={{padding:'8px 16px',borderRadius:10,background:exporting?'#e5e7eb':P,color:exporting?'#9ca3af':'white',border:'none',cursor:exporting?'not-allowed':'pointer',fontSize:13,fontWeight:700,fontFamily:'inherit',display:'flex',alignItems:'center',gap:6}}>
+            {exporting?'⏳':'📥'} {exporting?'Exporting...':'Export CSV'}
+          </button>
+        </div>
+      </div>
 
       {/* Top stats */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,marginBottom:20}}>
@@ -1723,7 +1769,7 @@ function FooterCMSEditor({ footer, onFooterChange }: { footer: FooterConfig; onF
 function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v: any[]) => void }) {
   const vuid = () => Math.random().toString(36).slice(2, 9);
 
-  const add = () => onChange([...variants, { id: vuid(), name: '', price_thb: '', enabled: true, stock: '' }]);
+  const add = () => onChange([...variants, { id: vuid(), name: '', price_thb: '', enabled: true, stock: '', stock_quantity: '' }]);
   const update = (id: string, key: string, val: any) => onChange(variants.map(v => v.id === id ? { ...v, [key]: val } : v));
   const del = (id: string) => onChange(variants.filter(v => v.id !== id));
   const move = (i: number, dir: number) => {
