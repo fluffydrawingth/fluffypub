@@ -98,8 +98,8 @@ function FeaturedSection({ products }: { products: any[] }) {
     <section style={{ padding:'64px 24px', background:'white' }}>
       <div style={{ maxWidth:1200, margin:'0 auto' }}>
         <div style={{ textAlign:'center', marginBottom:40 }}>
-          <span style={{ fontSize:13, fontWeight:700, color:theme.primaryColor, letterSpacing:1, textTransform:'uppercase' as const }}>✨ Handpicked for You</span>
-          <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 12px', fontFamily:theme.fontFamily }}>Featured Collections</h2>
+          <span style={{ fontSize:13, fontWeight:700, color:theme.primaryColor, letterSpacing:1, textTransform:'uppercase' as const }}>{theme.labels?.featured_eyebrow || '✨ Handpicked for You'}</span>
+          <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 12px', fontFamily:theme.fontFamily }}>{theme.labels?.featured_title || 'Featured Collections'}</h2>
         </div>
         <div style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
           {products.map(p => (
@@ -109,7 +109,7 @@ function FeaturedSection({ products }: { products: any[] }) {
           ))}
         </div>
         <div style={{ textAlign:'center', marginTop:40 }}>
-          <button onClick={()=>navigate('/products')} style={{ background:'transparent', border:`2px solid ${theme.primaryColor}`, color:theme.primaryColor, cursor:'pointer', padding:'12px 32px', borderRadius:24, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily }}>View All Books →</button>
+          <button onClick={()=>navigate('/products')} style={{ background:'transparent', border:`2px solid ${theme.primaryColor}`, color:theme.primaryColor, cursor:'pointer', padding:'12px 32px', borderRadius:24, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily }}>{theme.labels?.featured_btn || 'View All Books →'}</button>
         </div>
       </div>
     </section>
@@ -231,8 +231,8 @@ function BlogSection() {
     <section style={{ padding:'64px 24px', background:'white' }}>
       <div style={{ maxWidth:1200, margin:'0 auto' }}>
         <div style={{ textAlign:'center' as const, marginBottom:40 }}>
-          <span style={{ fontSize:13, fontWeight:700, color:p, letterSpacing:1, textTransform:'uppercase' as const }}>📄 From the Blog</span>
-          <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 0', fontFamily:theme.fontFamily }}>Latest Updates</h2>
+          <span style={{ fontSize:13, fontWeight:700, color:p, letterSpacing:1, textTransform:'uppercase' as const }}>{theme.labels?.blog_eyebrow || '📄 From the Blog'}</span>
+          <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 0', fontFamily:theme.fontFamily }}>{theme.labels?.blog_title || 'Latest Updates'}</h2>
         </div>
         <div style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
           {pages.map(pg => (
@@ -254,7 +254,7 @@ function BlogSection() {
         </div>
         <div style={{ textAlign:'center' as const, marginTop:32 }}>
           <button onClick={() => navigate('/pages')} style={{ background:'transparent', border:`2px solid ${p}`, color:p, cursor:'pointer', padding:'11px 28px', borderRadius:24, fontSize:14, fontWeight:700, fontFamily:theme.fontFamily }}>
-            View All Posts →
+            {theme.labels?.blog_btn || 'View All Posts →'}
           </button>
         </div>
       </div>

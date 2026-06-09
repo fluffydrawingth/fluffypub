@@ -1538,6 +1538,45 @@ function ThemeTab() {
           <div style={{borderRadius:12,overflow:'hidden'}}><div style={{background:draft.bannerBg,color:'white',textAlign:'center' as const,padding:'11px',fontSize:13,fontWeight:600}}>{draft.bannerText}</div></div>
         </>)}
         {section==='pages'&&(<>
+          {/* Section Labels */}
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:13,fontWeight:800,color:'#374151',marginBottom:12}}>Section Labels</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              {([
+                ['featured_eyebrow','Featured Eyebrow','✨ Handpicked for You'],
+                ['featured_title','Featured Title','Featured Collections'],
+                ['featured_btn','Featured Button','View All Books →'],
+                ['blog_eyebrow','Blog Eyebrow','📄 From the Blog'],
+                ['blog_title','Blog Title','Latest Updates'],
+                ['blog_btn','Blog Button','View All Posts →'],
+              ] as [string,string,string][]).map(([key,label,ph])=>(
+                <div key={key}>
+                  <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:3}}>{label}</label>
+                  <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={ph}
+                    style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:12,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                    onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                </div>
+              ))}
+            </div>
+            <div style={{marginTop:12}}>
+              <div style={{fontSize:13,fontWeight:800,color:'#374151',marginBottom:8}}>Navigation Labels</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
+                {([
+                  ['nav_shop','Shop Label','Shop'],
+                  ['nav_artists','Artists Label','Artists'],
+                  ['nav_blog','Blog/Pages Label','Blog'],
+                ] as [string,string,string][]).map(([key,label,ph])=>(
+                  <div key={key}>
+                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:3}}>{label}</label>
+                    <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={ph}
+                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:12,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Newsletter toggle */}
           <div style={{marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
             <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:13,fontWeight:700,color:'#374151'}}>

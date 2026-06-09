@@ -32,6 +32,11 @@ export interface ThemeConfig {
   heroStats: { value: string; label: string }[];
   featuredProductIds: string[];
   showNewsletter: boolean;
+  labels: {
+    featured_eyebrow: string; featured_title: string; featured_btn: string;
+    blog_eyebrow: string; blog_title: string; blog_btn: string;
+    nav_shop: string; nav_artists: string; nav_blog: string;
+  };
   footer: FooterConfig;
 }
 
@@ -76,6 +81,17 @@ const DEFAULT: ThemeConfig = {
   ],
   featuredProductIds:[],
   showNewsletter: false,
+  labels: {
+    featured_eyebrow: '✨ Handpicked for You',
+    featured_title: 'Featured Collections',
+    featured_btn: 'View All Books →',
+    blog_eyebrow: '📄 From the Blog',
+    blog_title: 'Latest Updates',
+    blog_btn: 'View All Posts →',
+    nav_shop: 'Shop',
+    nav_artists: 'Artists',
+    nav_blog: 'Blog',
+  },
   footer: DEFAULT_FOOTER,
 };
 
