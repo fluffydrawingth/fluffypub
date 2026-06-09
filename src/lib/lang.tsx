@@ -6,6 +6,7 @@ export type Lang = 'th' | 'en';
 export const DEFAULT_TRANSLATIONS: Record<string, { th: string; en: string }> = {
   shop:         { th: 'ร้านค้า',         en: 'Shop' },
   artists:      { th: 'ศิลปิน',           en: 'Artists' },
+  blog:         { th: 'บทความ',          en: 'Blog' },
   login:        { th: 'เข้าสู่ระบบ',      en: 'Login' },
   logout:       { th: 'ออกจากระบบ',       en: 'Sign Out' },
   orders:       { th: 'คำสั่งซื้อ',       en: 'Orders' },

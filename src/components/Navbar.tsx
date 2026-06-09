@@ -39,7 +39,7 @@ export default function Navbar() {
           {[
             [theme.labels?.nav_shop || t('shop'), '/products'],
             [theme.labels?.nav_artists || t('artists'), '/artists'],
-            [theme.labels?.nav_blog || 'Blog', '/pages'],
+            [theme.labels?.nav_blog || t('blog'), '/pages'],
           ].map(([label,path])=>(
             <button key={path} onClick={()=>navigate(path)} style={{ background:'none', border:'none', cursor:'pointer', padding:'7px 12px', borderRadius:18, fontSize:13, fontWeight:600, color:isActive(path)?p:theme.textColor, backgroundColor:isActive(path)?p+'15':'transparent', fontFamily:theme.fontFamily, whiteSpace:'nowrap' }}>
               {label}
