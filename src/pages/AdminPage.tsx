@@ -1538,66 +1538,115 @@ function ThemeTab() {
           <div style={{borderRadius:12,overflow:'hidden'}}><div style={{background:draft.bannerBg,color:'white',textAlign:'center' as const,padding:'11px',fontSize:13,fontWeight:600}}>{draft.bannerText}</div></div>
         </>)}
         {section==='pages'&&(<>
-          {/* Section Labels */}
-          <div style={{marginBottom:20}}>
-            <div style={{fontSize:13,fontWeight:800,color:'#374151',marginBottom:12}}>Section Labels</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+
+          {/* ── Card: Header Navigation ───────────────────────── */}
+          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:18}}>🔗</span>
+              <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Header Navigation Labels</span>
+            </div>
+            <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Text shown in the top navigation bar. Leave empty to use defaults.</p>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
               {([
-                ['featured_eyebrow','Featured Eyebrow','✨ Handpicked for You'],
-                ['featured_title','Featured Title','Featured Collections'],
-                ['featured_btn','Featured Button','View All Books →'],
-                ['blog_eyebrow','Blog Eyebrow','📄 From the Blog'],
-                ['blog_title','Blog Title','Latest Updates'],
-                ['blog_btn','Blog Button','View All Posts →'],
+                ['nav_shop','Shop','Shop'],
+                ['nav_artists','Artists','Artists'],
+                ['nav_blog','Blog','Blog'],
               ] as [string,string,string][]).map(([key,label,ph])=>(
                 <div key={key}>
-                  <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:3}}>{label}</label>
+                  <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label}</label>
                   <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={ph}
-                    style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:12,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                    style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
                     onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
                 </div>
               ))}
             </div>
-            <div style={{marginTop:12}}>
-              <div style={{fontSize:13,fontWeight:800,color:'#374151',marginBottom:8}}>Navigation Labels</div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
-                {([
-                  ['nav_shop','Shop Label','Shop'],
-                  ['nav_artists','Artists Label','Artists'],
-                  ['nav_blog','Blog/Pages Label','Blog'],
-                ] as [string,string,string][]).map(([key,label,ph])=>(
-                  <div key={key}>
-                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:3}}>{label}</label>
-                    <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={ph}
-                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:12,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
-                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
-                  </div>
-                ))}
-              </div>
+          </div>
+
+          {/* ── Card: Featured Products ───────────────────────── */}
+          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:18}}>⭐</span>
+              <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Featured Products Section</span>
+            </div>
+            <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Shown on the homepage. Select which products to highlight and customize the section text.</p>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:14}}>
+              {([
+                ['featured_eyebrow','Eyebrow text','✨ Handpicked for You'],
+                ['featured_title','Section title','Featured Collections'],
+                ['featured_btn','Button text','View All Books →'],
+              ] as [string,string,string][]).map(([key,label,ph])=>(
+                <div key={key}>
+                  <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label}</label>
+                  <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={ph}
+                    style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                    onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                </div>
+              ))}
+            </div>
+            <div style={{borderTop:'1px solid #f3f4f6',paddingTop:14}}>
+              <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:6}}>FEATURED PRODUCTS <span style={{fontWeight:400}}>(select which products appear)</span></label>
+              <FeaturedProductsPicker draft={draft} setDraft={setDraft} />
             </div>
           </div>
 
-          {/* Newsletter toggle */}
-          <div style={{marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
-            <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:13,fontWeight:700,color:'#374151'}}>
-              <input type="checkbox" checked={draft.showNewsletter||false} onChange={e=>setDraft((d:any)=>({...d,showNewsletter:e.target.checked}))} style={{width:16,height:16,accentColor:P}} />
-              Show Newsletter Section on Homepage
-            </label>
-            <span style={{fontSize:11,color:'#9ca3af'}}>(hidden by default)</span>
+          {/* ── Card: Blog / Pages ────────────────────────────── */}
+          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:18}}>📄</span>
+              <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Blog / Featured Pages Section</span>
+            </div>
+            <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Shows pages marked "Show on Homepage" in Pages CMS. Hidden automatically when no pages are selected.</p>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
+              {([
+                ['blog_eyebrow','Eyebrow text','📄 From the Blog'],
+                ['blog_title','Section title','Latest Updates'],
+                ['blog_btn','Button text','View All Posts →'],
+              ] as [string,string,string][]).map(([key,label,ph])=>(
+                <div key={key}>
+                  <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label}</label>
+                  <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={ph}
+                    style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                    onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                </div>
+              ))}
+            </div>
           </div>
-          {/* Featured Products picker */}
-          <FeaturedProductsPicker draft={draft} setDraft={setDraft} />
-          <h2 style={{fontSize:20,fontWeight:900,color:'#111827',marginBottom:8}}>Page Sections</h2>
-          <p style={{fontSize:13,color:'#6b7280',marginBottom:20}}>Reorder homepage sections with ↑↓</p>
-          {draft.sections?.map((s,i)=>{
-            const labels:any={hero:'🌟 Hero Banner',featured:'⭐ Featured',categories:'📂 Categories',artists:'🎨 Artists',newsletter:'💌 Newsletter'};
-            return (<div key={s} style={{display:'flex',alignItems:'center',gap:12,background:'#fafafa',borderRadius:12,padding:'13px 16px',marginBottom:8,border:'1px solid #f3f4f6'}}>
-              <span style={{color:'#d1d5db',fontSize:16}}>⠿</span>
-              <span style={{flex:1,fontWeight:600,fontSize:14,color:'#374151'}}>{labels[s]||s}</span>
-              <button onClick={()=>{const a=[...draft.sections];if(i>0){[a[i],a[i-1]]=[a[i-1],a[i]];upd('sections',a);}}} disabled={i===0} style={{padding:'6px 12px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:i===0?'not-allowed':'pointer',opacity:i===0?0.4:1,fontSize:13}}>↑</button>
-              <button onClick={()=>{const a=[...draft.sections];if(i<a.length-1){[a[i],a[i+1]]=[a[i+1],a[i]];upd('sections',a);}}} disabled={i===draft.sections.length-1} style={{padding:'6px 12px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:i===draft.sections.length-1?'not-allowed':'pointer',opacity:i===draft.sections.length-1?0.4:1,fontSize:13}}>↓</button>
-            </div>);
-          })}
+
+          {/* ── Card: Newsletter ─────────────────────────────── */}
+          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:18}}>💌</span>
+              <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Newsletter Section</span>
+            </div>
+            <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Email signup section at the bottom of the homepage. Hidden by default until your email system is ready.</p>
+            <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',background:draft.showNewsletter?P+'10':'#f9fafb',border:`1.5px solid ${draft.showNewsletter?P:'#e5e7eb'}`,borderRadius:10,padding:'11px 16px',width:'fit-content'}}>
+              <input type="checkbox" checked={draft.showNewsletter||false} onChange={e=>setDraft((d:any)=>({...d,showNewsletter:e.target.checked}))} style={{width:16,height:16,accentColor:P}} />
+              <span style={{fontSize:13,fontWeight:700,color:draft.showNewsletter?P:'#374151'}}>{draft.showNewsletter?'✅ Newsletter visible on homepage':'⬜ Newsletter hidden'}</span>
+            </label>
+          </div>
+
+          {/* ── Card: Section Order ───────────────────────────── */}
+          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:18}}>↕️</span>
+              <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Homepage Section Order</span>
+            </div>
+            <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Drag or click ↑↓ to reorder sections on the homepage.</p>
+            {draft.sections?.map((s:string,i:number)=>{
+              const sLabels:any={hero:'🌟 Hero Banner',featured:'⭐ Featured Products',categories:'📂 Browse by Category',artists:'🎨 Meet Our Artists',newsletter:'💌 Newsletter',blog:'📄 Blog / Pages'};
+              return (
+                <div key={s} style={{display:'flex',alignItems:'center',gap:10,background:'#fafafa',borderRadius:10,padding:'11px 14px',marginBottom:6,border:'1px solid #f3f4f6'}}>
+                  <span style={{color:'#d1d5db',fontSize:16,userSelect:'none' as const}}>⠿</span>
+                  <span style={{flex:1,fontWeight:600,fontSize:14,color:'#374151'}}>{sLabels[s]||s}</span>
+                  <button onClick={()=>{const a=[...draft.sections];if(i>0){[a[i],a[i-1]]=[a[i-1],a[i]];upd('sections',a);}}} disabled={i===0}
+                    style={{padding:'5px 11px',borderRadius:7,border:'1px solid #e5e7eb',background:'white',cursor:i===0?'not-allowed':'pointer',opacity:i===0?0.4:1,fontSize:13,fontWeight:700}}>↑</button>
+                  <button onClick={()=>{const a=[...draft.sections];if(i<a.length-1){[a[i],a[i+1]]=[a[i+1],a[i]];upd('sections',a);}}} disabled={i===draft.sections.length-1}
+                    style={{padding:'5px 11px',borderRadius:7,border:'1px solid #e5e7eb',background:'white',cursor:i===draft.sections.length-1?'not-allowed':'pointer',opacity:i===draft.sections.length-1?0.4:1,fontSize:13,fontWeight:700}}>↓</button>
+                </div>
+              );
+            })}
+          </div>
+
         </>)}
         {section==='background'&&(<>
           <h2 style={{fontSize:20,fontWeight:900,color:'#111827',marginBottom:8}}>Background</h2>
