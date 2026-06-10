@@ -101,7 +101,6 @@ const ThemeContext = createContext<{ theme: ThemeConfig; setTheme:(t:ThemeConfig
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeConfig>(DEFAULT);
-  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     fetch('/api/theme').then(r=>r.json()).then(t => {
@@ -113,8 +112,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         else parsed.footer = { ...DEFAULT_FOOTER, ...parsed.footer };
         setThemeState({ ...DEFAULT, ...parsed });
       }
-      setLoaded(true);
-    }).catch(() => setLoaded(true));
+    }).catch(() => {});
   }, []);
 
   const setTheme = (t: ThemeConfig) => setThemeState(t);
@@ -135,7 +133,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     r.style.setProperty('--text', theme.textColor);
   }, [theme]);
 
-  if (!loaded) return null;
   return <ThemeContext.Provider value={{ theme, setTheme, saveTheme }}>{children}</ThemeContext.Provider>;
 }
 
