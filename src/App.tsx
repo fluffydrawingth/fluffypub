@@ -19,6 +19,7 @@ import ArtistProfilePage from './pages/ArtistProfilePage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import CmsPage from './pages/CmsPage';
 import PagesIndexPage from './pages/PagesIndexPage';
+import DigitalProductsPage from './pages/DigitalProductsPage';
 import { LangProvider } from './lib/lang';
 import { FavoritesProvider } from './lib/favorites';
 
@@ -47,6 +48,7 @@ function AppContent() {
       case '/pages': return <PagesIndexPage />;
       case '/pages/:slug': return <CmsPage slug={route.params?.slug||''} />;
       case '/products': return <ProductsPage />;
+      case '/digital-products': return <DigitalProductsPage />;
       case '/products/:slug': return <ProductDetailPage slug={route.params?.slug||''} />;
       case '/cart': return <CartPage />;
       case '/checkout': return <CheckoutPage />;

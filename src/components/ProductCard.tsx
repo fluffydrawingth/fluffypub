@@ -73,6 +73,9 @@ export default function ProductCard({ product }: { product: any }) {
               : <span>{product.image}</span>}
           </div>
           {product.is_new && <span style={{ position:'absolute', top:8, right:8, background:theme.secondaryColor||'#c084fc', color:'white', borderRadius:12, padding:'3px 8px', fontSize:10, fontWeight:700, zIndex:1 }}>✨ New</span>}
+          {(product.is_digital === true || product.type === 'digital' || product.type === 'both') && (
+            <span style={{ position:'absolute', bottom:8, left:8, background:'#3b82f6', color:'white', borderRadius:12, padding:'3px 8px', fontSize:10, fontWeight:700, zIndex:1 }}>💾 Digital</span>
+          )}
           {/* Heart / favorite button */}
           <button
             onClick={e => {

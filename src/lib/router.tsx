@@ -21,6 +21,7 @@ function parse(hash: string): Route {
   if (!p.length) return { path: '/' };
   if (p[0]==='products' && p[1]) return { path:'/products/:slug', params:{ slug:p[1] } };
   if (p[0]==='products') return { path:'/products' };
+  if (p[0]==='digital-products') return { path:'/digital-products' };
   if (p[0]==='cart') return { path:'/cart' };
   if (p[0]==='checkout') return { path:'/checkout' };
   if (p[0]==='checkout' && p[1]==='success') return { path:'/checkout/success', params:{ orderId:p[2]||'' } };

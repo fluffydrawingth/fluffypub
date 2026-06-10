@@ -24,13 +24,18 @@ export default function HomePage() {
     });
   }, [theme.featuredProductIds]);
 
+  const digitalProducts = allProducts.filter((p: any) =>
+    p.is_digital === true || p.type === 'digital' || p.type === 'both'
+  );
+
   const sectionMap: Record<string, React.ReactNode> = {
-    hero:       <HeroSection key="hero" />,
-    featured:   <FeaturedSection key="featured" products={featured} />,
-    categories: <CategoriesSection key="categories" allProducts={allProducts} />,
-    artists:    <ArtistsSection key="artists" />,
-    newsletter: <NewsletterSection key="newsletter" />,
-    blog: <BlogSection key="blog" />,
+    hero:             <HeroSection key="hero" />,
+    featured:         <FeaturedSection key="featured" products={featured} />,
+    digital_products: <DigitalProductsSection key="digital_products" products={digitalProducts} />,
+    categories:       <CategoriesSection key="categories" allProducts={allProducts} />,
+    artists:          <ArtistsSection key="artists" />,
+    newsletter:       <NewsletterSection key="newsletter" />,
+    blog:             <BlogSection key="blog" />,
   };
 
   return (
@@ -110,6 +115,34 @@ function FeaturedSection({ products }: { products: any[] }) {
         </div>
         <div style={{ textAlign:'center', marginTop:40 }}>
           <button onClick={()=>navigate('/products')} style={{ background:'transparent', border:`2px solid ${theme.primaryColor}`, color:theme.primaryColor, cursor:'pointer', padding:'12px 32px', borderRadius:24, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily }}>{theme.labels?.featured_btn || 'View All Books →'}</button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Digital Products ─────────────────────────────────────────────────────────
+function DigitalProductsSection({ products }: { products: any[] }) {
+  const { theme } = useTheme();
+  const { navigate } = useRouter();
+  if (products.length === 0) return null;
+  const shown = products.slice(0, 4);
+  return (
+    <section style={{ padding:'64px 24px', background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})` }}>
+      <div style={{ maxWidth:1200, margin:'0 auto' }}>
+        <div style={{ textAlign:'center', marginBottom:40 }}>
+          <span style={{ fontSize:13, fontWeight:700, color:theme.primaryColor, letterSpacing:1, textTransform:'uppercase' as const }}>💾 Download Instantly</span>
+          <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 12px', fontFamily:theme.fontFamily }}>Digital Products</h2>
+        </div>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
+          {shown.map(p => (
+            <div key={p.id} style={{ width:'min(100%, 260px)', flexShrink:0, flexGrow:0 }}>
+              <ProductCard product={p} />
+            </div>
+          ))}
+        </div>
+        <div style={{ textAlign:'center', marginTop:40 }}>
+          <button onClick={()=>navigate('/digital-products')} style={{ background:'transparent', border:`2px solid ${theme.primaryColor}`, color:theme.primaryColor, cursor:'pointer', padding:'12px 32px', borderRadius:24, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily }}>View All Digital →</button>
         </div>
       </div>
     </section>

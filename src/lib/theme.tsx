@@ -35,7 +35,7 @@ export interface ThemeConfig {
   labels: {
     featured_eyebrow: string; featured_title: string; featured_btn: string;
     blog_eyebrow: string; blog_title: string; blog_btn: string;
-    nav_shop: string; nav_artists: string; nav_blog: string;
+    nav_shop: string; nav_artists: string; nav_blog: string; nav_digital: string;
   };
   footer: FooterConfig;
 }
@@ -72,7 +72,7 @@ const DEFAULT: ThemeConfig = {
   heroTitle:'Color Your World ✨', heroSubtitle:'Adorable coloring books for every dreamer 🌸',
   heroCrop:null, mobileHeroCrop:null, bannerText:'🌟 Free shipping on orders over $30! Use FLUFFY15 for 15% off 🌸',
   bannerBg:'#f472b6', bannerImageCrop:null, bgImageCrop:null,
-  sections:['hero','featured','categories','artists','newsletter'],
+  sections:['hero','featured','digital_products','categories','artists','newsletter'],
   heroStats:[
     { value:'500+', label:'Books' },
     { value:'12K+', label:'Happy Colorists' },
@@ -91,6 +91,7 @@ const DEFAULT: ThemeConfig = {
     nav_shop: 'Shop',
     nav_artists: 'Artists',
     nav_blog: 'Blog',
+    nav_digital: 'Digital Products',
   },
   footer: DEFAULT_FOOTER,
 };

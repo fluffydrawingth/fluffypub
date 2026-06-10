@@ -38,6 +38,7 @@ export default function Navbar() {
           {/* Nav links */}
           {[
             [t('shop'), '/products'],
+            [t('digital_products'), '/digital-products'],
             [t('artists'), '/artists'],
             [t('blog'), '/pages'],
           ].map(([label,path])=>(
