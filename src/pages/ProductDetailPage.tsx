@@ -94,7 +94,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     if (items.some(i => `${i.id}::${i.optionId}` === k)) {
       increment(product.id, opt.id);
     } else {
-      add({ id: product.id, title, image: product.image, artist: product.artistName || product.artist_name || product.artist || '', slug: product.slug, optionId: opt.id, optionName: opt.name, optionType: opt.type, unitPriceTHB: opt.price });
+      add({ id: product.id, title, image: product.image, coverImageUrl: product.cover_image_url || undefined, artist: product.artistName || product.artist_name || product.artist || '', slug: product.slug, optionId: opt.id, optionName: opt.name, optionType: opt.type, unitPriceTHB: opt.price });
     }
   };
 

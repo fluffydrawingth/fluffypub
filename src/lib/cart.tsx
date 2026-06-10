@@ -4,6 +4,7 @@ export interface CartItem {
   id: string;
   title: string;
   image: string;
+  coverImageUrl?: string;
   artist: string;
   slug?: string;
   // Option (variant or digital)

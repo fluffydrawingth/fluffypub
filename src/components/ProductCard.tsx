@@ -45,7 +45,7 @@ export default function ProductCard({ product }: { product: any }) {
       const k = `${product.id}::${o.id}`;
       if (cartKeys.includes(k)) { increment(product.id, o.id); return; }
       if (o.price <= 0) return; // block ฿0
-      add({ id: product.id, title, image: product.image, artist, slug: product.slug, optionId: o.id, optionName: o.name, optionType: o.type, unitPriceTHB: o.price });
+      add({ id: product.id, title, image: product.image, coverImageUrl: product.cover_image_url || undefined, artist, slug: product.slug, optionId: o.id, optionName: o.name, optionType: o.type, unitPriceTHB: o.price });
       return;
     }
     setModal(true);
@@ -54,7 +54,7 @@ export default function ProductCard({ product }: { product: any }) {
   const handleOption = (o: { id: string; name: string; type: 'physical'|'digital'; price: number }) => {
     const k = `${product.id}::${o.id}`;
     if (cartKeys.includes(k)) { increment(product.id, o.id); }
-    else if (o.price > 0) { add({ id: product.id, title, image: product.image, artist, slug: product.slug, optionId: o.id, optionName: o.name, optionType: o.type, unitPriceTHB: o.price }); }
+    else if (o.price > 0) { add({ id: product.id, title, image: product.image, coverImageUrl: product.cover_image_url || undefined, artist, slug: product.slug, optionId: o.id, optionName: o.name, optionType: o.type, unitPriceTHB: o.price }); }
     setModal(false);
   };
 

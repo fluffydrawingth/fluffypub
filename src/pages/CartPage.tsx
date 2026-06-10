@@ -36,8 +36,10 @@ export default function CartPage() {
           <div style={{display:'flex',flexDirection:'column' as const,gap:10}}>
             {items.map(item => (
               <div key={`${item.id}::${item.optionId}`} style={{background:'white',borderRadius:16,padding:'14px 16px',display:'flex',gap:12,alignItems:'center',boxShadow:'0 2px 10px rgba(0,0,0,0.06)'}}>
-                <div style={{width:64,height:64,borderRadius:12,background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,flexShrink:0}}>
-                  {item.image}
+                <div style={{width:64,height:64,borderRadius:12,background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,flexShrink:0,overflow:'hidden'}}>
+                  {item.coverImageUrl
+                    ? <img src={item.coverImageUrl} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover'}} />
+                    : item.image}
                 </div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:800,color:theme.textColor,fontSize:14,overflow:'hidden',whiteSpace:'nowrap' as const,textOverflow:'ellipsis'}}>{item.title}</div>
