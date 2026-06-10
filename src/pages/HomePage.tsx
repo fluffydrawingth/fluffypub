@@ -63,14 +63,14 @@ function HeroSection() {
       {['🌸','✨','🌷','⭐','💫','🌺','🎀','🦋'].map((emoji, i) => (
         <span key={i} style={{ position:'absolute', top:`${10+(i*11)%70}%`, left:`${5+(i*13)%90}%`, fontSize:`${18+(i*7)%20}px`, opacity:0.4, pointerEvents:'none' }}>{emoji}</span>
       ))}
-      <div style={{ position:'relative', zIndex:1 }}>
+      <div style={{ position:'relative', zIndex:1, width:'100%', maxWidth:720, margin:'0 auto', display:'flex', flexDirection:'column', alignItems:'center' }}>
         <div style={{ display:'inline-block', background:'rgba(255,255,255,0.6)', backdropFilter:'blur(10px)', borderRadius:16, padding:'6px 20px', fontSize:13, fontWeight:700, color:p, marginBottom:20, letterSpacing:1, border:`1.5px solid ${p}30` }}>
           🌸 Digital Coloring Books — Download Instantly
         </div>
-        <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, lineHeight:1.1, color:theme.textColor, margin:'0 0 16px', textShadow:'0 2px 20px rgba(255,255,255,0.8)', fontFamily:theme.fontFamily }}>
+        <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, lineHeight:1.1, color:theme.textColor, margin:'0 0 16px', textShadow:'0 2px 20px rgba(255,255,255,0.8)', fontFamily:theme.fontFamily, textAlign:'center' }}>
           {theme.heroTitle || 'Color Your World ✨'}
         </h1>
-        <p style={{ fontSize:'clamp(16px,2.5vw,22px)', color:theme.textColor+'cc', margin:'0 0 36px', maxWidth:500, fontFamily:theme.fontFamily }}>
+        <p style={{ fontSize:'clamp(16px,2.5vw,22px)', color:theme.textColor+'cc', margin:'0 0 36px', maxWidth:500, fontFamily:theme.fontFamily, textAlign:'center' }}>
           {theme.heroSubtitle || 'Adorable coloring books for every dreamer 🌸'}
         </p>
         <div style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap' }}>
