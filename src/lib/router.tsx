@@ -17,6 +17,9 @@ export function RouterProvider({ children }: { children: React.ReactNode }) {
 }
 
 function parse(hash: string): Route {
+  // Supabase auth callbacks arrive as ?access_token=...&type=recovery (no leading slash)
+  if (hash.includes('type=recovery')) return { path: '/reset-password' };
+  if (hash.includes('type=signup') || hash.includes('type=email_change')) return { path: '/login' };
   const p = hash.split('/').filter(Boolean);
   if (!p.length) return { path: '/' };
   if (p[0]==='products' && p[1]) return { path:'/products/:slug', params:{ slug:p[1] } };
