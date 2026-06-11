@@ -67,7 +67,7 @@ const DEFAULT_FOOTER: FooterConfig = {
 const DEFAULT: ThemeConfig = {
   primaryColor:'#f472b6', secondaryColor:'#c084fc', accentColor:'#fb923c',
   bgColor:'#fdf2f8', bgColor2:'#faf5ff', textColor:'#4a1942',
-  fontFamily:"'Nunito', sans-serif", logoText:'Fluffy Pub', logoEmoji:'🐰', logoImageCrop:null,
+  fontFamily:"'Itim', 'Nunito', sans-serif", logoText:'Fluffy Pub', logoEmoji:'🐰', logoImageCrop:null,
   heroBgColor:'linear-gradient(135deg, #fce7f3 0%, #f3e8ff 50%, #fef3c7 100%)',
   heroTitle:'Color Your World ✨', heroSubtitle:'Adorable coloring books for every dreamer 🌸',
   heroCrop:null, mobileHeroCrop:null, bannerText:'🌟 Free shipping on orders over $30! Use FLUFFY15 for 15% off 🌸',
