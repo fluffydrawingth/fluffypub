@@ -29,14 +29,29 @@ export default function ProductsPage() {
     return acc;
   }, {});
 
+  const searchTerm = search.trim().toLowerCase();
+
   let filtered = allProducts.filter(prod => {
     if (category !== 'All') {
-      // Match if primary category OR any of the categories array matches
       const prodCats: string[] = prod.categories && prod.categories.length ? prod.categories : (prod.category ? [prod.category] : []);
       if (!prodCats.includes(category)) return false;
     }
-    if (search && !prod.title?.toLowerCase().includes(search.toLowerCase()) &&
-        !(prod.artistName || prod.artist_name || '').toLowerCase().includes(search.toLowerCase())) return false;
+    if (searchTerm) {
+      const tags: string = Array.isArray(prod.tags) ? prod.tags.join(' ') : (prod.tags || '');
+      const haystack = [
+        prod.title,
+        prod.title_th,
+        prod.title_en,
+        prod.description,
+        prod.description_th,
+        prod.description_en,
+        prod.category,
+        (prod.categories || []).join(' '),
+        tags,
+        prod.artistName || prod.artist_name,
+      ].map(v => (v || '').toLowerCase()).join(' ');
+      if (!haystack.includes(searchTerm)) return false;
+    }
     return true;
   });
 
