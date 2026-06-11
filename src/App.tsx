@@ -20,6 +20,8 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import CmsPage from './pages/CmsPage';
 import PagesIndexPage from './pages/PagesIndexPage';
 import DigitalProductsPage from './pages/DigitalProductsPage';
+import GuestOrderPage from './pages/GuestOrderPage';
+import TrackOrderPage from './pages/TrackOrderPage';
 import { LangProvider } from './lib/lang';
 import { FavoritesProvider } from './lib/favorites';
 
@@ -54,6 +56,8 @@ function AppContent() {
       case '/checkout': return <CheckoutPage />;
       case '/artists/:slug': return <ArtistProfilePage slug={route.params?.slug||''} />;
       case '/reset-password': return <ResetPasswordPage />;
+      case '/guest-order/:token': return <GuestOrderPage token={route.params?.token || ''} />;
+      case '/track-order': return <TrackOrderPage />;
       case '/artists': return <ArtistsPage />;
       case '/login': return <LoginPage />;
       case '/account': return <ProtectedRoute roles={['customer','artist','admin']}><AccountPage /></ProtectedRoute>;

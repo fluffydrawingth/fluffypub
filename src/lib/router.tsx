@@ -34,6 +34,8 @@ function parse(hash: string): Route {
   if (p[0]==='admin') return { path:'/admin', params:{ tab:p[1]||'dashboard' } };
   if (p[0]==='pages' && !p[1]) return { path:'/pages' };
   if (p[0]==='pages' && p[1]) return { path:'/pages/:slug', params:{ slug:p[1] } };
+  if (p[0]==='guest-order' && p[1]) return { path:'/guest-order/:token', params:{ token:p[1] } };
+  if (p[0]==='track-order') return { path:'/track-order' };
   return { path:'/' };
 }
 

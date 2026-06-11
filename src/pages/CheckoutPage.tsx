@@ -224,7 +224,10 @@ export default function CheckoutPage() {
                   : tRaw('⬇️ ลิงค์ดาวน์โหลดส่งทางอีเมลหลังยืนยัน','⬇️ Download link emailed after payment confirmed.')}
               </div>
               <div style={{marginTop:14,display:'flex',flexDirection:'column' as const,gap:8}}>
-                {user && <button onClick={()=>navigate('/account/orders')} style={{width:'100%',padding:'11px',background:p,color:'white',border:'none',cursor:'pointer',borderRadius:14,fontSize:13,fontWeight:700,fontFamily:theme.fontFamily}}>{tRaw('ดูคำสั่งซื้อ','View Orders')}</button>}
+                {user
+                  ? <button onClick={()=>navigate('/account/orders')} style={{width:'100%',padding:'11px',background:p,color:'white',border:'none',cursor:'pointer',borderRadius:14,fontSize:13,fontWeight:700,fontFamily:theme.fontFamily}}>{tRaw('ดูคำสั่งซื้อ','View Orders')}</button>
+                  : order?.access_token && <button onClick={()=>navigate(`/guest-order/${order.access_token}`)} style={{width:'100%',padding:'11px',background:p,color:'white',border:'none',cursor:'pointer',borderRadius:14,fontSize:13,fontWeight:700,fontFamily:theme.fontFamily}}>📱 {tRaw('ดูคำสั่งซื้อ','View My Order')}</button>
+                }
                 <button onClick={()=>navigate('/products')} style={{width:'100%',padding:'11px',background:'transparent',border:`1.5px solid ${p}30`,color:p,cursor:'pointer',borderRadius:14,fontSize:13,fontWeight:600,fontFamily:theme.fontFamily}}>{tRaw('ช้อปต่อ','Continue Shopping')}</button>
               </div>
             </div>

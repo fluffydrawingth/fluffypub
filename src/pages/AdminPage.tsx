@@ -911,6 +911,7 @@ function OrdersTab() {
                       payment_reminder:'Payment Reminder → Customer', payment_confirmed:'Payment Confirmed → Customer',
                       admin_payment_confirmed:'Payment Confirmed → Admin', tracking_added:'Tracking Updated → Customer',
                       shipped_notification:'Shipped Notification → Customer', slip_uploaded:'Slip Uploaded → Admin',
+                      access_link_resent:'Order Link Resent → Customer',
                     };
                     const isErr = log.status === 'error';
                     return (

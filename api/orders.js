@@ -1,7 +1,8 @@
 // /api/orders
 const { supabase, requireAuth, getUser, json } = require('./_lib');
+const crypto = require('crypto');
 
-const SITE = process.env.SITE_URL || 'https://fluffypub.vercel.app';
+const SITE = process.env.SITE_URL || 'https://fluffypub.com';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'fluffydrawing.th@gmail.com';
 
 // ── Email helpers ────────────────────────────────────────────────────────────
@@ -62,6 +63,9 @@ function orderSummaryHtml(order) {
 function tplOrderCreated(order) {
   const ref = (order.id || '').slice(-8).toUpperCase();
   const total = order.total_thb || order.total_amount || 0;
+  const orderLink = order.access_token
+    ? `${SITE}/#/guest-order/${order.access_token}`
+    : `${SITE}/#/account/orders`;
   return emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:20px">🎉 ขอบคุณสำหรับการสั่งซื้อ!</h2>
     <p style="margin:0 0 20px;color:#6b7280;font-size:13px">Thank you for your order! We've received it and are waiting for payment.</p>
@@ -78,7 +82,12 @@ function tplOrderCreated(order) {
         <li>ถ่ายรูปสลิปการโอนเงิน</li>
         <li>อัปโหลดสลิปในหน้าคำสั่งซื้อ</li>
       </ol>
-      <a href="${SITE}/account/orders" style="display:inline-block;margin-top:12px;background:#f472b6;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📱 ดูคำสั่งซื้อ / View Order →</a>
+      <a href="${orderLink}" style="display:inline-block;margin-top:12px;background:#f472b6;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📱 ดูคำสั่งซื้อ / View Order →</a>
+    </div>
+    <div style="background:#eff6ff;border-radius:12px;padding:14px 16px;margin-top:16px;border:1px solid #bfdbfe">
+      <div style="font-size:12px;color:#1e40af;font-weight:700;margin-bottom:6px">🔗 ลิงก์ติดตามคำสั่งซื้อ / Order Access Link</div>
+      <p style="margin:0 0 8px;font-size:12px;color:#374151">บันทึกลิงก์นี้ไว้เพื่อดูสถานะออเดอร์โดยไม่ต้องล็อกอิน / Save this link to track your order without logging in.</p>
+      <a href="${orderLink}" style="font-size:11px;color:#2563eb;word-break:break-all">${orderLink}</a>
     </div>
     <p style="margin:20px 0 0;font-size:12px;color:#9ca3af">หลังจากยืนยันการชำระเงิน ทีมงานจะดำเนินการต่อภายใน 24 ชม. 🌸</p>
   `);
@@ -294,6 +303,50 @@ module.exports = async function handler(req, res) {
   }
 
   // GET artist orders
+  // GET order by access token — no auth required (guest order page)
+  if (req.method === 'GET' && action === 'by-token' && id) {
+    const { data, error } = await supabase.from('orders').select('*').eq('access_token', id).single();
+    if (error || !data) return json(res, 404, { error: 'Order not found or link has expired' });
+    // Strip access_token from the response so the token never leaks to client JS
+    const { access_token: _tok, ...safeOrder } = data;
+    // Only expose download links if paid
+    if (safeOrder.payment_status !== 'paid') {
+      safeOrder.items = (safeOrder.items || []).map(i => ({ ...i, digital_download_url: null, download_instruction: null }));
+    }
+    return json(res, 200, safeOrder);
+  }
+
+  // POST resend order access link — no auth required
+  if (req.method === 'POST' && action === 'resend-link') {
+    const { email, orderRef } = req.body || {};
+    if (!email || !orderRef) return json(res, 400, { error: 'email and orderRef required' });
+    const ref = orderRef.replace(/^#/, '').toUpperCase();
+    // Find orders by email, then match the 8-char ref
+    const { data: rows } = await supabase.from('orders').select('id,access_token,customer_email,total_thb,total_amount,status,created_at').eq('customer_email', email);
+    const order = (rows || []).find(o => (o.id || '').slice(-8).toUpperCase() === ref);
+    if (!order || !order.access_token) {
+      // Return generic success to avoid leaking which emails exist
+      return json(res, 200, { ok: true });
+    }
+    const orderLink = `${SITE}/#/guest-order/${order.access_token}`;
+    const orderRefFmt = '#' + (order.id || '').slice(-8).toUpperCase();
+    await sendEmail(email, `🔗 ลิงก์ติดตามคำสั่งซื้อ ${orderRefFmt} — Fluffy Pub`,
+      emailWrapper(`
+        <h2 style="margin:0 0 6px;color:#111827;font-size:20px">🔗 ลิงก์ติดตามคำสั่งซื้อของคุณ</h2>
+        <p style="margin:0 0 16px;color:#6b7280;font-size:13px">Here is your order access link / นี่คือลิงก์สำหรับดูคำสั่งซื้อของคุณ</p>
+        <div style="background:#fdf2f8;border-radius:12px;padding:14px 16px;margin-bottom:16px;border:1.5px solid #f9a8d4">
+          <div style="font-size:12px;color:#9ca3af;font-weight:700;margin-bottom:4px">ORDER</div>
+          <div style="font-size:22px;font-weight:900;color:#f472b6">${orderRefFmt}</div>
+        </div>
+        <a href="${orderLink}" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:12px 24px;border-radius:20px;font-weight:700;font-size:14px;margin-bottom:16px">📱 ดูคำสั่งซื้อ / View Order →</a>
+        <p style="margin:0;font-size:11px;color:#9ca3af;word-break:break-all">${orderLink}</p>
+        <p style="margin:16px 0 0;font-size:11px;color:#d1d5db">หากคุณไม่ได้ขอลิงก์นี้ กรุณาเพิกเฉย / If you did not request this, please ignore. 🌸</p>
+      `),
+      { orderId: order.id, eventType: 'access_link_resent' }
+    );
+    return json(res, 200, { ok: true });
+  }
+
   if (req.method === 'GET' && action === 'artist') {
     const user = await requireAuth(req, res, ['artist']);
     if (!user) return;
@@ -358,6 +411,7 @@ module.exports = async function handler(req, res) {
     const physicalQtyFromCart = orderItems.filter(i => i.optionType === 'physical').reduce((s, i) => s + i.qty, 0);
 
     const authUser = await getUser(req);
+    const accessToken = crypto.randomBytes(32).toString('hex');
     const { data: order, error } = await supabase.from('orders').insert({
       user_id: authUser?.id || null,
       guest_email: authUser ? null : customerEmail,
@@ -379,6 +433,7 @@ module.exports = async function handler(req, res) {
       status: 'pending_payment',
       payment_status: 'pending',
       type: hasPhysical ? 'physical' : 'digital',
+      access_token: accessToken,
     }).select().single();
     if (error) {
       console.error('[orders POST] INSERT ERROR:', error.code, error.message, error.details, error.hint);
