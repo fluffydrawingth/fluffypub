@@ -126,6 +126,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     r.style.setProperty('--bg', theme.bgColor);
     r.style.setProperty('--bg2', theme.bgColor2);
     r.style.setProperty('--text', theme.textColor);
+    // Apply font to the whole document
+    document.body.style.fontFamily = theme.fontFamily;
   }, [theme]);
 
   return <ThemeContext.Provider value={{ theme, setTheme, saveTheme }}>{children}</ThemeContext.Provider>;

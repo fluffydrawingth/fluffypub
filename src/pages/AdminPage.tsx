@@ -1584,6 +1584,29 @@ function ThemeTab() {
           <h2 style={{fontSize:20,fontWeight:900,color:'#111827',marginBottom:4}}>Brand & Logo</h2>
           <p style={{fontSize:13,color:'#6b7280',marginBottom:20}}>Customize your store's identity</p>
           <TF label="Store Name" val={draft.logoText} set={v=>upd('logoText',v)} />
+          <div style={{marginBottom:20}}>
+            <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:8}}>Font Family</label>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+              {[
+                {name:'Itim',label:'Itim — น่ารักมาก 🌸',css:"'Itim', sans-serif"},
+                {name:'Mitr',label:'Mitr — กลมน่ารัก',css:"'Mitr', sans-serif"},
+                {name:'Sriracha',label:'Sriracha — สนุก',css:"'Sriracha', sans-serif"},
+                {name:'Kanit',label:'Kanit — ทันสมัย',css:"'Kanit', sans-serif"},
+                {name:'Sarabun',label:'Sarabun — อ่านง่าย',css:"'Sarabun', sans-serif"},
+                {name:'Prompt',label:'Prompt — เรียบหรู',css:"'Prompt', sans-serif"},
+                {name:'Nunito',label:'Nunito — English only',css:"'Nunito', sans-serif"},
+                {name:'Quicksand',label:'Quicksand — English only',css:"'Quicksand', sans-serif"},
+              ].map(f=>{
+                const active = draft.fontFamily?.includes(f.name);
+                return (
+                  <button key={f.name} onClick={()=>upd('fontFamily',f.css)}
+                    style={{padding:'10px 14px',borderRadius:12,border:`2px solid ${active?P:'#e5e7eb'}`,background:active?'#fce7f3':'white',cursor:'pointer',textAlign:'left' as const,fontFamily:f.css,fontSize:14,color:active?P:'#374151',fontWeight:active?700:400}}>
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div style={{marginBottom:16}}>
             <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:8}}>Logo Emoji</label>
             <div style={{display:'flex',gap:8,flexWrap:'wrap' as const}}>
