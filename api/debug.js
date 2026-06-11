@@ -2,6 +2,27 @@
 const { supabase, requireAuth, getUser, json } = require('./_lib');
 
 module.exports = async function handler(req, res) {
+  // POST /api/debug?action=test-email  — admin: send a test email
+  if (req.method === 'POST' && req.query.action === 'test-email') {
+    const user = await getUser(req);
+    if (!user || user.role !== 'admin') return json(res, 403, { error: 'Admin only' });
+    const RESEND_KEY = process.env.RESEND_API_KEY;
+    const FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+    const TO = user.email;
+    if (!RESEND_KEY) return json(res, 200, { ok: false, reason: 'RESEND_API_KEY env var is not set' });
+    try {
+      const resp = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RESEND_KEY}` },
+        body: JSON.stringify({ from: `Fluffy Pub <${FROM}>`, to: TO, subject: '✅ Fluffy Pub email test', html: '<p>Email is working! 🌸</p>' }),
+      });
+      const body = await resp.json();
+      return json(res, 200, { ok: resp.ok, status: resp.status, resend: body, from: FROM, to: TO });
+    } catch (e) {
+      return json(res, 200, { ok: false, error: e.message });
+    }
+  }
+
   if (req.method === 'GET') {
     const user = await getUser(req);
     if (!user) return json(res, 401, { error: 'Not authenticated' });
