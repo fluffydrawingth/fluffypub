@@ -670,7 +670,11 @@ function OrdersTab() {
     </body></html>`);
   };
 
+  const ACTIVE_STATUSES = ['pending_payment','paid','packing','shipped'];
+  const INACTIVE_STATUSES = ['delivered','cancelled'];
   const filteredOrders = filterStatus==='all' ? orders : orders.filter(o=>o.status===filterStatus);
+  const activeOrders   = filteredOrders.filter(o=>ACTIVE_STATUSES.includes(o.status));
+  const inactiveOrders = filteredOrders.filter(o=>INACTIVE_STATUSES.includes(o.status));
   const STATUS_OPTS = ['pending_payment','paid','packing','shipped','delivered','cancelled'];
   const FILTER_TABS = [{k:'all',label:'All'},{k:'pending_payment',label:'Pending'},{k:'paid',label:'Paid'},{k:'packing',label:'Preparing'},{k:'shipped',label:'Shipped'},{k:'delivered',label:'Delivered'},{k:'cancelled',label:'Cancelled'}];
 
@@ -727,11 +731,8 @@ function OrdersTab() {
 
       <div style={{display:'grid',gridTemplateColumns:'1fr 380px',gap:20,alignItems:'start'}}>
         <div style={{...card,overflow:'hidden'}}>
-          <table style={{width:'100%',borderCollapse:'collapse'}}>
-            <thead><tr style={{borderBottom:'2px solid #f3f4f6',background:'#fafafa'}}>
-              {['Order','Date','Customer','Amount','Status',''].map(h=><th key={h} style={{textAlign:'left' as const,padding:'10px 12px',fontSize:10,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}
-            </tr></thead>
-            <tbody>{filteredOrders.map(o=>{
+          {(()=>{
+            const renderRows = (list: any[]) => list.map(o=>{
               const[c,bg]=STATUS_COLOR[o.status]||['#6b7280','#f1f5f9'];
               const thb = o.total_thb||o.total_amount||(parseFloat(o.total||'0')*35);
               return (
@@ -747,13 +748,42 @@ function OrdersTab() {
                   <td style={{padding:'11px 12px'}}><Badge color={c} bg={bg} text={STATUS_TEXT[o.status]||o.status}/></td>
                   <td style={{padding:'11px 12px'}}>
                     {o.payment_reminder_sent_at&&<span style={{fontSize:10,background:'#fef3c7',color:'#92400e',borderRadius:6,padding:'2px 6px',fontWeight:600,whiteSpace:'nowrap' as const}}>reminded</span>}
-                  <button onClick={e=>{e.stopPropagation();deleteOrder(o.id);}} disabled={deleting} style={{background:'none',border:'none',cursor:'pointer',color:'#fca5a5',fontSize:14,padding:4}}>🗑</button>
+                    <button onClick={e=>{e.stopPropagation();deleteOrder(o.id);}} disabled={deleting} style={{background:'none',border:'none',cursor:'pointer',color:'#fca5a5',fontSize:14,padding:4}}>🗑</button>
                   </td>
                 </tr>
               );
-            })}</tbody>
-          </table>
-          {filteredOrders.length===0&&<div style={{textAlign:'center',padding:'40px',color:'#9ca3af'}}>No orders {filterStatus!=='all'?`with status "${filterStatus}"`:'yet'}</div>}
+            });
+            const cols = ['Order','Date','Customer','Amount','Status',''];
+            const thead = <thead><tr style={{borderBottom:'2px solid #f3f4f6',background:'#fafafa'}}>{cols.map(h=><th key={h} style={{textAlign:'left' as const,padding:'10px 12px',fontSize:10,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}</tr></thead>;
+            if (filteredOrders.length===0) return <div style={{textAlign:'center',padding:'40px',color:'#9ca3af'}}>No orders {filterStatus!=='all'?`with status "${filterStatus}"`:'yet'}</div>;
+            if (activeOrders.length===0 && inactiveOrders.length===0) return null;
+            return (
+              <>
+                {activeOrders.length>0&&(
+                  <>
+                    <div style={{padding:'10px 14px',background:'#f0fdf4',borderBottom:'1px solid #d1fae5',fontSize:11,fontWeight:700,color:'#065f46',letterSpacing:0.5}}>
+                      🟢 ACTIVE ORDERS ({activeOrders.length})
+                    </div>
+                    <table style={{width:'100%',borderCollapse:'collapse'}}>
+                      {thead}
+                      <tbody>{renderRows(activeOrders)}</tbody>
+                    </table>
+                  </>
+                )}
+                {inactiveOrders.length>0&&(
+                  <>
+                    <div style={{padding:'10px 14px',background:'#f9fafb',borderBottom:'1px solid #e5e7eb',borderTop:activeOrders.length>0?'2px solid #e5e7eb':'none',fontSize:11,fontWeight:700,color:'#6b7280',letterSpacing:0.5}}>
+                      ✓ COMPLETED / INACTIVE ({inactiveOrders.length})
+                    </div>
+                    <table style={{width:'100%',borderCollapse:'collapse'}}>
+                      {thead}
+                      <tbody>{renderRows(inactiveOrders)}</tbody>
+                    </table>
+                  </>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         {selected&&(
@@ -879,8 +909,8 @@ function OrdersTab() {
                     const EVENT_LABELS:any = {
                       order_created:'Order Created → Customer', admin_order_created:'Order Created → Admin',
                       payment_reminder:'Payment Reminder → Customer', payment_confirmed:'Payment Confirmed → Customer',
-                      admin_payment_confirmed:'Payment Confirmed → Admin', tracking_added:'Tracking Added → Customer',
-                      slip_uploaded:'Slip Uploaded → Admin',
+                      admin_payment_confirmed:'Payment Confirmed → Admin', tracking_added:'Tracking Updated → Customer',
+                      shipped_notification:'Shipped Notification → Customer', slip_uploaded:'Slip Uploaded → Admin',
                     };
                     const isErr = log.status === 'error';
                     return (

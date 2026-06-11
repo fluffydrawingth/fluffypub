@@ -142,6 +142,10 @@ function OrdersTab({p,theme}:any) {
     return [sa.address,sa.province,sa.postal_code,sa.country].filter(Boolean).join(', ');
   };
 
+  const ACTIVE_STATUSES = ['pending_payment','paid','packing','shipped'];
+  const activeOrders    = orders.filter(o => ACTIVE_STATUSES.includes(o.status));
+  const completedOrders = orders.filter(o => !ACTIVE_STATUSES.includes(o.status));
+
   if (loading) return <div style={{ textAlign:'center', padding:40, color:'#888' }}>Loading...</div>;
   if (!orders.length) return (
     <div style={{ textAlign:'center', padding:'60px 24px', background:'white', borderRadius:20 }}>
@@ -289,56 +293,56 @@ function OrdersTab({p,theme}:any) {
     </div>
   );
 
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-      {orders.map(o=>(
-        <div key={o.id} onClick={()=>setSelected(o)} style={{ background:'white', borderRadius:18, padding:20, boxShadow:'0 2px 10px rgba(0,0,0,0.05)', cursor:'pointer', border:`1.5px solid ${p}10` }}
-          onMouseEnter={e=>e.currentTarget.style.borderColor=p+'40'}
-          onMouseLeave={e=>e.currentTarget.style.borderColor=p+'10'}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
-            <div>
-              <div style={{ fontWeight:800, color:'#1e293b', marginBottom:3 }}>#{o.id.slice(-8).toUpperCase()}</div>
-              <div style={{ fontSize:12, color:'#94a3b8' }}>{new Date(o.created_at||o.createdAt).toLocaleDateString(lang==='th'?'th-TH':'en-US')}</div>
-            </div>
-            <span style={{ background:STATUS_COLORS[o.status]||'#f1f5f9', color:o.status==='delivered'||o.status==='paid'?'#059669':'#d97706', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:700 }}>
-              {STATUS_TEXT[o.status]||o.status}
-            </span>
+  const renderOrderCard = (o: any) => (
+    <div key={o.id} onClick={()=>setSelected(o)} style={{ background:'white', borderRadius:18, padding:20, boxShadow:'0 2px 10px rgba(0,0,0,0.05)', cursor:'pointer', border:`1.5px solid ${p}10` }}
+      onMouseEnter={e=>e.currentTarget.style.borderColor=p+'40'}
+      onMouseLeave={e=>e.currentTarget.style.borderColor=p+'10'}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
+        <div>
+          <div style={{ fontWeight:800, color:'#1e293b', marginBottom:3 }}>#{o.id.slice(-8).toUpperCase()}</div>
+          <div style={{ fontSize:12, color:'#94a3b8' }}>{new Date(o.created_at||o.createdAt).toLocaleDateString(lang==='th'?'th-TH':'en-US')}</div>
+        </div>
+        <span style={{ background:STATUS_COLORS[o.status]||'#f1f5f9', color:STATUS_TEXT[o.status]?.[0]||'#6b7280', borderRadius:20, padding:'4px 12px', fontSize:12, fontWeight:700 }}>
+          {lang==='th'?STATUS_TEXT[o.status]?.[1]:STATUS_TEXT[o.status]?.[2]}
+        </span>
+      </div>
+      {o.items.map((i:any)=>(
+        <div key={i.productId} style={{ display:'flex', gap:10, alignItems:'center', marginBottom:8 }}>
+          <span style={{ fontSize:26 }}>{i.image}</span>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:14, fontWeight:700, color:'#1e293b' }}>{i.title}</div>
+            <div style={{ fontSize:12, color:'#888' }}>{i.optionType==='digital'||i.type==='digital'?'⬇️ Digital Download':'📦 Physical'}</div>
           </div>
-          {o.items.map((i:any)=>(
-            <div key={i.productId} style={{ display:'flex', gap:10, alignItems:'center', marginBottom:8 }}>
-              <span style={{ fontSize:26 }}>{i.image}</span>
-              <div style={{ flex:1 }}>
-                <div style={{ fontSize:14, fontWeight:700, color:'#1e293b' }}>{i.title}</div>
-                <div style={{ fontSize:12, color:'#888' }}>{i.type==='digital'?'⬇️ Digital Download':'📦 Physical'}</div>
-              </div>
-              <span style={{ fontWeight:800, color:'#1e293b' }}>${i.price}</span>
-            </div>
-          ))}
-          <div style={{ borderTop:'1px solid #f1f5f9', marginTop:10, paddingTop:10, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-            <div style={{ fontSize:13, color:'#64748b' }}>Total: <strong style={{color:'#1e293b'}}>${o.total}</strong></div>
-            {o.paymentStatus==='paid'&&o.type==='digital'&&(
-              <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:'flex-end'}}>
-                {o.items?.some((i:any)=>i.digital_download_url||i.download_instruction) ? (
-                  o.items?.filter((i:any)=>i.digital_download_url||i.download_instruction).map((i:any,idx:number)=>(
-                    <div key={idx}>
-                      {i.digital_download_url&&<a href={i.digital_download_url} target="_blank" rel="noreferrer" style={{background:p,color:'white',textDecoration:'none',padding:'6px 14px',borderRadius:11,fontSize:12,fontWeight:700,display:'inline-block'}}>⬇️ Download</a>}
-                      {i.download_instruction&&!i.digital_download_url&&<div style={{fontSize:11,color:'#64748b',maxWidth:200}}>{i.download_instruction}</div>}
-                    </div>
-                  ))
-                ) : (
-                  <div style={{fontSize:11,color:'#94a3b8'}}>Download link will be sent to your email</div>
-                )}
-              </div>
-            )}
-            {(o.paymentStatus==='pending'||o.payment_status==='pending')&&o.type==='digital'&&(
-              <div style={{fontSize:11,color:'#f59e0b',fontWeight:600}}>⏳ Awaiting payment confirmation</div>
-            )}
-            {o.trackingNumber&&(
-              <div style={{ fontSize:12, color:'#64748b' }}>🚚 {o.shippingProvider}: <strong>{o.trackingNumber}</strong></div>
-            )}
-          </div>
+          <span style={{ fontWeight:800, color:'#1e293b' }}>฿{Number(i.unitPriceTHB||i.price_thb||(i.price?Math.round(i.price*35):0)).toLocaleString('th-TH')}</span>
         </div>
       ))}
+      <div style={{ borderTop:'1px solid #f1f5f9', marginTop:10, paddingTop:10, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div style={{ fontSize:13, color:'#64748b' }}>Total: <strong style={{color:'#1e293b'}}>฿{Number(o.total_thb||o.total_amount||(parseFloat(o.total||'0')*35)).toLocaleString('th-TH')}</strong></div>
+        {(o.tracking_number||o.trackingNumber)&&(
+          <div style={{ fontSize:12, color:'#7c3aed', fontWeight:600 }}>🚚 {o.shipping_provider||o.shippingProvider}: <strong>{o.tracking_number||o.trackingNumber}</strong></div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+      {activeOrders.length>0&&(
+        <>
+          <div style={{ fontSize:11, fontWeight:800, color:'#059669', letterSpacing:0.5, padding:'4px 0 2px', textTransform:'uppercase' as const }}>
+            🟢 {tRaw('คำสั่งซื้อที่ดำเนินการอยู่','Active Orders')} ({activeOrders.length})
+          </div>
+          {activeOrders.map(renderOrderCard)}
+        </>
+      )}
+      {completedOrders.length>0&&(
+        <>
+          <div style={{ fontSize:11, fontWeight:800, color:'#9ca3af', letterSpacing:0.5, padding:'10px 0 2px', textTransform:'uppercase' as const, borderTop: activeOrders.length>0?'1px solid #f1f5f9':'none', marginTop: activeOrders.length>0?4:0 }}>
+            ✓ {tRaw('คำสั่งซื้อที่เสร็จสิ้นแล้ว','Completed Orders')} ({completedOrders.length})
+          </div>
+          {completedOrders.map(renderOrderCard)}
+        </>
+      )}
     </div>
   );
 }

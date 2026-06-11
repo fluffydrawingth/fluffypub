@@ -440,6 +440,9 @@ module.exports = async function handler(req, res) {
     }).eq('id', id).select().single();
     if (error) return json(res, 400, { error: error.message });
 
+    // Decrease stock for physical items now that payment is confirmed
+    await adjustStock(data.items, -1);
+
     // Send payment confirmed emails
     const ref = (data.id||'').slice(-8).toUpperCase();
     await sendEmail(data.customer_email, `✅ ยืนยันการชำระเงิน Order #${ref} — Fluffy Pub`, tplPaymentConfirmed(data), { orderId: data.id, eventType: 'payment_confirmed' });
@@ -465,11 +468,18 @@ module.exports = async function handler(req, res) {
     const { data, error } = await supabase.from('orders').update(updates).eq('id', id).select().single();
     if (error) return json(res, 404, { error: 'Order not found' });
 
-    // Send tracking email if tracking number was newly set
+    // Send shipped notification when status changes to 'shipped', or tracking is newly added
     const trackingAdded = tracking_number && tracking_number !== before?.tracking_number;
-    if (trackingAdded && data.customer_email) {
+    const justShipped = status === 'shipped' && before?.status !== 'shipped';
+    if (data.customer_email) {
       const ref = (data.id||'').slice(-8).toUpperCase();
-      await sendEmail(data.customer_email, `🚚 สินค้าถูกจัดส่งแล้ว! Order #${ref} — Fluffy Pub`, tplTrackingAdded(data), { orderId: data.id, eventType: 'tracking_added' });
+      if (justShipped) {
+        // One email covers both shipped status + any new tracking number
+        await sendEmail(data.customer_email, `🚚 สินค้าถูกจัดส่งแล้ว! Order #${ref} — Fluffy Pub`, tplTrackingAdded(data), { orderId: data.id, eventType: 'shipped_notification' });
+      } else if (trackingAdded) {
+        // Tracking updated without shipping status change (e.g., adding tracking later)
+        await sendEmail(data.customer_email, `🚚 อัปเดตหมายเลขพัสดุ Order #${ref} — Fluffy Pub`, tplTrackingAdded(data), { orderId: data.id, eventType: 'tracking_added' });
+      }
     }
 
     return json(res, 200, data);
