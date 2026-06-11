@@ -137,7 +137,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
-      const redirectTo = `${window.location.origin}/#/reset-password`;
+      // Must be just the origin — Supabase appends #access_token=...&type=recovery as a hash,
+      // so adding /#/reset-password would create an invalid double-hash URL.
+      const redirectTo = window.location.origin;
       const r = await fetch('/api/auth?action=reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
