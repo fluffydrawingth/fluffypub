@@ -181,7 +181,7 @@ function CategoriesSection({ allProducts }: { allProducts: any[] }) {
             const count = catCounts[cat.name] || 0;
             return (
               <button key={cat.name} onClick={()=>navigate('/products')}
-                style={{ background:'white', border:`1.5px solid ${theme.primaryColor}20`, borderRadius:20, padding:'28px 16px', cursor:'pointer', textAlign:'center' as const, fontFamily:theme.fontFamily }}
+                style={{ background:'white', border:`1.5px solid ${theme.primaryColor}20`, borderRadius:20, padding:'28px 16px', cursor:'pointer', textAlign:'center' as const, fontFamily:theme.fontFamily, width:'min(100%,160px)', flexShrink:0 }}
                 onMouseEnter={e=>{(e.currentTarget as any).style.transform='translateY(-4px)';(e.currentTarget as any).style.boxShadow=`0 8px 24px ${theme.primaryColor}25`;}}
                 onMouseLeave={e=>{(e.currentTarget as any).style.transform='none';(e.currentTarget as any).style.boxShadow='none';}}
               >
@@ -218,7 +218,7 @@ function ArtistsSection() {
         </div>
         <div style={{ display:'flex', flexWrap:'wrap', gap:20, justifyContent:'center' }}>
           {artists.map((a: any, idx: number) => (
-            <div key={a.id} style={{ background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, borderRadius:20, padding:24, textAlign:'center' as const, border:`1.5px solid ${theme.primaryColor}15`, cursor:'pointer', width:240, flexShrink:0 }}
+            <div key={a.id} style={{ background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, borderRadius:20, padding:24, textAlign:'center' as const, border:`1.5px solid ${theme.primaryColor}15`, cursor:'pointer', width:'min(100%,240px)', flexShrink:0 }}
               onMouseEnter={e=>{(e.currentTarget as any).style.transform='translateY(-4px)';}}
               onMouseLeave={e=>{(e.currentTarget as any).style.transform='none';}}
               onClick={()=>navigate(`/artists/${a.artist_slug || a.id}`)}

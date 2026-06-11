@@ -19,8 +19,9 @@ export default function Footer() {
 
   return (
     <footer style={{ background:'white', borderTop:`2px solid ${p}15`, padding:'40px 24px 20px', fontFamily:theme.fontFamily, marginTop:'auto' }}>
+      <style>{`@media(max-width:640px){.ft-grid{grid-template-columns:1fr!important;gap:24px!important;}}`}</style>
       <div style={{ maxWidth:1200, margin:'0 auto' }}>
-        <div style={{ display:'grid', gridTemplateColumns:`2fr ${footer.columns.map(()=>'1fr').join(' ')}`, gap:40, marginBottom:32 }}>
+        <div className="ft-grid" style={{ display:'grid', gridTemplateColumns:`2fr ${footer.columns.map(()=>'1fr').join(' ')}`, gap:40, marginBottom:32 }}>
           {/* Brand column */}
           <div>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
