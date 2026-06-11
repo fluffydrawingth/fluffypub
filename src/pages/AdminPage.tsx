@@ -503,6 +503,35 @@ function OrdersTab() {
   const [msg, setMsg] = useState('');
   const [reminderIds, setReminderIds] = useState<string[]>([]);
   const [sendingReminder, setSendingReminder] = useState(false);
+  const [emailLogs, setEmailLogs] = useState<any[]>([]);
+  const [sendingReminderSingle, setSendingReminderSingle] = useState(false);
+
+  const loadEmailLogs = async (orderId: string) => {
+    const token = localStorage.getItem('fluffy_token') || '';
+    try {
+      const r = await fetch(`/api/orders?action=email-logs&id=${orderId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const d = await r.json();
+      setEmailLogs(Array.isArray(d) ? d : []);
+    } catch { setEmailLogs([]); }
+  };
+
+  const sendSingleReminder = async () => {
+    if (!selected) return;
+    setSendingReminderSingle(true);
+    const token = localStorage.getItem('fluffy_token') || '';
+    const r = await fetch(`/api/orders?action=reminder&id=${selected.id}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+    const d = await r.json();
+    if (d.error) { setMsg('⚠️ ' + d.error); }
+    else {
+      const now = new Date().toISOString();
+      setOrders(prev => prev.map(o => o.id === selected.id ? { ...o, payment_reminder_sent_at: now } : o));
+      setSelected((prev: any) => ({ ...prev, payment_reminder_sent_at: now }));
+      setMsg('✓ Reminder sent!');
+      await loadEmailLogs(selected.id);
+    }
+    setSendingReminderSingle(false);
+    setTimeout(() => setMsg(''), 4000);
+  };
 
   const load = () => api.allOrders().then(o=>setOrders(Array.isArray(o)?o:[]));
   useEffect(()=>{load();},[]);
@@ -533,13 +562,17 @@ function OrdersTab() {
     setProvider(o.shipping_provider||'');
     setStatus(o.status);
     setMsg('');
+    setEmailLogs([]);
+    loadEmailLogs(o.id);
   };
 
   const save = async () => {
     if (!selected) return; setSaving(true);
     const updated = await api.updateOrder(selected.id, { status, tracking_number:tracking, shipping_provider:provider });
     setOrders(prev=>prev.map(o=>o.id===selected.id?{...o,...updated}:o));
-    setSelected((prev:any)=>({...prev,...updated})); setSaving(false); setMsg('✓ Updated!'); setTimeout(()=>setMsg(''),3000);
+    setSelected((prev:any)=>({...prev,...updated})); setSaving(false); setMsg('✓ Updated!');
+    await loadEmailLogs(selected.id);
+    setTimeout(()=>setMsg(''),3000);
   };
 
   const markPaid = async () => {
@@ -549,7 +582,7 @@ function OrdersTab() {
       const r = await fetch(`/api/orders?action=pay&id=${selected.id}`,{method:'POST',headers:{Authorization:`Bearer ${token}`}});
       const updated = await r.json();
       if (updated.error) setMsg('⚠️ '+updated.error);
-      else { setOrders(prev=>prev.map(o=>o.id===selected.id?updated:o)); setSelected(updated); setMsg('✓ Marked as paid!'); }
+      else { setOrders(prev=>prev.map(o=>o.id===selected.id?updated:o)); setSelected(updated); setMsg('✓ Marked as paid!'); await loadEmailLogs(selected.id); }
     } catch { setMsg('⚠️ Failed.'); }
     setMarking(false); setTimeout(()=>setMsg(''),4000);
   };
@@ -804,9 +837,14 @@ function OrdersTab() {
 
             {/* Mark paid */}
             {selected.payment_status!=='paid'&&(
-              <button onClick={markPaid} disabled={marking} style={{width:'100%',padding:'10px',background:marking?'#10b981aa':'#10b981',color:'white',border:'none',cursor:'pointer',borderRadius:10,fontSize:13,fontWeight:700,fontFamily:'inherit',marginBottom:10,boxShadow:'0 4px 12px #10b98144'}}>
-                {marking?'Processing...':'✅ Mark as Paid'}
-              </button>
+              <div style={{display:'flex',gap:8,marginBottom:10}}>
+                <button onClick={markPaid} disabled={marking} style={{flex:1,padding:'10px',background:marking?'#10b981aa':'#10b981',color:'white',border:'none',cursor:'pointer',borderRadius:10,fontSize:13,fontWeight:700,fontFamily:'inherit',boxShadow:'0 4px 12px #10b98144'}}>
+                  {marking?'Processing...':'✅ Mark as Paid'}
+                </button>
+                <button onClick={sendSingleReminder} disabled={sendingReminderSingle} title="Send payment reminder email" style={{padding:'10px 12px',background:sendingReminderSingle?'#f59e0baa':'#f59e0b',color:'white',border:'none',cursor:'pointer',borderRadius:10,fontSize:13,fontWeight:700,fontFamily:'inherit'}}>
+                  {sendingReminderSingle?'...':'📧'}
+                </button>
+              </div>
             )}
             {selected.payment_status==='paid'&&<div style={{background:'#d1fae5',borderRadius:8,padding:'8px 12px',fontSize:12,color:'#065f46',fontWeight:700,marginBottom:10}}>✅ Payment confirmed</div>}
 
@@ -831,6 +869,36 @@ function OrdersTab() {
 
             {msg&&<div style={{marginBottom:8,fontSize:12,fontWeight:600,color:msg.startsWith('✓')?'#059669':'#dc2626'}}>{msg}</div>}
             <button onClick={save} disabled={saving} style={{width:'100%',padding:'10px',background:saving?P+'88':P,color:'white',border:'none',cursor:'pointer',borderRadius:10,fontSize:13,fontWeight:700,fontFamily:'inherit',boxShadow:`0 4px 12px ${P}44`}}>{saving?'Saving...':'Update Order'}</button>
+
+            {/* Email history */}
+            <div style={{marginTop:18,borderTop:'1px solid #f3f4f6',paddingTop:14}}>
+              <div style={{fontSize:11,fontWeight:700,color:'#9ca3af',marginBottom:8,letterSpacing:0.5}}>📧 EMAIL HISTORY</div>
+              {emailLogs.length === 0
+                ? <div style={{fontSize:12,color:'#d1d5db',fontStyle:'italic'}}>No emails logged yet</div>
+                : emailLogs.map((log:any) => {
+                    const EVENT_LABELS:any = {
+                      order_created:'Order Created → Customer', admin_order_created:'Order Created → Admin',
+                      payment_reminder:'Payment Reminder → Customer', payment_confirmed:'Payment Confirmed → Customer',
+                      admin_payment_confirmed:'Payment Confirmed → Admin', tracking_added:'Tracking Added → Customer',
+                      slip_uploaded:'Slip Uploaded → Admin',
+                    };
+                    const isErr = log.status === 'error';
+                    return (
+                      <div key={log.id} style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',padding:'6px 0',borderBottom:'1px solid #f9fafb',gap:8}}>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:11,fontWeight:700,color:isErr?'#dc2626':'#374151'}}>{EVENT_LABELS[log.event_type]||log.event_type}</div>
+                          <div style={{fontSize:10,color:'#9ca3af',marginTop:1}}>{log.recipient_email}</div>
+                          {isErr&&<div style={{fontSize:10,color:'#ef4444',marginTop:1}}>{log.error}</div>}
+                        </div>
+                        <div style={{textAlign:'right',flexShrink:0}}>
+                          <span style={{fontSize:10,background:isErr?'#fee2e2':log.status==='dev_skip'?'#f3f4f6':'#d1fae5',color:isErr?'#dc2626':log.status==='dev_skip'?'#6b7280':'#065f46',borderRadius:6,padding:'2px 6px',fontWeight:600}}>{isErr?'error':log.status==='dev_skip'?'dev':' sent'}</span>
+                          <div style={{fontSize:9,color:'#d1d5db',marginTop:2}}>{new Date(log.created_at).toLocaleString('th-TH',{month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>
+                        </div>
+                      </div>
+                    );
+                  })
+              }
+            </div>
           </div>
         )}
       </div>

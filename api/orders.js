@@ -1,21 +1,238 @@
 // /api/orders
 const { supabase, requireAuth, getUser, json } = require('./_lib');
 
-async function sendEmail(to, subject, html) {
-  // Use Resend API if configured, otherwise log
+const SITE = process.env.SITE_URL || 'https://fluffypub.vercel.app';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'fluffydrawing.th@gmail.com';
+
+// ── Email helpers ────────────────────────────────────────────────────────────
+
+function emailWrapper(bodyHtml) {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#fdf2f8;font-family:'Nunito',sans-serif">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#fdf2f8;padding:32px 16px">
+<tr><td>
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:white;borderRadius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(244,114,182,0.12)">
+  <tr><td style="background:linear-gradient(135deg,#fce7f3,#fdf4ff);padding:28px 32px;text-align:center;border-bottom:2px solid #f9a8d4">
+    <div style="font-size:28px;margin-bottom:6px">🐰</div>
+    <div style="font-size:22px;font-weight:900;color:#f472b6;letter-spacing:-0.5px">Fluffy Pub</div>
+    <div style="font-size:12px;color:#c084fc;font-weight:600;margin-top:2px">adorable coloring books 🌸</div>
+  </td></tr>
+  <tr><td style="padding:28px 32px">${bodyHtml}</td></tr>
+  <tr><td style="background:#fafafa;padding:16px 32px;text-align:center;border-top:1px solid #f3f4f6">
+    <p style="margin:0;font-size:11px;color:#9ca3af">Fluffy Pub · <a href="${SITE}" style="color:#f472b6;text-decoration:none">${SITE}</a></p>
+    <p style="margin:4px 0 0;font-size:11px;color:#d1d5db">© ${new Date().getFullYear()} Fluffy Pub. All rights reserved.</p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+}
+
+function orderItemsHtml(items) {
+  return (items || []).map(i => {
+    const isDigital = (i.optionType || i.type) === 'digital';
+    const qty = i.qty || 1;
+    const price = i.unitPriceTHB || i.price_thb || 0;
+    const line = i.lineTotalTHB || price * qty;
+    return `<tr style="border-bottom:1px solid #f3f4f6">
+      <td style="padding:10px 0;font-size:13px">
+        <div style="font-weight:700;color:#111827">${i.title || ''}</div>
+        ${i.optionName ? `<div style="font-size:11px;color:#6b7280;margin-top:2px">📌 ${i.optionName}</div>` : ''}
+        <div style="font-size:11px;color:${isDigital?'#1d4ed8':'#065f46'};font-weight:600;margin-top:3px">${isDigital?'⬇️ Digital':'📦 Physical'} · Qty: ${qty}</div>
+      </td>
+      <td style="padding:10px 0;text-align:right;font-weight:800;color:#111827;font-size:13px">฿${Number(line).toLocaleString('th-TH')}</td>
+    </tr>`;
+  }).join('');
+}
+
+function orderSummaryHtml(order) {
+  const ref = (order.id || '').slice(-8).toUpperCase();
+  const total = order.total_thb || order.total_amount || 0;
+  const shipping = order.shipping_thb || 0;
+  return `
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px">
+      ${orderItemsHtml(order.items)}
+    </table>
+    ${shipping > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;margin-bottom:4px"><span>Shipping</span><span>฿${Number(shipping).toLocaleString('th-TH')}</span></div>` : ''}
+    <div style="border-top:2px solid #f3f4f6;padding-top:10px;display:flex;justify-content:space-between;font-weight:900;font-size:16px;color:#111827">
+      <span>Total</span><span style="color:#f472b6">฿${Number(total).toLocaleString('th-TH')}</span>
+    </div>`;
+}
+
+// Templates ─────────────────────────────────────────────────────────────────
+
+function tplOrderCreated(order) {
+  const ref = (order.id || '').slice(-8).toUpperCase();
+  const total = order.total_thb || order.total_amount || 0;
+  return emailWrapper(`
+    <h2 style="margin:0 0 6px;color:#111827;font-size:20px">🎉 ขอบคุณสำหรับการสั่งซื้อ!</h2>
+    <p style="margin:0 0 20px;color:#6b7280;font-size:13px">Thank you for your order! We've received it and are waiting for payment.</p>
+    <div style="background:#fdf2f8;border-radius:12px;padding:14px 16px;margin-bottom:20px;border:1.5px solid #f9a8d4">
+      <div style="font-size:12px;color:#9ca3af;font-weight:700;letter-spacing:0.5px;margin-bottom:4px">ORDER NUMBER</div>
+      <div style="font-size:22px;font-weight:900;color:#f472b6">#${ref}</div>
+    </div>
+    <h3 style="margin:0 0 10px;font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.5px">รายการสินค้า / Items</h3>
+    ${orderSummaryHtml(order)}
+    <div style="background:#fef3c7;border-radius:12px;padding:16px;margin-top:20px;border:1px solid #fcd34d">
+      <div style="font-weight:700;color:#92400e;font-size:14px;margin-bottom:8px">💳 วิธีชำระเงิน / Payment Instructions</div>
+      <ol style="margin:0;padding-left:20px;color:#78350f;font-size:13px;line-height:1.8">
+        <li>โอนเงินผ่าน PromptPay ตามยอดที่ระบุ</li>
+        <li>ถ่ายรูปสลิปการโอนเงิน</li>
+        <li>อัปโหลดสลิปในหน้าคำสั่งซื้อ</li>
+      </ol>
+      <a href="${SITE}/account/orders" style="display:inline-block;margin-top:12px;background:#f472b6;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📱 ดูคำสั่งซื้อ / View Order →</a>
+    </div>
+    <p style="margin:20px 0 0;font-size:12px;color:#9ca3af">หลังจากยืนยันการชำระเงิน ทีมงานจะดำเนินการต่อภายใน 24 ชม. 🌸</p>
+  `);
+}
+
+function tplAdminNewOrder(order) {
+  const ref = (order.id || '').slice(-8).toUpperCase();
+  const total = order.total_thb || order.total_amount || 0;
+  return emailWrapper(`
+    <h2 style="margin:0 0 6px;color:#111827;font-size:18px">🛍️ New Order Received</h2>
+    <div style="background:#f0fdf4;border-radius:10px;padding:12px 14px;margin:14px 0;border:1px solid #86efac">
+      <div style="font-weight:700;color:#065f46;font-size:14px">#${ref} · ฿${Number(total).toLocaleString('th-TH')}</div>
+      <div style="font-size:12px;color:#374151;margin-top:4px">👤 ${order.customer_name} · ${order.customer_email}</div>
+      ${order.customer_phone ? `<div style="font-size:12px;color:#374151">📞 ${order.customer_phone}</div>` : ''}
+    </div>
+    ${orderSummaryHtml(order)}
+    <a href="${SITE}/admin" style="display:inline-block;margin-top:16px;background:#f472b6;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">⚙️ View in Admin →</a>
+  `);
+}
+
+function tplPaymentReminder(order) {
+  const ref = (order.id || '').slice(-8).toUpperCase();
+  const total = order.total_thb || order.total_amount || 0;
+  return emailWrapper(`
+    <h2 style="margin:0 0 6px;color:#111827;font-size:20px">⏰ แจ้งเตือนการชำระเงิน</h2>
+    <p style="margin:0 0 16px;color:#6b7280;font-size:13px">คำสั่งซื้อของคุณยังรอการชำระเงินอยู่ / Your order is still awaiting payment.</p>
+    <div style="background:#fef3c7;border-radius:12px;padding:14px 16px;margin-bottom:20px;border:1.5px solid #fcd34d">
+      <div style="font-size:12px;color:#92400e;font-weight:700;margin-bottom:4px">คำสั่งซื้อ / ORDER</div>
+      <div style="font-size:22px;font-weight:900;color:#d97706">#${ref}</div>
+      <div style="font-size:18px;font-weight:800;color:#92400e;margin-top:4px">฿${Number(total).toLocaleString('th-TH')}</div>
+    </div>
+    <p style="font-size:13px;color:#374151;margin:0 0 12px">กรุณาชำระเงินเพื่อยืนยันคำสั่งซื้อของคุณ / Please complete payment to confirm your order.</p>
+    <a href="${SITE}/account/orders" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:12px 24px;border-radius:20px;font-weight:700;font-size:14px">💳 ชำระเงินตอนนี้ / Pay Now →</a>
+    <p style="margin:16px 0 0;font-size:11px;color:#9ca3af">หากต้องการยกเลิก กรุณาติดต่อเรา / To cancel, please contact us. 🌸</p>
+  `);
+}
+
+function tplPaymentConfirmed(order) {
+  const ref = (order.id || '').slice(-8).toUpperCase();
+  return emailWrapper(`
+    <h2 style="margin:0 0 6px;color:#111827;font-size:20px">✅ ยืนยันการชำระเงินแล้ว!</h2>
+    <p style="margin:0 0 16px;color:#6b7280;font-size:13px">Payment confirmed! We're preparing your order. 🌸</p>
+    <div style="background:#f0fdf4;border-radius:12px;padding:14px 16px;margin-bottom:20px;border:1.5px solid #86efac">
+      <div style="font-size:12px;color:#065f46;font-weight:700;margin-bottom:4px">คำสั่งซื้อ / ORDER</div>
+      <div style="font-size:22px;font-weight:900;color:#059669">#${ref}</div>
+      <div style="font-size:12px;color:#374151;margin-top:6px">🎁 กำลังเตรียมสินค้า / Preparing your items...</div>
+    </div>
+    <h3 style="margin:0 0 10px;font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.5px">รายการสินค้า / Items</h3>
+    ${orderSummaryHtml(order)}
+    <a href="${SITE}/account/orders" style="display:inline-block;margin-top:16px;background:#059669;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📦 ติดตามคำสั่งซื้อ / Track Order →</a>
+    <p style="margin:16px 0 0;font-size:12px;color:#9ca3af">ทีมงานจะดำเนินการจัดส่งภายใน 1-3 วันทำการ 🌸</p>
+  `);
+}
+
+function tplAdminPaymentConfirmed(order) {
+  const ref = (order.id || '').slice(-8).toUpperCase();
+  const total = order.total_thb || order.total_amount || 0;
+  return emailWrapper(`
+    <h2 style="margin:0 0 6px;color:#111827;font-size:18px">💰 Payment Received</h2>
+    <div style="background:#f0fdf4;border-radius:10px;padding:12px 14px;margin:14px 0;border:1px solid #86efac">
+      <div style="font-weight:700;color:#065f46;font-size:14px">#${ref} · ฿${Number(total).toLocaleString('th-TH')}</div>
+      <div style="font-size:12px;color:#374151;margin-top:4px">👤 ${order.customer_name} · ${order.customer_email}</div>
+    </div>
+    <p style="font-size:13px;color:#374151">Payment confirmed. Order is ready for fulfillment.</p>
+    <a href="${SITE}/admin" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">⚙️ Fulfill Order →</a>
+  `);
+}
+
+function tplTrackingAdded(order) {
+  const ref = (order.id || '').slice(-8).toUpperCase();
+  const tracking = order.tracking_number;
+  const provider = order.shipping_provider || 'Thailand Post';
+  return emailWrapper(`
+    <h2 style="margin:0 0 6px;color:#111827;font-size:20px">🚚 สินค้าถูกจัดส่งแล้ว!</h2>
+    <p style="margin:0 0 16px;color:#6b7280;font-size:13px">Your order has been shipped! 📦</p>
+    <div style="background:#eff6ff;border-radius:12px;padding:16px;margin-bottom:20px;border:1.5px solid #93c5fd">
+      <div style="font-size:12px;color:#1e40af;font-weight:700;margin-bottom:8px">TRACKING NUMBER</div>
+      <div style="font-size:24px;font-weight:900;color:#1d4ed8;letter-spacing:1px">${tracking}</div>
+      <div style="font-size:13px;color:#374151;margin-top:6px">🚚 ${provider}</div>
+    </div>
+    <div style="font-size:13px;color:#374151;margin-bottom:16px">
+      <strong>คำสั่งซื้อ / Order #${ref}</strong>
+    </div>
+    <a href="${SITE}/account/orders" style="display:inline-block;background:#2563eb;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📦 ติดตามพัสดุ / Track Package →</a>
+    <p style="margin:16px 0 0;font-size:12px;color:#9ca3af">กรุณารอรับพัสดุภายใน 3-7 วันทำการ 🌸</p>
+  `);
+}
+
+// Core send + log ─────────────────────────────────────────────────────────────
+
+async function sendEmail(to, subject, html, opts = {}) {
+  const { orderId, eventType } = opts;
   const RESEND_KEY = process.env.RESEND_API_KEY;
   const FROM = process.env.EMAIL_FROM || 'noreply@fluffypub.vercel.app';
+
+  // Check duplicate: if orderId + eventType already sent successfully, skip
+  if (orderId && eventType) {
+    try {
+      const { data: existing } = await supabase
+        .from('order_email_logs')
+        .select('id')
+        .eq('order_id', orderId)
+        .eq('event_type', eventType)
+        .eq('recipient_email', to)
+        .eq('status', 'sent')
+        .limit(1);
+      if (existing && existing.length > 0) {
+        console.log(`[EMAIL] Duplicate skip: ${eventType} for order ${orderId}`);
+        return { skipped: true };
+      }
+    } catch (e) { /* table may not exist yet — proceed */ }
+  }
+
+  let status = 'sent';
+  let errorMsg = null;
+
   if (!RESEND_KEY) {
     console.log('[EMAIL] No RESEND_API_KEY. Would send to:', to, 'Subject:', subject);
-    return;
+    status = 'dev_skip';
+  } else {
+    try {
+      const resp = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RESEND_KEY}` },
+        body: JSON.stringify({ from: `Fluffy Pub <${FROM}>`, to, subject, html }),
+      });
+      if (!resp.ok) {
+        const body = await resp.text();
+        status = 'error';
+        errorMsg = `HTTP ${resp.status}: ${body}`;
+        console.error('[EMAIL] Resend error:', errorMsg);
+      }
+    } catch(e) {
+      status = 'error';
+      errorMsg = e.message;
+      console.error('[EMAIL] Send failed:', e.message);
+    }
   }
-  try {
-    await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RESEND_KEY}` },
-      body: JSON.stringify({ from: `Fluffy Pub <${FROM}>`, to, subject, html }),
-    });
-  } catch(e) { console.error('Email send failed:', e.message); }
+
+  // Log
+  if (orderId && eventType) {
+    try {
+      await supabase.from('order_email_logs').insert({
+        order_id: orderId,
+        event_type: eventType,
+        recipient_email: to,
+        subject,
+        status,
+        error: errorMsg,
+      });
+    } catch (e) { console.warn('[EMAIL] Log failed (table may not exist):', e.message); }
+  }
+
+  return { status, error: errorMsg };
 }
 
 
@@ -168,35 +385,9 @@ module.exports = async function handler(req, res) {
       return json(res, 400, { error: error.message, code: error.code, hint: error.hint });
     }
     // Send confirmation emails
-    const SITE = process.env.SITE_URL || 'https://fluffypub.vercel.app';
     const orderRef = (order.id || '').slice(-8).toUpperCase();
-    const adminEmail = process.env.ADMIN_EMAIL || 'fluffydrawing.th@gmail.com';
-    const thbAmount = order.total_thb || order.total_amount || (parseFloat(order.total||'0') * 35);
-
-    // Email customer
-    await sendEmail(customerEmail, `✅ คำสั่งซื้อ #${orderRef} รับแล้ว — Fluffy Pub`,
-      `<div style="font-family:sans-serif;max-width:480px;margin:auto">
-        <h2>🐰 ขอบคุณสำหรับการสั่งซื้อ!</h2>
-        <p>เลขที่คำสั่งซื้อ: <strong>#${orderRef}</strong></p>
-        <p>ยอดชำระ: <strong>฿${Number(thbAmount).toLocaleString('th-TH')}</strong></p>
-        <h3>วิธีชำระเงิน PromptPay</h3>
-        <p>โอนเงินผ่าน PromptPay แล้วอัปโหลดสลิปที่:</p>
-        <p><a href="${SITE}/#/account/orders">${SITE}/#/account/orders</a></p>
-        <p>หลังจากยืนยันการชำระเงิน ทีมงานจะดำเนินการต่อภายใน 24 ชม.</p>
-        <hr/><p style="color:#888;font-size:12px">Fluffy Pub — adorable coloring books 🌸</p>
-      </div>`
-    );
-
-    // Email admin
-    await sendEmail(adminEmail, `🛍️ New Order #${orderRef} — ฿${Number(thbAmount).toLocaleString('th-TH')}`,
-      `<p><strong>New order received!</strong></p>
-       <p>Order: #${orderRef}</p>
-       <p>Customer: ${customerName} (${customerEmail})</p>
-       <p>Phone: ${customerPhone||'-'}</p>
-       <p>Amount: ฿${Number(thbAmount).toLocaleString('th-TH')}</p>
-       <p>Items: ${orderItems.map(i=>`${i.title}${i.variant?` (${i.variant.name})`:''}`).join(', ')}</p>
-       <p><a href="${SITE}/#/admin/orders">View in Admin →</a></p>`
-    );
+    await sendEmail(customerEmail, `✅ คำสั่งซื้อ #${orderRef} รับแล้ว — Fluffy Pub`, tplOrderCreated(order), { orderId: order.id, eventType: 'order_created' });
+    await sendEmail(ADMIN_EMAIL, `🛍️ New Order #${orderRef} — ฿${Number(order.total_thb||0).toLocaleString('th-TH')}`, tplAdminNewOrder(order), { orderId: order.id, eventType: 'admin_order_created' });
 
     return json(res, 201, order);
   }
@@ -214,21 +405,14 @@ module.exports = async function handler(req, res) {
     }).eq('id', id).select().single();
     if (error) return json(res, 400, { error: error.message });
 
-    // Notify admin
-    const adminEmail = process.env.ADMIN_EMAIL || 'fluffydrawing.th@gmail.com';
-    await sendEmail(adminEmail, `💳 Payment slip uploaded — Order #${id.slice(-8).toUpperCase()}`,
-      `<p>Customer <strong>${order.customer_name}</strong> uploaded a payment slip for Order #${id.slice(-8).toUpperCase()}.</p><p>Amount: ฿${order.total_thb || order.total_amount || order.total}</p><p>Slip: <a href="${slip_url}">${slip_url}</a></p>`
-    );
-    // Notify admin of slip upload
-    const adminEmail2 = process.env.ADMIN_EMAIL || 'fluffydrawing.th@gmail.com';
-    const SITE2 = process.env.SITE_URL || 'https://fluffypub.vercel.app';
-    const ref2 = (order.id||'').slice(-8).toUpperCase();
-    const thb2 = order.total_thb || order.total_amount || (parseFloat(order.total||'0')*35);
-    await sendEmail(adminEmail2, `💳 Payment Slip Uploaded — Order #${ref2}`,
-      `<p><strong>${order.customer_name}</strong> uploaded a payment slip.</p>
-       <p>Order: #${ref2} — ฿${Number(thb2).toLocaleString('th-TH')}</p>
-       <p>Slip: <a href="${slip_url}">${slip_url}</a></p>
-       <p><a href="${SITE2}/#/admin/orders">Review in Admin →</a></p>`
+    const ref = (order.id||'').slice(-8).toUpperCase();
+    const total = order.total_thb || order.total_amount || 0;
+    await sendEmail(ADMIN_EMAIL, `💳 Payment Slip Uploaded — Order #${ref}`,
+      emailWrapper(`<h2 style="margin:0 0 10px;color:#111827;font-size:18px">💳 Payment Slip Uploaded</h2>
+        <p style="color:#374151;font-size:13px"><strong>${order.customer_name}</strong> uploaded a payment slip for Order <strong>#${ref}</strong> · ฿${Number(total).toLocaleString('th-TH')}</p>
+        <img src="${slip_url}" alt="slip" style="width:100%;max-width:320px;border-radius:8px;border:1px solid #e5e7eb;margin:8px 0">
+        <a href="${SITE}/admin" style="display:inline-block;margin-top:8px;background:#f472b6;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">⚙️ Review in Admin →</a>`),
+      { orderId: order.id, eventType: 'slip_uploaded' }
     );
     return json(res, 200, data);
   }
@@ -255,6 +439,12 @@ module.exports = async function handler(req, res) {
       items: enrichedItems,
     }).eq('id', id).select().single();
     if (error) return json(res, 400, { error: error.message });
+
+    // Send payment confirmed emails
+    const ref = (data.id||'').slice(-8).toUpperCase();
+    await sendEmail(data.customer_email, `✅ ยืนยันการชำระเงิน Order #${ref} — Fluffy Pub`, tplPaymentConfirmed(data), { orderId: data.id, eventType: 'payment_confirmed' });
+    await sendEmail(ADMIN_EMAIL, `💰 Payment Confirmed — Order #${ref}`, tplAdminPaymentConfirmed(data), { orderId: data.id, eventType: 'admin_payment_confirmed' });
+
     return json(res, 200, data);
   }
 
@@ -263,12 +453,25 @@ module.exports = async function handler(req, res) {
     const user = await requireAuth(req, res, ['admin']);
     if (!user) return;
     const { status, tracking_number, shipping_provider } = req.body || {};
+
+    // Fetch current order to detect tracking change
+    const { data: before } = await supabase.from('orders').select('*').eq('id', id).single();
+
     const updates = { updated_at: new Date().toISOString() };
     if (status) updates.status = status;
-    if (tracking_number) updates.tracking_number = tracking_number;
-    if (shipping_provider) updates.shipping_provider = shipping_provider;
+    if (tracking_number !== undefined) updates.tracking_number = tracking_number;
+    if (shipping_provider !== undefined) updates.shipping_provider = shipping_provider;
+
     const { data, error } = await supabase.from('orders').update(updates).eq('id', id).select().single();
     if (error) return json(res, 404, { error: 'Order not found' });
+
+    // Send tracking email if tracking number was newly set
+    const trackingAdded = tracking_number && tracking_number !== before?.tracking_number;
+    if (trackingAdded && data.customer_email) {
+      const ref = (data.id||'').slice(-8).toUpperCase();
+      await sendEmail(data.customer_email, `🚚 สินค้าถูกจัดส่งแล้ว! Order #${ref} — Fluffy Pub`, tplTrackingAdded(data), { orderId: data.id, eventType: 'tracking_added' });
+    }
+
     return json(res, 200, data);
   }
 
@@ -294,42 +497,45 @@ module.exports = async function handler(req, res) {
     return json(res, 200, cancelData);
   }
 
-  // POST send payment reminder (admin)
+  // POST send payment reminder (admin) — supports single id via query or bulk via body
   if (req.method === 'POST' && action === 'reminder') {
     const user = await requireAuth(req, res, ['admin']);
     if (!user) return;
-    const { orderIds } = req.body || {};
-    if (!orderIds?.length) return json(res, 400, { error: 'orderIds required' });
-    const SITE = process.env.SITE_URL || 'https://fluffypub.vercel.app';
+    // Support single order via ?id= or bulk via body.orderIds
+    const orderIds = id ? [id] : (req.body?.orderIds || []);
+    if (!orderIds.length) return json(res, 400, { error: 'orderIds required' });
     const results = [];
     for (const oid of orderIds) {
       const { data: order } = await supabase.from('orders').select('*').eq('id', oid).single();
       if (!order) { results.push({ id: oid, error: 'Not found' }); continue; }
-      // Send reminder email
       const ref = (order.id || '').slice(-8).toUpperCase();
-      const amt = order.total_thb || order.total_amount || (parseFloat(order.total || '0') * 35);
-      await sendEmail(
+      const result = await sendEmail(
         order.customer_email,
         `⏰ แจ้งเตือน: รอชำระเงินคำสั่งซื้อ #${ref} — Fluffy Pub`,
-        `<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:20px">
-          <h2>⏰ แจ้งเตือนการชำระเงิน</h2>
-          <p>คำสั่งซื้อของคุณ <strong>#${ref}</strong> ยังรอการชำระเงินอยู่</p>
-          <p>ยอดชำระ: <strong>฿${Number(amt).toLocaleString('th-TH')}</strong></p>
-          <h3>วิธีชำระเงิน:</h3>
-          <ol>
-            <li>โอนเงินผ่าน PromptPay ตามยอดที่ระบุ</li>
-            <li>ถ่ายรูปสลิปการโอนเงิน</li>
-            <li>อัปโหลดสลิปที่: <a href="${SITE}/#/account/orders">${SITE}/#/account/orders</a></li>
-          </ol>
-          <p><em>หากชำระเงินแล้ว กรุณาอัปโหลดสลิป หรือติดต่อแอดมินพร้อมระบุเลขที่คำสั่งซื้อ #${ref}</em></p>
-          <hr/><p style="color:#888;font-size:12px">Fluffy Pub 🌸</p>
-        </div>`
+        tplPaymentReminder(order),
+        { orderId: order.id, eventType: 'payment_reminder' }
       );
-      // Mark reminder sent
       await supabase.from('orders').update({ payment_reminder_sent_at: new Date().toISOString() }).eq('id', oid);
-      results.push({ id: oid, sent: true });
+      results.push({ id: oid, sent: true, skipped: result?.skipped });
     }
     return json(res, 200, { results });
+  }
+
+  // GET email logs for an order (admin)
+  if (req.method === 'GET' && action === 'email-logs' && id) {
+    const user = await requireAuth(req, res, ['admin']);
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('order_email_logs')
+        .select('*')
+        .eq('order_id', id)
+        .order('created_at', { ascending: false });
+      if (error) return json(res, 200, []); // table may not exist yet
+      return json(res, 200, data || []);
+    } catch (e) {
+      return json(res, 200, []);
+    }
   }
 
   // DELETE order (admin)
