@@ -34,7 +34,7 @@ module.exports = async function handler(req, res) {
     const { name, email, password, role = 'customer' } = req.body || {};
     if (!name || !email || !password) return json(res, 400, { error: 'Name, email and password required.' });
     if (!['customer', 'artist'].includes(role)) return json(res, 400, { error: 'Invalid role.' });
-    const redirectUrl = `${process.env.SITE_URL || 'https://fluffypub.vercel.app'}/api/auth?action=confirm`;
+    const redirectUrl = `${process.env.SITE_URL || 'https://fluffypub.com'}/api/auth?action=confirm`;
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name, role }, emailRedirectTo: redirectUrl } });
     if (error) {
       if (error.message.includes('already registered')) return json(res, 409, { error: 'Email already registered.' });
@@ -53,7 +53,7 @@ module.exports = async function handler(req, res) {
     const { email, redirectTo } = req.body || {};
     if (!email) return json(res, 400, { error: 'Email required.' });
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectTo || `${process.env.SITE_URL || 'https://fluffypub.vercel.app'}/#/reset-password`,
+      redirectTo: redirectTo || `${process.env.SITE_URL || 'https://fluffypub.com'}/#/reset-password`,
     });
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, { success: true, message: 'Password reset email sent.' });
