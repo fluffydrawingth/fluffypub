@@ -63,10 +63,12 @@ module.exports = async function handler(req, res) {
     const token = (req.headers['authorization'] || '').replace('Bearer ', '');
     const { password } = req.body || {};
     if (!password || password.length < 6) return json(res, 400, { error: 'Password must be at least 6 characters.' });
-    // Use the user's token to update their password
-    const { createClient } = require('@supabase/supabase-js');
-    const userSupabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-    const { error } = await userSupabase.auth.updateUser({ password });
+    if (!token) return json(res, 401, { error: 'Auth session missing. Please request a new reset link.' });
+    // Verify the recovery token and get the user
+    const { data: { user }, error: getUserError } = await supabase.auth.getUser(token);
+    if (getUserError || !user) return json(res, 401, { error: 'Reset link has expired. Please request a new one.' });
+    // Update password via admin API (no session required)
+    const { error } = await supabase.auth.admin.updateUserById(user.id, { password });
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, { success: true });
   }
