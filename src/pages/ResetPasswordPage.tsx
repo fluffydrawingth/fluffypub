@@ -14,17 +14,18 @@ export default function ResetPasswordPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
-  const [recoveryToken, setRecoveryToken] = useState('');
+  const [recoveryTokens, setRecoveryTokens] = useState<{access_token:string, refresh_token:string} | null>(null);
 
-  // Extract access_token from URL hash when arriving from email link
+  // Extract tokens from URL hash when arriving from Supabase email link
   useEffect(() => {
-    const hash = window.location.hash.slice(1); // strip leading #
+    const hash = window.location.hash.slice(1);
     const params = new URLSearchParams(hash);
-    const token = params.get('access_token');
+    const access_token = params.get('access_token') || '';
+    const refresh_token = params.get('refresh_token') || '';
     const type = params.get('type');
-    if (token && type === 'recovery') {
-      setRecoveryToken(token);
-      // Clear the token from the URL so it isn't bookmarked
+    if (access_token && type === 'recovery') {
+      setRecoveryTokens({ access_token, refresh_token });
+      // Clean URL so tokens aren't stored in browser history
       window.history.replaceState(null, '', window.location.pathname + '#/reset-password');
     }
   }, []);
@@ -34,12 +35,14 @@ export default function ResetPasswordPage() {
     if (!password || password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     if (password !== confirm) { setError('Passwords do not match.'); return; }
     setBusy(true);
-    // Use recovery token from email link if available, otherwise fall back to stored session
-    const tokenToUse = recoveryToken || localStorage.getItem('fluffy_token') || '';
     const r = await fetch('/api/auth?action=update-password', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tokenToUse}` },
-      body: JSON.stringify({ password }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password,
+        access_token: recoveryTokens?.access_token || '',
+        refresh_token: recoveryTokens?.refresh_token || '',
+      }),
     });
     const d = await r.json();
     if (r.ok) { setDone(true); setTimeout(() => navigate('/login'), 2500); }

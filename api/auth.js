@@ -60,15 +60,15 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method === 'POST' && action === 'update-password') {
-    const token = (req.headers['authorization'] || '').replace('Bearer ', '');
-    const { password } = req.body || {};
+    const { password, access_token, refresh_token } = req.body || {};
     if (!password || password.length < 6) return json(res, 400, { error: 'Password must be at least 6 characters.' });
-    if (!token) return json(res, 401, { error: 'Auth session missing. Please request a new reset link.' });
-    // Verify the recovery token and get the user
-    const { data: { user }, error: getUserError } = await supabase.auth.getUser(token);
-    if (getUserError || !user) return json(res, 401, { error: 'Reset link has expired. Please request a new one.' });
-    // Update password via admin API (no session required)
-    const { error } = await supabase.auth.admin.updateUserById(user.id, { password });
+    if (!access_token) return json(res, 401, { error: 'Reset link missing. Please request a new one.' });
+    // Establish a session using the recovery tokens from the email link
+    const { createClient } = require('@supabase/supabase-js');
+    const anonClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const { error: sessionError } = await anonClient.auth.setSession({ access_token, refresh_token: refresh_token || '' });
+    if (sessionError) return json(res, 401, { error: 'Reset link has expired. Please request a new one.' });
+    const { error } = await anonClient.auth.updateUser({ password });
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, { success: true });
   }
