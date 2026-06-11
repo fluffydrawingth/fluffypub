@@ -84,10 +84,10 @@ function tplOrderCreated(order) {
       </ol>
       <a href="${orderLink}" style="display:inline-block;margin-top:12px;background:#f472b6;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📱 ดูคำสั่งซื้อ / View Order →</a>
     </div>
-    <div style="background:#eff6ff;border-radius:12px;padding:14px 16px;margin-top:16px;border:1px solid #bfdbfe">
-      <div style="font-size:12px;color:#1e40af;font-weight:700;margin-bottom:6px">🔗 ลิงก์ติดตามคำสั่งซื้อ / Order Access Link</div>
-      <p style="margin:0 0 8px;font-size:12px;color:#374151">บันทึกลิงก์นี้ไว้เพื่อดูสถานะออเดอร์โดยไม่ต้องล็อกอิน / Save this link to track your order without logging in.</p>
-      <a href="${orderLink}" style="font-size:11px;color:#2563eb;word-break:break-all">${orderLink}</a>
+    <div style="background:#fdf2f8;border-radius:12px;padding:14px 16px;margin-top:16px;border:1px solid #f9a8d4;text-align:center">
+      <div style="font-size:12px;color:#9ca3af;font-weight:700;margin-bottom:6px">🔗 ติดตามคำสั่งซื้อ / Track Your Order</div>
+      <p style="margin:0 0 12px;font-size:12px;color:#374151">บันทึกลิงก์นี้ไว้เพื่อดูสถานะออเดอร์โดยไม่ต้องล็อกอิน / Save this link to track your order without logging in.</p>
+      <a href="${orderLink}" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:10px 24px;border-radius:20px;font-weight:700;font-size:13px">🔍 ดูสถานะออเดอร์ / Track Order →</a>
     </div>
     <p style="margin:20px 0 0;font-size:12px;color:#9ca3af">หลังจากยืนยันการชำระเงิน ทีมงานจะดำเนินการต่อภายใน 24 ชม. 🌸</p>
   `);
