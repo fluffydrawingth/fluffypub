@@ -102,9 +102,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (t && typeof t === 'object' && !Array.isArray(t)) {
         const parsed = JSON.parse(JSON.stringify(t));
         delete parsed.heroImage; delete parsed.bgImage;
-        // Merge footer with defaults to ensure structure
         if (!parsed.footer) parsed.footer = DEFAULT_FOOTER;
         else parsed.footer = { ...DEFAULT_FOOTER, ...parsed.footer };
+        // Migrate old Nunito-only font to Itim
+        if (!parsed.fontFamily || parsed.fontFamily === "'Nunito', sans-serif" || parsed.fontFamily === '"Nunito", sans-serif') {
+          parsed.fontFamily = "'Itim', 'Nunito', sans-serif";
+        }
         setThemeState({ ...DEFAULT, ...parsed });
       }
     }).catch(() => {});
@@ -126,8 +129,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     r.style.setProperty('--bg', theme.bgColor);
     r.style.setProperty('--bg2', theme.bgColor2);
     r.style.setProperty('--text', theme.textColor);
-    // Apply font to the whole document
-    document.body.style.fontFamily = theme.fontFamily;
   }, [theme]);
 
   return <ThemeContext.Provider value={{ theme, setTheme, saveTheme }}>{children}</ThemeContext.Provider>;
