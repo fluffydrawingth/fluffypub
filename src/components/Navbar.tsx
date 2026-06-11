@@ -140,7 +140,6 @@ export default function Navbar() {
       )}
 
       {menuOpen && <div style={{ position:'fixed', inset:0, zIndex:150 }} onClick={()=>setMenuOpen(false)} />}
-      {navOpen && <div style={{ position:'fixed', inset:0, zIndex:99 }} onClick={()=>setNavOpen(false)} />}
     </nav>
   );
 }
