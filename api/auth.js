@@ -76,9 +76,6 @@ module.exports = async function handler(req, res) {
     const RESEND_KEY = process.env.RESEND_API_KEY;
     if (RESEND_KEY) {
       const brand = await getThemeBranding();
-      const logoHtml = brand.logoImageDataUrl
-        ? `<img src="${brand.logoImageDataUrl}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 8px" alt="${brand.logoText}" />`
-        : `<span style="font-size:40px">${brand.logoEmoji}</span>`;
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RESEND_KEY}` },
@@ -87,7 +84,7 @@ module.exports = async function handler(req, res) {
           to: [email],
           subject: `🔑 Reset your ${brand.logoText} password`,
           html: `<div style="font-family:'Helvetica Neue',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#fdf2f8;border-radius:16px">
-            <div style="text-align:center;margin-bottom:24px">${logoHtml}<h2 style="color:${brand.primaryColor};margin:8px 0">${brand.logoText}</h2></div>
+            <div style="text-align:center;margin-bottom:24px"><span style="font-size:40px">🐰</span><h2 style="color:${brand.primaryColor};margin:8px 0">${brand.logoText}</h2></div>
             <h3 style="color:#4a1942;margin:0 0 12px">Reset your password</h3>
             <p style="color:#6b7280;margin:0 0 24px">Click the button below to set a new password. This link expires in 1 hour.</p>
             <div style="text-align:center;margin-bottom:24px">

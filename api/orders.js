@@ -9,15 +9,12 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'fluffydrawing.th@gmail.com';
 
 async function emailWrapper(bodyHtml) {
   const brand = await getThemeBranding();
-  const logoHtml = brand.logoImageDataUrl
-    ? `<img src="${brand.logoImageDataUrl}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;margin-bottom:8px;display:block;margin-left:auto;margin-right:auto" alt="${brand.logoText}" />`
-    : `<div style="font-size:28px;margin-bottom:6px">${brand.logoEmoji}</div>`;
   return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#fdf2f8;font-family:'Nunito',sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#fdf2f8;padding:32px 16px">
 <tr><td>
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:white;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(244,114,182,0.12)">
   <tr><td style="background:linear-gradient(135deg,#fce7f3,#fdf4ff);padding:28px 32px;text-align:center;border-bottom:2px solid #f9a8d4">
-    ${logoHtml}
+    <div style="font-size:28px;margin-bottom:6px">🐰</div>
     <div style="font-size:22px;font-weight:900;color:${brand.primaryColor};letter-spacing:-0.5px">${brand.logoText}</div>
     <div style="font-size:12px;color:#c084fc;font-weight:600;margin-top:2px">adorable coloring books 🌸</div>
   </td></tr>
