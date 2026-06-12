@@ -2056,9 +2056,11 @@ function CustomEmailBox({ orderId, customerEmail, onSent }: { orderId: string; c
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ subject, message }),
       });
-      const data = await res.json();
-      if (data.success) { setResult('✓ Email sent!'); setSubject(''); setMessage(''); onSent(); }
-      else setResult(`⚠️ ${data.error || 'Failed to send.'}`);
+      // Safe parse — Vercel may return non-JSON on timeout even if the email sent
+      let data: any = null;
+      try { data = await res.json(); } catch {}
+      if (data?.error) { setResult(`⚠️ ${data.error}`); }
+      else { setResult('✓ Email sent!'); setSubject(''); setMessage(''); onSent(); }
     } catch { setResult('⚠️ Network error.'); }
     setSending(false);
   };
