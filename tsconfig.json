@@ -25,6 +25,7 @@
     "checkJs": false
   },
   "include": [
-    "src"
+    "src",
+    "api"
   ]
 }
