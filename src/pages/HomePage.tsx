@@ -276,20 +276,25 @@ function BlogSection() {
           <span style={{ fontSize:13, fontWeight:700, color:p, letterSpacing:1, textTransform:'uppercase' as const }}>{tl(theme.labels?.blog_eyebrow || '📄 From the Blog', theme.labels?.blog_eyebrow_th)}</span>
           <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 0', fontFamily:theme.fontFamily }}>{tl(theme.labels?.blog_title || 'Latest Updates', theme.labels?.blog_title_th)}</h2>
         </div>
-        <div style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:24 }}>
           {pages.map(pg => (
             <div key={pg.id} onClick={() => navigate(`/pages/${pg.slug}`)}
-              style={{ width:'min(100%,340px)', background:theme.bgColor, borderRadius:16, overflow:'hidden', cursor:'pointer', boxShadow:'0 2px 12px rgba(0,0,0,0.06)', border:`1px solid ${p}15`, transition:'all 0.15s', flexShrink:0 }}
-              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow=`0 8px 24px ${p}20`; }}
-              onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='0 2px 12px rgba(0,0,0,0.06)'; }}
+              style={{ background:'white', borderRadius:20, overflow:'hidden', cursor:'pointer', boxShadow:'0 2px 16px rgba(0,0,0,0.07)', border:`1px solid ${p}12`, transition:'all 0.18s', display:'flex', flexDirection:'column' as const }}
+              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow=`0 12px 32px ${p}22`; }}
+              onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='0 2px 16px rgba(0,0,0,0.07)'; }}
             >
-              {pg.image_url && (
-                <img src={pg.image_url} alt={pg.title} style={{ width:'100%', height:180, objectFit:'cover', display:'block' }} />
-              )}
-              <div style={{ padding:20 }}>
-                <h3 style={{ fontSize:16, fontWeight:800, color:theme.textColor, margin:'0 0 8px', lineHeight:1.3 }}>{pg.title}</h3>
-                {pg.excerpt && <p style={{ fontSize:13, color:theme.textColor+'88', margin:'0 0 12px', lineHeight:1.6 }}>{pg.excerpt}</p>}
-                <span style={{ fontSize:13, color:p, fontWeight:700 }}>Read More →</span>
+              {pg.image_url
+                ? <img src={pg.image_url} alt={pg.title} style={{ width:'100%', height:200, objectFit:'cover', display:'block' }} />
+                : <div style={{ width:'100%', height:200, background:`linear-gradient(135deg,${p}18,${p}08)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:56 }}>
+                    📄
+                  </div>
+              }
+              <div style={{ padding:'20px 22px', flex:1, display:'flex', flexDirection:'column' as const }}>
+                <h3 style={{ fontSize:17, fontWeight:800, color:theme.textColor, margin:'0 0 8px', lineHeight:1.35 }}>{pg.title}</h3>
+                {pg.excerpt && <p style={{ fontSize:13, color:theme.textColor+'88', margin:'0 0 14px', lineHeight:1.65, flex:1 }}>{pg.excerpt}</p>}
+                <div style={{ marginTop:'auto' }}>
+                  <span style={{ display:'inline-block', fontSize:13, color:p, fontWeight:700, background:p+'12', padding:'6px 14px', borderRadius:20 }}>Read More →</span>
+                </div>
               </div>
             </div>
           ))}

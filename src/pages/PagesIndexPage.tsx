@@ -33,26 +33,26 @@ export default function PagesIndexPage() {
             <p>Check back soon for updates!</p>
           </div>
         ) : (
-          <div style={{ display:'flex', flexDirection:'column' as const, gap:24 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:28 }}>
             {pages.map(pg => (
               <div key={pg.id}
                 onClick={() => navigate(`/pages/${pg.slug}`)}
-                style={{ background:'white', borderRadius:16, overflow:'hidden', display:'flex', cursor:'pointer', boxShadow:'0 2px 12px rgba(0,0,0,0.06)', border:`1px solid ${p}15`, transition:'all 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${p}15`; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; }}
+                style={{ background:'white', borderRadius:20, overflow:'hidden', cursor:'pointer', boxShadow:'0 2px 16px rgba(0,0,0,0.07)', border:`1px solid ${p}12`, transition:'all 0.18s', display:'flex', flexDirection:'column' as const }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = `0 12px 32px ${p}22`; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 16px rgba(0,0,0,0.07)'; }}
               >
-                {pg.image_url && (
-                  <img src={pg.image_url} alt={pg.title}
-                    style={{ width:200, height:140, objectFit:'cover', flexShrink:0 }} />
-                )}
-                <div style={{ padding:'20px 24px', flex:1 }}>
+                {pg.image_url
+                  ? <img src={pg.image_url} alt={pg.title} style={{ width:'100%', height:200, objectFit:'cover', display:'block' }} />
+                  : <div style={{ width:'100%', height:200, background:`linear-gradient(135deg,${p}18,${p}08)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:56 }}>📄</div>
+                }
+                <div style={{ padding:'20px 22px', flex:1, display:'flex', flexDirection:'column' as const }}>
+                  <div style={{ fontSize:12, color:theme.textColor+'55', marginBottom:8 }}>
+                    {new Date(pg.updated_at || pg.created_at).toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' })}
+                  </div>
                   <h2 style={{ fontSize:18, fontWeight:800, color:theme.textColor, margin:'0 0 8px', lineHeight:1.3 }}>{pg.title}</h2>
-                  {pg.excerpt && <p style={{ fontSize:14, color:theme.textColor+'99', margin:'0 0 12px', lineHeight:1.6 }}>{pg.excerpt}</p>}
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <span style={{ fontSize:12, color:theme.textColor+'55' }}>
-                      {new Date(pg.updated_at || pg.created_at).toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' })}
-                    </span>
-                    <span style={{ fontSize:13, color:p, fontWeight:700 }}>Read More →</span>
+                  {pg.excerpt && <p style={{ fontSize:14, color:theme.textColor+'99', margin:'0 0 14px', lineHeight:1.65, flex:1 }}>{pg.excerpt}</p>}
+                  <div style={{ marginTop:'auto' }}>
+                    <span style={{ display:'inline-block', fontSize:13, color:p, fontWeight:700, background:p+'12', padding:'7px 16px', borderRadius:20 }}>Read More →</span>
                   </div>
                 </div>
               </div>
