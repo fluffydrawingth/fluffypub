@@ -1463,6 +1463,7 @@ function PagesCMSTab() {
   const [slug, setSlug] = useState('');
   const [content, setContent] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [status, setStatus] = useState('draft');
   const [excerpt, setExcerpt] = useState('');
   const [showOnHomepage, setShowOnHomepage] = useState(false);
@@ -1559,7 +1560,34 @@ function PagesCMSTab() {
             </select>
           </div>
         </div>
-        {F('Image URL (optional)', imageUrl, setImageUrl, 'https://...')}
+        {/* Cover image upload */}
+        <div style={{marginBottom:12}}>
+          <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:6}}>Cover Image (optional)</label>
+          {imageUrl && (
+            <div style={{position:'relative' as const,marginBottom:8,display:'inline-block'}}>
+              <img src={imageUrl} alt="cover" style={{width:'100%',maxWidth:340,height:160,objectFit:'cover',borderRadius:10,border:'1.5px solid #e5e7eb',display:'block'}} />
+              <button onClick={()=>setImageUrl('')} style={{position:'absolute' as const,top:6,right:6,background:'rgba(0,0,0,0.55)',color:'white',border:'none',borderRadius:'50%',width:24,height:24,cursor:'pointer',fontSize:12,lineHeight:'24px',textAlign:'center' as const}}>✕</button>
+            </div>
+          )}
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <label style={{display:'flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:10,border:`1.5px solid ${P}`,background:'#fdf2f8',cursor:uploadingCover?'not-allowed':'pointer',fontSize:12,fontWeight:700,color:P}}>
+              {uploadingCover ? '⏳ Uploading…' : '📤 Upload Image'}
+              <input type="file" accept="image/*" style={{display:'none'}} disabled={uploadingCover} onChange={async e=>{
+                const file = e.target.files?.[0]; if (!file) return;
+                setUploadingCover(true);
+                const result = await api.uploadFile(file, 'pages');
+                setUploadingCover(false);
+                if (result.error) { alert('Upload failed: ' + result.error); return; }
+                setImageUrl(result.publicUrl);
+                e.target.value = '';
+              }} />
+            </label>
+            <span style={{fontSize:11,color:'#9ca3af'}}>or paste URL:</span>
+            <input value={imageUrl} onChange={e=>setImageUrl(e.target.value)} placeholder="https://..."
+              style={{flex:1,padding:'8px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:12,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+              onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+          </div>
+        </div>
         {F('Excerpt (optional)', excerpt, setExcerpt, 'Short summary shown on homepage and pages list...')}
         <div style={{display:'grid',gridTemplateColumns:'1fr 100px',gap:12,marginBottom:12}}>
           <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',background:showOnHomepage?P+'10':'#f9fafb',border:`1.5px solid ${showOnHomepage?P:'#e5e7eb'}`,borderRadius:10,padding:'10px 14px',fontSize:13,fontWeight:600,color:showOnHomepage?P:'#374151',transition:'all 0.1s'}}>
