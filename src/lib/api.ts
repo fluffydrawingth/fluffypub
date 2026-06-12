@@ -40,7 +40,7 @@ export const api = {
   deleteOrder: (id: string) =>
     fetch(`/api/orders?id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 
-  updateOrder: (id: string, data: any) => fetch(`/api/orders?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify({ status: data.status, tracking_number: data.trackingNumber, shipping_provider: data.shippingProvider }) }).then(r => r.json()).then(normalizeOrder),
+  updateOrder: (id: string, data: any) => fetch(`/api/orders?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify({ status: data.status, tracking_number: data.tracking_number ?? data.trackingNumber, shipping_provider: data.shipping_provider ?? data.shippingProvider }) }).then(r => r.json()).then(normalizeOrder),
 
   // Users
   updateMe: async (data: any) => {

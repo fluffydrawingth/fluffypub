@@ -159,7 +159,7 @@ async function tplAdminPaymentConfirmed(order) {
 
 async function tplTrackingAdded(order) {
   const ref = (order.id || '').slice(-8).toUpperCase();
-  const tracking = order.tracking_number;
+  const tracking = order.tracking_number || '—';
   const provider = order.shipping_provider || 'Thailand Post';
   return await emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:20px">🚚 สินค้าถูกจัดส่งแล้ว!</h2>
