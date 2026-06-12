@@ -52,8 +52,11 @@ module.exports = async function handler(req, res) {
   if (req.method === 'POST' && action === 'reset') {
     const { email, redirectTo } = req.body || {};
     if (!email) return json(res, 400, { error: 'Email required.' });
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectTo || `${process.env.SITE_URL || 'https://fluffypub.com'}/#/reset-password`,
+    // Must use anon key — service role key bypasses email sending
+    const { createClient } = require('@supabase/supabase-js');
+    const anonClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+    const { error } = await anonClient.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectTo || `${process.env.SITE_URL || 'https://fluffypub.com'}`,
     });
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, { success: true, message: 'Password reset email sent.' });
