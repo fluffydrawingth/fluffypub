@@ -98,21 +98,35 @@ const DEFAULT: ThemeConfig = {
 const ThemeContext = createContext<{ theme: ThemeConfig; setTheme:(t:ThemeConfig)=>void; saveTheme:(t:ThemeConfig)=>Promise<void>; }>
   ({ theme:DEFAULT, setTheme:()=>{}, saveTheme:async()=>{} });
 
+const THEME_CACHE_KEY = 'fluffy_theme_cache';
+
+function applyParsed(parsed: any): ThemeConfig {
+  delete parsed.heroImage; delete parsed.bgImage;
+  if (!parsed.footer) parsed.footer = DEFAULT_FOOTER;
+  else parsed.footer = { ...DEFAULT_FOOTER, ...parsed.footer };
+  if (!parsed.fontFamily || parsed.fontFamily === "'Nunito', sans-serif" || parsed.fontFamily === '"Nunito", sans-serif') {
+    parsed.fontFamily = "'Itim', 'Nunito', sans-serif";
+  }
+  return { ...DEFAULT, ...parsed };
+}
+
+function getCachedTheme(): ThemeConfig {
+  try {
+    const raw = localStorage.getItem(THEME_CACHE_KEY);
+    if (raw) return applyParsed(JSON.parse(raw));
+  } catch {}
+  return DEFAULT;
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeConfig>(DEFAULT);
+  const [theme, setThemeState] = useState<ThemeConfig>(() => getCachedTheme());
 
   useEffect(() => {
     fetch('/api/theme').then(r=>r.json()).then(t => {
       if (t && typeof t === 'object' && !Array.isArray(t)) {
-        const parsed = JSON.parse(JSON.stringify(t));
-        delete parsed.heroImage; delete parsed.bgImage;
-        if (!parsed.footer) parsed.footer = DEFAULT_FOOTER;
-        else parsed.footer = { ...DEFAULT_FOOTER, ...parsed.footer };
-        // Migrate old Nunito-only font to Itim
-        if (!parsed.fontFamily || parsed.fontFamily === "'Nunito', sans-serif" || parsed.fontFamily === '"Nunito", sans-serif') {
-          parsed.fontFamily = "'Itim', 'Nunito', sans-serif";
-        }
-        setThemeState({ ...DEFAULT, ...parsed });
+        const applied = applyParsed(JSON.parse(JSON.stringify(t)));
+        try { localStorage.setItem(THEME_CACHE_KEY, JSON.stringify(t)); } catch {}
+        setThemeState(applied);
       }
     }).catch(() => {});
   }, []);
@@ -122,6 +136,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const saveTheme = async (t: ThemeConfig) => {
     const token = localStorage.getItem('fluffy_token');
     setThemeState(t);
+    try { localStorage.setItem(THEME_CACHE_KEY, JSON.stringify(t)); } catch {}
     await fetch('/api/theme', { method:'PUT', headers:{'Content-Type':'application/json', ...(token?{Authorization:`Bearer ${token}`}:{})}, body: JSON.stringify(t) });
   };
 
