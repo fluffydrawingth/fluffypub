@@ -74,7 +74,7 @@ async function getThemeBranding() {
     return {
       logoText: cfg.logoText || 'Fluffy Pub',
       logoEmoji: cfg.logoEmoji || '🐰',
-      logoImageDataUrl: cfg.logoUrl || null,  // public URL only — base64 is blocked by email clients
+      logoImageDataUrl: cfg.logoUrl || cfg.logoImageCrop?.croppedDataUrl || null,
       primaryColor: cfg.primaryColor || '#f472b6',
     };
   } catch {
