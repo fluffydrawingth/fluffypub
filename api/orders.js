@@ -604,6 +604,33 @@ module.exports = async function handler(req, res) {
     }
   }
 
+  // POST custom message email to customer (admin only)
+  if (req.method === 'POST' && action === 'custom-email' && id) {
+    const user = await requireAuth(req, res, ['admin']);
+    if (!user) return;
+    const { subject, message } = req.body || {};
+    if (!subject?.trim() || !message?.trim()) return json(res, 400, { error: 'Subject and message are required.' });
+    const { data: order, error: orderErr } = await supabase.from('orders').select('id,customer_name,customer_email,access_token').eq('id', id).single();
+    if (orderErr || !order) return json(res, 404, { error: 'Order not found.' });
+    const ref = order.id.slice(-8).toUpperCase();
+    const orderLink = order.access_token ? `${SITE}/#/guest-order/${order.access_token}` : `${SITE}/#/account/orders`;
+    const html = await emailWrapper(`
+      <div style="background:#fdf2f8;border-radius:10px;padding:10px 14px;margin-bottom:18px;border:1px solid #f9a8d4">
+        <div style="font-size:11px;color:#9ca3af;font-weight:700;letter-spacing:0.5px">ORDER</div>
+        <div style="font-size:16px;font-weight:900;color:#f472b6">#${ref}</div>
+        <div style="font-size:12px;color:#374151;margin-top:2px">👤 ${order.customer_name}</div>
+      </div>
+      <div style="font-size:14px;color:#111827;line-height:1.8;white-space:pre-wrap">${message.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+      <div style="margin-top:20px;text-align:center">
+        <a href="${orderLink}" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:10px 24px;border-radius:20px;font-weight:700;font-size:13px">📦 ดูคำสั่งซื้อ / View Order →</a>
+      </div>
+    `);
+    // Custom messages always send (no dedup) — call sendEmail without eventType to skip dedup check, then log manually
+    await sendEmail(order.customer_email, subject.trim(), html, {});
+    await supabase.from('order_email_logs').insert({ order_id: order.id, event_type: 'custom_message', recipient_email: order.customer_email, subject: subject.trim(), status: 'sent', sent_by: user.email }).catch(() => {});
+    return json(res, 200, { success: true });
+  }
+
   // DELETE order (admin)
   if (req.method === 'DELETE' && id) {
     const user = await requireAuth(req, res, ['admin']);

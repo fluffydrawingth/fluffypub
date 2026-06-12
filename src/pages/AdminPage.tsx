@@ -1020,6 +1020,9 @@ function OrdersTab() {
             {msg&&<div style={{marginBottom:8,fontSize:12,fontWeight:600,color:msg.startsWith('✓')?'#059669':'#dc2626'}}>{msg}</div>}
             <button onClick={save} disabled={saving} style={{width:'100%',padding:'10px',background:saving?P+'88':P,color:'white',border:'none',cursor:'pointer',borderRadius:10,fontSize:13,fontWeight:700,fontFamily:'inherit',boxShadow:`0 4px 12px ${P}44`}}>{saving?'Saving...':'Update Order'}</button>
 
+            {/* Send custom message */}
+            <CustomEmailBox orderId={selected.id} customerEmail={selected.customer_email} onSent={()=>loadEmailLogs(selected.id)} />
+
             {/* Email history */}
             <div style={{marginTop:18,borderTop:'1px solid #f3f4f6',paddingTop:14}}>
               <div style={{fontSize:11,fontWeight:700,color:'#9ca3af',marginBottom:8,letterSpacing:0.5}}>📧 EMAIL HISTORY</div>
@@ -1032,6 +1035,7 @@ function OrdersTab() {
                       admin_payment_confirmed:'Payment Confirmed → Admin', tracking_added:'Tracking Updated → Customer',
                       shipped_notification:'Shipped Notification → Customer', slip_uploaded:'Slip Uploaded → Admin',
                       access_link_resent:'Order Link Resent → Customer',
+                      custom_message:'Custom Message → Customer',
                     };
                     const isErr = log.status === 'error';
                     return (
@@ -1927,6 +1931,57 @@ function ThemeTab() {
         </>)}
         {section==='footer'&&<FooterCMSEditor footer={draft.footer} onFooterChange={upd} />}
       </div>
+    </div>
+  );
+}
+
+// ── Custom Email Box ─────────────────────────────────────────────────────────
+function CustomEmailBox({ orderId, customerEmail, onSent }: { orderId: string; customerEmail: string; onSent: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState('');
+
+  const send = async () => {
+    if (!subject.trim() || !message.trim()) { setResult('⚠️ Subject and message are required.'); return; }
+    if (!confirm(`Send email to ${customerEmail}?\n\nSubject: ${subject}`)) return;
+    setSending(true); setResult('');
+    try {
+      const token = localStorage.getItem('fluffy_token');
+      const res = await fetch(`/api/orders?action=custom-email&id=${orderId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ subject, message }),
+      });
+      const data = await res.json();
+      if (data.success) { setResult('✓ Email sent!'); setSubject(''); setMessage(''); onSent(); }
+      else setResult(`⚠️ ${data.error || 'Failed to send.'}`);
+    } catch { setResult('⚠️ Network error.'); }
+    setSending(false);
+  };
+
+  return (
+    <div style={{ marginTop: 14, borderTop: '1px solid #f3f4f6', paddingTop: 14 }}>
+      <button onClick={() => { setOpen(v => !v); setResult(''); }}
+        style={{ width: '100%', textAlign: 'left' as const, background: open ? '#fdf2f8' : '#f9fafb', border: `1.5px solid ${open ? '#f9a8d4' : '#e5e7eb'}`, borderRadius: 10, padding: '9px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: open ? '#be185d' : '#374151', fontFamily: 'inherit', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>✉️ Send Message to Customer</span>
+        <span style={{ fontSize: 10, opacity: 0.6 }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+          <div style={{ fontSize: 11, color: '#9ca3af' }}>To: {customerEmail}</div>
+          <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Email subject..."
+            style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 12, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' as const }} />
+          <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder="Message body..."
+            rows={5} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 12, outline: 'none', fontFamily: 'inherit', resize: 'vertical' as const, boxSizing: 'border-box' as const }} />
+          {result && <div style={{ fontSize: 12, fontWeight: 600, color: result.startsWith('✓') ? '#059669' : '#dc2626' }}>{result}</div>}
+          <button onClick={send} disabled={sending}
+            style={{ padding: '9px', background: sending ? '#f9a8d4' : '#f472b6', color: 'white', border: 'none', cursor: sending ? 'not-allowed' : 'pointer', borderRadius: 10, fontSize: 12, fontWeight: 700, fontFamily: 'inherit' }}>
+            {sending ? 'Sending...' : '📤 Send Email'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
