@@ -27,6 +27,8 @@ export default function AdminPage() {
   const { navigate } = useRouter();
   const { user, logout } = useAuth();
   const [tab, setTab] = useState<Tab>('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   useEffect(()=>{
     if (!user) { navigate('/login'); return; }
@@ -35,40 +37,75 @@ export default function AdminPage() {
 
   if (!user || user.role !== 'admin' || user.email !== ADMIN_EMAIL) return null;
 
-  return (
-    <div style={{ display:'flex', minHeight:'100vh', background:'#f9fafb', fontFamily:"'Nunito', sans-serif" }}>
-      <div style={{ width:220, background:'white', borderRight:'1px solid #f3f4f6', display:'flex', flexDirection:'column', position:'sticky', top:0, height:'100vh', boxShadow:'2px 0 8px rgba(0,0,0,0.04)' }}>
-        <div style={{ padding:'24px 20px 20px' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
-            <span style={{ fontSize:22 }}>⚙️</span>
-            <span style={{ fontSize:20, fontWeight:900, color:'#f472b6' }}>Admin</span>
-          </div>
-          <div style={{ fontSize:12, color:'#9ca3af', fontWeight:500 }}>Fluffy Pub Studio</div>
+  const TAB_LABELS: Record<Tab, string> = {
+    dashboard:'Dashboard', products:'Products', orders:'Orders', artists:'Artists',
+    categories:'Categories', pages:'Pages', theme:'Theme & CMS', lang:'Language CMS',
+  };
+
+  const selectTab = (t: Tab) => { setTab(t); setSidebarOpen(false); };
+
+  const sidebar = (
+    <div style={{ width:220, background:'white', borderRight:'1px solid #f3f4f6', display:'flex', flexDirection:'column', height:'100%', boxShadow:'2px 0 8px rgba(0,0,0,0.04)' }}>
+      <div style={{ padding:'24px 20px 20px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+          <span style={{ fontSize:22 }}>⚙️</span>
+          <span style={{ fontSize:20, fontWeight:900, color:'#f472b6' }}>Admin</span>
         </div>
-        <nav style={{ flex:1, padding:'0 12px' }}>
-          <NavItem icon="📊" label="Dashboard" active={tab==='dashboard'} onClick={()=>setTab('dashboard')} />
-          <NavItem icon="📚" label="Products"  active={tab==='products'}  onClick={()=>setTab('products')} />
-          <NavItem icon="📦" label="Orders"    active={tab==='orders'}    onClick={()=>setTab('orders')} />
-          <NavItem icon="🎨" label="Artists"   active={tab==='artists'}   onClick={()=>setTab('artists')} />
-          <NavItem icon="🏷️" label="Categories" active={tab==='categories'} onClick={()=>setTab('categories')} />
-          <NavItem icon="📄" label="Pages"      active={tab==='pages'}   onClick={()=>setTab('pages')} />
-          <NavItem icon="✨" label="Theme & CMS" active={tab==='theme'}   onClick={()=>setTab('theme')} />
-          <NavItem icon="🌐" label="Language CMS" active={tab==='lang'}    onClick={()=>setTab('lang')} />
-        </nav>
-        <div style={{ padding:'16px 12px', borderTop:'1px solid #f3f4f6' }}>
-          <button onClick={()=>navigate('/')} style={{ width:'100%', padding:'9px', borderRadius:10, border:'1px solid #e5e7eb', color:'#6b7280', cursor:'pointer', background:'transparent', fontSize:13, fontWeight:600, marginBottom:8, fontFamily:'inherit' }}>← View Store</button>
-          <button onClick={async()=>{await logout();navigate('/');}} style={{ width:'100%', padding:'9px', borderRadius:10, border:'1px solid #fca5a5', color:'#ef4444', cursor:'pointer', background:'#fef2f2', fontSize:13, fontWeight:600, fontFamily:'inherit' }}>Sign Out</button>
-        </div>
+        <div style={{ fontSize:12, color:'#9ca3af', fontWeight:500 }}>Fluffy Pub Studio</div>
       </div>
-      <div style={{ flex:1, overflow:'auto' }}>
-        {tab==='dashboard' && <DashboardTab />}
-        {tab==='products'  && <ProductsTab />}
-        {tab==='orders'    && <OrdersTab />}
-        {tab==='artists'   && <ArtistsTab />}
+      <nav style={{ flex:1, padding:'0 12px' }}>
+        <NavItem icon="📊" label="Dashboard"    active={tab==='dashboard'}  onClick={()=>selectTab('dashboard')} />
+        <NavItem icon="📚" label="Products"     active={tab==='products'}   onClick={()=>selectTab('products')} />
+        <NavItem icon="📦" label="Orders"       active={tab==='orders'}     onClick={()=>selectTab('orders')} />
+        <NavItem icon="🎨" label="Artists"      active={tab==='artists'}    onClick={()=>selectTab('artists')} />
+        <NavItem icon="🏷️" label="Categories"   active={tab==='categories'} onClick={()=>selectTab('categories')} />
+        <NavItem icon="📄" label="Pages"        active={tab==='pages'}      onClick={()=>selectTab('pages')} />
+        <NavItem icon="✨" label="Theme & CMS"  active={tab==='theme'}      onClick={()=>selectTab('theme')} />
+        <NavItem icon="🌐" label="Language CMS" active={tab==='lang'}       onClick={()=>selectTab('lang')} />
+      </nav>
+      <div style={{ padding:'16px 12px', borderTop:'1px solid #f3f4f6' }}>
+        <button onClick={()=>navigate('/')} style={{ width:'100%', padding:'9px', borderRadius:10, border:'1px solid #e5e7eb', color:'#6b7280', cursor:'pointer', background:'transparent', fontSize:13, fontWeight:600, marginBottom:8, fontFamily:'inherit' }}>← View Store</button>
+        <button onClick={async()=>{await logout();navigate('/');}} style={{ width:'100%', padding:'9px', borderRadius:10, border:'1px solid #fca5a5', color:'#ef4444', cursor:'pointer', background:'#fef2f2', fontSize:13, fontWeight:600, fontFamily:'inherit' }}>Sign Out</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ display:'flex', minHeight:'100vh', background:'#f9fafb', fontFamily:'inherit' }}>
+      <style>{`@media(min-width:768px){.admin-sidebar{display:flex!important;position:sticky!important;top:0;height:100vh;}}`}</style>
+
+      {/* Desktop sidebar */}
+      <div className="admin-sidebar" style={{ display:'none', flexDirection:'column', width:220, flexShrink:0 }}>
+        {sidebar}
+      </div>
+
+      {/* Mobile drawer backdrop */}
+      {sidebarOpen && (
+        <div onClick={()=>setSidebarOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:40 }} />
+      )}
+
+      {/* Mobile drawer */}
+      <div style={{ position:'fixed', top:0, left:0, height:'100%', zIndex:50, display:'flex', flexDirection:'column', width:240, transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)', transition:'transform 0.25s ease' }}>
+        {sidebar}
+      </div>
+
+      {/* Main content */}
+      <div style={{ flex:1, overflow:'auto', minWidth:0 }}>
+        {/* Mobile top bar */}
+        <div style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', background:'white', borderBottom:'1px solid #f3f4f6', position:'sticky', top:0, zIndex:30 }} className="admin-topbar">
+          <style>{`@media(min-width:768px){.admin-topbar{display:none!important;}}`}</style>
+          <button onClick={()=>setSidebarOpen(v=>!v)} style={{ background:'none', border:'none', cursor:'pointer', padding:6, borderRadius:8, fontSize:20, lineHeight:1 }}>☰</button>
+          <span style={{ fontWeight:800, fontSize:16, color:'#111827' }}>{TAB_LABELS[tab]}</span>
+        </div>
+
+        {tab==='dashboard'  && <DashboardTab />}
+        {tab==='products'   && <ProductsTab />}
+        {tab==='orders'     && <OrdersTab />}
+        {tab==='artists'    && <ArtistsTab />}
         {tab==='categories' && <CategoriesTab />}
-        {tab==='pages'     && <PagesCMSTab />}
-        {tab==='theme'     && <ThemeTab />}
-        {tab==='lang'      && <LanguageCMSTab />}
+        {tab==='pages'      && <PagesCMSTab />}
+        {tab==='theme'      && <ThemeTab />}
+        {tab==='lang'       && <LanguageCMSTab />}
       </div>
     </div>
   );
