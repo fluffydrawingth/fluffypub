@@ -61,13 +61,16 @@ module.exports = async function handler(req, res) {
       options: { redirectTo: SITE },
     });
 
-    // Always return success — never reveal whether an email exists
-    if (linkError || !linkData) {
-      return json(res, 200, { success: true, message: 'Password reset email sent.' });
+    if (linkError) {
+      const msg = linkError.message?.toLowerCase() || '';
+      if (msg.includes('not found') || msg.includes('no user') || msg.includes('unable to find')) {
+        return json(res, 404, { error: 'No account found with this email address.' });
+      }
+      return json(res, 400, { error: linkError.message });
     }
 
     const resetLink = linkData?.properties?.action_link || linkData?.action_link;
-    if (!resetLink) return json(res, 200, { success: true, message: 'Password reset email sent.' });
+    if (!resetLink) return json(res, 500, { error: 'Could not generate reset link. Please try again.' });
 
     // Send via Resend directly (same as order emails)
     const RESEND_KEY = process.env.RESEND_API_KEY;
