@@ -154,6 +154,20 @@ function DashboardTab() {
     setExporting(false);
   };
 
+  const exportSalesCsv = async () => {
+    const token = localStorage.getItem('fluffy_token') || '';
+    const res = await fetch(`/api/analytics?export_sales=1&month=${selMonth}&year=${selYear}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `product-sales-${selYear}-${String(selMonth).padStart(2,'0')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const years = Array.from({ length: 3 }, (_, i) => now.getFullYear() - i);
 
@@ -221,7 +235,7 @@ function DashboardTab() {
       </div>
 
       {/* Recent orders — from selected month */}
-      <div style={{...card,padding:20}}>
+      <div style={{...card,padding:20,marginBottom:20}}>
         <h3 style={{fontSize:15,fontWeight:800,color:'#111827',margin:'0 0 14px'}}>
           Orders — {['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][selMonth]} {selYear}
         </h3>
@@ -238,6 +252,63 @@ function DashboardTab() {
               </tr>
             );})}</tbody>
           </table>
+        )}
+      </div>
+
+      {/* Product Sales Summary */}
+      <div style={{...card,padding:20}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14,flexWrap:'wrap' as const,gap:8}}>
+          <h3 style={{fontSize:15,fontWeight:800,color:'#111827',margin:0}}>
+            📦 Product Sales Summary — {['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][selMonth]} {selYear}
+          </h3>
+          <button onClick={exportSalesCsv} disabled={!stats}
+            style={{padding:'7px 14px',borderRadius:10,background:P,color:'white',border:'none',cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:'inherit',display:'flex',alignItems:'center',gap:5}}>
+            📥 Export Sales CSV
+          </button>
+        </div>
+        <p style={{fontSize:11,color:'#9ca3af',margin:'0 0 14px'}}>Counts orders with status: paid, preparing, shipped, delivered only.</p>
+        {!stats ? (
+          <div style={{textAlign:'center',padding:'20px',color:'#9ca3af'}}>Loading...</div>
+        ) : (stats.productSales||[]).length === 0 ? (
+          <div style={{textAlign:'center',padding:'20px',color:'#9ca3af'}}>No sales data for this period</div>
+        ) : (
+          <div style={{overflowX:'auto' as const}}>
+            <table style={{width:'100%',borderCollapse:'collapse',minWidth:560}}>
+              <thead>
+                <tr style={{borderBottom:'2px solid #f3f4f6'}}>
+                  {['Product','Artist','Variant','Qty Sold','Gross Sales','Orders'].map(h=>(
+                    <th key={h} style={{textAlign:'left' as const,padding:'8px 10px',fontSize:11,color:'#9ca3af',fontWeight:700,letterSpacing:0.5,whiteSpace:'nowrap' as const}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(stats.productSales||[]).map((s:any, i:number)=>(
+                  <tr key={i} style={{borderBottom:'1px solid #f9fafb'}}>
+                    <td style={{padding:'10px',fontSize:13,fontWeight:600,color:'#111827'}}>{s.productName||'—'}</td>
+                    <td style={{padding:'10px',fontSize:12,color:'#6b7280'}}>{s.artistName||'—'}</td>
+                    <td style={{padding:'10px',fontSize:12,color:'#6b7280'}}>{s.variantName||'—'}</td>
+                    <td style={{padding:'10px',fontSize:13,fontWeight:700,color:'#111827',textAlign:'center' as const}}>{s.qty}</td>
+                    <td style={{padding:'10px',fontSize:13,fontWeight:700,color:'#059669'}}>฿{(s.grossSales||0).toLocaleString('th-TH')}</td>
+                    <td style={{padding:'10px',fontSize:12,color:'#6b7280',textAlign:'center' as const}}>{s.orderCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr style={{borderTop:'2px solid #f3f4f6',background:'#f9fafb'}}>
+                  <td colSpan={3} style={{padding:'10px',fontSize:12,fontWeight:700,color:'#374151'}}>Total</td>
+                  <td style={{padding:'10px',fontSize:13,fontWeight:900,color:'#111827',textAlign:'center' as const}}>
+                    {(stats.productSales||[]).reduce((s:number,r:any)=>s+r.qty,0)}
+                  </td>
+                  <td style={{padding:'10px',fontSize:13,fontWeight:900,color:'#059669'}}>
+                    ฿{(stats.productSales||[]).reduce((s:number,r:any)=>s+r.grossSales,0).toLocaleString('th-TH')}
+                  </td>
+                  <td style={{padding:'10px',fontSize:12,fontWeight:700,color:'#374151',textAlign:'center' as const}}>
+                    {(stats.productSales||[]).reduce((s:number,r:any)=>s+r.orderCount,0)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         )}
       </div>
     </div>
