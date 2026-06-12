@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export interface FooterLink {
   id: string;
-  label: string;
+  label: string; label_th?: string;
   url: string;
   newTab: boolean;
   enabled: boolean;
@@ -10,14 +10,14 @@ export interface FooterLink {
 
 export interface FooterColumn {
   id: string;
-  title: string;
+  title: string; title_th?: string;
   links: FooterLink[];
 }
 
 export interface FooterConfig {
-  description: string;
-  copyright: string;
-  trustBadges: string;
+  description: string; description_th?: string;
+  copyright: string; copyright_th?: string;
+  trustBadges: string; trustBadges_th?: string;
   columns: FooterColumn[];
 }
 
@@ -25,16 +25,20 @@ export interface ThemeConfig {
   primaryColor: string; secondaryColor: string; accentColor: string;
   bgColor: string; bgColor2: string; textColor: string; fontFamily: string;
   logoText: string; logoEmoji: string; logoImageCrop: any | null;
-  heroBgColor: string; heroTitle: string; heroSubtitle: string;
+  heroBgColor: string; heroTitle: string; heroTitle_th?: string; heroSubtitle: string; heroSubtitle_th?: string;
   heroCrop: any | null; mobileHeroCrop: any | null;
-  bannerText: string; bannerBg: string; bannerImageCrop: any | null;
+  bannerText: string; bannerText_th?: string; bannerBg: string; bannerImageCrop: any | null;
   bgImageCrop: any | null; sections: string[];
   heroStats: { value: string; label: string }[];
   featuredProductIds: string[];
   showNewsletter: boolean;
   labels: {
-    featured_eyebrow: string; featured_title: string; featured_btn: string;
-    blog_eyebrow: string; blog_title: string; blog_btn: string;
+    featured_eyebrow: string; featured_eyebrow_th?: string;
+    featured_title: string; featured_title_th?: string;
+    featured_btn: string; featured_btn_th?: string;
+    blog_eyebrow: string; blog_eyebrow_th?: string;
+    blog_title: string; blog_title_th?: string;
+    blog_btn: string; blog_btn_th?: string;
     nav_shop: string; nav_artists: string; nav_blog: string; nav_digital: string;
   };
   footer: FooterConfig;

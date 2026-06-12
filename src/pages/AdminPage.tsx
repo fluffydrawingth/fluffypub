@@ -1246,7 +1246,7 @@ function ArtistsTab() {
 // ── Theme text field — defined OUTSIDE component to prevent remount ──────────
 // StableInput: keeps local state while typing, flushes to parent only on blur.
 // This prevents the focus-loss bug caused by parent re-renders on every keystroke.
-function TF({label,val,set}:{label:string,val:string,set:(v:string)=>void}) {
+function TF({label,val,set,ph}:{label:string,val:string,set:(v:string)=>void,ph?:string}) {
   const [local, setLocal] = React.useState(val);
   // Sync from parent only when val changes from outside (e.g. preset applied)
   const prevVal = React.useRef(val);
@@ -1259,6 +1259,7 @@ function TF({label,val,set}:{label:string,val:string,set:(v:string)=>void}) {
       <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:6}}>{label}</label>
       <input
         value={local}
+        placeholder={ph}
         onChange={e=>setLocal(e.target.value)}
         onBlur={()=>set(local)}
         style={{width:'100%',padding:'10px 14px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
@@ -1753,15 +1754,24 @@ function ThemeTab() {
         </>)}
         {section==='hero'&&(<>
           <h2 style={{fontSize:20,fontWeight:900,color:'#111827',marginBottom:20}}>Hero Section</h2>
-          <TF label="Headline" val={draft.heroTitle} set={v=>upd('heroTitle',v)} />
-          <TF label="Subtitle" val={draft.heroSubtitle} set={v=>upd('heroSubtitle',v)} />
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
+            <TF label="Headline (EN)" val={draft.heroTitle} set={v=>upd('heroTitle',v)} />
+            <TF label="Headline (TH)" val={draft.heroTitle_th||''} set={v=>upd('heroTitle_th',v)} ph="ภาษาไทย (ไม่บังคับ)" />
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
+            <TF label="Subtitle (EN)" val={draft.heroSubtitle} set={v=>upd('heroSubtitle',v)} />
+            <TF label="Subtitle (TH)" val={draft.heroSubtitle_th||''} set={v=>upd('heroSubtitle_th',v)} ph="ภาษาไทย (ไม่บังคับ)" />
+          </div>
           <TF label="Background Gradient (CSS)" val={draft.heroBgColor} set={v=>upd('heroBgColor',v)} />
           <ImageCropEditor title="Hero Image (Desktop)" hint="Wide image 1600×600px." value={draft.heroCrop} aspectRatio={16/6} onChange={v=>upd('heroCrop',v)} />
           <div style={{marginTop:16}}><ImageCropEditor title="Hero Image (Mobile)" hint="Portrait 4:3 crop." value={draft.mobileHeroCrop} aspectRatio={4/3} onChange={v=>upd('mobileHeroCrop',v)} /></div>
         </>)}
         {section==='banner'&&(<>
           <h2 style={{fontSize:20,fontWeight:900,color:'#111827',marginBottom:20}}>Banner</h2>
-          <TF label="Banner Text" val={draft.bannerText} set={v=>upd('bannerText',v)} />
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:0}}>
+            <TF label="Banner Text (EN)" val={draft.bannerText} set={v=>upd('bannerText',v)} />
+            <TF label="Banner Text (TH)" val={draft.bannerText_th||''} set={v=>upd('bannerText_th',v)} ph="ข้อความแบนเนอร์ภาษาไทย (ไม่บังคับ)" />
+          </div>
           <div style={{marginBottom:14}}>
             <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:6}}>Banner Color</label>
             <div style={{display:'flex',gap:8,alignItems:'center'}}>
@@ -1803,18 +1813,26 @@ function ThemeTab() {
               <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Featured Products Section</span>
             </div>
             <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Shown on the homepage. Select which products to highlight and customize the section text.</p>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:14}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
               {([
-                ['featured_eyebrow','Eyebrow text','✨ Handpicked for You'],
-                ['featured_title','Section title','Featured Collections'],
-                ['featured_btn','Button text','View All Books →'],
-              ] as [string,string,string][]).map(([key,label,ph])=>(
-                <div key={key}>
-                  <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label}</label>
-                  <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={ph}
-                    style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
-                    onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
-                </div>
+                ['featured_eyebrow','featured_eyebrow_th','Eyebrow text','✨ Handpicked for You'],
+                ['featured_title','featured_title_th','Section title','Featured Collections'],
+                ['featured_btn','featured_btn_th','Button text','View All Books →'],
+              ] as [string,string,string,string][]).map(([key,keyTh,label,ph])=>(
+                <React.Fragment key={key}>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label} (EN)</label>
+                    <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={ph}
+                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                  </div>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label} (TH)</label>
+                    <input value={(draft.labels||{})[keyTh]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [keyTh]:e.target.value}}))} placeholder="ภาษาไทย (ไม่บังคับ)"
+                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                  </div>
+                </React.Fragment>
               ))}
             </div>
             <div style={{borderTop:'1px solid #f3f4f6',paddingTop:14}}>
@@ -1830,18 +1848,26 @@ function ThemeTab() {
               <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Blog / Featured Pages Section</span>
             </div>
             <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Shows pages marked "Show on Homepage" in Pages CMS. Hidden automatically when no pages are selected.</p>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
               {([
-                ['blog_eyebrow','Eyebrow text','📄 From the Blog'],
-                ['blog_title','Section title','Latest Updates'],
-                ['blog_btn','Button text','View All Posts →'],
-              ] as [string,string,string][]).map(([key,label,ph])=>(
-                <div key={key}>
-                  <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label}</label>
-                  <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={ph}
-                    style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
-                    onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
-                </div>
+                ['blog_eyebrow','blog_eyebrow_th','Eyebrow text','📄 From the Blog'],
+                ['blog_title','blog_title_th','Section title','Latest Updates'],
+                ['blog_btn','blog_btn_th','Button text','View All Posts →'],
+              ] as [string,string,string,string][]).map(([key,keyTh,label,ph])=>(
+                <React.Fragment key={key}>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label} (EN)</label>
+                    <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={ph}
+                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                  </div>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label} (TH)</label>
+                    <input value={(draft.labels||{})[keyTh]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [keyTh]:e.target.value}}))} placeholder="ภาษาไทย (ไม่บังคับ)"
+                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                  </div>
+                </React.Fragment>
               ))}
             </div>
           </div>
@@ -1919,8 +1945,11 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 function FooterCMSEditor({ footer, onFooterChange }: { footer: FooterConfig; onFooterChange: (k: any, v: any) => void }) {
   // Local state for text fields — prevents focus loss from prop re-renders
   const [description, setDescription] = useState(footer.description || '');
+  const [descriptionTh, setDescriptionTh] = useState(footer.description_th || '');
   const [copyright, setCopyright]     = useState(footer.copyright || '');
+  const [copyrightTh, setCopyrightTh] = useState(footer.copyright_th || '');
   const [trustBadges, setTrustBadges] = useState(footer.trustBadges || '');
+  const [trustBadgesTh, setTrustBadgesTh] = useState(footer.trustBadges_th || '');
   const [cmsPages, setCmsPages] = useState<any[]>([]);
   useEffect(() => {
     api.getPages().then((d:any) => setCmsPages(Array.isArray(d) ? d.filter((p:any) => p.status==='published') : []));
@@ -1931,13 +1960,13 @@ function FooterCMSEditor({ footer, onFooterChange }: { footer: FooterConfig; onF
 
   // Flush local text to parent (only on blur)
   const flushText = useCallback(() => {
-    onFooterChange('footer', { ...footer, description, copyright, trustBadges });
-  }, [footer, description, copyright, trustBadges, onFooterChange]);
+    onFooterChange('footer', { ...footer, description, description_th: descriptionTh||undefined, copyright, copyright_th: copyrightTh||undefined, trustBadges, trustBadges_th: trustBadgesTh||undefined });
+  }, [footer, description, descriptionTh, copyright, copyrightTh, trustBadges, trustBadgesTh, onFooterChange]);
 
   // Column/link operations (non-text, no focus issue)
   const updCol = useCallback((updates: Partial<FooterConfig>) => {
-    onFooterChange('footer', { ...footer, description, copyright, trustBadges, ...updates });
-  }, [footer, description, copyright, trustBadges, onFooterChange]);
+    onFooterChange('footer', { ...footer, description, description_th: descriptionTh||undefined, copyright, copyright_th: copyrightTh||undefined, trustBadges, trustBadges_th: trustBadgesTh||undefined, ...updates });
+  }, [footer, description, descriptionTh, copyright, copyrightTh, trustBadges, trustBadgesTh, onFooterChange]);
 
   const addColumn = () => {
     const col: FooterColumn = { id: uid(), title: 'New Column', links: [] };
@@ -2004,9 +2033,14 @@ function FooterCMSEditor({ footer, onFooterChange }: { footer: FooterConfig; onF
       {/* Global settings — local state to prevent focus loss */}
       <div style={{ ...card, padding: 20, marginBottom: 20 }}>
         <h3 style={{ fontSize: 15, fontWeight: 800, color: '#111827', margin: '0 0 14px' }}>Global Settings</h3>
-        <FooterTextField label="Description" value={description} onChange={setDescription} onBlur={flushText} placeholder="Store description..." />
-        <FooterTextField label="Copyright Text" value={copyright} onChange={setCopyright} onBlur={flushText} placeholder="© 2026 Fluffy Pub. Made with 💕" />
-        <FooterTextField label="Trust Badges" value={trustBadges} onChange={setTrustBadges} onBlur={flushText} placeholder="🔒 Secure · ⚡ Downloads · 💯 Guaranteed" />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <FooterTextField label="Description (EN)" value={description} onChange={setDescription} onBlur={flushText} placeholder="Store description..." />
+          <FooterTextField label="Description (TH)" value={descriptionTh} onChange={setDescriptionTh} onBlur={flushText} placeholder="คำอธิบายร้านค้า (ไม่บังคับ)" />
+          <FooterTextField label="Copyright Text (EN)" value={copyright} onChange={setCopyright} onBlur={flushText} placeholder="© 2026 Fluffy Pub. Made with 💕" />
+          <FooterTextField label="Copyright Text (TH)" value={copyrightTh} onChange={setCopyrightTh} onBlur={flushText} placeholder="ภาษาไทย (ไม่บังคับ)" />
+          <FooterTextField label="Trust Badges (EN)" value={trustBadges} onChange={setTrustBadges} onBlur={flushText} placeholder="🔒 Secure · ⚡ Downloads · 💯 Guaranteed" />
+          <FooterTextField label="Trust Badges (TH)" value={trustBadgesTh} onChange={setTrustBadgesTh} onBlur={flushText} placeholder="ภาษาไทย (ไม่บังคับ)" />
+        </div>
       </div>
 
       {/* Columns */}
@@ -2020,13 +2054,21 @@ function FooterCMSEditor({ footer, onFooterChange }: { footer: FooterConfig; onF
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               {editingCol === col.id ? (
-                <input value={col.title} onChange={e => updateColumn(col.id, { title: e.target.value })}
-                  style={{ padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${P}`, fontSize: 14, fontWeight: 700, outline: 'none', fontFamily: 'inherit' }}
-                  onBlur={() => setEditingCol(null)}
-                  autoFocus
-                />
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input value={col.title} onChange={e => updateColumn(col.id, { title: e.target.value })}
+                    style={{ padding: '6px 10px', borderRadius: 8, border: `1.5px solid ${P}`, fontSize: 14, fontWeight: 700, outline: 'none', fontFamily: 'inherit', width: 120 }}
+                    onBlur={() => setEditingCol(null)}
+                    autoFocus
+                    placeholder="EN"
+                  />
+                  <input value={col.title_th||''} onChange={e => updateColumn(col.id, { title_th: e.target.value||undefined })}
+                    style={{ padding: '6px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 14, outline: 'none', fontFamily: 'inherit', width: 120 }}
+                    onBlur={() => setEditingCol(null)}
+                    placeholder="TH (ไม่บังคับ)"
+                  />
+                </div>
               ) : (
-                <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{col.title}</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{col.title}{col.title_th ? ` / ${col.title_th}` : ''}</span>
               )}
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
@@ -2043,10 +2085,16 @@ function FooterCMSEditor({ footer, onFooterChange }: { footer: FooterConfig; onF
               <div key={link.id} style={{ background: editingLink?.linkId === link.id ? '#fdf2f8' : '#f9fafb', borderRadius: 10, padding: '10px 12px', marginBottom: 8, border: `1px solid ${editingLink?.linkId === link.id ? P + '40' : '#f3f4f6'}` }}>
                 {editingLink?.linkId === link.id ? (
                   <div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
                       <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 3 }}>Label</label>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 3 }}>Label (EN)</label>
                         <input value={link.label} onChange={e => updateLink(col.id, link.id, { label: e.target.value })}
+                          style={{ width: '100%', padding: '6px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' as const }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 3 }}>Label (TH)</label>
+                        <input value={link.label_th||''} onChange={e => updateLink(col.id, link.id, { label_th: e.target.value||undefined })}
+                          placeholder="ภาษาไทย (ไม่บังคับ)"
                           style={{ width: '100%', padding: '6px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' as const }} />
                       </div>
                       <div>

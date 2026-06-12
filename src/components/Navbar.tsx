@@ -43,7 +43,7 @@ export default function Navbar() {
         }
       `}</style>
       <div style={{ background:theme.bannerBg, color:'white', textAlign:'center', padding:'6px 16px', fontSize:'12px', fontWeight:600 }}>
-        {theme.bannerText}
+        {(lang === 'th' && theme.bannerText_th) ? theme.bannerText_th : theme.bannerText}
       </div>
       <div style={{ maxWidth:1200, margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 16px', height:60 }}>
         {/* Logo */}

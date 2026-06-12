@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
+import { useLang } from '../lib/lang';
 import ProductCard from '../components/ProductCard';
 
 export default function HomePage() {
   const { theme } = useTheme();
+  const { lang } = useLang();
+  const tl = (en: string, th?: string) => (lang === 'th' && th) ? th : en;
   const [featured, setFeatured] = useState<any[]>([]);
   const [allProducts, setAllProducts] = useState<any[]>([]);
 
@@ -68,10 +71,10 @@ function HeroSection() {
           🌸 Digital Coloring Books — Download Instantly
         </div>
         <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, lineHeight:1.1, color:theme.textColor, margin:'0 0 16px', textShadow:'0 2px 20px rgba(255,255,255,0.8)', fontFamily:theme.fontFamily, textAlign:'center' }}>
-          {theme.heroTitle || 'Color Your World ✨'}
+          {tl(theme.heroTitle || 'Color Your World ✨', theme.heroTitle_th)}
         </h1>
         <p style={{ fontSize:'clamp(16px,2.5vw,22px)', color:theme.textColor+'cc', margin:'0 0 36px', maxWidth:500, fontFamily:theme.fontFamily, textAlign:'center' }}>
-          {theme.heroSubtitle || 'Adorable coloring books for every dreamer 🌸'}
+          {tl(theme.heroSubtitle || 'Adorable coloring books for every dreamer 🌸', theme.heroSubtitle_th)}
         </p>
         <div style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap' }}>
           <button onClick={()=>navigate('/products')} style={{ background:p, color:'white', border:'none', cursor:'pointer', padding:'14px 32px', borderRadius:30, fontSize:17, fontWeight:800, boxShadow:`0 8px 24px ${p}44`, fontFamily:theme.fontFamily }}>Shop Now 🛍️</button>
@@ -97,14 +100,16 @@ function HeroSection() {
 function FeaturedSection({ products }: { products: any[] }) {
   const { theme } = useTheme();
   const { navigate } = useRouter();
+  const { lang } = useLang();
+  const tl = (en: string, th?: string) => (lang === 'th' && th) ? th : en;
   // Hide section if no products configured
   if (products.length === 0) return null;
   return (
     <section style={{ padding:'64px 24px', background:'white' }}>
       <div style={{ maxWidth:1200, margin:'0 auto' }}>
         <div style={{ textAlign:'center', marginBottom:40 }}>
-          <span style={{ fontSize:13, fontWeight:700, color:theme.primaryColor, letterSpacing:1, textTransform:'uppercase' as const }}>{theme.labels?.featured_eyebrow || '✨ Handpicked for You'}</span>
-          <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 12px', fontFamily:theme.fontFamily }}>{theme.labels?.featured_title || 'Featured Collections'}</h2>
+          <span style={{ fontSize:13, fontWeight:700, color:theme.primaryColor, letterSpacing:1, textTransform:'uppercase' as const }}>{tl(theme.labels?.featured_eyebrow || '✨ Handpicked for You', theme.labels?.featured_eyebrow_th)}</span>
+          <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 12px', fontFamily:theme.fontFamily }}>{tl(theme.labels?.featured_title || 'Featured Collections', theme.labels?.featured_title_th)}</h2>
         </div>
         <div style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
           {products.map(p => (
@@ -114,7 +119,7 @@ function FeaturedSection({ products }: { products: any[] }) {
           ))}
         </div>
         <div style={{ textAlign:'center', marginTop:40 }}>
-          <button onClick={()=>navigate('/products')} style={{ background:'transparent', border:`2px solid ${theme.primaryColor}`, color:theme.primaryColor, cursor:'pointer', padding:'12px 32px', borderRadius:24, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily }}>{theme.labels?.featured_btn || 'View All Books →'}</button>
+          <button onClick={()=>navigate('/products')} style={{ background:'transparent', border:`2px solid ${theme.primaryColor}`, color:theme.primaryColor, cursor:'pointer', padding:'12px 32px', borderRadius:24, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily }}>{tl(theme.labels?.featured_btn || 'View All Books →', theme.labels?.featured_btn_th)}</button>
         </div>
       </div>
     </section>
@@ -248,6 +253,8 @@ function ArtistsSection() {
 function BlogSection() {
   const { theme } = useTheme();
   const { navigate } = useRouter();
+  const { lang } = useLang();
+  const tl = (en: string, th?: string) => (lang === 'th' && th) ? th : en;
   const [pages, setPages] = React.useState<any[]>([]);
 
   useEffect(() => {
@@ -264,8 +271,8 @@ function BlogSection() {
     <section style={{ padding:'64px 24px', background:'white' }}>
       <div style={{ maxWidth:1200, margin:'0 auto' }}>
         <div style={{ textAlign:'center' as const, marginBottom:40 }}>
-          <span style={{ fontSize:13, fontWeight:700, color:p, letterSpacing:1, textTransform:'uppercase' as const }}>{theme.labels?.blog_eyebrow || '📄 From the Blog'}</span>
-          <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 0', fontFamily:theme.fontFamily }}>{theme.labels?.blog_title || 'Latest Updates'}</h2>
+          <span style={{ fontSize:13, fontWeight:700, color:p, letterSpacing:1, textTransform:'uppercase' as const }}>{tl(theme.labels?.blog_eyebrow || '📄 From the Blog', theme.labels?.blog_eyebrow_th)}</span>
+          <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 0', fontFamily:theme.fontFamily }}>{tl(theme.labels?.blog_title || 'Latest Updates', theme.labels?.blog_title_th)}</h2>
         </div>
         <div style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
           {pages.map(pg => (
@@ -287,7 +294,7 @@ function BlogSection() {
         </div>
         <div style={{ textAlign:'center' as const, marginTop:32 }}>
           <button onClick={() => navigate('/pages')} style={{ background:'transparent', border:`2px solid ${p}`, color:p, cursor:'pointer', padding:'11px 28px', borderRadius:24, fontSize:14, fontWeight:700, fontFamily:theme.fontFamily }}>
-            {theme.labels?.blog_btn || 'View All Posts →'}
+            {tl(theme.labels?.blog_btn || 'View All Posts →', theme.labels?.blog_btn_th)}
           </button>
         </div>
       </div>
