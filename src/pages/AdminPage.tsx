@@ -717,12 +717,18 @@ function OrdersTab() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ reason: rejectReason, note: rejectNote }),
       });
-      const updated = await r.json();
-      if (updated.error) { setMsg('⚠️ ' + updated.error); }
-      else {
-        setOrders(prev => prev.map(o => o.id === selected.id ? updated : o));
-        setSelected(updated);
-        setStatus(updated.status);
+      // Safe JSON parse — Vercel may return non-JSON on timeout even if the action succeeded
+      let updated: any = null;
+      try { updated = await r.json(); } catch {}
+      if (updated?.error) {
+        setMsg('⚠️ ' + updated.error);
+      } else {
+        // Reload order from server to get fresh state (handles timeout/partial response)
+        const fresh = await api.allOrders().then((all: any[]) => all.find(o => o.id === selected.id));
+        const next = fresh || updated || selected;
+        setOrders(prev => prev.map(o => o.id === selected.id ? next : o));
+        setSelected(next);
+        setStatus(next.status);
         setRejectOpen(false);
         setRejectReason('');
         setRejectNote('');
