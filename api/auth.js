@@ -50,15 +50,43 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method === 'POST' && action === 'reset') {
-    const { email, redirectTo } = req.body || {};
+    const { email } = req.body || {};
     if (!email) return json(res, 400, { error: 'Email required.' });
-    // Must use anon key — service role key bypasses email sending
-    const { createClient } = require('@supabase/supabase-js');
-    const anonClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-    const { error } = await anonClient.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectTo || `${process.env.SITE_URL || 'https://fluffypub.com'}`,
+    const SITE = process.env.SITE_URL || 'https://fluffypub.com';
+
+    // Generate reset link via admin API (bypasses Supabase SMTP entirely)
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: { redirectTo: SITE },
     });
-    if (error) return json(res, 400, { error: error.message });
+    if (linkError) return json(res, 400, { error: linkError.message });
+
+    const resetLink = linkData?.properties?.action_link || linkData?.action_link;
+    if (!resetLink) return json(res, 500, { error: 'Could not generate reset link.' });
+
+    // Send via Resend directly (same as order emails)
+    const RESEND_KEY = process.env.RESEND_API_KEY;
+    if (RESEND_KEY) {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RESEND_KEY}` },
+        body: JSON.stringify({
+          from: 'Fluffy Pub <hello@fluffypub.com>',
+          to: [email],
+          subject: '🔑 Reset your Fluffy Pub password',
+          html: `<div style="font-family:'Helvetica Neue',sans-serif;max-width:520px;margin:0 auto;padding:32px 24px;background:#fdf2f8;border-radius:16px">
+            <div style="text-align:center;margin-bottom:24px"><span style="font-size:40px">🐰</span><h2 style="color:#f472b6;margin:8px 0">Fluffy Pub</h2></div>
+            <h3 style="color:#4a1942;margin:0 0 12px">Reset your password</h3>
+            <p style="color:#6b7280;margin:0 0 24px">Click the button below to set a new password. This link expires in 1 hour.</p>
+            <div style="text-align:center;margin-bottom:24px">
+              <a href="${resetLink}" style="display:inline-block;background:#f472b6;color:white;padding:14px 32px;border-radius:30px;text-decoration:none;font-weight:700;font-size:16px">🔑 Reset Password</a>
+            </div>
+            <p style="color:#9ca3af;font-size:12px;text-align:center">If you didn't request this, you can safely ignore this email.</p>
+          </div>`,
+        }),
+      });
+    }
     return json(res, 200, { success: true, message: 'Password reset email sent.' });
   }
 
