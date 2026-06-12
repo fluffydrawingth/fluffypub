@@ -177,6 +177,29 @@ async function tplTrackingAdded(order) {
   `);
 }
 
+async function tplSlipRejected(order, reason, note) {
+  const ref = (order.id || '').slice(-8).toUpperCase();
+  const orderLink = order.access_token
+    ? `${SITE}/#/guest-order/${order.access_token}`
+    : `${SITE}/#/account/orders`;
+  return await emailWrapper(`
+    <h2 style="margin:0 0 6px;color:#111827;font-size:20px">⚠️ Payment Proof Requires Attention</h2>
+    <p style="margin:0 0 16px;color:#6b7280;font-size:13px">We could not verify your payment slip. Please upload a new one.</p>
+    <div style="background:#fef3c7;border-radius:12px;padding:14px 16px;margin-bottom:16px;border:1.5px solid #fcd34d">
+      <div style="font-size:12px;color:#92400e;font-weight:700;margin-bottom:4px">คำสั่งซื้อ / ORDER</div>
+      <div style="font-size:22px;font-weight:900;color:#d97706">#${ref}</div>
+    </div>
+    <div style="background:#fee2e2;border-radius:12px;padding:14px 16px;margin-bottom:16px;border:1.5px solid #fca5a5">
+      <div style="font-size:12px;color:#7f1d1d;font-weight:700;margin-bottom:6px">❌ Reason / เหตุผล</div>
+      <div style="font-size:14px;font-weight:700;color:#dc2626">${reason}</div>
+      ${note ? `<div style="font-size:13px;color:#374151;margin-top:6px">${note}</div>` : ''}
+    </div>
+    <p style="font-size:13px;color:#374151;margin:0 0 16px">กรุณาอัปโหลดสลิปการโอนเงินใหม่อีกครั้ง / Please upload a new payment slip.</p>
+    <a href="${orderLink}" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:12px 24px;border-radius:20px;font-weight:700;font-size:14px">💳 Upload New Slip →</a>
+    <p style="margin:16px 0 0;font-size:11px;color:#9ca3af">หากมีคำถาม กรุณาติดต่อเรา / If you have questions, please contact us. 🌸</p>
+  `);
+}
+
 // Core send + log ─────────────────────────────────────────────────────────────
 
 async function sendEmail(to, subject, html, opts = {}) {
@@ -457,19 +480,57 @@ module.exports = async function handler(req, res) {
     const { data, error } = await supabase.from('orders').update({
       slip_url,
       slip_uploaded_at: new Date().toISOString(),
+      status: 'payment_submitted',
+      payment_status: 'payment_submitted',
+      // Clear any previous rejection info on re-upload
+      slip_reject_reason: null,
+      slip_reject_note: null,
+      slip_rejected_at: null,
       updated_at: new Date().toISOString(),
     }).eq('id', id).select().single();
     if (error) return json(res, 400, { error: error.message });
 
     const ref = (order.id||'').slice(-8).toUpperCase();
     const total = order.total_thb || order.total_amount || 0;
+    // No eventType → bypasses dedup so every re-upload notifies admin
     await sendEmail(ADMIN_EMAIL, `💳 Payment Slip Uploaded — Order #${ref}`,
       await emailWrapper(`<h2 style="margin:0 0 10px;color:#111827;font-size:18px">💳 Payment Slip Uploaded</h2>
         <p style="color:#374151;font-size:13px"><strong>${order.customer_name}</strong> uploaded a payment slip for Order <strong>#${ref}</strong> · ฿${Number(total).toLocaleString('th-TH')}</p>
         <img src="${slip_url}" alt="slip" style="width:100%;max-width:320px;border-radius:8px;border:1px solid #e5e7eb;margin:8px 0">
-        <a href="${SITE}/admin" style="display:inline-block;margin-top:8px;background:#f472b6;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">⚙️ Review in Admin →</a>`),
-      { orderId: order.id, eventType: 'slip_uploaded' }
+        <a href="${SITE}/admin" style="display:inline-block;margin-top:8px;background:#f472b6;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">⚙️ Review in Admin →</a>`)
     );
+    await supabase.from('order_email_logs').insert({ order_id: order.id, event_type: 'slip_uploaded', recipient_email: ADMIN_EMAIL, subject: `Payment Slip Uploaded — Order #${ref}`, status: 'sent' }).catch(() => {});
+    return json(res, 200, data);
+  }
+
+  // POST reject slip (admin)
+  if (req.method === 'POST' && action === 'reject-slip' && id) {
+    const user = await requireAuth(req, res, ['admin']);
+    if (!user) return;
+    const { reason, note } = req.body || {};
+    if (!reason) return json(res, 400, { error: 'reason required' });
+    const { data: order } = await supabase.from('orders').select('*').eq('id', id).single();
+    if (!order) return json(res, 404, { error: 'Order not found' });
+    const { data, error } = await supabase.from('orders').update({
+      status: 'pending_payment',
+      payment_status: 'pending',
+      slip_url: null,
+      slip_uploaded_at: null,
+      slip_reject_reason: reason,
+      slip_reject_note: note || null,
+      slip_rejected_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('id', id).select().single();
+    if (error) return json(res, 400, { error: error.message });
+
+    const ref = (order.id||'').slice(-8).toUpperCase();
+    const orderLink = order.access_token
+      ? `${SITE}/#/guest-order/${order.access_token}`
+      : `${SITE}/#/account/orders`;
+    // No eventType → bypasses dedup so every rejection sends a fresh email
+    const rejSubject = `⚠️ Payment Proof Requires Attention — Order #${ref}`;
+    await sendEmail(order.customer_email, rejSubject, await tplSlipRejected(order, reason, note));
+    await supabase.from('order_email_logs').insert({ order_id: order.id, event_type: 'slip_rejected', recipient_email: order.customer_email, subject: rejSubject, status: 'sent', sent_by: user.email }).catch(() => {});
     return json(res, 200, data);
   }
 

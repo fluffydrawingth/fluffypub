@@ -57,14 +57,16 @@ function OrdersTab({p,theme}:any) {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any>(null);
   const [slipUploading, setSlipUploading] = useState(false);
+  const [showReplace, setShowReplace] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<Record<string,string>>({});  // keyed by order id
   const [qrLoading, setQrLoading] = useState<Record<string,boolean>>({});
   const { tRaw, lang } = useLang();
   const STATUS_COLORS: Record<string,string> = {
-    pending_payment:'#fef3c7', paid:'#d1fae5', packing:'#dbeafe', shipped:'#e0e7ff', delivered:'#d1fae5', cancelled:'#fee2e2',
+    pending_payment:'#fef3c7', payment_submitted:'#ede9fe', paid:'#d1fae5', packing:'#dbeafe', shipped:'#e0e7ff', delivered:'#d1fae5', cancelled:'#fee2e2',
   };
   const STATUS_TEXT: Record<string,string[]> = {
     pending_payment:['#d97706','รอชำระเงิน','Pending Payment'],
+    payment_submitted:['#7c3aed','ส่งสลิปแล้ว','Payment Submitted'],
     paid:['#059669','ชำระแล้ว','Paid'],
     packing:['#2563eb','กำลังแพ็ค','Preparing'],
     shipped:['#7c3aed','จัดส่งแล้ว','Shipped'],
@@ -127,8 +129,9 @@ function OrdersTab({p,theme}:any) {
         return;
       }
       console.log('[slip upload] saved to order OK');
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, slip_url: result.publicUrl } : o));
-      if (selected?.id === orderId) setSelected((s: any) => ({ ...s, slip_url: result.publicUrl }));
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, slip_url: result.publicUrl, status: 'payment_submitted', payment_status: 'payment_submitted', slip_reject_reason: null } : o));
+      if (selected?.id === orderId) setSelected((s: any) => ({ ...s, slip_url: result.publicUrl, status: 'payment_submitted', payment_status: 'payment_submitted', slip_reject_reason: null }));
+      setShowReplace(false);
     } catch (e: any) {
       console.error('[slip upload] exception:', e.message);
       alert(tRaw('เกิดข้อผิดพลาด', 'Error: ' + e.message));
@@ -142,7 +145,7 @@ function OrdersTab({p,theme}:any) {
     return [sa.address,sa.province,sa.postal_code,sa.country].filter(Boolean).join(', ');
   };
 
-  const ACTIVE_STATUSES = ['pending_payment','paid','packing','shipped'];
+  const ACTIVE_STATUSES = ['pending_payment','payment_submitted','paid','packing','shipped'];
   const activeOrders    = orders.filter(o => ACTIVE_STATUSES.includes(o.status));
   const completedOrders = orders.filter(o => !ACTIVE_STATUSES.includes(o.status));
 
@@ -219,26 +222,51 @@ function OrdersTab({p,theme}:any) {
         🚚 {selected.shipping_provider}: {selected.tracking_number}
       </div>}
 
-      {/* Payment section — pending_payment only */}
-      {selected.status==='pending_payment'&&(()=>{
+      {/* Payment section — pending_payment or payment_submitted */}
+      {(selected.status==='pending_payment'||selected.status==='payment_submitted')&&(()=>{
         const payAmt = selected.total_thb || selected.total_amount || (parseFloat(selected.total||'0')*35);
-        // Trigger QR load when this section renders
-        if (!selected.slip_url && payAmt && !qrDataUrl[selected.id] && !qrLoading[selected.id]) {
+        const isSubmitted = selected.status === 'payment_submitted';
+        const showQR = !isSubmitted || showReplace;
+
+        // Preload QR when showing it
+        if (showQR && payAmt && !qrDataUrl[selected.id] && !qrLoading[selected.id]) {
           loadQR(selected.id, payAmt);
         }
+
         return (
           <div style={{marginBottom:14}}>
-            {selected.slip_url ? (
-              /* Slip already uploaded */
+            {/* Rejection notice */}
+            {selected.slip_reject_reason && selected.status==='pending_payment' && (
+              <div style={{background:'#fee2e2',borderRadius:12,padding:'12px 14px',marginBottom:12,border:'1.5px solid #fca5a5'}}>
+                <div style={{fontSize:13,fontWeight:700,color:'#dc2626',marginBottom:4}}>❌ {tRaw('สลิปถูกปฏิเสธ','Payment slip rejected')}</div>
+                <div style={{fontSize:12,color:'#7f1d1d',fontWeight:600}}>{selected.slip_reject_reason}</div>
+                {selected.slip_reject_note&&<div style={{fontSize:12,color:'#374151',marginTop:4}}>{selected.slip_reject_note}</div>}
+                <div style={{fontSize:11,color:'#9ca3af',marginTop:4}}>{tRaw('กรุณาอัปโหลดสลิปใหม่อีกครั้ง','Please upload a new payment slip below.')}</div>
+              </div>
+            )}
+
+            {isSubmitted&&!showReplace ? (
+              /* Slip submitted — show preview + waiting message */
               <div>
-                <div style={{background:'#d1fae5',borderRadius:12,padding:'12px 14px',marginBottom:10,fontSize:13,color:'#065f46',fontWeight:700}}>
-                  ✅ {tRaw('อัปโหลดสลิปแล้ว — รอแอดมินยืนยัน','Slip uploaded — waiting for admin confirmation')}
+                <div style={{background:'#ede9fe',borderRadius:12,padding:'12px 14px',marginBottom:10,fontSize:13,color:'#5b21b6',fontWeight:700}}>
+                  🕐 {tRaw('ส่งหลักฐานแล้ว — รอแอดมินตรวจสอบ','Payment proof submitted. Waiting for review.')}
                 </div>
-                <img src={selected.slip_url} alt="slip" style={{width:'100%',borderRadius:10,border:'1px solid #e5e7eb'}} />
+                <img src={selected.slip_url} alt="slip" style={{width:'100%',borderRadius:10,border:'1px solid #e5e7eb',marginBottom:10}} />
+                <button onClick={()=>setShowReplace(true)}
+                  style={{width:'100%',padding:'9px',background:'#f9fafb',border:'1.5px solid #d1d5db',color:'#374151',borderRadius:10,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:theme.fontFamily}}>
+                  🔄 {tRaw('เปลี่ยนสลิป','Replace Payment Slip')}
+                </button>
               </div>
             ) : (
-              /* No slip yet — show QR + upload + cancel */
+              /* Show QR + upload form */
               <div>
+                {isSubmitted&&(
+                  <div style={{background:'#ede9fe',borderRadius:12,padding:'10px 14px',marginBottom:12,fontSize:12,color:'#5b21b6',fontWeight:600,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <span>🔄 {tRaw('กำลังเปลี่ยนสลิป','Replacing slip')}</span>
+                    <button onClick={()=>setShowReplace(false)} style={{background:'none',border:'none',cursor:'pointer',color:'#7c3aed',fontSize:12,fontWeight:700,fontFamily:theme.fontFamily}}>✕ {tRaw('ยกเลิก','Cancel')}</button>
+                  </div>
+                )}
+
                 {/* PromptPay QR */}
                 <div style={{background:'white',border:'1.5px solid #e5e7eb',borderRadius:16,padding:20,textAlign:'center' as const,marginBottom:12}}>
                   <div style={{fontWeight:800,fontSize:14,color:theme.textColor,marginBottom:4}}>💳 PromptPay</div>
@@ -266,20 +294,51 @@ function OrdersTab({p,theme}:any) {
                 </div>
 
                 {/* Upload slip */}
-                <label style={{display:'block',cursor:'pointer',marginBottom:8}}>
+                <label style={{display:'block',cursor:slipUploading?'not-allowed':'pointer',marginBottom:8}}>
                   <div style={{background:p+'10',border:`2px dashed ${p}50`,borderRadius:12,padding:'12px 14px',textAlign:'center' as const,fontSize:13,color:p,fontWeight:700}}>
                     {slipUploading ? '⏳ '+tRaw('กำลังอัปโหลด...','Uploading...') : '📷 '+tRaw('อัปโหลดสลิปการโอนเงิน','Upload Payment Slip')}
                   </div>
-                  <input type="file" accept="image/*" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)uploadSlip(selected.id,f);}} />
+                  <input type="file" accept="image/*" style={{display:'none'}} disabled={slipUploading} onChange={e=>{const f=e.target.files?.[0];if(f)uploadSlip(selected.id,f);}} />
                 </label>
 
-                {/* Cancel */}
-                <button onClick={()=>cancelOrder(selected.id)}
-                  style={{width:'100%',padding:'9px',background:'#fef2f2',border:'1.5px solid #fca5a5',color:'#dc2626',borderRadius:10,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:theme.fontFamily}}>
-                  ✕ {tRaw('ยกเลิกคำสั่งซื้อ','Cancel Order')}
-                </button>
+                {/* Cancel — only when truly pending (no slip submitted yet) */}
+                {!isSubmitted&&(
+                  <button onClick={()=>cancelOrder(selected.id)}
+                    style={{width:'100%',padding:'9px',background:'#fef2f2',border:'1.5px solid #fca5a5',color:'#dc2626',borderRadius:10,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:theme.fontFamily}}>
+                    ✕ {tRaw('ยกเลิกคำสั่งซื้อ','Cancel Order')}
+                  </button>
+                )}
               </div>
             )}
+          </div>
+        );
+      })()}
+
+      {/* Order timeline */}
+      {(()=>{
+        type TimelineStep = { label: string; labelTh: string; ts: string | null; done: boolean; rejected?: boolean };
+        const steps: TimelineStep[] = [
+          { label:'Order Created', labelTh:'สร้างคำสั่งซื้อ', ts: selected.created_at||selected.createdAt||null, done: true },
+          { label:'Payment Submitted', labelTh:'ส่งสลิปแล้ว', ts: selected.slip_uploaded_at||null, done: !!selected.slip_uploaded_at || selected.status==='payment_submitted' || !!selected.paid_at },
+          ...(selected.slip_rejected_at ? [{ label:'Slip Rejected', labelTh:'สลิปถูกปฏิเสธ', ts: selected.slip_rejected_at, done: true, rejected: true } as TimelineStep] : []),
+          { label:'Paid', labelTh:'ชำระแล้ว', ts: selected.paid_at||null, done: !!selected.paid_at },
+          ...(selected.shipped_at||selected.tracking_number ? [{ label:'Shipped', labelTh:'จัดส่งแล้ว', ts: selected.shipped_at||null, done: true } as TimelineStep] : []),
+        ];
+        const hasMilestone = steps.some(s => s.done && s.ts);
+        if (!hasMilestone) return null;
+        return (
+          <div style={{marginBottom:14,marginTop:4}}>
+            <div style={{fontSize:11,fontWeight:700,color:'#9ca3af',marginBottom:10,letterSpacing:0.5}}>{tRaw('ความคืบหน้า','ORDER TIMELINE')}</div>
+            <div style={{position:'relative' as const,paddingLeft:20}}>
+              <div style={{position:'absolute' as const,left:6,top:8,bottom:8,width:2,background:'#f3f4f6',borderRadius:2}} />
+              {steps.map((s,i)=>(
+                <div key={i} style={{position:'relative' as const,marginBottom:i<steps.length-1?14:0,paddingLeft:16}}>
+                  <div style={{position:'absolute' as const,left:-7,top:2,width:12,height:12,borderRadius:'50%',background:s.rejected?'#dc2626':s.done?p:'#e5e7eb',border:`2px solid ${s.rejected?'#fca5a5':s.done?p:'#e5e7eb'}`,flexShrink:0}} />
+                  <div style={{fontSize:13,fontWeight:700,color:s.rejected?'#dc2626':s.done?'#1e293b':'#9ca3af'}}>{lang==='th'?s.labelTh:s.label}</div>
+                  {s.ts&&<div style={{fontSize:11,color:'#94a3b8',marginTop:1}}>{new Date(s.ts).toLocaleString(lang==='th'?'th-TH':'en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</div>}
+                </div>
+              ))}
+            </div>
           </div>
         );
       })()}

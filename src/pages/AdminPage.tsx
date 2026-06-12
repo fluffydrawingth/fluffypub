@@ -120,8 +120,8 @@ function Badge({color,bg,text}:{color:string,bg:string,text:string}) {
   return <span style={{ background:bg, color, borderRadius:20, padding:'3px 12px', fontSize:12, fontWeight:700, whiteSpace:'nowrap' as const }}>{text}</span>;
 }
 
-const STATUS_COLOR:any = { pending_payment:['#d97706','#fef3c7'], paid:['#059669','#d1fae5'], packing:['#2563eb','#dbeafe'], shipped:['#7c3aed','#ede9fe'], delivered:['#059669','#d1fae5'], cancelled:['#dc2626','#fee2e2'] };
-const STATUS_TEXT:any  = { pending_payment:'Pending Payment', paid:'Paid', packing:'Packing', shipped:'Shipped', delivered:'Delivered', cancelled:'Cancelled' };
+const STATUS_COLOR:any = { pending_payment:['#d97706','#fef3c7'], payment_submitted:['#7c3aed','#ede9fe'], paid:['#059669','#d1fae5'], packing:['#2563eb','#dbeafe'], shipped:['#7c3aed','#ede9fe'], delivered:['#059669','#d1fae5'], cancelled:['#dc2626','#fee2e2'] };
+const STATUS_TEXT:any  = { pending_payment:'Pending Payment', payment_submitted:'Payment Submitted', paid:'Paid', packing:'Packing', shipped:'Shipped', delivered:'Delivered', cancelled:'Cancelled' };
 
 // ── Dashboard ──────────────────────────────────────────────────────────────
 function DashboardTab() {
@@ -175,6 +175,7 @@ function DashboardTab() {
 
   const statusCards = stats ? [
     {label:'Pending',value:stats.byStatus?.pending_payment||0,icon:'⏳',color:'#d97706',bg:'#fef3c7'},
+    {label:'Submitted',value:stats.byStatus?.payment_submitted||0,icon:'🕐',color:'#7c3aed',bg:'#ede9fe'},
     {label:'Paid',value:stats.byStatus?.paid||0,icon:'✅',color:'#059669',bg:'#d1fae5'},
     {label:'Preparing',value:stats.byStatus?.packing||0,icon:'📦',color:'#2563eb',bg:'#dbeafe'},
     {label:'Shipped',value:stats.byStatus?.shipped||0,icon:'🚚',color:'#7c3aed',bg:'#ede9fe'},
@@ -620,6 +621,10 @@ function OrdersTab() {
   const [sendingReminder, setSendingReminder] = useState(false);
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
   const [sendingReminderSingle, setSendingReminderSingle] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectNote, setRejectNote] = useState('');
+  const [rejecting, setRejecting] = useState(false);
 
   const loadEmailLogs = async (orderId: string) => {
     const token = localStorage.getItem('fluffy_token') || '';
@@ -700,6 +705,33 @@ function OrdersTab() {
       else { setOrders(prev=>prev.map(o=>o.id===selected.id?updated:o)); setSelected(updated); setMsg('✓ Marked as paid!'); await loadEmailLogs(selected.id); }
     } catch { setMsg('⚠️ Failed.'); }
     setMarking(false); setTimeout(()=>setMsg(''),4000);
+  };
+
+  const rejectSlip = async () => {
+    if (!selected || !rejectReason) return;
+    setRejecting(true);
+    try {
+      const token = localStorage.getItem('fluffy_token');
+      const r = await fetch(`/api/orders?action=reject-slip&id=${selected.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ reason: rejectReason, note: rejectNote }),
+      });
+      const updated = await r.json();
+      if (updated.error) { setMsg('⚠️ ' + updated.error); }
+      else {
+        setOrders(prev => prev.map(o => o.id === selected.id ? updated : o));
+        setSelected(updated);
+        setStatus(updated.status);
+        setRejectOpen(false);
+        setRejectReason('');
+        setRejectNote('');
+        setMsg('✓ Slip rejected — customer notified.');
+        await loadEmailLogs(selected.id);
+      }
+    } catch { setMsg('⚠️ Failed.'); }
+    setRejecting(false);
+    setTimeout(() => setMsg(''), 5000);
   };
 
   const deleteOrder = async (id:string) => {
@@ -785,13 +817,13 @@ function OrdersTab() {
     </body></html>`);
   };
 
-  const ACTIVE_STATUSES = ['pending_payment','paid','packing','shipped'];
+  const ACTIVE_STATUSES = ['pending_payment','payment_submitted','paid','packing','shipped'];
   const INACTIVE_STATUSES = ['delivered','cancelled'];
   const filteredOrders = filterStatus==='all' ? orders : orders.filter(o=>o.status===filterStatus);
   const activeOrders   = filteredOrders.filter(o=>ACTIVE_STATUSES.includes(o.status));
   const inactiveOrders = filteredOrders.filter(o=>INACTIVE_STATUSES.includes(o.status));
-  const STATUS_OPTS = ['pending_payment','paid','packing','shipped','delivered','cancelled'];
-  const FILTER_TABS = [{k:'all',label:'All'},{k:'pending_payment',label:'Pending'},{k:'paid',label:'Paid'},{k:'packing',label:'Preparing'},{k:'shipped',label:'Shipped'},{k:'delivered',label:'Delivered'},{k:'cancelled',label:'Cancelled'}];
+  const STATUS_OPTS = ['pending_payment','payment_submitted','paid','packing','shipped','delivered','cancelled'];
+  const FILTER_TABS = [{k:'all',label:'All'},{k:'pending_payment',label:'Pending'},{k:'payment_submitted',label:'Submitted'},{k:'paid',label:'Paid'},{k:'packing',label:'Preparing'},{k:'shipped',label:'Shipped'},{k:'delivered',label:'Delivered'},{k:'cancelled',label:'Cancelled'}];
 
   const fmtAddr = (sa:any) => {
     if (!sa) return '';
@@ -985,8 +1017,43 @@ function OrdersTab() {
               </div>
             )}
 
-            {/* Mark paid */}
-            {selected.payment_status!=='paid'&&(
+            {/* Payment submitted — Approve / Reject */}
+            {selected.payment_status==='payment_submitted'&&(
+              <div style={{marginBottom:10}}>
+                <div style={{background:'#ede9fe',borderRadius:8,padding:'8px 12px',fontSize:12,color:'#5b21b6',fontWeight:700,marginBottom:8}}>🕐 Payment slip submitted — awaiting review</div>
+                <div style={{display:'flex',gap:8,marginBottom:rejectOpen?8:0}}>
+                  <button onClick={markPaid} disabled={marking} style={{flex:1,padding:'10px',background:marking?'#10b981aa':'#10b981',color:'white',border:'none',cursor:'pointer',borderRadius:10,fontSize:13,fontWeight:700,fontFamily:'inherit',boxShadow:'0 2px 8px #10b98133'}}>
+                    {marking?'Processing...':'✅ Approve Payment'}
+                  </button>
+                  <button onClick={()=>{setRejectOpen(o=>!o);setRejectReason('');setRejectNote('');}} style={{flex:1,padding:'10px',background:'#fef2f2',color:'#dc2626',border:'1.5px solid #fca5a5',cursor:'pointer',borderRadius:10,fontSize:13,fontWeight:700,fontFamily:'inherit'}}>
+                    ✕ Reject Slip
+                  </button>
+                </div>
+                {rejectOpen&&(
+                  <div style={{background:'#fef2f2',borderRadius:10,padding:12,border:'1.5px solid #fca5a5'}}>
+                    <div style={{fontSize:11,fontWeight:700,color:'#dc2626',marginBottom:8}}>REJECT REASON</div>
+                    <select value={rejectReason} onChange={e=>setRejectReason(e.target.value)} style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #fca5a5',fontSize:13,outline:'none',fontFamily:'inherit',marginBottom:8,background:'white',color:'#111827',boxSizing:'border-box' as const}}>
+                      <option value=''>— Select reason —</option>
+                      <option value='Wrong payment amount'>Wrong payment amount</option>
+                      <option value='Wrong payment proof'>Wrong payment proof</option>
+                      <option value='Unreadable image'>Unreadable image</option>
+                      <option value='Duplicate payment proof'>Duplicate payment proof</option>
+                      <option value='Other'>Other</option>
+                    </select>
+                    <input value={rejectNote} onChange={e=>setRejectNote(e.target.value)} placeholder="Optional note to customer..." style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #fca5a5',fontSize:13,outline:'none',fontFamily:'inherit',marginBottom:8,boxSizing:'border-box' as const}} />
+                    <div style={{display:'flex',gap:8}}>
+                      <button onClick={rejectSlip} disabled={rejecting||!rejectReason} style={{flex:1,padding:'9px',background:(!rejectReason||rejecting)?'#fca5a5':'#dc2626',color:'white',border:'none',cursor:!rejectReason?'not-allowed':'pointer',borderRadius:8,fontSize:13,fontWeight:700,fontFamily:'inherit'}}>
+                        {rejecting?'Sending...':'Send Rejection'}
+                      </button>
+                      <button onClick={()=>setRejectOpen(false)} style={{padding:'9px 14px',background:'white',color:'#6b7280',border:'1px solid #e5e7eb',cursor:'pointer',borderRadius:8,fontSize:13,fontFamily:'inherit'}}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Mark paid — for orders without slip submission flow */}
+            {selected.payment_status!=='paid'&&selected.payment_status!=='payment_submitted'&&(
               <div style={{display:'flex',gap:8,marginBottom:10}}>
                 <button onClick={markPaid} disabled={marking} style={{flex:1,padding:'10px',background:marking?'#10b981aa':'#10b981',color:'white',border:'none',cursor:'pointer',borderRadius:10,fontSize:13,fontWeight:700,fontFamily:'inherit',boxShadow:'0 4px 12px #10b98144'}}>
                   {marking?'Processing...':'✅ Mark as Paid'}
@@ -1034,6 +1101,7 @@ function OrdersTab() {
                       payment_reminder:'Payment Reminder → Customer', payment_confirmed:'Payment Confirmed → Customer',
                       admin_payment_confirmed:'Payment Confirmed → Admin', tracking_added:'Tracking Updated → Customer',
                       shipped_notification:'Shipped Notification → Customer', slip_uploaded:'Slip Uploaded → Admin',
+                      slip_rejected:'Slip Rejected → Customer',
                       access_link_resent:'Order Link Resent → Customer',
                       custom_message:'Custom Message → Customer',
                     };
