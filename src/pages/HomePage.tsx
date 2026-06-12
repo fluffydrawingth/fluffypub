@@ -52,6 +52,8 @@ export default function HomePage() {
 function HeroSection() {
   const { theme } = useTheme();
   const { navigate } = useRouter();
+  const { lang } = useLang();
+  const tl = (en: string, th?: string) => (lang === 'th' && th) ? th : en;
   const p = theme.primaryColor;
   // Use theme.heroStats if available, otherwise empty (no mock data)
   const stats = theme.heroStats || [];
