@@ -168,6 +168,26 @@ function DashboardTab() {
     URL.revokeObjectURL(url);
   };
 
+  const [exportingXlsx, setExportingXlsx] = useState(false);
+  const exportXlsx = async () => {
+    setExportingXlsx(true);
+    try {
+      const token = localStorage.getItem('fluffy_token') || '';
+      const res = await fetch(`/api/export-xlsx?month=${selMonth}&year=${selYear}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fluffy-report-${selYear}-${String(selMonth).padStart(2,'0')}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportingXlsx(false);
+    }
+  };
+
   const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const years = Array.from({ length: 3 }, (_, i) => now.getFullYear() - i);
 
@@ -201,9 +221,9 @@ function DashboardTab() {
             style={{padding:'8px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',background:'white',cursor:'pointer'}}>
             {years.map(y=><option key={y} value={y}>{y}</option>)}
           </select>
-          <button onClick={exportCsv} disabled={exporting||!stats}
-            style={{padding:'8px 16px',borderRadius:10,background:exporting?'#e5e7eb':P,color:exporting?'#9ca3af':'white',border:'none',cursor:exporting?'not-allowed':'pointer',fontSize:13,fontWeight:700,fontFamily:'inherit',display:'flex',alignItems:'center',gap:6}}>
-            {exporting?'⏳':'📥'} {exporting?'Exporting...':'Export CSV'}
+          <button onClick={exportXlsx} disabled={exportingXlsx||!stats}
+            style={{padding:'8px 16px',borderRadius:10,background:exportingXlsx?'#e5e7eb':'#059669',color:exportingXlsx?'#9ca3af':'white',border:'none',cursor:exportingXlsx?'not-allowed':'pointer',fontSize:13,fontWeight:700,fontFamily:'inherit',display:'flex',alignItems:'center',gap:6}}>
+            {exportingXlsx?'⏳':'📊'} {exportingXlsx?'Exporting...':'Export XLSX'}
           </button>
         </div>
       </div>
