@@ -1737,6 +1737,7 @@ function ThemeTab() {
             </div>
           </div>
           <ImageCropEditor title="Logo Image (optional)" hint="Upload a logo image. If set, replaces the emoji across the site." value={draft.logoImageCrop} aspectRatio={1} onChange={v=>upd('logoImageCrop',v)} />
+          <TF label="Logo URL for Emails (optional)" val={draft.logoUrl||''} set={v=>upd('logoUrl',v)} ph="https://fluffypub.com/logo.png — paste a public image URL to show in emails" />
           <div style={{padding:20,borderRadius:14,background:'#fdf2f8',border:`2px dashed ${P}40`,textAlign:'center' as const,marginTop:16}}>
             {draft.logoImageCrop?.croppedDataUrl
               ? <img src={draft.logoImageCrop.croppedDataUrl} style={{width:48,height:48,borderRadius:'50%',objectFit:'cover',marginBottom:6}} alt="logo" />

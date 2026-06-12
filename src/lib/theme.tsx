@@ -24,7 +24,7 @@ export interface FooterConfig {
 export interface ThemeConfig {
   primaryColor: string; secondaryColor: string; accentColor: string;
   bgColor: string; bgColor2: string; textColor: string; fontFamily: string;
-  logoText: string; logoEmoji: string; logoImageCrop: any | null;
+  logoText: string; logoEmoji: string; logoImageCrop: any | null; logoUrl?: string;
   heroBgColor: string; heroTitle: string; heroTitle_th?: string; heroSubtitle: string; heroSubtitle_th?: string;
   heroCrop: any | null; mobileHeroCrop: any | null;
   bannerText: string; bannerText_th?: string; bannerBg: string; bannerImageCrop: any | null;
