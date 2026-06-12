@@ -28,7 +28,9 @@ export default function Footer() {
           {/* Brand column */}
           <div>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:14 }}>
-              <span style={{ fontSize:26 }}>{theme.logoEmoji}</span>
+              {theme.logoImageCrop?.croppedDataUrl
+                ? <img src={theme.logoImageCrop.croppedDataUrl} style={{ width:36, height:36, borderRadius:'50%', objectFit:'cover' }} alt="logo" />
+                : <span style={{ fontSize:26 }}>{theme.logoEmoji}</span>}
               <span style={{ fontSize:20, fontWeight:800, color:p }}>{theme.logoText}</span>
             </div>
             <p style={{ color:theme.textColor+'88', fontSize:13, lineHeight:1.7, maxWidth:260, margin:0 }}>

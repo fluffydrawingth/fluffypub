@@ -79,7 +79,9 @@ export default function LoginPage() {
       ))}
       <div style={{ background:'white', borderRadius:28, padding:'44px 40px', width:'100%', maxWidth:420, boxShadow:`0 24px 64px ${p}18, 0 8px 24px rgba(0,0,0,0.08)`, position:'relative', zIndex:1, border:`1.5px solid ${p}18` }}>
         <div style={{ textAlign:'center', marginBottom:28 }}>
-          <div style={{ fontSize:42, marginBottom:10 }}>{theme.logoEmoji}</div>
+          {theme.logoImageCrop?.croppedDataUrl
+            ? <img src={theme.logoImageCrop.croppedDataUrl} style={{ width:54, height:54, borderRadius:'50%', objectFit:'cover', marginBottom:10 }} alt="logo" />
+            : <div style={{ fontSize:42, marginBottom:10 }}>{theme.logoEmoji}</div>}
           <div style={{ fontSize:22, fontWeight:900, color:p, marginBottom:4 }}>{theme.logoText}</div>
         </div>
 

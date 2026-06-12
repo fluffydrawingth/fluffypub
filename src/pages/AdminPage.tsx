@@ -48,7 +48,9 @@ export default function AdminPage() {
     <div style={{ width:220, background:'white', borderRight:'1px solid #f3f4f6', display:'flex', flexDirection:'column', height:'100%', boxShadow:'2px 0 8px rgba(0,0,0,0.04)' }}>
       <div style={{ padding:'24px 20px 20px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
-          <span style={{ fontSize:22 }}>⚙️</span>
+          {theme.logoImageCrop?.croppedDataUrl
+            ? <img src={theme.logoImageCrop.croppedDataUrl} style={{ width:28, height:28, borderRadius:'50%', objectFit:'cover' }} alt="logo" />
+            : <span style={{ fontSize:22 }}>⚙️</span>}
           <span style={{ fontSize:20, fontWeight:900, color:'#f472b6' }}>Admin</span>
         </div>
         <div style={{ fontSize:12, color:'#9ca3af', fontWeight:500 }}>Fluffy Pub Studio</div>
@@ -609,6 +611,7 @@ function OrdersTab() {
   const [provider, setProvider] = useState('');
   const [status, setStatus] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [showInactive, setShowInactive] = useState(false);
   const [saving, setSaving] = useState(false);
   const [marking, setMarking] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -884,13 +887,18 @@ function OrdersTab() {
                 )}
                 {inactiveOrders.length>0&&(
                   <>
-                    <div style={{padding:'10px 14px',background:'#f9fafb',borderBottom:'1px solid #e5e7eb',borderTop:activeOrders.length>0?'2px solid #e5e7eb':'none',fontSize:11,fontWeight:700,color:'#6b7280',letterSpacing:0.5}}>
-                      ✓ COMPLETED / INACTIVE ({inactiveOrders.length})
+                    <div style={{padding:'10px 14px',background:'#f9fafb',borderTop:activeOrders.length>0?'2px solid #e5e7eb':'none',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                      <span style={{fontSize:11,fontWeight:700,color:'#6b7280',letterSpacing:0.5}}>✓ COMPLETED / INACTIVE ({inactiveOrders.length})</span>
+                      <button onClick={()=>setShowInactive(v=>!v)} style={{background:'none',border:'1px solid #e5e7eb',borderRadius:8,cursor:'pointer',fontSize:11,fontWeight:600,color:'#6b7280',padding:'3px 10px',fontFamily:'inherit'}}>
+                        {showInactive?'Hide':'Show'} Completed
+                      </button>
                     </div>
-                    <table style={{width:'100%',borderCollapse:'collapse'}}>
-                      {thead}
-                      <tbody>{renderRows(inactiveOrders)}</tbody>
-                    </table>
+                    {showInactive&&(
+                      <table style={{width:'100%',borderCollapse:'collapse'}}>
+                        {thead}
+                        <tbody>{renderRows(inactiveOrders)}</tbody>
+                      </table>
+                    )}
                   </>
                 )}
               </>
@@ -1728,8 +1736,11 @@ function ThemeTab() {
               ))}
             </div>
           </div>
-          <div style={{padding:20,borderRadius:14,background:'#fdf2f8',border:`2px dashed ${P}40`,textAlign:'center' as const}}>
-            <div style={{fontSize:32,marginBottom:6}}>{draft.logoEmoji}</div>
+          <ImageCropEditor title="Logo Image (optional)" hint="Upload a logo image. If set, replaces the emoji across the site." value={draft.logoImageCrop} aspectRatio={1} onChange={v=>upd('logoImageCrop',v)} />
+          <div style={{padding:20,borderRadius:14,background:'#fdf2f8',border:`2px dashed ${P}40`,textAlign:'center' as const,marginTop:16}}>
+            {draft.logoImageCrop?.croppedDataUrl
+              ? <img src={draft.logoImageCrop.croppedDataUrl} style={{width:48,height:48,borderRadius:'50%',objectFit:'cover',marginBottom:6}} alt="logo" />
+              : <div style={{fontSize:32,marginBottom:6}}>{draft.logoEmoji}</div>}
             <div style={{fontSize:20,fontWeight:900,color:draft.primaryColor}}>{draft.logoText}</div>
             <div style={{fontSize:11,color:'#9ca3af',marginTop:4}}>Preview</div>
           </div>

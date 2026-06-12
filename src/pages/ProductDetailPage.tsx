@@ -19,6 +19,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const [selectedOption, setSelectedOption] = useState<any>(null);
   const [optionError, setOptionError] = useState('');
   const [related, setRelated] = useState<any[]>([]);
+  const [artistProducts, setArtistProducts] = useState<any[]>([]);
+  const [artistProfile, setArtistProfile] = useState<any>(null);
   const { isFav, toggle } = useFavorites();
   const { user } = useAuth();
 
@@ -42,7 +44,15 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     api.getProducts().then((all: any[]) => {
       if (!Array.isArray(all)) return;
       setRelated(all.filter(x => x.category === product.category && x.id !== product.id).slice(0, 4));
+      const artistSlug = product.artist_slug || product.artistSlug;
+      if (artistSlug) {
+        setArtistProducts(all.filter(x => (x.artist_slug || x.artistSlug) === artistSlug && x.id !== product.id).slice(0, 4));
+      }
     }).catch(() => {});
+    const artistSlug = product.artist_slug || product.artistSlug;
+    if (artistSlug) {
+      api.getArtist(artistSlug).then(a => { if (a && !a.error) setArtistProfile(a); }).catch(() => {});
+    }
   }, [product]);
 
   if (loading) return <div style={{minHeight:'60vh',display:'flex',alignItems:'center',justifyContent:'center',fontSize:32}}>⏳</div>;
@@ -249,6 +259,39 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             )}
           </div>
         </div>
+
+        {/* Artist section */}
+        {(artistProfile || (product.artistName || product.artist_name)) && (
+          <div style={{marginTop:36,background:'white',borderRadius:20,padding:'24px',boxShadow:'0 4px 24px rgba(0,0,0,0.06)'}}>
+            <h2 style={{fontSize:18,fontWeight:900,color:theme.textColor,margin:'0 0 18px'}}>{tRaw('ผลงานจากศิลปินคนนี้','More from this artist')}</h2>
+            {/* Artist card */}
+            <div style={{display:'flex',gap:16,alignItems:'flex-start',marginBottom:artistProducts.length>0?24:0}}>
+              <button onClick={()=>navigate(`/artists/${product.artist_slug||product.artistSlug||''}`)}
+                style={{background:'none',border:'none',cursor:'pointer',padding:0,flexShrink:0}}>
+                {(artistProfile?.cover_image_url||artistProfile?.avatar_url)
+                  ? <img src={artistProfile.cover_image_url||artistProfile.avatar_url} alt={artistProfile.name} style={{width:64,height:64,borderRadius:'50%',objectFit:'cover',border:`2px solid ${p}30`}} />
+                  : <div style={{width:64,height:64,borderRadius:'50%',background:`linear-gradient(135deg,${p}30,${p}60)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,border:`2px solid ${p}30`}}>🎨</div>}
+              </button>
+              <div style={{flex:1}}>
+                <button onClick={()=>navigate(`/artists/${product.artist_slug||product.artistSlug||''}`)}
+                  style={{background:'none',border:'none',cursor:'pointer',padding:0,textAlign:'left' as const}}>
+                  <div style={{fontSize:16,fontWeight:800,color:theme.textColor,marginBottom:4}}>{artistProfile?.name||product.artistName||product.artist_name}</div>
+                </button>
+                {artistProfile?.bio && <p style={{fontSize:13,color:theme.textColor+'99',margin:'0 0 10px',lineHeight:1.6}}>{artistProfile.bio}</p>}
+                <button onClick={()=>navigate(`/artists/${product.artist_slug||product.artistSlug||''}`)}
+                  style={{background:'none',border:`1.5px solid ${p}`,color:p,cursor:'pointer',padding:'6px 14px',borderRadius:20,fontSize:12,fontWeight:700,fontFamily:theme.fontFamily}}>
+                  {tRaw('ดูหน้าศิลปิน','View artist page')} →
+                </button>
+              </div>
+            </div>
+            {/* Other products from same artist */}
+            {artistProducts.length>0 && (
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:14}}>
+                {artistProducts.map((x:any)=><ProductCard key={x.id} product={x}/>)}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Related */}
         {related.length > 0 && (
