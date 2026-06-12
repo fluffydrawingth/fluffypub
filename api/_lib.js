@@ -67,4 +67,19 @@ async function requireAuth(req, res, roles) {
   return user;
 }
 
-module.exports = { supabase, getToken, getUser, json, requireAuth };
+async function getThemeBranding() {
+  try {
+    const { data } = await supabase.from('theme').select('config').eq('id', 1).single();
+    const cfg = data?.config || {};
+    return {
+      logoText: cfg.logoText || 'Fluffy Pub',
+      logoEmoji: cfg.logoEmoji || '🐰',
+      logoImageDataUrl: cfg.logoImageCrop?.croppedDataUrl || null,
+      primaryColor: cfg.primaryColor || '#f472b6',
+    };
+  } catch {
+    return { logoText: 'Fluffy Pub', logoEmoji: '🐰', logoImageDataUrl: null, primaryColor: '#f472b6' };
+  }
+}
+
+module.exports = { supabase, getToken, getUser, json, requireAuth, getThemeBranding };

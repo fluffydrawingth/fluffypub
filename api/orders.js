@@ -1,5 +1,5 @@
 // /api/orders
-const { supabase, requireAuth, getUser, json } = require('./_lib');
+const { supabase, requireAuth, getUser, json, getThemeBranding } = require('./_lib');
 const crypto = require('crypto');
 
 const SITE = process.env.SITE_URL || 'https://fluffypub.com';
@@ -7,20 +7,24 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'fluffydrawing.th@gmail.com';
 
 // ── Email helpers ────────────────────────────────────────────────────────────
 
-function emailWrapper(bodyHtml) {
+async function emailWrapper(bodyHtml) {
+  const brand = await getThemeBranding();
+  const logoHtml = brand.logoImageDataUrl
+    ? `<img src="${brand.logoImageDataUrl}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;margin-bottom:8px;display:block;margin-left:auto;margin-right:auto" alt="${brand.logoText}" />`
+    : `<div style="font-size:28px;margin-bottom:6px">${brand.logoEmoji}</div>`;
   return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#fdf2f8;font-family:'Nunito',sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#fdf2f8;padding:32px 16px">
 <tr><td>
-<table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:white;borderRadius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(244,114,182,0.12)">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:white;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(244,114,182,0.12)">
   <tr><td style="background:linear-gradient(135deg,#fce7f3,#fdf4ff);padding:28px 32px;text-align:center;border-bottom:2px solid #f9a8d4">
-    <div style="font-size:28px;margin-bottom:6px">🐰</div>
-    <div style="font-size:22px;font-weight:900;color:#f472b6;letter-spacing:-0.5px">Fluffy Pub</div>
+    ${logoHtml}
+    <div style="font-size:22px;font-weight:900;color:${brand.primaryColor};letter-spacing:-0.5px">${brand.logoText}</div>
     <div style="font-size:12px;color:#c084fc;font-weight:600;margin-top:2px">adorable coloring books 🌸</div>
   </td></tr>
   <tr><td style="padding:28px 32px">${bodyHtml}</td></tr>
   <tr><td style="background:#fafafa;padding:16px 32px;text-align:center;border-top:1px solid #f3f4f6">
-    <p style="margin:0;font-size:11px;color:#9ca3af">Fluffy Pub · <a href="${SITE}" style="color:#f472b6;text-decoration:none">${SITE}</a></p>
-    <p style="margin:4px 0 0;font-size:11px;color:#d1d5db">© ${new Date().getFullYear()} Fluffy Pub. All rights reserved.</p>
+    <p style="margin:0;font-size:11px;color:#9ca3af">${brand.logoText} · <a href="${SITE}" style="color:${brand.primaryColor};text-decoration:none">${SITE}</a></p>
+    <p style="margin:4px 0 0;font-size:11px;color:#d1d5db">© ${new Date().getFullYear()} ${brand.logoText}. All rights reserved.</p>
   </td></tr>
 </table>
 </td></tr></table>
@@ -60,13 +64,13 @@ function orderSummaryHtml(order) {
 
 // Templates ─────────────────────────────────────────────────────────────────
 
-function tplOrderCreated(order) {
+async function tplOrderCreated(order) {
   const ref = (order.id || '').slice(-8).toUpperCase();
   const total = order.total_thb || order.total_amount || 0;
   const orderLink = order.access_token
     ? `${SITE}/#/guest-order/${order.access_token}`
     : `${SITE}/#/account/orders`;
-  return emailWrapper(`
+  return await emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:20px">🎉 ขอบคุณสำหรับการสั่งซื้อ!</h2>
     <p style="margin:0 0 20px;color:#6b7280;font-size:13px">Thank you for your order! We've received it and are waiting for payment.</p>
     <div style="background:#fdf2f8;border-radius:12px;padding:14px 16px;margin-bottom:20px;border:1.5px solid #f9a8d4">
@@ -93,10 +97,10 @@ function tplOrderCreated(order) {
   `);
 }
 
-function tplAdminNewOrder(order) {
+async function tplAdminNewOrder(order) {
   const ref = (order.id || '').slice(-8).toUpperCase();
   const total = order.total_thb || order.total_amount || 0;
-  return emailWrapper(`
+  return await emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:18px">🛍️ New Order Received</h2>
     <div style="background:#f0fdf4;border-radius:10px;padding:12px 14px;margin:14px 0;border:1px solid #86efac">
       <div style="font-weight:700;color:#065f46;font-size:14px">#${ref} · ฿${Number(total).toLocaleString('th-TH')}</div>
@@ -108,10 +112,10 @@ function tplAdminNewOrder(order) {
   `);
 }
 
-function tplPaymentReminder(order) {
+async function tplPaymentReminder(order) {
   const ref = (order.id || '').slice(-8).toUpperCase();
   const total = order.total_thb || order.total_amount || 0;
-  return emailWrapper(`
+  return await emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:20px">⏰ แจ้งเตือนการชำระเงิน</h2>
     <p style="margin:0 0 16px;color:#6b7280;font-size:13px">คำสั่งซื้อของคุณยังรอการชำระเงินอยู่ / Your order is still awaiting payment.</p>
     <div style="background:#fef3c7;border-radius:12px;padding:14px 16px;margin-bottom:20px;border:1.5px solid #fcd34d">
@@ -125,9 +129,9 @@ function tplPaymentReminder(order) {
   `);
 }
 
-function tplPaymentConfirmed(order) {
+async function tplPaymentConfirmed(order) {
   const ref = (order.id || '').slice(-8).toUpperCase();
-  return emailWrapper(`
+  return await emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:20px">✅ ยืนยันการชำระเงินแล้ว!</h2>
     <p style="margin:0 0 16px;color:#6b7280;font-size:13px">Payment confirmed! We're preparing your order. 🌸</p>
     <div style="background:#f0fdf4;border-radius:12px;padding:14px 16px;margin-bottom:20px;border:1.5px solid #86efac">
@@ -142,10 +146,10 @@ function tplPaymentConfirmed(order) {
   `);
 }
 
-function tplAdminPaymentConfirmed(order) {
+async function tplAdminPaymentConfirmed(order) {
   const ref = (order.id || '').slice(-8).toUpperCase();
   const total = order.total_thb || order.total_amount || 0;
-  return emailWrapper(`
+  return await emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:18px">💰 Payment Received</h2>
     <div style="background:#f0fdf4;border-radius:10px;padding:12px 14px;margin:14px 0;border:1px solid #86efac">
       <div style="font-weight:700;color:#065f46;font-size:14px">#${ref} · ฿${Number(total).toLocaleString('th-TH')}</div>
@@ -156,11 +160,11 @@ function tplAdminPaymentConfirmed(order) {
   `);
 }
 
-function tplTrackingAdded(order) {
+async function tplTrackingAdded(order) {
   const ref = (order.id || '').slice(-8).toUpperCase();
   const tracking = order.tracking_number;
   const provider = order.shipping_provider || 'Thailand Post';
-  return emailWrapper(`
+  return await emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:20px">🚚 สินค้าถูกจัดส่งแล้ว!</h2>
     <p style="margin:0 0 16px;color:#6b7280;font-size:13px">Your order has been shipped! 📦</p>
     <div style="background:#eff6ff;border-radius:12px;padding:16px;margin-bottom:20px;border:1.5px solid #93c5fd">
@@ -331,7 +335,7 @@ module.exports = async function handler(req, res) {
     const orderLink = `${SITE}/#/guest-order/${order.access_token}`;
     const orderRefFmt = '#' + (order.id || '').slice(-8).toUpperCase();
     await sendEmail(email, `🔗 ลิงก์ติดตามคำสั่งซื้อ ${orderRefFmt} — Fluffy Pub`,
-      emailWrapper(`
+      await emailWrapper(`
         <h2 style="margin:0 0 6px;color:#111827;font-size:20px">🔗 ลิงก์ติดตามคำสั่งซื้อของคุณ</h2>
         <p style="margin:0 0 16px;color:#6b7280;font-size:13px">Here is your order access link / นี่คือลิงก์สำหรับดูคำสั่งซื้อของคุณ</p>
         <div style="background:#fdf2f8;border-radius:12px;padding:14px 16px;margin-bottom:16px;border:1.5px solid #f9a8d4">
@@ -441,8 +445,8 @@ module.exports = async function handler(req, res) {
     }
     // Send confirmation emails
     const orderRef = (order.id || '').slice(-8).toUpperCase();
-    await sendEmail(customerEmail, `✅ คำสั่งซื้อ #${orderRef} รับแล้ว — Fluffy Pub`, tplOrderCreated(order), { orderId: order.id, eventType: 'order_created' });
-    await sendEmail(ADMIN_EMAIL, `🛍️ New Order #${orderRef} — ฿${Number(order.total_thb||0).toLocaleString('th-TH')}`, tplAdminNewOrder(order), { orderId: order.id, eventType: 'admin_order_created' });
+    await sendEmail(customerEmail, `✅ คำสั่งซื้อ #${orderRef} รับแล้ว — Fluffy Pub`, await tplOrderCreated(order), { orderId: order.id, eventType: 'order_created' });
+    await sendEmail(ADMIN_EMAIL, `🛍️ New Order #${orderRef} — ฿${Number(order.total_thb||0).toLocaleString('th-TH')}`, await tplAdminNewOrder(order), { orderId: order.id, eventType: 'admin_order_created' });
 
     return json(res, 201, order);
   }
@@ -463,7 +467,7 @@ module.exports = async function handler(req, res) {
     const ref = (order.id||'').slice(-8).toUpperCase();
     const total = order.total_thb || order.total_amount || 0;
     await sendEmail(ADMIN_EMAIL, `💳 Payment Slip Uploaded — Order #${ref}`,
-      emailWrapper(`<h2 style="margin:0 0 10px;color:#111827;font-size:18px">💳 Payment Slip Uploaded</h2>
+      await emailWrapper(`<h2 style="margin:0 0 10px;color:#111827;font-size:18px">💳 Payment Slip Uploaded</h2>
         <p style="color:#374151;font-size:13px"><strong>${order.customer_name}</strong> uploaded a payment slip for Order <strong>#${ref}</strong> · ฿${Number(total).toLocaleString('th-TH')}</p>
         <img src="${slip_url}" alt="slip" style="width:100%;max-width:320px;border-radius:8px;border:1px solid #e5e7eb;margin:8px 0">
         <a href="${SITE}/admin" style="display:inline-block;margin-top:8px;background:#f472b6;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">⚙️ Review in Admin →</a>`),
@@ -500,8 +504,8 @@ module.exports = async function handler(req, res) {
 
     // Send payment confirmed emails
     const ref = (data.id||'').slice(-8).toUpperCase();
-    await sendEmail(data.customer_email, `✅ ยืนยันการชำระเงิน Order #${ref} — Fluffy Pub`, tplPaymentConfirmed(data), { orderId: data.id, eventType: 'payment_confirmed' });
-    await sendEmail(ADMIN_EMAIL, `💰 Payment Confirmed — Order #${ref}`, tplAdminPaymentConfirmed(data), { orderId: data.id, eventType: 'admin_payment_confirmed' });
+    await sendEmail(data.customer_email, `✅ ยืนยันการชำระเงิน Order #${ref} — Fluffy Pub`, await tplPaymentConfirmed(data), { orderId: data.id, eventType: 'payment_confirmed' });
+    await sendEmail(ADMIN_EMAIL, `💰 Payment Confirmed — Order #${ref}`, await tplAdminPaymentConfirmed(data), { orderId: data.id, eventType: 'admin_payment_confirmed' });
 
     return json(res, 200, data);
   }
@@ -530,10 +534,10 @@ module.exports = async function handler(req, res) {
       const ref = (data.id||'').slice(-8).toUpperCase();
       if (justShipped) {
         // One email covers both shipped status + any new tracking number
-        await sendEmail(data.customer_email, `🚚 สินค้าถูกจัดส่งแล้ว! Order #${ref} — Fluffy Pub`, tplTrackingAdded(data), { orderId: data.id, eventType: 'shipped_notification' });
+        await sendEmail(data.customer_email, `🚚 สินค้าถูกจัดส่งแล้ว! Order #${ref} — Fluffy Pub`, await tplTrackingAdded(data), { orderId: data.id, eventType: 'shipped_notification' });
       } else if (trackingAdded) {
         // Tracking updated without shipping status change (e.g., adding tracking later)
-        await sendEmail(data.customer_email, `🚚 อัปเดตหมายเลขพัสดุ Order #${ref} — Fluffy Pub`, tplTrackingAdded(data), { orderId: data.id, eventType: 'tracking_added' });
+        await sendEmail(data.customer_email, `🚚 อัปเดตหมายเลขพัสดุ Order #${ref} — Fluffy Pub`, await tplTrackingAdded(data), { orderId: data.id, eventType: 'tracking_added' });
       }
     }
 
@@ -577,7 +581,7 @@ module.exports = async function handler(req, res) {
       const result = await sendEmail(
         order.customer_email,
         `⏰ แจ้งเตือน: รอชำระเงินคำสั่งซื้อ #${ref} — Fluffy Pub`,
-        tplPaymentReminder(order),
+        await tplPaymentReminder(order),
         { orderId: order.id, eventType: 'payment_reminder' }
       );
       await supabase.from('orders').update({ payment_reminder_sent_at: new Date().toISOString() }).eq('id', oid);
