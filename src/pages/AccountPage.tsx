@@ -121,8 +121,10 @@ function OrdersTab({p,theme}:any) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token||''}` },
         body: JSON.stringify({ slip_url: result.publicUrl }),
       });
-      const saveData = await saveRes.json();
-      if (saveData.error) {
+      // Safe JSON parse — Vercel may return non-JSON on timeout even if the save succeeded
+      let saveData: any = null;
+      try { saveData = await saveRes.json(); } catch {}
+      if (saveData?.error) {
         console.error('[slip upload] save error:', saveData.error);
         alert(tRaw(`บันทึกไม่สำเร็จ: ${saveData.error}`, `Save failed: ${saveData.error}`));
         setSlipUploading(false);
@@ -133,8 +135,21 @@ function OrdersTab({p,theme}:any) {
       if (selected?.id === orderId) setSelected((s: any) => ({ ...s, slip_url: result.publicUrl, status: 'payment_submitted', payment_status: 'payment_submitted', slip_reject_reason: null }));
       setShowReplace(false);
     } catch (e: any) {
+      // If the image was already uploaded to storage, the save likely succeeded despite the error.
+      // Reload orders to reflect actual state rather than showing a confusing alert.
       console.error('[slip upload] exception:', e.message);
-      alert(tRaw('เกิดข้อผิดพลาด', 'Error: ' + e.message));
+      const freshOrders = await api.myOrders().catch(() => null);
+      if (freshOrders) {
+        setOrders(freshOrders);
+        const freshOrder = freshOrders.find((o: any) => o.id === orderId);
+        if (freshOrder?.slip_url) {
+          if (selected?.id === orderId) setSelected(freshOrder);
+          setShowReplace(false);
+          setSlipUploading(false);
+          return;
+        }
+      }
+      alert(tRaw('เกิดข้อผิดพลาด กรุณาลองใหม่', 'Something went wrong. Please try again.'));
     }
     setSlipUploading(false);
   };
