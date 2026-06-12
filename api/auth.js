@@ -60,10 +60,14 @@ module.exports = async function handler(req, res) {
       email,
       options: { redirectTo: SITE },
     });
-    if (linkError) return json(res, 400, { error: linkError.message });
+
+    // Always return success — never reveal whether an email exists
+    if (linkError || !linkData) {
+      return json(res, 200, { success: true, message: 'Password reset email sent.' });
+    }
 
     const resetLink = linkData?.properties?.action_link || linkData?.action_link;
-    if (!resetLink) return json(res, 500, { error: 'Could not generate reset link.' });
+    if (!resetLink) return json(res, 200, { success: true, message: 'Password reset email sent.' });
 
     // Send via Resend directly (same as order emails)
     const RESEND_KEY = process.env.RESEND_API_KEY;
