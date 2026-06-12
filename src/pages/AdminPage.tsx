@@ -128,7 +128,6 @@ function DashboardTab() {
   const [selYear,  setSelYear]  = useState(now.getFullYear());
   const [stats, setStats] = useState<any>(null);
   const [exporting, setExporting] = useState(false);
-  const [exportingXlsx, setExportingXlsx] = useState(false);
 
   const loadStats = (month: number, year: number) => {
     setStats(null);
@@ -169,6 +168,7 @@ function DashboardTab() {
     URL.revokeObjectURL(url);
   };
 
+  const [exportingXlsx, setExportingXlsx] = useState(false);
   const exportXlsx = async () => {
     setExportingXlsx(true);
     try {
