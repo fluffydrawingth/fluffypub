@@ -4,13 +4,16 @@ module.exports = async function handler(req, res) {
 
   // GET /api/artists or /api/artists?id=xxx
   if (req.method === 'GET') {
-    const { id } = req.query;
-    if (id) {
-      const { data, error } = await supabase.from('profiles')
+    const { id, slug } = req.query;
+    if (id || slug) {
+      const query = supabase.from('profiles')
         .select('id,name,artist_slug,bio,role,cover_image_url,avatar_url,website,social_links,artist_status,created_at')
-        .eq('id', id).eq('role', 'artist').single();
+        .eq('role', 'artist').single();
+      const { data, error } = slug
+        ? await supabase.from('profiles').select('id,name,artist_slug,bio,role,cover_image_url,avatar_url,website,social_links,artist_status,created_at').eq('artist_slug', slug).eq('role','artist').single()
+        : await supabase.from('profiles').select('id,name,artist_slug,bio,role,cover_image_url,avatar_url,website,social_links,artist_status,created_at').eq('id', id).eq('role','artist').single();
       if (error || !data) return json(res, 404, { error: 'Artist not found' });
-      const { data: products } = await supabase.from('products').select('id,title,slug,image,cover_image_url,price,category').eq('artist_id', id).eq('active', true).eq('status','published');
+      const { data: products } = await supabase.from('products').select('id,title,slug,image,cover_image_url,price,category').eq('artist_id', data.id).eq('active', true).eq('status','published');
       return json(res, 200, { ...data, products: products || [] });
     }
     const { data: artists } = await supabase.from('profiles')

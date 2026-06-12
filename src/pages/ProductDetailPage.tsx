@@ -41,17 +41,22 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
   useEffect(() => {
     if (!product) return;
+    const artistSlug = product.artist_slug || product.artistSlug;
     api.getProducts().then((all: any[]) => {
       if (!Array.isArray(all)) return;
-      setRelated(all.filter(x => x.category === product.category && x.id !== product.id).slice(0, 4));
-      const artistSlug = product.artist_slug || product.artistSlug;
-      if (artistSlug) {
-        setArtistProducts(all.filter(x => (x.artist_slug || x.artistSlug) === artistSlug && x.id !== product.id).slice(0, 4));
-      }
+      const fromArtist = artistSlug
+        ? all.filter(x => (x.artist_slug || x.artistSlug) === artistSlug && x.id !== product.id).slice(0, 4)
+        : [];
+      setArtistProducts(fromArtist);
+      const shownIds = new Set([product.id, ...fromArtist.map((x: any) => x.id)]);
+      const recommendations = all
+        .filter(x => !shownIds.has(x.id))
+        .sort((a, b) => (b.category === product.category ? 1 : 0) - (a.category === product.category ? 1 : 0))
+        .slice(0, 4);
+      setRelated(recommendations);
     }).catch(() => {});
-    const artistSlug = product.artist_slug || product.artistSlug;
     if (artistSlug) {
-      api.getArtist(artistSlug).then(a => { if (a && !a.error) setArtistProfile(a); }).catch(() => {});
+      api.getArtistBySlug(artistSlug).then(a => { if (a && !a.error) setArtistProfile(a); }).catch(() => {});
     }
   }, [product]);
 
@@ -296,7 +301,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
         {/* Related */}
         {related.length > 0 && (
           <div style={{marginTop:36}}>
-            <h2 style={{fontSize:22,fontWeight:900,color:theme.textColor,marginBottom:18}}>{tRaw('สินค้าที่คุณอาจชอบ 💕','You Might Also Like 💕')}</h2>
+            <h2 style={{fontSize:22,fontWeight:900,color:theme.textColor,marginBottom:18}}>{tRaw('สินค้าที่คุณอาจสนใจ 💕','You may also like 💕')}</h2>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:16}}>
               {related.map((x:any)=><ProductCard key={x.id} product={x}/>)}
             </div>
