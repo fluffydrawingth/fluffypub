@@ -336,6 +336,7 @@ function ProductsTab() {
   const [type, setType] = useState('digital');
   const [pages, setPages] = useState('');
   const [tags, setTags] = useState('');
+  const [searchKeywords, setSearchKeywords] = useState('');
   const [status, setStatus] = useState('published');
   const [digitalDownloadUrl, setDigitalDownloadUrl] = useState('');
   const [downloadInstruction, setDownloadInstruction] = useState('');
@@ -372,7 +373,7 @@ function ProductsTab() {
   const resetForm = () => {
     setTitle(''); setPrice(''); setOriginalPrice(''); setCategories_sel([]);
     setDescription(''); setImage('🎨'); setCoverImageUrl(''); setType('digital');
-    setPages(''); setTags(''); setStatus('published'); setDigitalDownloadUrl('');
+    setPages(''); setTags(''); setSearchKeywords(''); setStatus('published'); setDigitalDownloadUrl('');
     setDownloadInstruction(''); setPhysicalStock('0'); setShippingRequired(false); setShippingNote('');
     setArtistId(''); setIsDigital(true); setIsPhysical(false); setRichBlocks([]);
     setEditingId(null);
@@ -383,7 +384,7 @@ function ProductsTab() {
     // Load from categories array if available, else fall back to single category field
     setCategories_sel(pr.categories && pr.categories.length ? pr.categories : (pr.category ? [pr.category] : [])); setDescription(pr.description||''); setImage(pr.image||'🎨');
     setCoverImageUrl(pr.cover_image_url||''); setType(pr.type||'digital'); setPages(String(pr.pages||''));
-    setTags((pr.tags||[]).join(', ')); setStatus(pr.status||'published');
+    setTags((pr.tags||[]).join(', ')); setSearchKeywords(pr.search_keywords||''); setStatus(pr.status||'published');
     setDigitalDownloadUrl(pr.digital_download_url||''); setDownloadInstruction(pr.download_instruction||'');
     setPhysicalStock(String(pr.physical_stock||0)); setShippingRequired(!!pr.shipping_required);
     setShippingNote(pr.shipping_note||''); setArtistId(pr.artist_id||'');
@@ -407,7 +408,9 @@ function ProductsTab() {
       is_digital:isDigital, is_physical:isPhysical,
       type:isPhysical?'physical':'digital', // DB only allows 'digital' or 'physical'
       pages:parseInt(pages)||0,
-      tags:tags.split(',').map((t:string)=>t.trim()).filter(Boolean), status,
+      tags:tags.split(',').map((t:string)=>t.trim()).filter(Boolean),
+      search_keywords: searchKeywords.trim() || null,
+      status,
       digital_download_url:isDigital?(digitalDownloadUrl||null):null,
       download_instruction:isDigital?(downloadInstruction||null):null,
       physical_stock:isPhysical?(parseInt(physicalStock)||0):0,
@@ -552,6 +555,7 @@ function ProductsTab() {
               <RichDescEditor blocks={richBlocks} onChange={setRichBlocks} />
             </div>
             <div style={{gridColumn:'1/-1'}}>{inp('Tags (comma-separated)', tags, setTags, 'bunnies, garden, spring')}</div>
+            <div style={{gridColumn:'1/-1'}}>{inp('Search Keywords (comma-separated, Thai/English)', searchKeywords, setSearchKeywords, 'เงือก, นางเงือก, ทะเล, ocean, sea, mermaid')}</div>
             <div style={{gridColumn:'1/-1'}}>
               <VariantsEditor variants={variants} onChange={setVariants} />
             </div>

@@ -48,6 +48,7 @@ export default function ProductsPage() {
         prod.category,
         (prod.categories || []).join(' '),
         tags,
+        prod.search_keywords || '',
         prod.artistName || prod.artist_name,
       ].map(v => (v || '').toLowerCase()).join(' ');
       if (!haystack.includes(searchTerm)) return false;
