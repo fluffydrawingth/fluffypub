@@ -44,7 +44,7 @@ async function handleFreeDownloads(req, res) {
   if (req.method === 'GET' && !slug && !id) {
     const user = req.headers.authorization ? await getUser(req) : null;
     let q = supabase.from('free_downloads')
-      .select('id,title_en,title_th,slug,cover_image_url,highlight,category,keywords,sort_order,file_type,r2_file_name,file_size,status,download_count,last_download_at,created_at')
+      .select('id,title_en,title_th,slug,cover_image_url,description_en,description_th,highlight,category,keywords,sort_order,file_type,r2_key,r2_file_name,file_size,status,download_count,last_download_at,created_at')
       .order('sort_order').order('created_at', { ascending: false });
     if (!user || user.role !== 'admin') q = q.eq('status', 'published');
     const { data, error } = await q;
