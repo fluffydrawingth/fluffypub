@@ -88,10 +88,12 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
         .fd-grid{display:flex;align-items:stretch;}
         .fd-img{width:50%;flex-shrink:0;aspect-ratio:1/1;position:relative;overflow:hidden;}
         .fd-info{flex:1;padding:36px 40px;overflow:hidden;overflow-y:auto;}
-        @media(max-width:768px){
+        .fd-related-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;}
+        @media(max-width:640px){
           .fd-grid{flex-direction:column!important;}
           .fd-img{width:100%!important;aspect-ratio:1/1!important;}
           .fd-info{padding:18px 16px 28px!important;}
+          .fd-related-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important;}
         }
       `}</style>
 
@@ -203,7 +205,7 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
             <h2 style={{ fontSize: 20, fontWeight: 900, color: '#1e293b', marginBottom: 20 }}>
               🎨 {tRaw('เพิ่มเติมจากศิลปินนี้', 'More from this artist')}
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+            <div className="fd-related-grid">
               {moreFromArtist.map(fd => {
                 const fdTitle = (lang === 'th' && fd.title_th) ? fd.title_th : fd.title_en;
                 const ft = fd.file_type || '';
@@ -233,7 +235,7 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
             <h2 style={{ fontSize: 20, fontWeight: 900, color: '#1e293b', marginBottom: 20 }}>
               {tRaw('คุณอาจชอบ', 'You may also like')}
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+            <div className="fd-related-grid">
               {related.map(pr => <ProductCard key={pr.id} product={pr} />)}
             </div>
           </div>
