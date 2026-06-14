@@ -13,6 +13,7 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
   const [artist, setArtist] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [freeDownloads, setFreeDownloads] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'physical'|'digital'|'free'>('physical');
   const p = theme.primaryColor;
 
   useEffect(() => {
@@ -107,67 +108,86 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
           </div>
         )}
 
-        {/* ── Physical Products ── */}
-        {physicalSection.length > 0 && (
-          <div style={{ marginBottom:48 }}>
-            <h2 style={{ fontSize:20, fontWeight:900, color:theme.textColor, marginBottom:16, display:'flex', alignItems:'center', gap:10 }}>
-              <span style={{ background:'#d1fae5', color:'#065f46', borderRadius:10, padding:'3px 12px', fontSize:13 }}>📦 {tRaw('สินค้า', 'Physical')}</span>
-              <span style={{ fontSize:14, color:'#9ca3af', fontWeight:600 }}>{physicalSection.length}</span>
-            </h2>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:20 }}>
-              {physicalSection.map((pr:any) => (
-                <ProductCard key={pr.id} product={{ ...pr, artistName: artist.name }} />
-              ))}
-            </div>
-          </div>
-        )}
+        {/* ── Tabs ── */}
+        {totalCount > 0 && (() => {
+          const tabs: { key: 'physical'|'digital'|'free'; label: string; labelTh: string; icon: string; count: number; bg: string; color: string }[] = [
+            ...(physicalSection.length > 0 ? [{ key: 'physical' as const, label: 'Physical', labelTh: 'สินค้า', icon: '📦', count: physicalSection.length, bg: '#d1fae5', color: '#065f46' }] : []),
+            ...(showDigital.length  > 0 ? [{ key: 'digital'  as const, label: 'Digital',  labelTh: 'ดิจิทัล', icon: '⬇️', count: showDigital.length,  bg: '#dbeafe', color: '#1d4ed8' }] : []),
+            ...(freeDownloads.length> 0 ? [{ key: 'free'     as const, label: 'Free',     labelTh: 'ฟรี',     icon: '🎁', count: freeDownloads.length, bg: '#fef9c3', color: '#854d0e' }] : []),
+          ];
+          // Auto-select first available tab if current selection has no items
+          const validTab = tabs.find(t => t.key === activeTab) ? activeTab : (tabs[0]?.key || 'physical');
+          if (validTab !== activeTab) setActiveTab(validTab);
 
-        {/* ── Digital Products ── */}
-        {showDigital.length > 0 && (
-          <div style={{ marginBottom:48 }}>
-            <h2 style={{ fontSize:20, fontWeight:900, color:theme.textColor, marginBottom:16, display:'flex', alignItems:'center', gap:10 }}>
-              <span style={{ background:'#dbeafe', color:'#1d4ed8', borderRadius:10, padding:'3px 12px', fontSize:13 }}>⬇️ {tRaw('ดิจิทัล', 'Digital')}</span>
-              <span style={{ fontSize:14, color:'#9ca3af', fontWeight:600 }}>{showDigital.length}</span>
-            </h2>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:20 }}>
-              {showDigital.map((pr:any) => (
-                <ProductCard key={pr.id} product={{ ...pr, artistName: artist.name }} />
-              ))}
-            </div>
-          </div>
-        )}
+          return (
+            <>
+              {/* Tab bar */}
+              <div style={{ display:'flex', gap:8, marginBottom:24, borderBottom:`2px solid ${p}15`, paddingBottom:0, flexWrap:'wrap' as const }}>
+                {tabs.map(tab => {
+                  const active = validTab === tab.key;
+                  return (
+                    <button key={tab.key} onClick={() => setActiveTab(tab.key)}
+                      style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 20px', borderRadius:'12px 12px 0 0', border:'none', cursor:'pointer', fontFamily:theme.fontFamily, fontSize:14, fontWeight:700, transition:'all 0.15s',
+                        background: active ? 'white' : 'transparent',
+                        color: active ? p : '#9ca3af',
+                        borderBottom: active ? `2px solid ${p}` : '2px solid transparent',
+                        marginBottom: active ? '-2px' : '0',
+                        boxShadow: active ? '0 -2px 8px rgba(0,0,0,0.05)' : 'none',
+                      }}>
+                      <span>{tab.icon}</span>
+                      <span>{lang === 'th' ? tab.labelTh : tab.label}</span>
+                      <span style={{ background: active ? tab.bg : '#f3f4f6', color: active ? tab.color : '#9ca3af', borderRadius:20, padding:'1px 8px', fontSize:12, fontWeight:800, minWidth:22, textAlign:'center' as const }}>
+                        {tab.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
 
-        {/* ── Free Downloads ── */}
-        {freeDownloads.length > 0 && (
-          <div style={{ marginBottom:48 }}>
-            <h2 style={{ fontSize:20, fontWeight:900, color:theme.textColor, marginBottom:16, display:'flex', alignItems:'center', gap:10 }}>
-              <span style={{ background:'#d1fae5', color:'#065f46', borderRadius:10, padding:'3px 12px', fontSize:13 }}>🎁 {tRaw('ฟรี', 'Free Downloads')}</span>
-              <span style={{ fontSize:14, color:'#9ca3af', fontWeight:600 }}>{freeDownloads.length}</span>
-            </h2>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:20 }}>
-              {freeDownloads.map((fd:any) => {
-                const fdTitle = (lang === 'th' && fd.title_th) ? fd.title_th : fd.title_en;
-                const ft = fd.file_type || '';
-                return (
-                  <div key={fd.id} onClick={() => navigate(`/free-downloads/${fd.slug}`)}
-                    style={{ background:'white', borderRadius:16, overflow:'hidden', cursor:'pointer', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', border:`1.5px solid ${p}15` }}>
-                    {fd.cover_image_url
-                      ? <img src={fd.cover_image_url} alt={fdTitle} style={{ width:'100%', aspectRatio:'1/1', objectFit:'cover', display:'block' }} />
-                      : <div style={{ width:'100%', aspectRatio:'1/1', background:`${p}10`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:40 }}>{fileIcon(ft)}</div>
-                    }
-                    <div style={{ padding:'10px 12px 14px' }}>
-                      {ft && <span style={{ fontSize:10, fontWeight:700, background:fileBg(ft), color:fileColor(ft), borderRadius:5, padding:'2px 7px', marginBottom:6, display:'inline-block' }}>{ft.toUpperCase()}</span>}
-                      <div style={{ fontSize:13, fontWeight:700, color:'#1e293b', lineHeight:1.35, marginBottom:4 }}>{fdTitle}</div>
-                      <div style={{ fontSize:11, color:'#065f46', fontWeight:700, background:'#d1fae5', borderRadius:20, padding:'2px 8px', display:'inline-block' }}>🎁 {tRaw('ฟรี', 'Free')}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+              {/* Tab content */}
+              {validTab === 'physical' && (
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:20 }}>
+                  {physicalSection.map((pr:any) => (
+                    <ProductCard key={pr.id} product={{ ...pr, artistName: artist.name }} />
+                  ))}
+                </div>
+              )}
 
-        {physicalSection.length === 0 && showDigital.length === 0 && freeDownloads.length === 0 && (
+              {validTab === 'digital' && (
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:20 }}>
+                  {showDigital.map((pr:any) => (
+                    <ProductCard key={pr.id} product={{ ...pr, artistName: artist.name }} />
+                  ))}
+                </div>
+              )}
+
+              {validTab === 'free' && (
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:20 }}>
+                  {freeDownloads.map((fd:any) => {
+                    const fdTitle = (lang === 'th' && fd.title_th) ? fd.title_th : fd.title_en;
+                    const ft = fd.file_type || '';
+                    return (
+                      <div key={fd.id} onClick={() => navigate(`/free-downloads/${fd.slug}`)}
+                        style={{ background:'white', borderRadius:16, overflow:'hidden', cursor:'pointer', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', border:`1.5px solid ${p}15` }}>
+                        {fd.cover_image_url
+                          ? <img src={fd.cover_image_url} alt={fdTitle} style={{ width:'100%', aspectRatio:'1/1', objectFit:'cover', display:'block' }} />
+                          : <div style={{ width:'100%', aspectRatio:'1/1', background:`${p}10`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:40 }}>{fileIcon(ft)}</div>
+                        }
+                        <div style={{ padding:'10px 12px 14px' }}>
+                          {ft && <span style={{ fontSize:10, fontWeight:700, background:fileBg(ft), color:fileColor(ft), borderRadius:5, padding:'2px 7px', marginBottom:6, display:'inline-block' }}>{ft.toUpperCase()}</span>}
+                          <div style={{ fontSize:13, fontWeight:700, color:'#1e293b', lineHeight:1.35, marginBottom:4 }}>{fdTitle}</div>
+                          <div style={{ fontSize:11, color:'#854d0e', fontWeight:700, background:'#fef9c3', borderRadius:20, padding:'2px 8px', display:'inline-block' }}>🎁 {tRaw('ฟรี', 'Free')}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          );
+        })()}
+
+        {totalCount === 0 && (
           <div style={{ textAlign:'center', padding:'40px', color:'#9ca3af', background:'white', borderRadius:16 }}>
             {tRaw('ยังไม่มีผลงาน', 'No items yet')}
           </div>
