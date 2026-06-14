@@ -59,14 +59,34 @@ function orderSummaryHtml(order) {
     </div>`;
 }
 
+// ── Link helper ───────────────────────────────────────────────────────────────
+// Only expose the public guest-order token link for true guest orders.
+// Registered-user orders must be viewed after login at /account/orders.
+function orderLink(order) {
+  return (!order.user_id && order.access_token)
+    ? `${SITE}/#/guest-order/${order.access_token}`
+    : `${SITE}/#/account/orders`;
+}
+
+// ── Masking helpers (for public token-based responses) ────────────────────────
+function maskEmail(email) {
+  if (!email) return '';
+  const [local, domain] = email.split('@');
+  if (!domain) return email[0] + '***';
+  return local.slice(0, 1) + '***@' + domain;
+}
+function maskPhone(phone) {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, '');
+  return digits.length > 4 ? '*'.repeat(digits.length - 4) + digits.slice(-4) : '****';
+}
+
 // Templates ─────────────────────────────────────────────────────────────────
 
 async function tplOrderCreated(order) {
   const ref = (order.id || '').slice(-8).toUpperCase();
   const total = order.total_thb || order.total_amount || 0;
-  const orderLink = order.access_token
-    ? `${SITE}/#/guest-order/${order.access_token}`
-    : `${SITE}/#/account/orders`;
+  const link = orderLink(order);
   return await emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:20px">🎉 ขอบคุณสำหรับการสั่งซื้อ!</h2>
     <p style="margin:0 0 20px;color:#6b7280;font-size:13px">Thank you for your order! We've received it and are waiting for payment.</p>
@@ -83,12 +103,12 @@ async function tplOrderCreated(order) {
         <li>ถ่ายรูปสลิปการโอนเงิน</li>
         <li>อัปโหลดสลิปในหน้าคำสั่งซื้อ</li>
       </ol>
-      <a href="${orderLink}" style="display:inline-block;margin-top:12px;background:#f472b6;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📱 ดูคำสั่งซื้อ / View Order →</a>
+      <a href="${link}" style="display:inline-block;margin-top:12px;background:#f472b6;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📱 ดูคำสั่งซื้อ / View Order →</a>
     </div>
     <div style="background:#fdf2f8;border-radius:12px;padding:14px 16px;margin-top:16px;border:1px solid #f9a8d4;text-align:center">
       <div style="font-size:12px;color:#9ca3af;font-weight:700;margin-bottom:6px">🔗 ติดตามคำสั่งซื้อ / Track Your Order</div>
-      <p style="margin:0 0 12px;font-size:12px;color:#374151">บันทึกลิงก์นี้ไว้เพื่อดูสถานะออเดอร์โดยไม่ต้องล็อกอิน / Save this link to track your order without logging in.</p>
-      <a href="${orderLink}" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:10px 24px;border-radius:20px;font-weight:700;font-size:13px">🔍 ดูสถานะออเดอร์ / Track Order →</a>
+      <p style="margin:0 0 12px;font-size:12px;color:#374151">บันทึกลิงก์นี้ไว้เพื่อดูสถานะออเดอร์ / Click the button to view your order.</p>
+      <a href="${link}" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:10px 24px;border-radius:20px;font-weight:700;font-size:13px">🔍 ดูสถานะออเดอร์ / Track Order →</a>
     </div>
     <p style="margin:20px 0 0;font-size:12px;color:#9ca3af">หลังจากยืนยันการชำระเงิน ทีมงานจะดำเนินการต่อภายใน 24 ชม. 🌸</p>
   `);
@@ -121,43 +141,33 @@ async function tplPaymentReminder(order) {
       <div style="font-size:18px;font-weight:800;color:#92400e;margin-top:4px">฿${Number(total).toLocaleString('th-TH')}</div>
     </div>
     <p style="font-size:13px;color:#374151;margin:0 0 12px">กรุณาชำระเงินเพื่อยืนยันคำสั่งซื้อของคุณ / Please complete payment to confirm your order.</p>
-    <a href="${order.access_token ? `${SITE}/#/guest-order/${order.access_token}` : `${SITE}/#/account/orders`}" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:12px 24px;border-radius:20px;font-weight:700;font-size:14px">💳 ชำระเงินตอนนี้ / Pay Now →</a>
+    <a href="${orderLink(order)}" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:12px 24px;border-radius:20px;font-weight:700;font-size:14px">💳 ชำระเงินตอนนี้ / Pay Now →</a>
     <p style="margin:16px 0 0;font-size:11px;color:#9ca3af">หากต้องการยกเลิก กรุณาติดต่อเรา / To cancel, please contact us. 🌸</p>
   `);
 }
 
 async function tplPaymentConfirmed(order) {
   const ref = (order.id || '').slice(-8).toUpperCase();
-  const orderLink = order.access_token
-    ? `${SITE}/#/guest-order/${order.access_token}`
-    : `${SITE}/#/account/orders`;
+  const link = orderLink(order);
   const hasDigital = (order.items || []).some(i => (i.optionType || i.type) === 'digital');
-  const isDigitalOnly = (order.items || []).every(i => (i.optionType || i.type) === 'digital');
-  const digitalItems = (order.items || []).filter(i => (i.optionType || i.type) === 'digital');
-  const downloadLinksHtml = isDigitalOnly && digitalItems.length > 0
-    ? `<div style="background:#eff6ff;border-radius:12px;padding:16px;margin-top:16px;border:1.5px solid #93c5fd">
-        <div style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:10px">⬇️ ไฟล์ดิจิทัลของคุณ / Your Digital Files</div>
-        ${digitalItems.map(i => i.digital_download_url
-          ? `<a href="${i.digital_download_url}" style="display:block;background:#2563eb;color:white;text-decoration:none;padding:10px 16px;border-radius:10px;font-weight:700;font-size:13px;margin-bottom:8px">⬇️ ดาวน์โหลด: ${i.title || 'File'}</a>`
-          : `<div style="font-size:12px;color:#374151;padding:8px;background:white;border-radius:8px;margin-bottom:6px">📄 ${i.title || 'File'} — ติดต่อแอดมินเพื่อรับลิงค์ / Contact admin for download link</div>`
-        ).join('')}
-        <p style="margin:8px 0 0;font-size:11px;color:#6b7280">หรือดูลิงค์ดาวน์โหลดได้ในหน้าคำสั่งซื้อ / Or view download links in your order page.</p>
-      </div>`
-    : hasDigital
-      ? `<div style="background:#eff6ff;border-radius:12px;padding:12px 16px;margin-top:16px;border:1.5px solid #93c5fd;font-size:13px;color:#1e40af">⬇️ ไฟล์ดิจิทัลพร้อมดาวน์โหลดแล้วในหน้าคำสั่งซื้อ / Your digital download is now available in your order page.</div>`
-      : '';
+  const isDigitalOnly = (order.items || []).length > 0 && (order.items || []).every(i => (i.optionType || i.type) === 'digital');
+  // Download links are NOT included in email — customer must visit the order page.
+  // This keeps future download-limit enforcement on the website side.
+  const digitalNote = hasDigital
+    ? `<div style="background:#eff6ff;border-radius:12px;padding:12px 16px;margin-top:16px;border:1.5px solid #93c5fd;font-size:13px;color:#1e40af">⬇️ ไฟล์ดิจิทัลพร้อมในหน้าคำสั่งซื้อแล้ว / Your digital files are ready on your order page.</div>`
+    : '';
   return await emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:20px">✅ ยืนยันการชำระเงินแล้ว!</h2>
-    <p style="margin:0 0 16px;color:#6b7280;font-size:13px">Payment confirmed! ${isDigitalOnly ? 'Your digital product is ready to download. 🎉' : 'We\'re preparing your order. 🌸'}</p>
+    <p style="margin:0 0 16px;color:#6b7280;font-size:13px">Payment confirmed! ${isDigitalOnly ? 'Your digital files are ready on your order page. 🎉' : 'We\'re preparing your order. 🌸'}</p>
     <div style="background:#f0fdf4;border-radius:12px;padding:14px 16px;margin-bottom:20px;border:1.5px solid #86efac">
       <div style="font-size:12px;color:#065f46;font-weight:700;margin-bottom:4px">คำสั่งซื้อ / ORDER</div>
       <div style="font-size:22px;font-weight:900;color:#059669">#${ref}</div>
-      <div style="font-size:12px;color:#374151;margin-top:6px">${isDigitalOnly ? '⬇️ ดาวน์โหลดพร้อมแล้ว / Ready to download' : '🎁 กำลังเตรียมสินค้า / Preparing your items...'}</div>
+      <div style="font-size:12px;color:#374151;margin-top:6px">${isDigitalOnly ? '⬇️ พร้อมดาวน์โหลดในหน้าคำสั่งซื้อ' : '🎁 กำลังเตรียมสินค้า / Preparing your items...'}</div>
     </div>
     <h3 style="margin:0 0 10px;font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.5px">รายการสินค้า / Items</h3>
     ${orderSummaryHtml(order)}
-    ${downloadLinksHtml}
-    <a href="${orderLink}" style="display:inline-block;margin-top:16px;background:#059669;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">${isDigitalOnly ? '⬇️ ดูหน้าคำสั่งซื้อ / View Order →' : '📦 ติดตามคำสั่งซื้อ / Track Order →'}</a>
+    ${digitalNote}
+    <a href="${link}" style="display:inline-block;margin-top:16px;background:#059669;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">${isDigitalOnly ? '⬇️ ดูคำสั่งซื้อ / View Order →' : '📦 ติดตามคำสั่งซื้อ / Track Order →'}</a>
     ${!isDigitalOnly ? '<p style="margin:16px 0 0;font-size:12px;color:#9ca3af">ทีมงานจะดำเนินการจัดส่งภายใน 1-3 วันทำการ 🌸</p>' : ''}
   `);
 }
@@ -191,16 +201,14 @@ async function tplTrackingAdded(order) {
     <div style="font-size:13px;color:#374151;margin-bottom:16px">
       <strong>คำสั่งซื้อ / Order #${ref}</strong>
     </div>
-    <a href="${order.access_token ? `${SITE}/#/guest-order/${order.access_token}` : `${SITE}/#/account/orders`}" style="display:inline-block;background:#2563eb;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📦 ติดตามพัสดุ / Track Package →</a>
+    <a href="${orderLink(order)}" style="display:inline-block;background:#2563eb;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📦 ติดตามพัสดุ / Track Package →</a>
     <p style="margin:16px 0 0;font-size:12px;color:#9ca3af">กรุณารอรับพัสดุภายใน 3-7 วันทำการ 🌸</p>
   `);
 }
 
 async function tplSlipRejected(order, reason, note) {
   const ref = (order.id || '').slice(-8).toUpperCase();
-  const orderLink = order.access_token
-    ? `${SITE}/#/guest-order/${order.access_token}`
-    : `${SITE}/#/account/orders`;
+  const link = orderLink(order);
   return await emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:20px">⚠️ Payment Proof Requires Attention</h2>
     <p style="margin:0 0 16px;color:#6b7280;font-size:13px">We could not verify your payment slip. Please upload a new one.</p>
@@ -214,7 +222,7 @@ async function tplSlipRejected(order, reason, note) {
       ${note ? `<div style="font-size:13px;color:#374151;margin-top:6px">${note}</div>` : ''}
     </div>
     <p style="font-size:13px;color:#374151;margin:0 0 16px">กรุณาอัปโหลดสลิปการโอนเงินใหม่อีกครั้ง / Please upload a new payment slip.</p>
-    <a href="${orderLink}" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:12px 24px;border-radius:20px;font-weight:700;font-size:14px">💳 Upload New Slip →</a>
+    <a href="${link}" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:12px 24px;border-radius:20px;font-weight:700;font-size:14px">💳 Upload New Slip →</a>
     <p style="margin:16px 0 0;font-size:11px;color:#9ca3af">หากมีคำถาม กรุณาติดต่อเรา / If you have questions, please contact us. 🌸</p>
   `);
 }
@@ -353,9 +361,12 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET' && action === 'by-token' && id) {
     const { data, error } = await supabase.from('orders').select('*').eq('access_token', id).single();
     if (error || !data) return json(res, 404, { error: 'Order not found or link has expired' });
-    // Strip access_token from the response so the token never leaks to client JS
+    // Strip access_token so token never leaks back to client JS
     const { access_token: _tok, ...safeOrder } = data;
-    // Only expose download links if paid or delivered (digital-only orders skip paid→go straight to delivered)
+    // Mask sensitive PII — this endpoint is publicly accessible via token link
+    safeOrder.customer_email = maskEmail(safeOrder.customer_email);
+    safeOrder.customer_phone = maskPhone(safeOrder.customer_phone);
+    // Only expose download links if paid or delivered
     const unlocked = safeOrder.payment_status === 'paid' || safeOrder.status === 'delivered';
     if (!unlocked) {
       safeOrder.items = (safeOrder.items || []).map(i => ({ ...i, digital_download_url: null, download_instruction: null }));
@@ -547,9 +558,6 @@ module.exports = async function handler(req, res) {
     if (error) return json(res, 400, { error: error.message });
 
     const ref = (order.id||'').slice(-8).toUpperCase();
-    const orderLink = order.access_token
-      ? `${SITE}/#/guest-order/${order.access_token}`
-      : `${SITE}/#/account/orders`;
     // No eventType → bypasses dedup so every rejection sends a fresh email
     const rejSubject = `⚠️ Payment Proof Requires Attention — Order #${ref}`;
     await sendEmail(order.customer_email, rejSubject, await tplSlipRejected(order, reason, note));
@@ -698,10 +706,10 @@ module.exports = async function handler(req, res) {
     if (!user) return;
     const { subject, message } = req.body || {};
     if (!subject?.trim() || !message?.trim()) return json(res, 400, { error: 'Subject and message are required.' });
-    const { data: order, error: orderErr } = await supabase.from('orders').select('id,customer_name,customer_email,access_token').eq('id', id).single();
+    const { data: order, error: orderErr } = await supabase.from('orders').select('id,user_id,customer_name,customer_email,access_token').eq('id', id).single();
     if (orderErr || !order) return json(res, 404, { error: 'Order not found.' });
     const ref = order.id.slice(-8).toUpperCase();
-    const orderLink = order.access_token ? `${SITE}/#/guest-order/${order.access_token}` : `${SITE}/#/account/orders`;
+    const link = orderLink(order);
     const html = await emailWrapper(`
       <div style="background:#fdf2f8;border-radius:10px;padding:10px 14px;margin-bottom:18px;border:1px solid #f9a8d4">
         <div style="font-size:11px;color:#9ca3af;font-weight:700;letter-spacing:0.5px">ORDER</div>
@@ -710,7 +718,7 @@ module.exports = async function handler(req, res) {
       </div>
       <div style="font-size:14px;color:#111827;line-height:1.8;white-space:pre-wrap">${message.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
       <div style="margin-top:20px;text-align:center">
-        <a href="${orderLink}" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:10px 24px;border-radius:20px;font-weight:700;font-size:13px">📦 ดูคำสั่งซื้อ / View Order →</a>
+        <a href="${link}" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:10px 24px;border-radius:20px;font-weight:700;font-size:13px">📦 ดูคำสั่งซื้อ / View Order →</a>
       </div>
     `);
     // Custom messages always send (no dedup) — call sendEmail without eventType to skip dedup check, then log manually

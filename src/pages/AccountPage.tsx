@@ -358,8 +358,9 @@ function OrdersTab({p,theme}:any) {
         );
       })()}
 
-      {/* Digital downloads — shown when paid or delivered (digital-only orders go straight to delivered) */}
-      {(selected.status==='paid'||selected.status==='delivered') && (selected.items||[]).some((i:any)=>(i.optionType||i.type)==='digital') && (
+      {/* Digital downloads — shown as soon as payment_status=paid, regardless of fulfilment status.
+          Mixed orders stay at packing/shipped after payment; digital-only jump straight to delivered. */}
+      {selected.payment_status==='paid' && (selected.items||[]).some((i:any)=>(i.optionType||i.type)==='digital') && (
         <div style={{marginBottom:8}}>
           <div style={{background:'#eff6ff',borderRadius:12,padding:'10px 14px',marginBottom:10,fontSize:13,color:'#1e40af',fontWeight:600}}>
             🎉 {tRaw('ไฟล์ดิจิทัลพร้อมดาวน์โหลดแล้ว','Your digital file is ready to download.')}
