@@ -38,7 +38,9 @@ export default function FreeDownloadsPage() {
   };
 
   const title = (i: any) => (lang === 'th' && i.title_th) ? i.title_th : i.title_en;
-  const fileIcon = (t: string) => t === 'pdf' ? '📄' : t === 'zip' ? '🗜️' : '📁';
+  const fileIcon = (t: string) => t === 'pdf' ? '📄' : t === 'zip' ? '🗜️' : t === 'png' ? '🖼️' : '📁';
+  const fileBg   = (t: string) => t === 'pdf' ? '#fee2e2' : t === 'png' ? '#f3e8ff' : '#dbeafe';
+  const fileColor= (t: string) => t === 'pdf' ? '#dc2626' : t === 'png' ? '#7c3aed' : '#1d4ed8';
   const fileLabel = (t: string) => t?.toUpperCase() || 'FILE';
 
   return (
@@ -85,7 +87,7 @@ export default function FreeDownloadsPage() {
               <div style={{ padding: '14px 16px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                 {/* File type badge */}
                 <div style={{ marginBottom: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, background: item.file_type === 'pdf' ? '#fee2e2' : '#dbeafe', color: item.file_type === 'pdf' ? '#dc2626' : '#1d4ed8', borderRadius: 6, padding: '2px 8px' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, background: fileBg(item.file_type), color: fileColor(item.file_type), borderRadius: 6, padding: '2px 8px' }}>
                     {fileIcon(item.file_type)} {fileLabel(item.file_type)}
                   </span>
                   {item.category && (

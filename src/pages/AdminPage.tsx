@@ -2834,23 +2834,23 @@ function FreeDownloadsTab() {
         <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', marginBottom: 12 }}>FILE (PDF / ZIP)</div>
         {r2Key ? (
           <div style={{ background: '#f0fdf4', borderRadius: 10, padding: '12px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 22 }}>{fileType === 'pdf' ? '📄' : '🗜️'}</span>
+            <span style={{ fontSize: 22 }}>{fileType === 'pdf' ? '📄' : fileType === 'png' ? '🖼️' : '🗜️'}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#065f46', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{r2FileName}</div>
               <div style={{ fontSize: 11, color: '#9ca3af' }}>{fileType?.toUpperCase()} · {fileSize ? (fileSize / 1024 / 1024).toFixed(2) + ' MB' : ''}</div>
             </div>
             <label style={{ cursor: r2Uploading ? 'not-allowed' : 'pointer' }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: P, cursor: 'pointer' }}>Replace</span>
-              <input type="file" accept=".pdf,.zip" style={{ display: 'none' }} disabled={r2Uploading}
+              <input type="file" accept=".pdf,.zip,.png" style={{ display: 'none' }} disabled={r2Uploading}
                 onChange={e => { const f = e.target.files?.[0]; if (f) uploadR2File(f); e.target.value = ''; }} />
             </label>
           </div>
         ) : (
           <label style={{ cursor: r2Uploading ? 'not-allowed' : 'pointer', display: 'block' }}>
             <div style={{ background: r2Uploading ? '#f3f4f6' : 'white', border: `2px dashed ${r2Uploading ? '#d1d5db' : '#93c5fd'}`, borderRadius: 10, padding: '16px', textAlign: 'center' as const, fontSize: 13, color: r2Uploading ? '#9ca3af' : '#2563eb', fontWeight: 700 }}>
-              {r2Uploading ? '⏳ Uploading...' : '📤 Upload PDF or ZIP'}
+              {r2Uploading ? '⏳ Uploading...' : '📤 Upload PDF, ZIP or PNG'}
             </div>
-            <input type="file" accept=".pdf,.zip" style={{ display: 'none' }} disabled={r2Uploading}
+            <input type="file" accept=".pdf,.zip,.png" style={{ display: 'none' }} disabled={r2Uploading}
               onChange={e => { const f = e.target.files?.[0]; if (f) uploadR2File(f); e.target.value = ''; }} />
           </label>
         )}
@@ -2913,7 +2913,7 @@ function FreeDownloadsTab() {
             {item.cover_image_url
               ? <img src={item.cover_image_url} alt={item.title_en} style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
               : <div style={{ width: 56, height: 56, borderRadius: 8, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
-                  {item.file_type === 'pdf' ? '📄' : '🗜️'}
+                  {item.file_type === 'pdf' ? '📄' : item.file_type === 'png' ? '🖼️' : '🗜️'}
                 </div>
             }
 
@@ -2922,7 +2922,7 @@ function FreeDownloadsTab() {
               <div style={{ fontWeight: 700, color: '#111827', fontSize: 14, marginBottom: 2 }}>{item.title_en}</div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
                 {item.file_type && (
-                  <span style={{ fontSize: 11, fontWeight: 700, background: item.file_type === 'pdf' ? '#fee2e2' : '#dbeafe', color: item.file_type === 'pdf' ? '#dc2626' : '#1d4ed8', borderRadius: 5, padding: '1px 6px' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, background: item.file_type === 'pdf' ? '#fee2e2' : item.file_type === 'png' ? '#f3e8ff' : '#dbeafe', color: item.file_type === 'pdf' ? '#dc2626' : item.file_type === 'png' ? '#7c3aed' : '#1d4ed8', borderRadius: 5, padding: '1px 6px' }}>
                     {item.file_type.toUpperCase()}
                   </span>
                 )}

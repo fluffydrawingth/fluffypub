@@ -51,7 +51,9 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
 
   const title = item ? ((lang === 'th' && item.title_th) ? item.title_th : item.title_en) : '';
   const description = item ? ((lang === 'th' && item.description_th) ? item.description_th : item.description_en) : '';
-  const fileIcon = (t: string) => t === 'pdf' ? '📄' : t === 'zip' ? '🗜️' : '📁';
+  const fileIcon  = (t: string) => t === 'pdf' ? '📄' : t === 'zip' ? '🗜️' : t === 'png' ? '🖼️' : '📁';
+  const fileBg    = (t: string) => t === 'pdf' ? '#fee2e2' : t === 'png' ? '#f3e8ff' : '#dbeafe';
+  const fileColor = (t: string) => t === 'pdf' ? '#dc2626' : t === 'png' ? '#7c3aed' : '#1d4ed8';
 
   if (loading) return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, fontFamily: theme.fontFamily }}>⏳</div>
@@ -91,7 +93,7 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
             {/* Badges */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
               {item.file_type && (
-                <span style={{ fontSize: 12, fontWeight: 700, background: item.file_type === 'pdf' ? '#fee2e2' : '#dbeafe', color: item.file_type === 'pdf' ? '#dc2626' : '#1d4ed8', borderRadius: 6, padding: '3px 10px' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, background: fileBg(item.file_type), color: fileColor(item.file_type), borderRadius: 6, padding: '3px 10px' }}>
                   {fileIcon(item.file_type)} {item.file_type.toUpperCase()}
                 </span>
               )}
