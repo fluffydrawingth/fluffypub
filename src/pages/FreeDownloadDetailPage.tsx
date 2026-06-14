@@ -17,15 +17,25 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
   const [dlLoading, setDlLoading] = useState(false);
   const [dlError, setDlError] = useState('');
   const [related, setRelated] = useState<any[]>([]);
+  const [artistProfile, setArtistProfile] = useState<any>(null);
+  const [moreFromArtist, setMoreFromArtist] = useState<any[]>([]);
 
   useEffect(() => {
     api.getFreeDownload(slug).then(d => {
-      if (d?.error) { setNotFound(true); }
-      else { setItem(d); }
+      if (d?.error) { setNotFound(true); setLoading(false); return; }
+      setItem(d);
       setLoading(false);
-    });
-    api.getProducts().then(prods => {
-      if (Array.isArray(prods)) setRelated(prods.filter((pr: any) => pr.active !== false).slice(0, 4));
+      if (d.artist_id) {
+        api.getArtist(d.artist_id).then((a: any) => { if (a && !a.error) setArtistProfile(a); }).catch(() => {});
+        api.getFreeDownloads().then((all: any[]) => {
+          if (!Array.isArray(all)) return;
+          setMoreFromArtist(all.filter(x => x.artist_id === d.artist_id && x.id !== d.id).slice(0, 4));
+        }).catch(() => {});
+      }
+      api.getProducts().then((prods: any[]) => {
+        if (!Array.isArray(prods)) return;
+        setRelated(prods.filter((pr: any) => pr.active !== false).slice(0, 4));
+      }).catch(() => {});
     });
   }, [slug]);
 
@@ -156,6 +166,53 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
             )}
           </div>
         </div>
+
+        {/* Artist card */}
+        {artistProfile && (
+          <div style={{ marginTop: 32, background: 'white', borderRadius: 16, padding: '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}
+            onClick={() => navigate(`/artists/${artistProfile.slug}`)}>
+            {artistProfile.avatar_url
+              ? <img src={artistProfile.avatar_url} alt={artistProfile.display_name} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+              : <div style={{ width: 56, height: 56, borderRadius: '50%', background: `${p}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🎨</div>
+            }
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', marginBottom: 2 }}>{tRaw('ศิลปิน', 'Artist')}</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#1e293b' }}>{artistProfile.display_name || artistProfile.name}</div>
+              {artistProfile.bio && <div style={{ fontSize: 13, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{artistProfile.bio}</div>}
+            </div>
+            <span style={{ color: p, fontSize: 18 }}>→</span>
+          </div>
+        )}
+
+        {/* More from this artist */}
+        {moreFromArtist.length > 0 && (
+          <div style={{ marginTop: 40 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 900, color: '#1e293b', marginBottom: 20 }}>
+              🎨 {tRaw('เพิ่มเติมจากศิลปินนี้', 'More from this artist')}
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+              {moreFromArtist.map(fd => {
+                const fdTitle = (lang === 'th' && fd.title_th) ? fd.title_th : fd.title_en;
+                const ft = fd.file_type || '';
+                const ftBg = ft === 'pdf' ? '#fee2e2' : ft === 'png' ? '#f3e8ff' : '#dbeafe';
+                const ftColor = ft === 'pdf' ? '#dc2626' : ft === 'png' ? '#7c3aed' : '#1d4ed8';
+                return (
+                  <div key={fd.id} onClick={() => navigate(`/free-downloads/${fd.slug}`)}
+                    style={{ background: 'white', borderRadius: 16, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1.5px solid #f3f4f6' }}>
+                    {fd.cover_image_url
+                      ? <img src={fd.cover_image_url} alt={fdTitle} style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', display: 'block' }} />
+                      : <div style={{ width: '100%', aspectRatio: '1/1', background: `${p}10`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>📁</div>
+                    }
+                    <div style={{ padding: '10px 12px' }}>
+                      {ft && <span style={{ fontSize: 10, fontWeight: 700, background: ftBg, color: ftColor, borderRadius: 5, padding: '2px 7px', marginBottom: 6, display: 'inline-block' }}>{ft.toUpperCase()}</span>}
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', lineHeight: 1.35 }}>{fdTitle}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Related products */}
         {related.length > 0 && (

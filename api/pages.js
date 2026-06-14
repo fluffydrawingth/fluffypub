@@ -44,7 +44,7 @@ async function handleFreeDownloads(req, res) {
   if (req.method === 'GET' && !slug && !id) {
     const user = req.headers.authorization ? await getUser(req) : null;
     let q = supabase.from('free_downloads')
-      .select('id,title_en,title_th,slug,cover_image_url,description_en,description_th,highlight,category,keywords,sort_order,file_type,r2_key,r2_file_name,file_size,status,download_count,last_download_at,created_at')
+      .select('id,title_en,title_th,slug,cover_image_url,description_en,description_th,highlight,category,keywords,sort_order,file_type,r2_key,r2_file_name,file_size,status,artist_id,download_count,last_download_at,created_at')
       .order('sort_order').order('created_at', { ascending: false });
     if (!user || user.role !== 'admin') q = q.eq('status', 'published');
     const { data, error } = await q;
@@ -56,7 +56,7 @@ async function handleFreeDownloads(req, res) {
   if (req.method === 'GET' && slug) {
     const user = req.headers.authorization ? await getUser(req) : null;
     let q = supabase.from('free_downloads')
-      .select('id,title_en,title_th,slug,cover_image_url,description_en,description_th,highlight,category,keywords,sort_order,file_type,r2_key,r2_file_name,file_size,status,download_count,last_download_at,created_at')
+      .select('id,title_en,title_th,slug,cover_image_url,description_en,description_th,highlight,category,keywords,sort_order,file_type,r2_key,r2_file_name,file_size,status,artist_id,download_count,last_download_at,created_at')
       .eq('slug', slug);
     if (!user || user.role !== 'admin') q = q.eq('status', 'published');
     const { data, error } = await q.single();
@@ -77,7 +77,7 @@ async function handleFreeDownloads(req, res) {
   // POST create (admin)
   if (req.method === 'POST') {
     const user = await requireAuth(req, res, ['admin']); if (!user) return;
-    const { title_en, title_th, slug: rawSlug, cover_image_url, description_en, description_th, highlight, category, keywords, sort_order, file_type, r2_key, r2_file_name, file_size, status } = req.body || {};
+    const { title_en, title_th, slug: rawSlug, cover_image_url, description_en, description_th, highlight, category, keywords, sort_order, file_type, r2_key, r2_file_name, file_size, status, artist_id } = req.body || {};
     if (!title_en) return json(res, 400, { error: 'title_en required' });
     const cleanSlug = (rawSlug || title_en).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + (rawSlug ? '' : '-' + Date.now().toString(36));
     const { data, error } = await supabase.from('free_downloads').insert({
@@ -89,7 +89,7 @@ async function handleFreeDownloads(req, res) {
       sort_order: parseInt(sort_order) || 0,
       file_type: file_type || null, r2_key: r2_key || null,
       r2_file_name: r2_file_name || null, file_size: file_size || null,
-      status: status || 'draft',
+      status: status || 'draft', artist_id: artist_id || null,
     }).select().single();
     if (error) return json(res, 400, { error: error.message });
     return json(res, 201, data);
@@ -98,7 +98,7 @@ async function handleFreeDownloads(req, res) {
   // PUT update (admin)
   if (req.method === 'PUT' && id) {
     const user = await requireAuth(req, res, ['admin']); if (!user) return;
-    const allowed = ['title_en','title_th','slug','cover_image_url','description_en','description_th','highlight','category','keywords','sort_order','file_type','r2_key','r2_file_name','file_size','status'];
+    const allowed = ['title_en','title_th','slug','cover_image_url','description_en','description_th','highlight','category','keywords','sort_order','file_type','r2_key','r2_file_name','file_size','status','artist_id'];
     const updates = { updated_at: new Date().toISOString() };
     allowed.forEach(k => { if ((req.body || {})[k] !== undefined) updates[k] = req.body[k]; });
     if (updates.slug) updates.slug = updates.slug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');

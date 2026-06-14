@@ -2690,9 +2690,14 @@ function FreeDownloadsTab() {
   const [r2FileName, setR2FileName]   = useState('');
   const [fileSize, setFileSize]       = useState(0);
   const [status, setStatus]           = useState<'draft'|'published'>('draft');
+  const [artistId, setArtistId]       = useState('');
+  const [artists, setArtists]         = useState<any[]>([]);
 
   const load = () => api.getFreeDownloads().then(d => { setItems(Array.isArray(d) ? d : []); setLoading(false); });
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    api.getArtists().then((d: any) => { if (Array.isArray(d)) setArtists(d); });
+  }, []);
 
   const resetForm = (item?: any) => {
     setTitleEn(item?.title_en || '');
@@ -2710,6 +2715,7 @@ function FreeDownloadsTab() {
     setR2FileName(item?.r2_file_name || '');
     setFileSize(item?.file_size || 0);
     setStatus(item?.status || 'draft');
+    setArtistId(item?.artist_id || '');
   };
 
   const startNew  = () => { resetForm(); setEditing({}); setMsg(''); };
@@ -2755,7 +2761,7 @@ function FreeDownloadsTab() {
       sort_order: sortOrder,
       file_type: fileType || null, r2_key: r2Key || null,
       r2_file_name: r2FileName || null, file_size: fileSize || null,
-      status,
+      status, artist_id: artistId || null,
     };
     const res = editing?.id
       ? await api.updateFreeDownload(editing.id, payload)
@@ -2826,6 +2832,16 @@ function FreeDownloadsTab() {
           <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 4 }}>Sort Order</label>
           <input type="number" value={sortOrder} onChange={e => setSortOrder(parseInt(e.target.value) || 0)}
             style={{ width: 100, padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 4 }}>Artist</label>
+          <select value={artistId} onChange={e => setArtistId(e.target.value)}
+            style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', background: 'white' }}>
+            <option value="">— No artist —</option>
+            {artists.map((a: any) => (
+              <option key={a.id} value={a.id}>{a.display_name || a.name || a.slug}</option>
+            ))}
+          </select>
         </div>
       </div>
 
