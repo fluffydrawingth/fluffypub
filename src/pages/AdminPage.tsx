@@ -2814,7 +2814,9 @@ function FreeDownloadsTab() {
         {inp('Title EN *', titleEn, setTitleEn, 'English title')}
         {inp('Title TH', titleTh, setTitleTh, 'ชื่อภาษาไทย')}
         {inp('Slug', slug, setSlug, 'auto-generated if empty')}
-        {inp('Cover Image URL', coverUrl, setCoverUrl, 'https://...')}
+        <div style={{ marginBottom: 12 }}>
+          <ImageUpload label="Cover Image" value={coverUrl} onChange={setCoverUrl} folder="uploads" hint="Recommended: 800×600px" />
+        </div>
         {txta('Highlight / Summary', highlight, setHighlight, 2)}
         {txta('Description EN', descEn, setDescEn, 4)}
         {txta('Description TH', descTh, setDescTh, 4)}
