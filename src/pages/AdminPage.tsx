@@ -449,7 +449,7 @@ function ProductsTab() {
     setR2Uploading(true); setR2UploadMsg('');
     try {
       const token = localStorage.getItem('fluffy_token');
-      const presignRes = await fetch('/api/r2-upload', {
+      const presignRes = await fetch('/api/upload?action=r2', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ fileName: file.name, fileType: file.type, fileSize: file.size }),
