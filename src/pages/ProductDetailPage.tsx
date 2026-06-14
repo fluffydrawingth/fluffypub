@@ -57,6 +57,8 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     }).catch(() => {});
     if (artistSlug) {
       api.getArtistBySlug(artistSlug).then(a => { if (a && !a.error) setArtistProfile(a); }).catch(() => {});
+    } else if (product.artist_id) {
+      api.getArtist(product.artist_id).then(a => { if (a && !a.error) setArtistProfile(a); }).catch(() => {});
     }
   }, [product]);
 
