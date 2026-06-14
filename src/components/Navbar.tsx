@@ -21,12 +21,17 @@ export default function Navbar() {
   const isAdmin = user?.role === 'admin' && user?.email === ADMIN_EMAIL;
   const dashPath = isAdmin ? '/admin' : user?.role === 'artist' ? '/artist-dashboard' : '/account';
 
+  // Use theme label overrides if set, otherwise fall back to lang translations
+  const lb = theme.labels || {};
+  const tl = (enKey: string, thKey: string, fallbackEn: string) =>
+    lang === 'th' ? (lb[thKey] || lb[enKey] || fallbackEn) : (lb[enKey] || fallbackEn);
+
   const navLinks = [
-    [t('shop'), '/products'],
+    [tl('nav_shop', 'nav_shop_th', t('shop')), '/products'],
     [t('digital_products'), '/digital-products'],
     [lang === 'th' ? '⬇️ ฟรี' : '⬇️ Free', '/free-downloads'],
-    [t('artists'), '/artists'],
-    [t('blog'), '/pages'],
+    [tl('nav_artists', 'nav_artists_th', t('artists')), '/artists'],
+    [tl('nav_blog', 'nav_blog_th', t('blog')), '/pages'],
   ];
 
   const handleNav = (path: string) => { navigate(path); setNavOpen(false); };

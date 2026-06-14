@@ -2126,18 +2126,86 @@ function ThemeTab() {
               <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Header Navigation Labels</span>
             </div>
             <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Text shown in the top navigation bar. Leave empty to use defaults.</p>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
               {([
-                ['nav_shop','Shop','Shop'],
-                ['nav_artists','Artists','Artists'],
-                ['nav_blog','Blog','Blog'],
-              ] as [string,string,string][]).map(([key,label,ph])=>(
-                <div key={key}>
-                  <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label}</label>
-                  <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={ph}
-                    style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
-                    onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
-                </div>
+                ['nav_shop','nav_shop_th','Shop','ร้านค้า'],
+                ['nav_artists','nav_artists_th','Artists','ศิลปิน'],
+                ['nav_blog','nav_blog_th','Blog','บทความ'],
+              ] as [string,string,string,string][]).map(([key,keyTh,label,phTh])=>(
+                <React.Fragment key={key}>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label} (EN)</label>
+                    <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={label}
+                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                  </div>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label} (TH)</label>
+                    <input value={(draft.labels||{})[keyTh]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [keyTh]:e.target.value}}))} placeholder={phTh}
+                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                  </div>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Card: Browse by Category ─────────────────────── */}
+          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:18}}>📂</span>
+              <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Browse by Category Section</span>
+            </div>
+            <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Displayed on the homepage when categories with products exist.</p>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              {([
+                ['categories_title','categories_title_th','Section title','Browse by Category 🎨','เลือกดูตามหมวดหมู่ 🎨'],
+                ['categories_subtitle','categories_subtitle_th','Subtitle','Find your perfect coloring style','ค้นหาสไตล์ที่ใช่สำหรับคุณ'],
+              ] as [string,string,string,string,string][]).map(([key,keyTh,label,ph,phTh])=>(
+                <React.Fragment key={key}>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label} (EN)</label>
+                    <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={ph}
+                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                  </div>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label} (TH)</label>
+                    <input value={(draft.labels||{})[keyTh]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [keyTh]:e.target.value}}))} placeholder={phTh}
+                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                  </div>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Card: Meet Our Artists ────────────────────────── */}
+          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:18}}>🎨</span>
+              <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Meet Our Artists Section</span>
+            </div>
+            <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Shown on the homepage when active artists exist.</p>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              {([
+                ['artists_title','artists_title_th','Section title','Meet Our Artists 🌟','พบกับศิลปินของเรา 🌟'],
+                ['artists_subtitle','artists_subtitle_th','Subtitle','Talented creators bringing joy through coloring','ศิลปินผู้สร้างสรรค์ความสุขผ่านการระบายสี'],
+              ] as [string,string,string,string,string][]).map(([key,keyTh,label,ph,phTh])=>(
+                <React.Fragment key={key}>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label} (EN)</label>
+                    <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={ph}
+                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                  </div>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label} (TH)</label>
+                    <input value={(draft.labels||{})[keyTh]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [keyTh]:e.target.value}}))} placeholder={phTh}
+                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                  </div>
+                </React.Fragment>
               ))}
             </div>
           </div>
@@ -2214,11 +2282,34 @@ function ThemeTab() {
               <span style={{fontSize:18}}>💌</span>
               <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Newsletter Section</span>
             </div>
-            <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Email signup section at the bottom of the homepage. Hidden by default until your email system is ready.</p>
-            <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',background:draft.showNewsletter?P+'10':'#f9fafb',border:`1.5px solid ${draft.showNewsletter?P:'#e5e7eb'}`,borderRadius:10,padding:'11px 16px',width:'fit-content'}}>
+            <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Email signup section at the bottom of the homepage.</p>
+            <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',background:draft.showNewsletter?P+'10':'#f9fafb',border:`1.5px solid ${draft.showNewsletter?P:'#e5e7eb'}`,borderRadius:10,padding:'11px 16px',marginBottom:14,width:'fit-content'}}>
               <input type="checkbox" checked={draft.showNewsletter||false} onChange={e=>setDraft((d:any)=>({...d,showNewsletter:e.target.checked}))} style={{width:16,height:16,accentColor:P}} />
               <span style={{fontSize:13,fontWeight:700,color:draft.showNewsletter?P:'#374151'}}>{draft.showNewsletter?'✅ Newsletter visible on homepage':'⬜ Newsletter hidden'}</span>
             </label>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              {([
+                ['newsletter_title','newsletter_title_th','Title','Join the Fluffy Family!','เข้าร่วมครอบครัว Fluffy!'],
+                ['newsletter_body','newsletter_body_th','Body text','Get new releases, exclusive discounts, and coloring tips delivered to your inbox 🌸','รับข่าวสาร ส่วนลดพิเศษ และเคล็ดลับการระบายสีส่งตรงถึงอีเมลคุณ 🌸'],
+                ['newsletter_btn','newsletter_btn_th','Button text','Subscribe 🌸','สมัครรับข่าวสาร 🌸'],
+                ['newsletter_success','newsletter_success_th','Success message','🎉 You\'re in! Welcome to the family!','🎉 ยินดีต้อนรับเข้าสู่ครอบครัว!'],
+              ] as [string,string,string,string,string][]).map(([key,keyTh,label,ph,phTh])=>(
+                <React.Fragment key={key}>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label} (EN)</label>
+                    <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={ph}
+                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                  </div>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label} (TH)</label>
+                    <input value={(draft.labels||{})[keyTh]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [keyTh]:e.target.value}}))} placeholder={phTh}
+                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                  </div>
+                </React.Fragment>
+              ))}
+            </div>
           </div>
 
           {/* ── Card: Section Order ───────────────────────────── */}

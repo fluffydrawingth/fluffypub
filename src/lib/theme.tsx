@@ -39,7 +39,18 @@ export interface ThemeConfig {
     blog_eyebrow: string; blog_eyebrow_th?: string;
     blog_title: string; blog_title_th?: string;
     blog_btn: string; blog_btn_th?: string;
-    nav_shop: string; nav_artists: string; nav_blog: string; nav_digital: string;
+    nav_shop: string; nav_shop_th?: string;
+    nav_artists: string; nav_artists_th?: string;
+    nav_blog: string; nav_blog_th?: string;
+    nav_digital: string;
+    categories_title?: string; categories_title_th?: string;
+    categories_subtitle?: string; categories_subtitle_th?: string;
+    artists_title?: string; artists_title_th?: string;
+    artists_subtitle?: string; artists_subtitle_th?: string;
+    newsletter_title?: string; newsletter_title_th?: string;
+    newsletter_body?: string; newsletter_body_th?: string;
+    newsletter_btn?: string; newsletter_btn_th?: string;
+    newsletter_success?: string; newsletter_success_th?: string;
   };
   footer: FooterConfig;
 }

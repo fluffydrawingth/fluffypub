@@ -160,6 +160,8 @@ function DigitalProductsSection({ products }: { products: any[] }) {
 function CategoriesSection({ allProducts }: { allProducts: any[] }) {
   const { theme } = useTheme();
   const { navigate } = useRouter();
+  const { lang } = useLang();
+  const tl = (en: string, th?: string) => (lang === 'th' && th) ? th : en;
   const [categories, setCategories] = React.useState<any[]>([]);
 
   useEffect(() => {
@@ -180,8 +182,8 @@ function CategoriesSection({ allProducts }: { allProducts: any[] }) {
     <section style={{ padding:'64px 24px', background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})` }}>
       <div style={{ maxWidth:1200, margin:'0 auto' }}>
         <div style={{ textAlign:'center', marginBottom:40 }}>
-          <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, fontFamily:theme.fontFamily }}>Browse by Category 🎨</h2>
-          <p style={{ color:theme.textColor+'88', fontSize:16 }}>Find your perfect coloring style</p>
+          <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, fontFamily:theme.fontFamily }}>{tl(theme.labels?.categories_title||'Browse by Category 🎨',theme.labels?.categories_title_th)}</h2>
+          <p style={{ color:theme.textColor+'88', fontSize:16 }}>{tl(theme.labels?.categories_subtitle||'Find your perfect coloring style',theme.labels?.categories_subtitle_th)}</p>
         </div>
         <div style={{ display:'flex', flexWrap:'wrap', gap:16, justifyContent:'center' }}>
           {catsWithProducts.map(cat => {
@@ -212,6 +214,8 @@ function CategoriesSection({ allProducts }: { allProducts: any[] }) {
 function ArtistsSection() {
   const { theme } = useTheme();
   const { navigate } = useRouter();
+  const { lang } = useLang();
+  const tl = (en: string, th?: string) => (lang === 'th' && th) ? th : en;
   const [artists, setArtists] = useState<any[]>([]);
   useEffect(() => { api.getArtists().then((x: any) => setArtists(Array.isArray(x) ? x : [])); }, []);
   const AVATARS = ['🎨','🌸','✨','🐰','🌺','💕','🦊','🌈'];
@@ -220,8 +224,8 @@ function ArtistsSection() {
     <section style={{ padding:'64px 24px', background:'white' }}>
       <div style={{ maxWidth:1200, margin:'0 auto' }}>
         <div style={{ textAlign:'center', marginBottom:40 }}>
-          <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, fontFamily:theme.fontFamily }}>Meet Our Artists 🌟</h2>
-          <p style={{ color:theme.textColor+'88', fontSize:16 }}>Talented creators bringing joy through coloring</p>
+          <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, fontFamily:theme.fontFamily }}>{tl(theme.labels?.artists_title||'Meet Our Artists 🌟',theme.labels?.artists_title_th)}</h2>
+          <p style={{ color:theme.textColor+'88', fontSize:16 }}>{tl(theme.labels?.artists_subtitle||'Talented creators bringing joy through coloring',theme.labels?.artists_subtitle_th)}</p>
         </div>
         <div style={{ display:'flex', flexWrap:'wrap', gap:20, justifyContent:'center' }}>
           {artists.map((a: any, idx: number) => (
@@ -312,6 +316,8 @@ function BlogSection() {
 // ── Newsletter ────────────────────────────────────────────────────────────────
 function NewsletterSection() {
   const { theme } = useTheme();
+  const { lang } = useLang();
+  const tl = (en: string, th?: string) => (lang === 'th' && th) ? th : en;
   if (theme.showNewsletter === false) return null;
   const [email, setEmail] = React.useState('');
   const [submitted, setSubmitted] = React.useState(false);
@@ -320,16 +326,16 @@ function NewsletterSection() {
     <section style={{ padding:'64px 24px', background:`linear-gradient(135deg,${p}15,${theme.secondaryColor||'#c084fc'}15)`, textAlign:'center' as const }}>
       <div style={{ maxWidth:560, margin:'0 auto' }}>
         <div style={{ fontSize:48, marginBottom:16 }}>💌</div>
-        <h2 style={{ fontSize:30, fontWeight:900, color:theme.textColor, fontFamily:theme.fontFamily }}>Join the Fluffy Family!</h2>
-        <p style={{ color:theme.textColor+'88', marginBottom:28, fontSize:16 }}>Get new releases, exclusive discounts, and coloring tips delivered to your inbox 🌸</p>
+        <h2 style={{ fontSize:30, fontWeight:900, color:theme.textColor, fontFamily:theme.fontFamily }}>{tl(theme.labels?.newsletter_title||"Join the Fluffy Family!",theme.labels?.newsletter_title_th)}</h2>
+        <p style={{ color:theme.textColor+'88', marginBottom:28, fontSize:16 }}>{tl(theme.labels?.newsletter_body||'Get new releases, exclusive discounts, and coloring tips delivered to your inbox 🌸',theme.labels?.newsletter_body_th)}</p>
         {submitted ? (
-          <div style={{ fontSize:20, color:p, fontWeight:700 }}>🎉 You're in! Welcome to the family!</div>
+          <div style={{ fontSize:20, color:p, fontWeight:700 }}>{tl(theme.labels?.newsletter_success||"🎉 You're in! Welcome to the family!",theme.labels?.newsletter_success_th)}</div>
         ) : (
           <div style={{ display:'flex', gap:12, maxWidth:440, margin:'0 auto', flexWrap:'wrap' as const }}>
             <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com"
               style={{ flex:1, padding:'12px 20px', borderRadius:24, border:`2px solid ${p}30`, outline:'none', fontSize:15, fontFamily:theme.fontFamily, minWidth:200 }}
             />
-            <button onClick={()=>email&&setSubmitted(true)} style={{ background:p, color:'white', border:'none', cursor:'pointer', padding:'12px 24px', borderRadius:24, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily, boxShadow:`0 4px 16px ${p}44` }}>Subscribe 🌸</button>
+            <button onClick={()=>email&&setSubmitted(true)} style={{ background:p, color:'white', border:'none', cursor:'pointer', padding:'12px 24px', borderRadius:24, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily, boxShadow:`0 4px 16px ${p}44` }}>{tl(theme.labels?.newsletter_btn||'Subscribe 🌸',theme.labels?.newsletter_btn_th)}</button>
           </div>
         )}
       </div>
