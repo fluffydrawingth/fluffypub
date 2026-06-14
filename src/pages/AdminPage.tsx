@@ -343,6 +343,12 @@ function ProductsTab() {
   const [status, setStatus] = useState('published');
   const [digitalDownloadUrl, setDigitalDownloadUrl] = useState('');
   const [downloadInstruction, setDownloadInstruction] = useState('');
+  const [r2Key, setR2Key] = useState('');
+  const [r2FileName, setR2FileName] = useState('');
+  const [r2FileSize, setR2FileSize] = useState(0);
+  const [r2FileType, setR2FileType] = useState('');
+  const [r2Uploading, setR2Uploading] = useState(false);
+  const [r2UploadMsg, setR2UploadMsg] = useState('');
   const [physicalStock, setPhysicalStock] = useState('0');
   const [shippingRequired, setShippingRequired] = useState(false);
   const [shippingNote, setShippingNote] = useState('');
@@ -379,6 +385,7 @@ function ProductsTab() {
     setPages(''); setTags(''); setSearchKeywords(''); setStatus('published'); setDigitalDownloadUrl('');
     setDownloadInstruction(''); setPhysicalStock('0'); setShippingRequired(false); setShippingNote('');
     setArtistId(''); setIsDigital(true); setIsPhysical(false); setRichBlocks([]);
+    setR2Key(''); setR2FileName(''); setR2FileSize(0); setR2FileType(''); setR2UploadMsg('');
     setEditingId(null);
   };
 
@@ -398,6 +405,8 @@ function ProductsTab() {
     setTitleTh(pr.title_th||''); setTitleEn(pr.title_en||'');
     setPriceTHB(String(pr.price_thb||''));
     setDescTh(pr.description_th||'');
+    setR2Key(pr.r2_key||''); setR2FileName(pr.r2_key ? pr.r2_key.split('/').pop() || '' : '');
+    setR2FileSize(pr.file_size||0); setR2FileType(pr.file_type||''); setR2UploadMsg('');
     setEditingId(pr.id);
     setShowForm(true);
   };
@@ -416,6 +425,9 @@ function ProductsTab() {
       status,
       digital_download_url:isDigital?(digitalDownloadUrl||null):null,
       download_instruction:isDigital?(downloadInstruction||null):null,
+      r2_key:isDigital?(r2Key||null):null,
+      file_size:isDigital&&r2FileSize?r2FileSize:null,
+      file_type:isDigital?(r2FileType||null):null,
       physical_stock:isPhysical?(parseInt(physicalStock)||0):0,
       shipping_required:isPhysical?shippingRequired:false,
       shipping_note:isPhysical?shippingNote:'',
@@ -432,6 +444,37 @@ function ProductsTab() {
   };
 
   const del = async (id:string) => { if(!confirm('Delete this product?'))return; await api.deleteProduct(id); load(); };
+
+  const uploadR2File = async (file: File) => {
+    setR2Uploading(true); setR2UploadMsg('');
+    try {
+      const token = localStorage.getItem('fluffy_token');
+      const presignRes = await fetch('/api/r2-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fileName: file.name, fileType: file.type, fileSize: file.size }),
+      });
+      const presign = await presignRes.json();
+      if (presign.error) { setR2UploadMsg('⚠️ ' + presign.error); setR2Uploading(false); return; }
+
+      // PUT directly to R2 using the presigned URL
+      const putRes = await fetch(presign.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
+      if (!putRes.ok) { setR2UploadMsg('⚠️ Upload failed: ' + putRes.statusText); setR2Uploading(false); return; }
+
+      setR2Key(presign.r2Key);
+      setR2FileName(file.name);
+      setR2FileSize(file.size);
+      setR2FileType(file.type);
+      setR2UploadMsg('✓ Uploaded');
+    } catch (e: any) {
+      setR2UploadMsg('⚠️ ' + e.message);
+    }
+    setR2Uploading(false);
+  };
 
   // Stable input component — NOT defined inside render, uses direct state setters
   const inp = (label:string, value:string, onChange:(v:string)=>void, placeholder='', type='text') => (
@@ -515,13 +558,39 @@ function ProductsTab() {
             {isDigital&&(
               <div style={{gridColumn:'1/-1',background:'#eff6ff',border:'1.5px solid #bfdbfe',borderRadius:14,padding:'16px 18px'}}>
                 <div style={{fontSize:13,fontWeight:800,color:'#1d4ed8',marginBottom:12}}>⬇️ Digital File Settings</div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
                   {inp('ราคาไฟล์ดิจิทัล (THB ฿)', priceTHB, setPriceTHB, '149', 'number')}
-                  {inp('Download URL', digitalDownloadUrl, setDigitalDownloadUrl, 'https://drive.google.com/...')}
                 </div>
-                <div style={{marginTop:8}}>{inp('Download Instructions', downloadInstruction, setDownloadInstruction, 'วิธีดาวน์โหลดไฟล์ / How to access download...', false)}</div>
-                <div style={{marginTop:8,fontSize:12,color:'#1d4ed8',background:'#dbeafe',borderRadius:8,padding:'8px 12px'}}>
-                  💡 ลูกค้าจะได้รับลิงค์ดาวน์โหลดทางอีเมลหลังจากแอดมินยืนยันการชำระเงิน
+
+                {/* R2 file upload */}
+                <div style={{marginBottom:10}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'#374151',marginBottom:6}}>📁 Digital File (R2) <span style={{fontWeight:400,color:'#9ca3af'}}>PDF · ZIP · PNG · max 200 MB</span></div>
+                  {r2Key ? (
+                    <div style={{background:'white',border:'1.5px solid #86efac',borderRadius:10,padding:'10px 14px',display:'flex',alignItems:'center',gap:10}}>
+                      <span style={{fontSize:20}}>{r2FileType==='application/pdf'?'📄':r2FileType==='image/png'?'🖼️':'🗜️'}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,fontWeight:700,color:'#065f46',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' as const}}>{r2FileName}</div>
+                        <div style={{fontSize:11,color:'#9ca3af'}}>{r2FileType} · {r2FileSize?(r2FileSize/1024/1024).toFixed(2)+' MB':''}</div>
+                      </div>
+                      <label style={{cursor:'pointer',flexShrink:0}}>
+                        <span style={{fontSize:12,fontWeight:700,color:'#2563eb',background:'#dbeafe',borderRadius:8,padding:'4px 10px'}}>🔄 Replace</span>
+                        <input type="file" accept=".pdf,.zip,.png" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)uploadR2File(f);e.target.value='';}} />
+                      </label>
+                    </div>
+                  ) : (
+                    <label style={{cursor:r2Uploading?'not-allowed':'pointer',display:'block'}}>
+                      <div style={{background:r2Uploading?'#f3f4f6':'white',border:`2px dashed ${r2Uploading?'#d1d5db':'#93c5fd'}`,borderRadius:10,padding:'14px',textAlign:'center' as const,fontSize:13,color:r2Uploading?'#9ca3af':'#2563eb',fontWeight:700,transition:'all 0.15s'}}>
+                        {r2Uploading ? '⏳ Uploading...' : '📤 Upload Digital File'}
+                      </div>
+                      <input type="file" accept=".pdf,.zip,.png" style={{display:'none'}} disabled={r2Uploading} onChange={e=>{const f=e.target.files?.[0];if(f)uploadR2File(f);e.target.value='';}} />
+                    </label>
+                  )}
+                  {r2UploadMsg&&<div style={{marginTop:6,fontSize:12,fontWeight:600,color:r2UploadMsg.startsWith('✓')?'#059669':'#dc2626'}}>{r2UploadMsg}</div>}
+                </div>
+
+                <div style={{marginBottom:8}}>{inp('Download Instructions', downloadInstruction, setDownloadInstruction, 'วิธีดาวน์โหลดไฟล์ / How to access download...', false)}</div>
+                <div style={{fontSize:12,color:'#1d4ed8',background:'#dbeafe',borderRadius:8,padding:'8px 12px'}}>
+                  💡 ไฟล์จะถูกเก็บใน Cloudflare R2 — ลิงค์ดาวน์โหลดจะถูกสร้างเมื่อลูกค้าชำระเงินแล้ว
                 </div>
               </div>
             )}
