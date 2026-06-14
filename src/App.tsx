@@ -22,6 +22,8 @@ import PagesIndexPage from './pages/PagesIndexPage';
 import DigitalProductsPage from './pages/DigitalProductsPage';
 import GuestOrderPage from './pages/GuestOrderPage';
 import TrackOrderPage from './pages/TrackOrderPage';
+import FreeDownloadsPage from './pages/FreeDownloadsPage';
+import FreeDownloadDetailPage from './pages/FreeDownloadDetailPage';
 import { LangProvider } from './lib/lang';
 import { FavoritesProvider } from './lib/favorites';
 
@@ -58,6 +60,8 @@ function AppContent() {
       case '/reset-password': return <ResetPasswordPage />;
       case '/guest-order/:token': return <GuestOrderPage token={route.params?.token || ''} />;
       case '/track-order': return <TrackOrderPage />;
+      case '/free-downloads': return <FreeDownloadsPage />;
+      case '/free-downloads/:slug': return <FreeDownloadDetailPage slug={route.params?.slug||''} />;
       case '/artists': return <ArtistsPage />;
       case '/login': return <LoginPage />;
       case '/account': return <ProtectedRoute roles={['customer','artist','admin']}><AccountPage /></ProtectedRoute>;

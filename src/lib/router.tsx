@@ -39,6 +39,8 @@ function parse(hash: string): Route {
   if (p[0]==='pages' && p[1]) return { path:'/pages/:slug', params:{ slug:p[1] } };
   if (p[0]==='guest-order' && p[1]) return { path:'/guest-order/:token', params:{ token:p[1] } };
   if (p[0]==='track-order') return { path:'/track-order' };
+  if (p[0]==='free-downloads' && p[1]) return { path:'/free-downloads/:slug', params:{ slug:p[1] } };
+  if (p[0]==='free-downloads') return { path:'/free-downloads' };
   return { path:'/' };
 }
 

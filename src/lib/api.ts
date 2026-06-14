@@ -107,6 +107,14 @@ export const api = {
     }
   },
 
+  // Free Downloads
+  getFreeDownloads: () => fetch('/api/pages?type=free-download', { headers: h() }).then(r => r.json()),
+  getFreeDownload: (slug: string) => fetch(`/api/pages?type=free-download&slug=${slug}`).then(r => r.json()),
+  createFreeDownload: (data: any) => fetch('/api/pages?type=free-download', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  updateFreeDownload: (id: string, data: any) => fetch(`/api/pages?type=free-download&id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  deleteFreeDownload: (id: string) => fetch(`/api/pages?type=free-download&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
+  downloadFree: (id: string) => fetch(`/api/pages?type=free-download&action=download&id=${id}`).then(r => r.json()),
+
   // Theme
   getCategories: () => fetch('/api/categories').then(r => r.json()),
   getAdminCategories: () => fetch('/api/categories', { headers: h() }).then(r => r.json()),

@@ -12,7 +12,7 @@ import ImageCropEditor from '../components/ImageCropEditor';
 import HtmlEditor from '../components/HtmlEditor';
 
 const ADMIN_EMAIL = 'fluffydrawing.th@gmail.com';
-type Tab = 'dashboard'|'products'|'orders'|'artists'|'categories'|'pages'|'theme'|'lang';
+type Tab = 'dashboard'|'products'|'orders'|'artists'|'categories'|'pages'|'free-downloads'|'theme'|'lang';
 
 function NavItem({icon,label,active,onClick}:any) {
   return (
@@ -39,7 +39,7 @@ export default function AdminPage() {
 
   const TAB_LABELS: Record<Tab, string> = {
     dashboard:'Dashboard', products:'Products', orders:'Orders', artists:'Artists',
-    categories:'Categories', pages:'Pages', theme:'Theme & CMS', lang:'Language CMS',
+    categories:'Categories', pages:'Pages', 'free-downloads':'Free Downloads', theme:'Theme & CMS', lang:'Language CMS',
   };
 
   const selectTab = (t: Tab) => { setTab(t); setSidebarOpen(false); };
@@ -61,8 +61,9 @@ export default function AdminPage() {
         <NavItem icon="📦" label="Orders"       active={tab==='orders'}     onClick={()=>selectTab('orders')} />
         <NavItem icon="🎨" label="Artists"      active={tab==='artists'}    onClick={()=>selectTab('artists')} />
         <NavItem icon="🏷️" label="Categories"   active={tab==='categories'} onClick={()=>selectTab('categories')} />
-        <NavItem icon="📄" label="Pages"        active={tab==='pages'}      onClick={()=>selectTab('pages')} />
-        <NavItem icon="✨" label="Theme & CMS"  active={tab==='theme'}      onClick={()=>selectTab('theme')} />
+        <NavItem icon="📄" label="Pages"          active={tab==='pages'}           onClick={()=>selectTab('pages')} />
+        <NavItem icon="⬇️" label="Free Downloads" active={tab==='free-downloads'}  onClick={()=>selectTab('free-downloads')} />
+        <NavItem icon="✨" label="Theme & CMS"    active={tab==='theme'}           onClick={()=>selectTab('theme')} />
         <NavItem icon="🌐" label="Language CMS" active={tab==='lang'}       onClick={()=>selectTab('lang')} />
       </nav>
       <div style={{ padding:'16px 12px', borderTop:'1px solid #f3f4f6' }}>
@@ -105,8 +106,9 @@ export default function AdminPage() {
         {tab==='orders'     && <OrdersTab />}
         {tab==='artists'    && <ArtistsTab />}
         {tab==='categories' && <CategoriesTab />}
-        {tab==='pages'      && <PagesCMSTab />}
-        {tab==='theme'      && <ThemeTab />}
+        {tab==='pages'           && <PagesCMSTab />}
+        {tab==='free-downloads'  && <FreeDownloadsTab />}
+        {tab==='theme'           && <ThemeTab />}
         {tab==='lang'       && <LanguageCMSTab />}
       </div>
     </div>
@@ -2655,6 +2657,298 @@ function LanguageCMSTab() {
             <input value={val?.en || ''} onChange={e => upd(key, 'en', e.target.value)}
               style={{ padding:'7px 10px', borderRadius:8, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none', fontFamily:'inherit' }}
               onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Free Downloads Tab ─────────────────────────────────────────────────────────
+
+function FreeDownloadsTab() {
+  const [items, setItems]         = useState<any[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [editing, setEditing]     = useState<any>(null);   // null = list, {} = new, item = edit
+  const [saving, setSaving]       = useState(false);
+  const [r2Uploading, setR2Uploading] = useState(false);
+  const [msg, setMsg]             = useState('');
+
+  // Form state
+  const [titleEn, setTitleEn]         = useState('');
+  const [titleTh, setTitleTh]         = useState('');
+  const [slug, setSlug]               = useState('');
+  const [coverUrl, setCoverUrl]       = useState('');
+  const [descEn, setDescEn]           = useState('');
+  const [descTh, setDescTh]           = useState('');
+  const [highlight, setHighlight]     = useState('');
+  const [category, setCategory]       = useState('');
+  const [keywords, setKeywords]       = useState('');
+  const [sortOrder, setSortOrder]     = useState(0);
+  const [fileType, setFileType]       = useState('');
+  const [r2Key, setR2Key]             = useState('');
+  const [r2FileName, setR2FileName]   = useState('');
+  const [fileSize, setFileSize]       = useState(0);
+  const [status, setStatus]           = useState<'draft'|'published'>('draft');
+
+  const load = () => api.getFreeDownloads().then(d => { setItems(Array.isArray(d) ? d : []); setLoading(false); });
+  useEffect(() => { load(); }, []);
+
+  const resetForm = (item?: any) => {
+    setTitleEn(item?.title_en || '');
+    setTitleTh(item?.title_th || '');
+    setSlug(item?.slug || '');
+    setCoverUrl(item?.cover_image_url || '');
+    setDescEn(item?.description_en || '');
+    setDescTh(item?.description_th || '');
+    setHighlight(item?.highlight || '');
+    setCategory(item?.category || '');
+    setKeywords((item?.keywords || []).join(', '));
+    setSortOrder(item?.sort_order || 0);
+    setFileType(item?.file_type || '');
+    setR2Key(item?.r2_key || '');
+    setR2FileName(item?.r2_file_name || '');
+    setFileSize(item?.file_size || 0);
+    setStatus(item?.status || 'draft');
+  };
+
+  const startNew  = () => { resetForm(); setEditing({}); setMsg(''); };
+  const startEdit = (item: any) => { resetForm(item); setEditing(item); setMsg(''); };
+  const cancel    = () => { setEditing(null); setMsg(''); };
+
+  const uploadR2File = async (file: File) => {
+    setR2Uploading(true);
+    setMsg('');
+    try {
+      const token = localStorage.getItem('fluffy_token') || '';
+      const presignRes = await fetch('/api/upload?action=r2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ fileName: file.name, fileType: file.type, fileSize: file.size }),
+      });
+      const presign = await presignRes.json();
+      if (presign.error) { setMsg('⚠️ ' + presign.error); setR2Uploading(false); return; }
+      const putRes = await fetch(presign.uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+      if (!putRes.ok) { setMsg('⚠️ Upload failed: ' + putRes.status); setR2Uploading(false); return; }
+      setR2Key(presign.r2Key);
+      setR2FileName(file.name);
+      setFileSize(file.size);
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
+      setFileType(ext === 'pdf' ? 'pdf' : ext === 'zip' ? 'zip' : ext);
+      setMsg('✓ File uploaded: ' + file.name);
+    } catch (e: any) {
+      setMsg('⚠️ ' + e.message);
+    }
+    setR2Uploading(false);
+  };
+
+  const save = async () => {
+    if (!titleEn.trim()) { setMsg('⚠️ Title (EN) is required'); return; }
+    setSaving(true); setMsg('');
+    const payload = {
+      title_en: titleEn.trim(), title_th: titleTh.trim() || null,
+      slug: slug.trim() || undefined,
+      cover_image_url: coverUrl.trim() || null,
+      description_en: descEn.trim() || null, description_th: descTh.trim() || null,
+      highlight: highlight.trim() || null, category: category.trim() || null,
+      keywords: keywords.split(',').map(s => s.trim()).filter(Boolean),
+      sort_order: sortOrder,
+      file_type: fileType || null, r2_key: r2Key || null,
+      r2_file_name: r2FileName || null, file_size: fileSize || null,
+      status,
+    };
+    const res = editing?.id
+      ? await api.updateFreeDownload(editing.id, payload)
+      : await api.createFreeDownload(payload);
+    if (res.error) { setMsg('⚠️ ' + res.error); setSaving(false); return; }
+    await load();
+    setEditing(null);
+    setMsg('');
+    setSaving(false);
+  };
+
+  const del = async (id: string, titleEn: string) => {
+    if (!confirm(`Delete "${titleEn}"? This cannot be undone.`)) return;
+    const res = await api.deleteFreeDownload(id);
+    if (res.error) { setMsg('⚠️ ' + res.error); return; }
+    await load();
+  };
+
+  const toggleStatus = async (item: any) => {
+    const newStatus = item.status === 'published' ? 'draft' : 'published';
+    await api.updateFreeDownload(item.id, { status: newStatus });
+    await load();
+  };
+
+  const inp = (label: string, val: string, set: (v: string) => void, placeholder = '') => (
+    <div style={{ marginBottom: 12 }}>
+      <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 4 }}>{label}</label>
+      <input value={val} onChange={e => set(e.target.value)} placeholder={placeholder}
+        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' as const }}
+        onFocus={e => e.target.style.borderColor = P} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+    </div>
+  );
+
+  const txta = (label: string, val: string, set: (v: string) => void, rows = 3) => (
+    <div style={{ marginBottom: 12 }}>
+      <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 4 }}>{label}</label>
+      <textarea value={val} onChange={e => set(e.target.value)} rows={rows}
+        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' as const, resize: 'vertical' as const }}
+        onFocus={e => e.target.style.borderColor = P} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+    </div>
+  );
+
+  // ── Form ──
+  if (editing !== null) return (
+    <div style={{ padding: 24, maxWidth: 640 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: 0 }}>
+          {editing?.id ? 'Edit Free Download' : 'New Free Download'}
+        </h2>
+        <button onClick={cancel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 20 }}>✕</button>
+      </div>
+
+      {/* Basic info */}
+      <div style={{ ...card, padding: 16, marginBottom: 16 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', marginBottom: 12 }}>BASIC INFORMATION</div>
+        {inp('Title EN *', titleEn, setTitleEn, 'English title')}
+        {inp('Title TH', titleTh, setTitleTh, 'ชื่อภาษาไทย')}
+        {inp('Slug', slug, setSlug, 'auto-generated if empty')}
+        {inp('Cover Image URL', coverUrl, setCoverUrl, 'https://...')}
+        {txta('Highlight / Summary', highlight, setHighlight, 2)}
+        {txta('Description EN', descEn, setDescEn, 4)}
+        {txta('Description TH', descTh, setDescTh, 4)}
+        {inp('Category', category, setCategory, 'e.g. Illustration, Fonts')}
+        {inp('Keywords (comma-separated)', keywords, setKeywords, 'procreate, brush, free')}
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 4 }}>Sort Order</label>
+          <input type="number" value={sortOrder} onChange={e => setSortOrder(parseInt(e.target.value) || 0)}
+            style={{ width: 100, padding: '8px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
+        </div>
+      </div>
+
+      {/* File upload */}
+      <div style={{ ...card, padding: 16, marginBottom: 16 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', marginBottom: 12 }}>FILE (PDF / ZIP)</div>
+        {r2Key ? (
+          <div style={{ background: '#f0fdf4', borderRadius: 10, padding: '12px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 22 }}>{fileType === 'pdf' ? '📄' : '🗜️'}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#065f46', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{r2FileName}</div>
+              <div style={{ fontSize: 11, color: '#9ca3af' }}>{fileType?.toUpperCase()} · {fileSize ? (fileSize / 1024 / 1024).toFixed(2) + ' MB' : ''}</div>
+            </div>
+            <label style={{ cursor: r2Uploading ? 'not-allowed' : 'pointer' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: P, cursor: 'pointer' }}>Replace</span>
+              <input type="file" accept=".pdf,.zip" style={{ display: 'none' }} disabled={r2Uploading}
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadR2File(f); e.target.value = ''; }} />
+            </label>
+          </div>
+        ) : (
+          <label style={{ cursor: r2Uploading ? 'not-allowed' : 'pointer', display: 'block' }}>
+            <div style={{ background: r2Uploading ? '#f3f4f6' : 'white', border: `2px dashed ${r2Uploading ? '#d1d5db' : '#93c5fd'}`, borderRadius: 10, padding: '16px', textAlign: 'center' as const, fontSize: 13, color: r2Uploading ? '#9ca3af' : '#2563eb', fontWeight: 700 }}>
+              {r2Uploading ? '⏳ Uploading...' : '📤 Upload PDF or ZIP'}
+            </div>
+            <input type="file" accept=".pdf,.zip" style={{ display: 'none' }} disabled={r2Uploading}
+              onChange={e => { const f = e.target.files?.[0]; if (f) uploadR2File(f); e.target.value = ''; }} />
+          </label>
+        )}
+      </div>
+
+      {/* Status */}
+      <div style={{ ...card, padding: 16, marginBottom: 16 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', marginBottom: 12 }}>STATUS</div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {(['draft', 'published'] as const).map(s => (
+            <button key={s} onClick={() => setStatus(s)}
+              style={{ padding: '8px 20px', borderRadius: 10, border: `2px solid ${status === s ? P : '#e5e7eb'}`, background: status === s ? P + '10' : 'white', color: status === s ? P : '#6b7280', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+              {s === 'published' ? '✅ Published' : '📝 Draft'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {msg && <div style={{ borderRadius: 10, padding: '9px 13px', marginBottom: 12, fontSize: 13, fontWeight: 600, background: msg.startsWith('✓') ? '#d1fae5' : '#fee2e2', color: msg.startsWith('✓') ? '#065f46' : '#dc2626' }}>{msg}</div>}
+
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={save} disabled={saving}
+          style={{ flex: 1, padding: '11px', background: saving ? P + '88' : P, color: 'white', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: saving ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
+          {saving ? 'Saving…' : editing?.id ? 'Save Changes' : 'Create'}
+        </button>
+        <button onClick={cancel}
+          style={{ padding: '11px 20px', background: '#f9fafb', border: '1.5px solid #e5e7eb', color: '#6b7280', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── List ──
+  return (
+    <div style={{ padding: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: 0 }}>⬇️ Free Downloads</h2>
+        <button onClick={startNew}
+          style={{ background: P, color: 'white', border: 'none', cursor: 'pointer', padding: '9px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700, fontFamily: 'inherit' }}>
+          + Add New
+        </button>
+      </div>
+
+      {msg && <div style={{ borderRadius: 10, padding: '9px 13px', marginBottom: 16, fontSize: 13, fontWeight: 600, background: msg.startsWith('✓') ? '#d1fae5' : '#fee2e2', color: msg.startsWith('✓') ? '#065f46' : '#dc2626' }}>{msg}</div>}
+
+      {loading && <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>Loading…</div>}
+
+      {!loading && items.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '60px 24px', background: 'white', borderRadius: 16, color: '#9ca3af' }}>
+          <div style={{ fontSize: 40, marginBottom: 10 }}>📭</div>
+          <div style={{ fontWeight: 700 }}>No free downloads yet. Click "+ Add New" to create one.</div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+        {items.map(item => (
+          <div key={item.id} style={{ ...card, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            {/* Cover thumbnail */}
+            {item.cover_image_url
+              ? <img src={item.cover_image_url} alt={item.title_en} style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+              : <div style={{ width: 56, height: 56, borderRadius: 8, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
+                  {item.file_type === 'pdf' ? '📄' : '🗜️'}
+                </div>
+            }
+
+            {/* Info */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, color: '#111827', fontSize: 14, marginBottom: 2 }}>{item.title_en}</div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
+                {item.file_type && (
+                  <span style={{ fontSize: 11, fontWeight: 700, background: item.file_type === 'pdf' ? '#fee2e2' : '#dbeafe', color: item.file_type === 'pdf' ? '#dc2626' : '#1d4ed8', borderRadius: 5, padding: '1px 6px' }}>
+                    {item.file_type.toUpperCase()}
+                  </span>
+                )}
+                {item.category && <span style={{ fontSize: 11, color: '#9ca3af' }}>{item.category}</span>}
+                <span style={{ fontSize: 11, color: '#9ca3af' }}>⬇️ {item.download_count || 0} downloads</span>
+                {item.last_download_at && (
+                  <span style={{ fontSize: 11, color: '#9ca3af' }}>
+                    · Last: {new Date(item.last_download_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Status toggle */}
+            <button onClick={() => toggleStatus(item)}
+              style={{ padding: '5px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', background: item.status === 'published' ? '#d1fae5' : '#f3f4f6', color: item.status === 'published' ? '#059669' : '#9ca3af' }}>
+              {item.status === 'published' ? '✅ Live' : '📝 Draft'}
+            </button>
+
+            {/* Actions */}
+            <button onClick={() => startEdit(item)}
+              style={{ padding: '6px 14px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: 'white', color: '#374151', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Edit
+            </button>
+            <button onClick={() => del(item.id, item.title_en)}
+              style={{ padding: '6px 12px', borderRadius: 8, border: '1.5px solid #fca5a5', background: '#fef2f2', color: '#dc2626', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Delete
+            </button>
           </div>
         ))}
       </div>
