@@ -16,7 +16,6 @@ export default function HomePage() {
     api.getProducts().then((p: any[]) => {
       if (!Array.isArray(p)) return;
       setAllProducts(p);
-      // Featured: use admin-selected ids first, then fall back to products marked featured
       const ids: string[] = theme.featuredProductIds || [];
       if (ids.length > 0) {
         const selected = ids.map(id => p.find((x: any) => x.id === id)).filter(Boolean);
@@ -55,7 +54,6 @@ function HeroSection() {
   const { lang } = useLang();
   const tl = (en: string, th?: string) => (lang === 'th' && th) ? th : en;
   const p = theme.primaryColor;
-  // Use theme.heroStats if available, otherwise empty (no mock data)
   const stats = theme.heroStats || [];
   return (
     <section style={{
@@ -65,26 +63,32 @@ function HeroSection() {
       minHeight: 520, display: 'flex', alignItems: 'center', justifyContent: 'center',
       textAlign: 'center', padding: '60px 24px', position: 'relative', overflow: 'hidden',
     }}>
+      <style>{`
+        @media(max-width:640px){
+          .hp-hero-inner{padding:36px 0 0!important;}
+          .hp-hero-stats{display:none!important;}
+          .hp-hero-btns button{padding:12px 22px!important;font-size:15px!important;}
+        }
+      `}</style>
       {['🌸','✨','🌷','⭐','💫','🌺','🎀','🦋'].map((emoji, i) => (
         <span key={i} style={{ position:'absolute', top:`${10+(i*11)%70}%`, left:`${5+(i*13)%90}%`, fontSize:`${18+(i*7)%20}px`, opacity:0.4, pointerEvents:'none' }}>{emoji}</span>
       ))}
-      <div style={{ position:'relative', zIndex:1, width:'100%', maxWidth:720, margin:'0 auto', display:'flex', flexDirection:'column', alignItems:'center' }}>
+      <div className="hp-hero-inner" style={{ position:'relative', zIndex:1, width:'100%', maxWidth:720, margin:'0 auto', display:'flex', flexDirection:'column', alignItems:'center' }}>
         <div style={{ display:'inline-block', background:'rgba(255,255,255,0.6)', backdropFilter:'blur(10px)', borderRadius:16, padding:'6px 20px', fontSize:13, fontWeight:700, color:p, marginBottom:20, letterSpacing:1, border:`1.5px solid ${p}30` }}>
           🌸 Digital Coloring Books — Download Instantly
         </div>
-        <h1 style={{ fontSize:'clamp(36px,6vw,72px)', fontWeight:900, lineHeight:1.1, color:theme.textColor, margin:'0 0 16px', textShadow:'0 2px 20px rgba(255,255,255,0.8)', fontFamily:theme.fontFamily, textAlign:'center' }}>
+        <h1 style={{ fontSize:'clamp(30px,6vw,72px)', fontWeight:900, lineHeight:1.1, color:theme.textColor, margin:'0 0 16px', textShadow:'0 2px 20px rgba(255,255,255,0.8)', fontFamily:theme.fontFamily, textAlign:'center' }}>
           {tl(theme.heroTitle || 'Color Your World ✨', theme.heroTitle_th)}
         </h1>
-        <p style={{ fontSize:'clamp(16px,2.5vw,22px)', color:theme.textColor+'cc', margin:'0 0 36px', maxWidth:500, fontFamily:theme.fontFamily, textAlign:'center' }}>
+        <p style={{ fontSize:'clamp(15px,2.5vw,22px)', color:theme.textColor+'cc', margin:'0 0 36px', maxWidth:500, fontFamily:theme.fontFamily, textAlign:'center' }}>
           {tl(theme.heroSubtitle || 'Adorable coloring books for every dreamer 🌸', theme.heroSubtitle_th)}
         </p>
-        <div style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap' }}>
+        <div className="hp-hero-btns" style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap' }}>
           <button onClick={()=>navigate('/products')} style={{ background:p, color:'white', border:'none', cursor:'pointer', padding:'14px 32px', borderRadius:30, fontSize:17, fontWeight:800, boxShadow:`0 8px 24px ${p}44`, fontFamily:theme.fontFamily }}>Shop Now 🛍️</button>
           <button onClick={()=>navigate('/artists')} style={{ background:'rgba(255,255,255,0.8)', color:theme.textColor, border:`2px solid ${p}40`, cursor:'pointer', padding:'14px 32px', borderRadius:30, fontSize:17, fontWeight:700, fontFamily:theme.fontFamily }}>Meet Artists 🎨</button>
         </div>
-        {/* Hero stats — admin-editable, hidden if empty */}
         {stats.length > 0 && (
-          <div style={{ display:'flex', gap:32, justifyContent:'center', marginTop:48, flexWrap:'wrap' }}>
+          <div className="hp-hero-stats" style={{ display:'flex', gap:32, justifyContent:'center', marginTop:48, flexWrap:'wrap' }}>
             {stats.map((s: any, i: number) => (
               <div key={i} style={{ background:'rgba(255,255,255,0.6)', backdropFilter:'blur(8px)', borderRadius:16, padding:'12px 20px', textAlign:'center', border:`1px solid ${p}20` }}>
                 <div style={{ fontSize:22, fontWeight:900, color:p }}>{s.value}</div>
@@ -104,23 +108,31 @@ function FeaturedSection({ products }: { products: any[] }) {
   const { navigate } = useRouter();
   const { lang } = useLang();
   const tl = (en: string, th?: string) => (lang === 'th' && th) ? th : en;
-  // Hide section if no products configured
   if (products.length === 0) return null;
   return (
-    <section style={{ padding:'64px 24px', background:'white' }}>
-      <div style={{ maxWidth:1200, margin:'0 auto' }}>
-        <div style={{ textAlign:'center', marginBottom:40 }}>
+    <section style={{ background:'white' }}>
+      <style>{`
+        @media(max-width:640px){
+          .hp-feat-wrap{padding:32px 0!important;}
+          .hp-feat-header,.hp-feat-footer{padding:0 16px!important;}
+          .hp-feat-scroll{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;padding:0 16px 12px!important;scrollbar-width:none!important;gap:12px!important;justify-content:flex-start!important;}
+          .hp-feat-scroll::-webkit-scrollbar{display:none!important;}
+          .hp-feat-card{width:72vw!important;min-width:200px!important;max-width:260px!important;flex-shrink:0!important;flex-grow:0!important;}
+        }
+      `}</style>
+      <div className="hp-feat-wrap" style={{ maxWidth:1200, margin:'0 auto', padding:'64px 24px' }}>
+        <div className="hp-feat-header" style={{ textAlign:'center', marginBottom:40 }}>
           <span style={{ fontSize:13, fontWeight:700, color:theme.primaryColor, letterSpacing:1, textTransform:'uppercase' as const }}>{tl(theme.labels?.featured_eyebrow || '✨ Handpicked for You', theme.labels?.featured_eyebrow_th)}</span>
           <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 12px', fontFamily:theme.fontFamily }}>{tl(theme.labels?.featured_title || 'Featured Collections', theme.labels?.featured_title_th)}</h2>
         </div>
-        <div style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
+        <div className="hp-feat-scroll" style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
           {products.map(p => (
-            <div key={p.id} style={{ width: 'min(100%, 260px)', flexShrink: 0, flexGrow: 0 }}>
+            <div key={p.id} className="hp-feat-card" style={{ width: 'min(100%, 260px)', flexShrink: 0, flexGrow: 0 }}>
               <ProductCard product={p} />
             </div>
           ))}
         </div>
-        <div style={{ textAlign:'center', marginTop:40 }}>
+        <div className="hp-feat-footer" style={{ textAlign:'center', marginTop:40 }}>
           <button onClick={()=>navigate('/products')} style={{ background:'transparent', border:`2px solid ${theme.primaryColor}`, color:theme.primaryColor, cursor:'pointer', padding:'12px 32px', borderRadius:24, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily }}>{tl(theme.labels?.featured_btn || 'View All Books →', theme.labels?.featured_btn_th)}</button>
         </div>
       </div>
@@ -135,20 +147,28 @@ function DigitalProductsSection({ products }: { products: any[] }) {
   if (products.length === 0) return null;
   const shown = products.slice(0, 4);
   return (
-    <section style={{ padding:'64px 24px', background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})` }}>
-      <div style={{ maxWidth:1200, margin:'0 auto' }}>
-        <div style={{ textAlign:'center', marginBottom:40 }}>
+    <section style={{ background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})` }}>
+      <style>{`
+        @media(max-width:640px){
+          .hp-dig-wrap{padding:32px 0!important;}
+          .hp-dig-scroll{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;padding:0 16px 12px!important;scrollbar-width:none!important;gap:12px!important;justify-content:flex-start!important;}
+          .hp-dig-scroll::-webkit-scrollbar{display:none!important;}
+          .hp-dig-card{width:72vw!important;min-width:200px!important;max-width:260px!important;flex-shrink:0!important;flex-grow:0!important;}
+        }
+      `}</style>
+      <div className="hp-dig-wrap" style={{ maxWidth:1200, margin:'0 auto', padding:'64px 24px' }}>
+        <div style={{ textAlign:'center', marginBottom:40, padding:'0 16px' }}>
           <span style={{ fontSize:13, fontWeight:700, color:theme.primaryColor, letterSpacing:1, textTransform:'uppercase' as const }}>💾 Download Instantly</span>
           <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 12px', fontFamily:theme.fontFamily }}>Digital Products</h2>
         </div>
-        <div style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
+        <div className="hp-dig-scroll" style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
           {shown.map(p => (
-            <div key={p.id} style={{ width:'min(100%, 260px)', flexShrink:0, flexGrow:0 }}>
+            <div key={p.id} className="hp-dig-card" style={{ width:'min(100%, 260px)', flexShrink:0, flexGrow:0 }}>
               <ProductCard product={p} />
             </div>
           ))}
         </div>
-        <div style={{ textAlign:'center', marginTop:40 }}>
+        <div style={{ textAlign:'center', marginTop:40, padding:'0 16px' }}>
           <button onClick={()=>navigate('/digital-products')} style={{ background:'transparent', border:`2px solid ${theme.primaryColor}`, color:theme.primaryColor, cursor:'pointer', padding:'12px 32px', borderRadius:24, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily }}>View All Digital →</button>
         </div>
       </div>
@@ -168,7 +188,6 @@ function CategoriesSection({ allProducts }: { allProducts: any[] }) {
     api.getCategories().then((d: any) => { if (Array.isArray(d)) setCategories(d); });
   }, []);
 
-  // Real counts from products — use categories array if available
   const catCounts: Record<string, number> = {};
   allProducts.forEach((p: any) => {
     const cats: string[] = p.categories && p.categories.length ? p.categories : (p.category ? [p.category] : []);
@@ -179,22 +198,34 @@ function CategoriesSection({ allProducts }: { allProducts: any[] }) {
   if (catsWithProducts.length === 0) return null;
 
   return (
-    <section style={{ padding:'64px 24px', background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})` }}>
-      <div style={{ maxWidth:1200, margin:'0 auto' }}>
-        <div style={{ textAlign:'center', marginBottom:40 }}>
+    <section style={{ background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})` }}>
+      <style>{`
+        @media(max-width:640px){
+          .hp-cat-wrap{padding:32px 0!important;}
+          .hp-cat-header{padding:0 16px!important;}
+          .hp-cat-scroll{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;padding:0 16px 8px!important;scrollbar-width:none!important;gap:10px!important;justify-content:flex-start!important;}
+          .hp-cat-scroll::-webkit-scrollbar{display:none!important;}
+          .hp-cat-card{width:100px!important;min-width:88px!important;padding:14px 8px!important;flex-shrink:0!important;}
+          .hp-cat-icon{font-size:28px!important;margin-bottom:6px!important;}
+          .hp-cat-card img{width:36px!important;height:36px!important;}
+        }
+      `}</style>
+      <div className="hp-cat-wrap" style={{ maxWidth:1200, margin:'0 auto', padding:'64px 24px' }}>
+        <div className="hp-cat-header" style={{ textAlign:'center', marginBottom:40 }}>
           <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, fontFamily:theme.fontFamily }}>{tl(theme.labels?.categories_title||'Browse by Category 🎨',theme.labels?.categories_title_th)}</h2>
           <p style={{ color:theme.textColor+'88', fontSize:16 }}>{tl(theme.labels?.categories_subtitle||'Find your perfect coloring style',theme.labels?.categories_subtitle_th)}</p>
         </div>
-        <div style={{ display:'flex', flexWrap:'wrap', gap:16, justifyContent:'center' }}>
+        <div className="hp-cat-scroll" style={{ display:'flex', flexWrap:'wrap', gap:16, justifyContent:'center' }}>
           {catsWithProducts.map(cat => {
             const count = catCounts[cat.name] || 0;
             return (
               <button key={cat.name} onClick={()=>navigate('/products')}
+                className="hp-cat-card"
                 style={{ background:'white', border:`1.5px solid ${theme.primaryColor}20`, borderRadius:20, padding:'28px 16px', cursor:'pointer', textAlign:'center' as const, fontFamily:theme.fontFamily, width:'min(100%,160px)', flexShrink:0 }}
                 onMouseEnter={e=>{(e.currentTarget as any).style.transform='translateY(-4px)';(e.currentTarget as any).style.boxShadow=`0 8px 24px ${theme.primaryColor}25`;}}
                 onMouseLeave={e=>{(e.currentTarget as any).style.transform='none';(e.currentTarget as any).style.boxShadow='none';}}
               >
-                <div style={{ fontSize:40, marginBottom:10, display:'flex', justifyContent:'center', alignItems:'center' }}>
+                <div className="hp-cat-icon" style={{ fontSize:40, marginBottom:10, display:'flex', justifyContent:'center', alignItems:'center' }}>
                   {cat.icon_type === 'image' && cat.icon
                     ? <img src={cat.icon} alt={cat.name} style={{ width:48, height:48, objectFit:'cover', borderRadius:10 }} />
                     : <span>{cat.icon || '🎨'}</span>}
@@ -221,25 +252,35 @@ function ArtistsSection() {
   const AVATARS = ['🎨','🌸','✨','🐰','🌺','💕','🦊','🌈'];
   if (artists.length === 0) return null;
   return (
-    <section style={{ padding:'64px 24px', background:'white' }}>
-      <div style={{ maxWidth:1200, margin:'0 auto' }}>
-        <div style={{ textAlign:'center', marginBottom:40 }}>
+    <section style={{ background:'white' }}>
+      <style>{`
+        @media(max-width:640px){
+          .hp-art-wrap{padding:32px 0!important;}
+          .hp-art-header{padding:0 16px!important;}
+          .hp-art-scroll{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;padding:0 16px 12px!important;scrollbar-width:none!important;gap:12px!important;justify-content:flex-start!important;}
+          .hp-art-scroll::-webkit-scrollbar{display:none!important;}
+          .hp-art-card{width:64vw!important;min-width:175px!important;max-width:220px!important;flex-shrink:0!important;padding:18px 14px!important;}
+          .hp-art-avatar{width:56px!important;height:56px!important;font-size:26px!important;margin-bottom:12px!important;}
+        }
+      `}</style>
+      <div className="hp-art-wrap" style={{ maxWidth:1200, margin:'0 auto', padding:'64px 24px' }}>
+        <div className="hp-art-header" style={{ textAlign:'center', marginBottom:40 }}>
           <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, fontFamily:theme.fontFamily }}>{tl(theme.labels?.artists_title||'Meet Our Artists 🌟',theme.labels?.artists_title_th)}</h2>
           <p style={{ color:theme.textColor+'88', fontSize:16 }}>{tl(theme.labels?.artists_subtitle||'Talented creators bringing joy through coloring',theme.labels?.artists_subtitle_th)}</p>
         </div>
-        <div style={{ display:'flex', flexWrap:'wrap', gap:20, justifyContent:'center' }}>
+        <div className="hp-art-scroll" style={{ display:'flex', flexWrap:'wrap', gap:20, justifyContent:'center' }}>
           {artists.map((a: any, idx: number) => (
-            <div key={a.id} style={{ background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, borderRadius:20, padding:24, textAlign:'center' as const, border:`1.5px solid ${theme.primaryColor}15`, cursor:'pointer', width:'min(100%,240px)', flexShrink:0 }}
+            <div key={a.id} className="hp-art-card"
+              style={{ background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, borderRadius:20, padding:24, textAlign:'center' as const, border:`1.5px solid ${theme.primaryColor}15`, cursor:'pointer', width:'min(100%,240px)', flexShrink:0 }}
               onMouseEnter={e=>{(e.currentTarget as any).style.transform='translateY(-4px)';}}
               onMouseLeave={e=>{(e.currentTarget as any).style.transform='none';}}
               onClick={()=>navigate(`/artists/${a.artist_slug || a.id}`)}
             >
-              <div style={{ width:72, height:72, borderRadius:'50%', background:'white', margin:'0 auto 16px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, boxShadow:`0 4px 16px ${theme.primaryColor}25`, overflow:'hidden' }}>
+              <div className="hp-art-avatar" style={{ width:72, height:72, borderRadius:'50%', background:'white', margin:'0 auto 16px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, boxShadow:`0 4px 16px ${theme.primaryColor}25`, overflow:'hidden' }}>
                 {a.avatar_url
                   ? <img src={a.avatar_url} alt={a.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                   : AVATARS[idx % AVATARS.length]}
               </div>
-              {/* Use artist display name — prefer name over slug */}
               <div style={{ fontSize:17, fontWeight:800, color:theme.textColor, fontFamily:theme.fontFamily }}>
                 {a.name || a.artist_slug}
               </div>
@@ -274,8 +315,9 @@ function BlogSection() {
 
   const p = theme.primaryColor;
   return (
-    <section style={{ padding:'64px 24px', background:'white' }}>
-      <div style={{ maxWidth:1200, margin:'0 auto' }}>
+    <section style={{ background:'white' }}>
+      <style>{`@media(max-width:640px){.hp-blog-wrap{padding:32px 16px!important;}}`}</style>
+      <div className="hp-blog-wrap" style={{ maxWidth:1200, margin:'0 auto', padding:'64px 24px' }}>
         <div style={{ textAlign:'center' as const, marginBottom:40 }}>
           <span style={{ fontSize:13, fontWeight:700, color:p, letterSpacing:1, textTransform:'uppercase' as const }}>{tl(theme.labels?.blog_eyebrow || '📄 From the Blog', theme.labels?.blog_eyebrow_th)}</span>
           <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 0', fontFamily:theme.fontFamily }}>{tl(theme.labels?.blog_title || 'Latest Updates', theme.labels?.blog_title_th)}</h2>
@@ -323,8 +365,9 @@ function NewsletterSection() {
   const [submitted, setSubmitted] = React.useState(false);
   const p = theme.primaryColor;
   return (
-    <section style={{ padding:'64px 24px', background:`linear-gradient(135deg,${p}15,${theme.secondaryColor||'#c084fc'}15)`, textAlign:'center' as const }}>
-      <div style={{ maxWidth:560, margin:'0 auto' }}>
+    <section style={{ background:`linear-gradient(135deg,${p}15,${theme.secondaryColor||'#c084fc'}15)`, textAlign:'center' as const }}>
+      <style>{`@media(max-width:640px){.hp-nl-wrap{padding:32px 16px!important;}}`}</style>
+      <div className="hp-nl-wrap" style={{ maxWidth:560, margin:'0 auto', padding:'64px 24px' }}>
         <div style={{ fontSize:48, marginBottom:16 }}>💌</div>
         <h2 style={{ fontSize:30, fontWeight:900, color:theme.textColor, fontFamily:theme.fontFamily }}>{tl(theme.labels?.newsletter_title||"Join the Fluffy Family!",theme.labels?.newsletter_title_th)}</h2>
         <p style={{ color:theme.textColor+'88', marginBottom:28, fontSize:16 }}>{tl(theme.labels?.newsletter_body||'Get new releases, exclusive discounts, and coloring tips delivered to your inbox 🌸',theme.labels?.newsletter_body_th)}</p>
