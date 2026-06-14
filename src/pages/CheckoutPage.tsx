@@ -29,6 +29,8 @@ export default function CheckoutPage() {
   const [qrLoading, setQrLoading] = useState(false);
   const [slipUrl, setSlipUrl] = useState('');
   const [slipBusy, setSlipBusy] = useState(false);
+  const [slipSubmitted, setSlipSubmitted] = useState(false);
+  const [showReplace, setShowReplace] = useState(false);
 
   const hasPhysical = items.some(i => i.optionType === 'physical');
 
@@ -156,9 +158,11 @@ export default function CheckoutPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
         body: JSON.stringify({ slip_url: up.publicUrl }),
       });
-      const data = await res.json();
-      if (data.error) { alert(tRaw('บันทึกไม่สำเร็จ: ','Save failed: ') + data.error); }
-      else setSlipUrl(up.publicUrl);
+      // Safe parse — Vercel may timeout after saving but before responding
+      let data: any = null;
+      try { data = await res.json(); } catch {}
+      if (data?.error) { alert(tRaw('บันทึกไม่สำเร็จ: ','Save failed: ') + data.error); }
+      else { setSlipUrl(up.publicUrl); setSlipSubmitted(true); setShowReplace(false); }
     } catch (e: any) { alert('Error: ' + e.message); }
     setSlipBusy(false);
   };
@@ -194,15 +198,32 @@ export default function CheckoutPage() {
               {/* Slip upload */}
               <div style={{marginTop:18,paddingTop:14,borderTop:'1px solid #f3f4f6'}}>
                 <div style={{fontSize:13,fontWeight:700,color:theme.textColor,marginBottom:8}}>{tRaw('อัปโหลดสลิป','Upload Slip')}</div>
-                {slipUrl
-                  ? <div style={{background:'#d1fae5',borderRadius:10,padding:'8px 12px',fontSize:12,color:'#065f46',fontWeight:600}}>✅ {tRaw('อัปโหลดแล้ว','Slip uploaded!')}</div>
-                  : <label style={{display:'block',cursor:'pointer'}}>
-                      <div style={{background:p+'12',border:`2px dashed ${p}40`,borderRadius:12,padding:12,fontSize:12,color:p,fontWeight:600}}>
+                {slipSubmitted && !showReplace ? (
+                  <div>
+                    <div style={{background:'#ede9fe',borderRadius:10,padding:'10px 12px',fontSize:12,color:'#5b21b6',fontWeight:700,marginBottom:8}}>
+                      🕐 {tRaw('ส่งหลักฐานแล้ว — รอแอดมินยืนยัน','Payment proof submitted. Waiting for review.')}
+                    </div>
+                    {slipUrl && <img src={slipUrl} alt="slip" style={{width:'100%',borderRadius:8,border:'1px solid #e5e7eb',marginBottom:8}} />}
+                    <button onClick={()=>setShowReplace(true)} style={{width:'100%',padding:'8px',background:'#f9fafb',border:'1.5px solid #d1d5db',color:'#374151',borderRadius:8,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:theme.fontFamily}}>
+                      🔄 {tRaw('เปลี่ยนสลิป','Replace Payment Slip')}
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    {showReplace && (
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8,fontSize:12,color:'#5b21b6',fontWeight:600}}>
+                        <span>🔄 {tRaw('กำลังเปลี่ยนสลิป','Replacing slip')}</span>
+                        <button onClick={()=>setShowReplace(false)} style={{background:'none',border:'none',cursor:'pointer',color:'#7c3aed',fontSize:12,fontWeight:700,fontFamily:theme.fontFamily}}>✕</button>
+                      </div>
+                    )}
+                    <label style={{display:'block',cursor:slipBusy?'not-allowed':'pointer'}}>
+                      <div style={{background:p+'12',border:`2px dashed ${p}40`,borderRadius:12,padding:12,fontSize:12,color:p,fontWeight:600,textAlign:'center' as const}}>
                         {slipBusy ? '⏳...' : `📷 ${tRaw('อัปโหลดสลิปการโอนเงิน','Upload transfer slip')}`}
                       </div>
-                      <input type="file" accept="image/*" style={{display:'none'}} onChange={e=>{const f=e.target.files?.[0];if(f)uploadSlip(f);}} />
+                      <input type="file" accept="image/*" style={{display:'none'}} disabled={slipBusy} onChange={e=>{const f=e.target.files?.[0];if(f)uploadSlip(f);}} />
                     </label>
-                }
+                  </div>
+                )}
               </div>
             </div>
             {/* Instructions */}

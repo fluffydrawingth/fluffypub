@@ -5,16 +5,17 @@ import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
 
 const STATUS_COLORS: Record<string, string> = {
-  pending_payment: '#fef3c7', paid: '#d1fae5', packing: '#dbeafe',
+  pending_payment: '#fef3c7', payment_submitted: '#ede9fe', paid: '#d1fae5', packing: '#dbeafe',
   shipped: '#e0e7ff', delivered: '#d1fae5', cancelled: '#fee2e2',
 };
 const STATUS_TEXT: Record<string, [string, string, string]> = {
-  pending_payment: ['#d97706', 'รอชำระเงิน', 'Pending Payment'],
-  paid:            ['#059669', 'ชำระแล้ว', 'Paid'],
-  packing:         ['#2563eb', 'กำลังแพ็ค', 'Preparing'],
-  shipped:         ['#7c3aed', 'จัดส่งแล้ว', 'Shipped'],
-  delivered:       ['#059669', 'ได้รับแล้ว', 'Delivered'],
-  cancelled:       ['#dc2626', 'ยกเลิก', 'Cancelled'],
+  pending_payment:    ['#d97706', 'รอชำระเงิน',    'Pending Payment'],
+  payment_submitted:  ['#7c3aed', 'ส่งสลิปแล้ว',   'Payment Submitted'],
+  paid:               ['#059669', 'ชำระแล้ว',       'Paid'],
+  packing:            ['#2563eb', 'กำลังแพ็ค',      'Preparing'],
+  shipped:            ['#7c3aed', 'จัดส่งแล้ว',     'Shipped'],
+  delivered:          ['#059669', 'ได้รับแล้ว',     'Delivered'],
+  cancelled:          ['#dc2626', 'ยกเลิก',          'Cancelled'],
 };
 
 export default function GuestOrderPage({ token }: { token: string }) {
@@ -29,6 +30,7 @@ export default function GuestOrderPage({ token }: { token: string }) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [slipUploading, setSlipUploading] = useState(false);
+  const [showReplace, setShowReplace] = useState(false);
   const [msg, setMsg] = useState('');
 
   useEffect(() => {
@@ -43,7 +45,8 @@ export default function GuestOrderPage({ token }: { token: string }) {
   }, [token]);
 
   useEffect(() => {
-    if (!order || order.status !== 'pending_payment' || order.slip_url) return;
+    const needsQR = (order?.status === 'pending_payment' || (order?.status === 'payment_submitted' && showReplace));
+    if (!order || !needsQR || order.slip_url) return;
     if (qrDataUrl || qrLoading) return;
     const amt = order.total_thb || order.total_amount;
     if (!amt) return;
@@ -53,7 +56,7 @@ export default function GuestOrderPage({ token }: { token: string }) {
       .then(d => { if (d.qrDataUrl) setQrDataUrl(d.qrDataUrl); })
       .catch(() => {})
       .finally(() => setQrLoading(false));
-  }, [order]);
+  }, [order, showReplace]);
 
   const uploadSlip = async (file: File) => {
     if (!order) return;
@@ -67,14 +70,25 @@ export default function GuestOrderPage({ token }: { token: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slip_url: result.publicUrl }),
       });
-      const data = await res.json();
-      if (data.error) { setMsg('⚠️ ' + data.error); }
+      // Safe parse — Vercel may return non-JSON on timeout even if the save succeeded
+      let data: any = null;
+      try { data = await res.json(); } catch {}
+      if (data?.error) { setMsg('⚠️ ' + data.error); }
       else {
-        setOrder((prev: any) => ({ ...prev, slip_url: result.publicUrl }));
+        setOrder((prev: any) => ({ ...prev, slip_url: result.publicUrl, status: 'payment_submitted', payment_status: 'payment_submitted', slip_reject_reason: null }));
+        setShowReplace(false);
         setMsg('✓ ' + tRaw('อัปโหลดสลิปสำเร็จ! รอแอดมินยืนยัน', 'Slip uploaded! Awaiting admin confirmation.'));
       }
     } catch (e: any) {
-      setMsg('⚠️ ' + e.message);
+      // Reload order to check if save succeeded despite the error
+      const fresh = await fetch(`/api/orders?action=by-token&id=${order.access_token||order.id}`).then(r=>r.json()).catch(()=>null);
+      if (fresh?.slip_url) {
+        setOrder(fresh);
+        setShowReplace(false);
+        setMsg('✓ ' + tRaw('อัปโหลดสลิปสำเร็จ! รอแอดมินยืนยัน', 'Slip uploaded! Awaiting admin confirmation.'));
+      } else {
+        setMsg('⚠️ ' + e.message);
+      }
     }
     setSlipUploading(false);
   };
@@ -202,17 +216,39 @@ export default function GuestOrderPage({ token }: { token: string }) {
         )}
 
         {/* Payment section */}
-        {order.status === 'pending_payment' && (
+        {(order.status === 'pending_payment' || order.status === 'payment_submitted') && (
           <div style={{ background: 'white', borderRadius: 20, padding: '20px', marginBottom: 16, boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
-            {order.slip_url ? (
+            {/* Rejection notice */}
+            {order.slip_reject_reason && order.status === 'pending_payment' && (
+              <div style={{ background: '#fee2e2', borderRadius: 12, padding: '12px 14px', marginBottom: 14, border: '1.5px solid #fca5a5' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#dc2626', marginBottom: 4 }}>❌ {tRaw('สลิปถูกปฏิเสธ', 'Payment slip rejected')}</div>
+                <div style={{ fontSize: 12, color: '#7f1d1d', fontWeight: 600 }}>{order.slip_reject_reason}</div>
+                {order.slip_reject_note && <div style={{ fontSize: 12, color: '#374151', marginTop: 4 }}>{order.slip_reject_note}</div>}
+                <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>{tRaw('กรุณาอัปโหลดสลิปใหม่อีกครั้ง', 'Please upload a new payment slip below.')}</div>
+              </div>
+            )}
+
+            {order.status === 'payment_submitted' && !showReplace ? (
+              /* Slip submitted — preview + waiting message */
               <div>
-                <div style={{ background: '#d1fae5', borderRadius: 12, padding: '12px 14px', marginBottom: 12, fontSize: 13, color: '#065f46', fontWeight: 700 }}>
-                  ✅ {tRaw('อัปโหลดสลิปแล้ว — รอแอดมินยืนยัน', 'Slip uploaded — waiting for admin confirmation')}
+                <div style={{ background: '#ede9fe', borderRadius: 12, padding: '12px 14px', marginBottom: 12, fontSize: 13, color: '#5b21b6', fontWeight: 700 }}>
+                  🕐 {tRaw('ส่งหลักฐานแล้ว — รอแอดมินตรวจสอบ', 'Payment proof submitted. Waiting for review.')}
                 </div>
-                <img src={order.slip_url} alt="Payment slip" style={{ width: '100%', borderRadius: 10, border: '1px solid #e5e7eb' }} />
+                {order.slip_url && <img src={order.slip_url} alt="Payment slip" style={{ width: '100%', borderRadius: 10, border: '1px solid #e5e7eb', marginBottom: 12 }} />}
+                <button onClick={() => setShowReplace(true)}
+                  style={{ width: '100%', padding: '9px', background: '#f9fafb', border: '1.5px solid #d1d5db', color: '#374151', borderRadius: 10, cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: theme.fontFamily }}>
+                  🔄 {tRaw('เปลี่ยนสลิป', 'Replace Payment Slip')}
+                </button>
               </div>
             ) : (
               <div>
+                {order.status === 'payment_submitted' && (
+                  <div style={{ background: '#ede9fe', borderRadius: 12, padding: '10px 14px', marginBottom: 14, fontSize: 12, color: '#5b21b6', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>🔄 {tRaw('กำลังเปลี่ยนสลิป', 'Replacing slip')}</span>
+                    <button onClick={() => setShowReplace(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7c3aed', fontSize: 12, fontWeight: 700, fontFamily: theme.fontFamily }}>✕ {tRaw('ยกเลิก', 'Cancel')}</button>
+                  </div>
+                )}
+
                 {/* QR */}
                 <div style={{ textAlign: 'center' as const, marginBottom: 16 }}>
                   <div style={{ fontWeight: 800, fontSize: 14, color: theme.textColor, marginBottom: 4 }}>💳 PromptPay</div>
@@ -244,19 +280,18 @@ export default function GuestOrderPage({ token }: { token: string }) {
                   ].map((s, i) => <div key={i}>{s}</div>)}
                 </div>
 
-                {/* Upload */}
                 {msg && (
                   <div style={{ background: msg.startsWith('✓') ? '#d1fae5' : '#fee2e2', borderRadius: 10, padding: '9px 13px', marginBottom: 10, fontSize: 13, color: msg.startsWith('✓') ? '#065f46' : '#dc2626', fontWeight: 600 }}>
                     {msg}
                   </div>
                 )}
-                <label style={{ display: 'block', cursor: 'pointer' }}>
+                <label style={{ display: 'block', cursor: slipUploading ? 'not-allowed' : 'pointer' }}>
                   <div style={{ background: p + '10', border: `2px dashed ${p}50`, borderRadius: 12, padding: '13px 14px', textAlign: 'center' as const, fontSize: 13, color: p, fontWeight: 700 }}>
                     {slipUploading
                       ? '⏳ ' + tRaw('กำลังอัปโหลด...', 'Uploading...')
                       : '📷 ' + tRaw('อัปโหลดสลิปการโอนเงิน', 'Upload Payment Slip')}
                   </div>
-                  <input type="file" accept="image/*" style={{ display: 'none' }}
+                  <input type="file" accept="image/*" style={{ display: 'none' }} disabled={slipUploading}
                     onChange={e => { const f = e.target.files?.[0]; if (f) uploadSlip(f); }} />
                 </label>
               </div>
