@@ -84,22 +84,35 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: theme.fontFamily }}>
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 24px' }}>
+      <style>{`
+        .fd-grid{display:flex;}
+        .fd-img{width:50%;flex-shrink:0;min-height:400px;}
+        .fd-info{flex:1;padding:36px 40px;overflow:hidden;}
+        @media(max-width:768px){
+          .fd-grid{flex-direction:column!important;}
+          .fd-img{width:100%!important;min-height:0!important;}
+          .fd-info{padding:18px 16px 28px!important;}
+        }
+      `}</style>
 
-        {/* Back */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '12px 16px', fontSize: 13, color: '#64748b' }}>
         <button onClick={() => navigate('/free-downloads')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 13, fontWeight: 700, marginBottom: 20, padding: 0, fontFamily: theme.fontFamily }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 13, fontWeight: 700, padding: 0, fontFamily: theme.fontFamily }}>
           ← {tRaw('ดาวน์โหลดทั้งหมด', 'All Free Downloads')}
         </button>
+      </div>
 
-        <div style={{ background: 'white', borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-          {/* Cover */}
-          {item.cover_image_url && (
-            <img src={item.cover_image_url} alt={title}
-              style={{ width: '100%', maxHeight: 360, objectFit: 'cover', display: 'block' }} />
-          )}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 16px 48px' }}>
+        <div className="fd-grid" style={{ background: 'white', borderRadius: 20, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.07)' }}>
+          {/* Cover image — square, full fill */}
+          <div className="fd-img" style={{ background: `${p}10`, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80 }}>
+            {item.cover_image_url
+              ? <img src={item.cover_image_url} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
+              : <span>{fileIcon(item.file_type)}</span>
+            }
+          </div>
 
-          <div style={{ padding: '24px 28px 32px' }}>
+          <div className="fd-info">
             {/* Badges */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
               {item.file_type && (
@@ -170,14 +183,14 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
         {/* Artist card */}
         {artistProfile && (
           <div style={{ marginTop: 32, background: 'white', borderRadius: 16, padding: '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}
-            onClick={() => navigate(`/artists/${artistProfile.slug}`)}>
+            onClick={() => navigate(`/artists/${artistProfile.artist_slug || artistProfile.slug}`)}>
             {artistProfile.avatar_url
-              ? <img src={artistProfile.avatar_url} alt={artistProfile.display_name} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+              ? <img src={artistProfile.avatar_url} alt={artistProfile.name} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
               : <div style={{ width: 56, height: 56, borderRadius: '50%', background: `${p}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🎨</div>
             }
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', marginBottom: 2 }}>{tRaw('ศิลปิน', 'Artist')}</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#1e293b' }}>{artistProfile.display_name || artistProfile.name}</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#1e293b' }}>{artistProfile.name}</div>
               {artistProfile.bio && <div style={{ fontSize: 13, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{artistProfile.bio}</div>}
             </div>
             <span style={{ color: p, fontSize: 18 }}>→</span>

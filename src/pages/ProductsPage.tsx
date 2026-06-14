@@ -21,8 +21,13 @@ export default function ProductsPage() {
     });
   }, []);
 
+  // Shop page shows only physical products
+  const physicalOnly = allProducts.filter(prod =>
+    prod.type === 'physical' || prod.is_physical === true || (!prod.is_digital && prod.type !== 'digital' && prod.type !== 'both')
+  );
+
   // Build category tabs from DB + "All"
-  const catCounts = allProducts.reduce((acc: Record<string, number>, prod: any) => {
+  const catCounts = physicalOnly.reduce((acc: Record<string, number>, prod: any) => {
     // Count from categories array if available, else fall back to category string
     const cats: string[] = prod.categories && prod.categories.length ? prod.categories : (prod.category ? [prod.category] : []);
     cats.forEach((cat: string) => { acc[cat] = (acc[cat] || 0) + 1; });
@@ -31,7 +36,7 @@ export default function ProductsPage() {
 
   const searchTerm = search.trim().toLowerCase();
 
-  let filtered = allProducts.filter(prod => {
+  let filtered = physicalOnly.filter(prod => {
     if (category !== 'All') {
       const prodCats: string[] = prod.categories && prod.categories.length ? prod.categories : (prod.category ? [prod.category] : []);
       if (!prodCats.includes(category)) return false;
