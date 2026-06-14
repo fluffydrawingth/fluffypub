@@ -61,14 +61,15 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
   const social = artist.social_links || {};
   const allProducts: any[] = artist.products || [];
 
-  const physicalProducts = allProducts.filter(pr =>
-    pr.type === 'physical' || pr.is_physical === true || (!pr.is_digital && pr.type !== 'digital' && pr.type !== 'both')
-  );
-  const digitalProducts = allProducts.filter(pr =>
-    pr.type === 'digital' || pr.is_digital === true || pr.type === 'both'
-  );
-
-  const totalCount = physicalProducts.length + digitalProducts.length + freeDownloads.length;
+  // Products with type==='physical' OR is_physical===true go in Physical section
+  // Products with type==='digital' OR is_digital===true go in Digital section
+  // A "both" product (is_digital=true AND type=physical) appears in both sections
+  const showPhysical = allProducts.filter(pr => pr.type === 'physical' || pr.is_physical === true);
+  const showDigital  = allProducts.filter(pr => pr.type === 'digital'  || pr.is_digital  === true);
+  // Unclassified products (old data with no flags) — show under Physical as fallback
+  const unclassified = allProducts.filter(pr => pr.type !== 'physical' && pr.type !== 'digital' && !pr.is_physical && !pr.is_digital);
+  const physicalSection = [...showPhysical, ...unclassified];
+  const totalCount = allProducts.length + freeDownloads.length;
 
   const fileIcon = (t: string) => t === 'pdf' ? '📄' : t === 'zip' ? '🗜️' : t === 'png' ? '🖼️' : '📁';
   const fileBg   = (t: string) => t === 'pdf' ? '#fee2e2' : t === 'png' ? '#f3e8ff' : '#dbeafe';
@@ -107,14 +108,14 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
         )}
 
         {/* ── Physical Products ── */}
-        {physicalProducts.length > 0 && (
+        {physicalSection.length > 0 && (
           <div style={{ marginBottom:48 }}>
             <h2 style={{ fontSize:20, fontWeight:900, color:theme.textColor, marginBottom:16, display:'flex', alignItems:'center', gap:10 }}>
               <span style={{ background:'#d1fae5', color:'#065f46', borderRadius:10, padding:'3px 12px', fontSize:13 }}>📦 {tRaw('สินค้า', 'Physical')}</span>
-              <span style={{ fontSize:14, color:'#9ca3af', fontWeight:600 }}>{physicalProducts.length}</span>
+              <span style={{ fontSize:14, color:'#9ca3af', fontWeight:600 }}>{physicalSection.length}</span>
             </h2>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:20 }}>
-              {physicalProducts.map((pr:any) => (
+              {physicalSection.map((pr:any) => (
                 <ProductCard key={pr.id} product={{ ...pr, artistName: artist.name }} />
               ))}
             </div>
@@ -122,14 +123,14 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
         )}
 
         {/* ── Digital Products ── */}
-        {digitalProducts.length > 0 && (
+        {showDigital.length > 0 && (
           <div style={{ marginBottom:48 }}>
             <h2 style={{ fontSize:20, fontWeight:900, color:theme.textColor, marginBottom:16, display:'flex', alignItems:'center', gap:10 }}>
               <span style={{ background:'#dbeafe', color:'#1d4ed8', borderRadius:10, padding:'3px 12px', fontSize:13 }}>⬇️ {tRaw('ดิจิทัล', 'Digital')}</span>
-              <span style={{ fontSize:14, color:'#9ca3af', fontWeight:600 }}>{digitalProducts.length}</span>
+              <span style={{ fontSize:14, color:'#9ca3af', fontWeight:600 }}>{showDigital.length}</span>
             </h2>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:20 }}>
-              {digitalProducts.map((pr:any) => (
+              {showDigital.map((pr:any) => (
                 <ProductCard key={pr.id} product={{ ...pr, artistName: artist.name }} />
               ))}
             </div>
@@ -166,7 +167,7 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
           </div>
         )}
 
-        {totalCount === 0 && (
+        {physicalSection.length === 0 && showDigital.length === 0 && freeDownloads.length === 0 && (
           <div style={{ textAlign:'center', padding:'40px', color:'#9ca3af', background:'white', borderRadius:16 }}>
             {tRaw('ยังไม่มีผลงาน', 'No items yet')}
           </div>

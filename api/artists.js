@@ -13,7 +13,7 @@ module.exports = async function handler(req, res) {
         ? await supabase.from('profiles').select('id,name,artist_slug,bio,role,cover_image_url,avatar_url,website,social_links,artist_status,created_at').eq('artist_slug', slug).eq('role','artist').single()
         : await supabase.from('profiles').select('id,name,artist_slug,bio,role,cover_image_url,avatar_url,website,social_links,artist_status,created_at').eq('id', id).eq('role','artist').single();
       if (error || !data) return json(res, 404, { error: 'Artist not found' });
-      const { data: products } = await supabase.from('products').select('id,title,slug,image,cover_image_url,price,category').eq('artist_id', data.id).eq('active', true).eq('status','published');
+      const { data: products } = await supabase.from('products').select('id,title,title_th,title_en,slug,image,cover_image_url,price,price_thb,category,type,is_digital,is_physical').eq('artist_id', data.id).eq('active', true).eq('status','published');
       return json(res, 200, { ...data, products: products || [] });
     }
     const { data: artists } = await supabase.from('profiles')

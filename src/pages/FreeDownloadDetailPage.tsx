@@ -85,12 +85,12 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: theme.fontFamily }}>
       <style>{`
-        .fd-grid{display:flex;}
-        .fd-img{width:50%;flex-shrink:0;min-height:400px;}
-        .fd-info{flex:1;padding:36px 40px;overflow:hidden;}
+        .fd-grid{display:flex;align-items:stretch;}
+        .fd-img{width:50%;flex-shrink:0;aspect-ratio:1/1;position:relative;overflow:hidden;}
+        .fd-info{flex:1;padding:36px 40px;overflow:hidden;overflow-y:auto;}
         @media(max-width:768px){
           .fd-grid{flex-direction:column!important;}
-          .fd-img{width:100%!important;min-height:0!important;}
+          .fd-img{width:100%!important;aspect-ratio:1/1!important;}
           .fd-info{padding:18px 16px 28px!important;}
         }
       `}</style>
@@ -105,9 +105,9 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 16px 48px' }}>
         <div className="fd-grid" style={{ background: 'white', borderRadius: 20, overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.07)' }}>
           {/* Cover image — square, full fill */}
-          <div className="fd-img" style={{ background: `${p}10`, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80 }}>
+          <div className="fd-img" style={{ background: `${p}10`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80 }}>
             {item.cover_image_url
-              ? <img src={item.cover_image_url} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
+              ? <img src={item.cover_image_url} alt={title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
               : <span>{fileIcon(item.file_type)}</span>
             }
           </div>
