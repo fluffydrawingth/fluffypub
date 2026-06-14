@@ -133,9 +133,22 @@ async function tplPaymentConfirmed(order) {
     : `${SITE}/#/account/orders`;
   const hasDigital = (order.items || []).some(i => (i.optionType || i.type) === 'digital');
   const isDigitalOnly = (order.items || []).every(i => (i.optionType || i.type) === 'digital');
+  const digitalItems = (order.items || []).filter(i => (i.optionType || i.type) === 'digital');
+  const downloadLinksHtml = isDigitalOnly && digitalItems.length > 0
+    ? `<div style="background:#eff6ff;border-radius:12px;padding:16px;margin-top:16px;border:1.5px solid #93c5fd">
+        <div style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:10px">⬇️ ไฟล์ดิจิทัลของคุณ / Your Digital Files</div>
+        ${digitalItems.map(i => i.digital_download_url
+          ? `<a href="${i.digital_download_url}" style="display:block;background:#2563eb;color:white;text-decoration:none;padding:10px 16px;border-radius:10px;font-weight:700;font-size:13px;margin-bottom:8px">⬇️ ดาวน์โหลด: ${i.title || 'File'}</a>`
+          : `<div style="font-size:12px;color:#374151;padding:8px;background:white;border-radius:8px;margin-bottom:6px">📄 ${i.title || 'File'} — ติดต่อแอดมินเพื่อรับลิงค์ / Contact admin for download link</div>`
+        ).join('')}
+        <p style="margin:8px 0 0;font-size:11px;color:#6b7280">หรือดูลิงค์ดาวน์โหลดได้ในหน้าคำสั่งซื้อ / Or view download links in your order page.</p>
+      </div>`
+    : hasDigital
+      ? `<div style="background:#eff6ff;border-radius:12px;padding:12px 16px;margin-top:16px;border:1.5px solid #93c5fd;font-size:13px;color:#1e40af">⬇️ ไฟล์ดิจิทัลพร้อมดาวน์โหลดแล้วในหน้าคำสั่งซื้อ / Your digital download is now available in your order page.</div>`
+      : '';
   return await emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:20px">✅ ยืนยันการชำระเงินแล้ว!</h2>
-    <p style="margin:0 0 16px;color:#6b7280;font-size:13px">Payment confirmed! ${isDigitalOnly ? 'Your digital files are ready. 🎉' : 'We\'re preparing your order. 🌸'}</p>
+    <p style="margin:0 0 16px;color:#6b7280;font-size:13px">Payment confirmed! ${isDigitalOnly ? 'Your digital product is ready to download. 🎉' : 'We\'re preparing your order. 🌸'}</p>
     <div style="background:#f0fdf4;border-radius:12px;padding:14px 16px;margin-bottom:20px;border:1.5px solid #86efac">
       <div style="font-size:12px;color:#065f46;font-weight:700;margin-bottom:4px">คำสั่งซื้อ / ORDER</div>
       <div style="font-size:22px;font-weight:900;color:#059669">#${ref}</div>
@@ -143,8 +156,8 @@ async function tplPaymentConfirmed(order) {
     </div>
     <h3 style="margin:0 0 10px;font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.5px">รายการสินค้า / Items</h3>
     ${orderSummaryHtml(order)}
-    ${hasDigital ? `<div style="background:#eff6ff;border-radius:12px;padding:12px 16px;margin-top:16px;border:1.5px solid #93c5fd;font-size:13px;color:#1e40af">⬇️ ไฟล์ดิจิทัลพร้อมดาวน์โหลดแล้วในหน้าคำสั่งซื้อ / Your digital download is now available in your order page.</div>` : ''}
-    <a href="${orderLink}" style="display:inline-block;margin-top:16px;background:#059669;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">${isDigitalOnly ? '⬇️ ไปดาวน์โหลด / Download Now →' : '📦 ติดตามคำสั่งซื้อ / Track Order →'}</a>
+    ${downloadLinksHtml}
+    <a href="${orderLink}" style="display:inline-block;margin-top:16px;background:#059669;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">${isDigitalOnly ? '⬇️ ดูหน้าคำสั่งซื้อ / View Order →' : '📦 ติดตามคำสั่งซื้อ / Track Order →'}</a>
     ${!isDigitalOnly ? '<p style="margin:16px 0 0;font-size:12px;color:#9ca3af">ทีมงานจะดำเนินการจัดส่งภายใน 1-3 วันทำการ 🌸</p>' : ''}
   `);
 }
@@ -302,14 +315,17 @@ module.exports = async function handler(req, res) {
     if (!user) return;
     const { data, error } = await supabase.from('orders').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
     if (error) return json(res, 500, { error: error.message });
-    const safe = (data || []).map(o => ({
-      ...o,
-      items: (o.items || []).map(i => ({
-        ...i,
-        digital_download_url: o.payment_status === 'paid' ? i.digital_download_url : null,
-        download_instruction: o.payment_status === 'paid' ? i.download_instruction : null,
-      }))
-    }));
+    const safe = (data || []).map(o => {
+      const unlocked = o.payment_status === 'paid' || o.status === 'delivered';
+      return {
+        ...o,
+        items: (o.items || []).map(i => ({
+          ...i,
+          digital_download_url: unlocked ? i.digital_download_url : null,
+          download_instruction: unlocked ? i.download_instruction : null,
+        }))
+      };
+    });
     return json(res, 200, safe);
   }
 
@@ -339,8 +355,9 @@ module.exports = async function handler(req, res) {
     if (error || !data) return json(res, 404, { error: 'Order not found or link has expired' });
     // Strip access_token from the response so the token never leaks to client JS
     const { access_token: _tok, ...safeOrder } = data;
-    // Only expose download links if paid
-    if (safeOrder.payment_status !== 'paid') {
+    // Only expose download links if paid or delivered (digital-only orders skip paid→go straight to delivered)
+    const unlocked = safeOrder.payment_status === 'paid' || safeOrder.status === 'delivered';
+    if (!unlocked) {
       safeOrder.items = (safeOrder.items || []).map(i => ({ ...i, digital_download_url: null, download_instruction: null }));
     }
     return json(res, 200, safeOrder);
@@ -557,8 +574,10 @@ module.exports = async function handler(req, res) {
         return { ...item, digital_download_url: p?.digital_download_url || null, download_instruction: p?.download_instruction || null };
       });
     }
+    const isDigitalOnly = enrichedItems.length > 0 && enrichedItems.every(i => (i.optionType || i.type) === 'digital');
     const { data, error } = await supabase.from('orders').update({
-      payment_status: 'paid', status: 'paid',
+      payment_status: 'paid',
+      status: isDigitalOnly ? 'delivered' : 'paid',
       paid_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       items: enrichedItems,

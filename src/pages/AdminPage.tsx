@@ -828,6 +828,8 @@ function OrdersTab() {
   const filteredOrders = filterStatus==='all' ? orders : orders.filter(o=>o.status===filterStatus);
   const activeOrders   = filteredOrders.filter(o=>ACTIVE_STATUSES.includes(o.status));
   const inactiveOrders = filteredOrders.filter(o=>INACTIVE_STATUSES.includes(o.status));
+  const DIGITAL_ONLY_STATUS_OPTS = ['pending_payment','payment_submitted','delivered','cancelled'];
+  const PHYSICAL_STATUS_OPTS = ['pending_payment','payment_submitted','paid','packing','shipped','delivered','cancelled'];
   const STATUS_OPTS = ['pending_payment','payment_submitted','paid','packing','shipped','delivered','cancelled'];
   const FILTER_TABS = [{k:'all',label:'All'},{k:'pending_payment',label:'Pending'},{k:'payment_submitted',label:'Submitted'},{k:'paid',label:'Paid'},{k:'packing',label:'Preparing'},{k:'shipped',label:'Shipped'},{k:'delivered',label:'Delivered'},{k:'cancelled',label:'Cancelled'}];
 
@@ -1069,17 +1071,30 @@ function OrdersTab() {
                 </button>
               </div>
             )}
-            {selected.payment_status==='paid'&&<div style={{background:'#d1fae5',borderRadius:8,padding:'8px 12px',fontSize:12,color:'#065f46',fontWeight:700,marginBottom:10}}>✅ Payment confirmed</div>}
+            {(()=>{
+              const isDigOnly = (selected.items||[]).length>0 && (selected.items||[]).every((i:any)=>(i.optionType||i.type)==='digital');
+              if (isDigOnly && selected.status==='delivered') return <div style={{background:'#d1fae5',borderRadius:8,padding:'8px 12px',fontSize:12,color:'#065f46',fontWeight:700,marginBottom:10}}>✅ Payment confirmed · ⬇️ Digital fulfillment complete</div>;
+              if (selected.payment_status==='paid') return <div style={{background:'#d1fae5',borderRadius:8,padding:'8px 12px',fontSize:12,color:'#065f46',fontWeight:700,marginBottom:10}}>✅ Payment confirmed</div>;
+              return null;
+            })()}
 
             {/* Status update */}
-            <div style={{marginBottom:8}}>
-              <label style={{display:'block',fontSize:11,fontWeight:700,color:'#374151',marginBottom:4}}>Update Status</label>
-              <select value={status} onChange={e=>setStatus(e.target.value)} style={{width:'100%',padding:'8px 12px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit'}}>
-                {STATUS_OPTS.map(s=><option key={s} value={s}>{STATUS_TEXT[s]}</option>)}
-              </select>
-            </div>
+            {(()=>{
+              const isDigOnly = (selected.items||[]).length>0 && (selected.items||[]).every((i:any)=>(i.optionType||i.type)==='digital');
+              const opts = isDigOnly ? DIGITAL_ONLY_STATUS_OPTS : PHYSICAL_STATUS_OPTS;
+              return (
+                <div style={{marginBottom:8}}>
+                  <label style={{display:'block',fontSize:11,fontWeight:700,color:'#374151',marginBottom:4}}>Update Status</label>
+                  <select value={status} onChange={e=>setStatus(e.target.value)} style={{width:'100%',padding:'8px 12px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit'}}>
+                    {opts.map((s:string)=><option key={s} value={s}>{STATUS_TEXT[s]}</option>)}
+                  </select>
+                </div>
+              );
+            })()}
 
-            {(selected.type==='physical'||selected.type==='both')&&<>
+            {(()=>{
+              const hasPhysical = (selected.items||[]).some((i:any)=>(i.optionType||i.type)==='physical');
+              return (hasPhysical||selected.type==='physical'||selected.type==='both') ? <>
               <div style={{marginBottom:8}}>
                 <label style={{display:'block',fontSize:11,fontWeight:700,color:'#374151',marginBottom:4}}>Shipping Provider</label>
                 <input value={provider} onChange={e=>setProvider(e.target.value)} placeholder="Thailand Post, Kerry, Flash..." style={{width:'100%',padding:'8px 12px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} />
@@ -1088,7 +1103,8 @@ function OrdersTab() {
                 <label style={{display:'block',fontSize:11,fontWeight:700,color:'#374151',marginBottom:4}}>Tracking Number</label>
                 <input value={tracking} onChange={e=>setTracking(e.target.value)} placeholder="TH123456789" style={{width:'100%',padding:'8px 12px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} />
               </div>
-            </>}
+            </> : null;
+            })()}
 
             {msg&&<div style={{marginBottom:8,fontSize:12,fontWeight:600,color:msg.startsWith('✓')?'#059669':'#dc2626'}}>{msg}</div>}
             <button onClick={save} disabled={saving} style={{width:'100%',padding:'10px',background:saving?P+'88':P,color:'white',border:'none',cursor:'pointer',borderRadius:10,fontSize:13,fontWeight:700,fontFamily:'inherit',boxShadow:`0 4px 12px ${P}44`}}>{saving?'Saving...':'Update Order'}</button>

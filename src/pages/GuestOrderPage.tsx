@@ -299,8 +299,8 @@ export default function GuestOrderPage({ token }: { token: string }) {
           </div>
         )}
 
-        {/* Digital downloads — only shown when paid */}
-        {order.status === 'paid' && (order.items || []).some((i: any) => (i.optionType || i.type) === 'digital') && (
+        {/* Digital downloads — shown when paid or delivered (digital-only orders go straight to delivered) */}
+        {(order.status === 'paid' || order.status === 'delivered') && (order.items || []).some((i: any) => (i.optionType || i.type) === 'digital') && (
           <div style={{ background: 'white', borderRadius: 20, padding: '18px 20px', marginBottom: 16, boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', marginBottom: 6, letterSpacing: 0.5 }}>⬇️ {tRaw('ดาวน์โหลดไฟล์ดิจิทัล', 'DIGITAL DOWNLOADS')}</div>
             <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#1e40af', fontWeight: 600 }}>
