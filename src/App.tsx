@@ -24,6 +24,7 @@ import GuestOrderPage from './pages/GuestOrderPage';
 import TrackOrderPage from './pages/TrackOrderPage';
 import FreeDownloadsPage from './pages/FreeDownloadsPage';
 import FreeDownloadDetailPage from './pages/FreeDownloadDetailPage';
+import MaintenancePage from './pages/MaintenancePage';
 import { LangProvider } from './lib/lang';
 import { FavoritesProvider } from './lib/favorites';
 
@@ -39,9 +40,26 @@ function ProtectedRoute({ roles, children }: { roles: string[]; children: React.
   return <>{children}</>;
 }
 
+// Paths blocked during maintenance (public-facing content only)
+const MAINTENANCE_BLOCKED: string[] = ['/','/products','/digital-products','/free-downloads','/artists','/pages','/cart','/checkout'];
+
+function isMaintBlocked(path: string): boolean {
+  if (MAINTENANCE_BLOCKED.includes(path)) return true;
+  return (
+    path.startsWith('/products/') ||
+    path.startsWith('/free-downloads/') ||
+    path.startsWith('/artists/') ||
+    path.startsWith('/pages/')
+  );
+}
+
 function AppContent() {
   const { route } = useRouter();
   const { theme } = useTheme();
+  const { user } = useAuth();
+
+  const isAdmin = user?.role === 'admin';
+  const inMaintenance = theme.maintenance_mode && isMaintBlocked(route.path) && !isAdmin;
 
   const isFullPage = ['/admin','/artist-dashboard','/login'].includes(route.path);
   const isCheckout = route.path === '/checkout';
@@ -77,12 +95,23 @@ function AppContent() {
     }
   };
 
+  // Show maintenance page (no navbar/footer, no admin bypass needed — admin is already excluded above)
+  if (inMaintenance) {
+    return <MaintenancePage />;
+  }
+
   return (
     <div style={{
       minHeight:'100vh', display:'flex', flexDirection:'column',
       background: theme.bgImageCrop?.croppedDataUrl ? `url(${theme.bgImageCrop.croppedDataUrl}) center/cover fixed` : theme.bgColor,
       fontFamily: theme.fontFamily,
     }}>
+      {/* Admin-only maintenance banner */}
+      {theme.maintenance_mode && isAdmin && (
+        <div style={{ background:'#dc2626', color:'white', textAlign:'center', padding:'8px 16px', fontSize:13, fontWeight:700, letterSpacing:0.5, zIndex:200 }}>
+          🔧 Maintenance Mode Enabled — only admins can see the site
+        </div>
+      )}
       {!isFullPage && <Navbar />}
       <main style={{flex:1}}>{page()}</main>
       {!isFullPage && !isCheckout && <Footer />}

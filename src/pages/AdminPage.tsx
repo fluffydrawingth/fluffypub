@@ -2119,6 +2119,22 @@ function ThemeTab() {
         </>)}
         {section==='pages'&&(<>
 
+          {/* ── Card: Maintenance Mode ────────────────────────── */}
+          <div style={{background:draft.maintenance_mode?'#fef2f2':'white',border:`1.5px solid ${draft.maintenance_mode?'#fca5a5':'#f3f4f6'}`,borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:18}}>🔧</span>
+              <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Maintenance Mode</span>
+              {draft.maintenance_mode&&<span style={{fontSize:11,fontWeight:800,background:'#dc2626',color:'white',borderRadius:6,padding:'2px 8px',letterSpacing:0.5}}>ON</span>}
+            </div>
+            <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>When ON, public pages show a maintenance screen. Admin users bypass it automatically.</p>
+            <label style={{display:'flex',alignItems:'center',gap:12,cursor:'pointer',background:draft.maintenance_mode?'#fee2e2':'#f9fafb',border:`1.5px solid ${draft.maintenance_mode?'#f87171':'#e5e7eb'}`,borderRadius:10,padding:'12px 16px',width:'fit-content'}}>
+              <input type="checkbox" checked={!!draft.maintenance_mode} onChange={e=>setDraft((d:any)=>({...d,maintenance_mode:e.target.checked}))} style={{width:18,height:18,accentColor:'#dc2626'}} />
+              <span style={{fontSize:14,fontWeight:800,color:draft.maintenance_mode?'#dc2626':'#374151'}}>
+                {draft.maintenance_mode?'🔴 Maintenance Mode ON — site is hidden from public':'⚪ Maintenance Mode OFF — site is live'}
+              </span>
+            </label>
+          </div>
+
           {/* ── Card: Header Navigation ───────────────────────── */}
           <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
             <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>

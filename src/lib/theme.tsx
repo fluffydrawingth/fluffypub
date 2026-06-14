@@ -32,6 +32,7 @@ export interface ThemeConfig {
   heroStats: { value: string; label: string }[];
   featuredProductIds: string[];
   showNewsletter: boolean;
+  maintenance_mode: boolean;
   labels: {
     featured_eyebrow: string; featured_eyebrow_th?: string;
     featured_title: string; featured_title_th?: string;
@@ -91,6 +92,7 @@ const DEFAULT: ThemeConfig = {
   heroStats:[],
   featuredProductIds:[],
   showNewsletter: false,
+  maintenance_mode: false,
   labels: {
     featured_eyebrow: '✨ Handpicked for You',
     featured_title: 'Featured Collections',
