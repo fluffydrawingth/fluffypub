@@ -790,7 +790,7 @@ module.exports = async function handler(req, res) {
         Key: item.r2_key,
         ResponseContentDisposition: `attachment; filename="${item.r2_file_name || 'download'}"`,
       });
-      const url = await getSignedUrl(client, command, { expiresIn: 30 });
+      const url = await getSignedUrl(client, command, { expiresIn: 300 });
       return json(res, 200, { url, fileName: item.r2_file_name, downloadsUsed: count + 1, downloadsLeft: Math.max(0, limit - count - 1) });
     }
 
