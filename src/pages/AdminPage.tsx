@@ -405,7 +405,7 @@ function ProductsTab() {
     setTitleTh(pr.title_th||''); setTitleEn(pr.title_en||'');
     setPriceTHB(String(pr.price_thb||''));
     setDescTh(pr.description_th||'');
-    setR2Key(pr.r2_key||''); setR2FileName(pr.r2_key ? pr.r2_key.split('/').pop() || '' : '');
+    setR2Key(pr.r2_key||''); setR2FileName(pr.r2_file_name||'');
     setR2FileSize(pr.file_size||0); setR2FileType(pr.file_type||''); setR2UploadMsg('');
     setEditingId(pr.id);
     setShowForm(true);
@@ -426,6 +426,7 @@ function ProductsTab() {
       digital_download_url:isDigital?(digitalDownloadUrl||null):null,
       download_instruction:isDigital?(downloadInstruction||null):null,
       r2_key:isDigital?(r2Key||null):null,
+      r2_file_name:isDigital?(r2FileName||null):null,
       file_size:isDigital&&r2FileSize?r2FileSize:null,
       file_type:isDigital?(r2FileType||null):null,
       physical_stock:isPhysical?(parseInt(physicalStock)||0):0,
@@ -483,7 +484,7 @@ function ProductsTab() {
       }
 
       setR2Key(presign.r2Key);
-      setR2FileName(file.name);
+      setR2FileName(file.name); // original filename — saved as r2_file_name in DB
       setR2FileSize(file.size);
       setR2FileType(file.type);
       setR2UploadMsg('✓ Uploaded');

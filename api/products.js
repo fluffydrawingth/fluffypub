@@ -6,7 +6,7 @@ module.exports = async function handler(req, res) {
 
   // GET all products
   if (req.method === 'GET' && !id) {
-    const { data, error } = await supabase.from('products').select('id,title,slug,price,original_price,artist_id,artist_name,artist_slug,category,categories,description,description_th,description_en,rich_description,image,cover_image_url,type,is_physical,is_digital,pages,rating,reviews,tags,search_keywords,featured,bestseller,is_new,active,status,shipping_required,shipping_note,digital_download_url,download_instruction,physical_stock,variants,title_th,title_en,price_thb,price_usd,created_at').eq('active', true).eq('status', 'published').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('products').select('id,title,slug,price,original_price,artist_id,artist_name,artist_slug,category,categories,description,description_th,description_en,rich_description,image,cover_image_url,type,is_physical,is_digital,pages,rating,reviews,tags,search_keywords,featured,bestseller,is_new,active,status,shipping_required,shipping_note,digital_download_url,download_instruction,physical_stock,variants,title_th,title_en,price_thb,price_usd,r2_key,r2_file_name,file_size,file_type,created_at').eq('active', true).eq('status', 'published').order('created_at', { ascending: false });
     if (error) return json(res, 500, { error: error.message });
     return json(res, 200, data);
   }
@@ -15,8 +15,8 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET' && id) {
     const isUuid = /^[0-9a-f-]{36}$/.test(id);
     const query = isUuid
-      ? supabase.from('products').select('id,title,slug,price,original_price,artist_id,artist_name,artist_slug,category,categories,description,description_th,description_en,rich_description,image,cover_image_url,type,is_physical,is_digital,pages,rating,reviews,tags,search_keywords,featured,bestseller,is_new,active,status,shipping_required,shipping_note,digital_download_url,download_instruction,physical_stock,variants,title_th,title_en,price_thb,price_usd,created_at').eq('id', id)
-      : supabase.from('products').select('id,title,slug,price,original_price,artist_id,artist_name,artist_slug,category,categories,description,description_th,description_en,rich_description,image,cover_image_url,type,is_physical,is_digital,pages,rating,reviews,tags,search_keywords,featured,bestseller,is_new,active,status,shipping_required,shipping_note,digital_download_url,download_instruction,physical_stock,variants,title_th,title_en,price_thb,price_usd,created_at').eq('slug', id);
+      ? supabase.from('products').select('id,title,slug,price,original_price,artist_id,artist_name,artist_slug,category,categories,description,description_th,description_en,rich_description,image,cover_image_url,type,is_physical,is_digital,pages,rating,reviews,tags,search_keywords,featured,bestseller,is_new,active,status,shipping_required,shipping_note,digital_download_url,download_instruction,physical_stock,variants,title_th,title_en,price_thb,price_usd,r2_key,r2_file_name,file_size,file_type,created_at').eq('id', id)
+      : supabase.from('products').select('id,title,slug,price,original_price,artist_id,artist_name,artist_slug,category,categories,description,description_th,description_en,rich_description,image,cover_image_url,type,is_physical,is_digital,pages,rating,reviews,tags,search_keywords,featured,bestseller,is_new,active,status,shipping_required,shipping_note,digital_download_url,download_instruction,physical_stock,variants,title_th,title_en,price_thb,price_usd,r2_key,r2_file_name,file_size,file_type,created_at').eq('slug', id);
     const { data, error } = await query.single();
     if (error || !data) return json(res, 404, { error: 'Not found' });
     return json(res, 200, data);
@@ -59,7 +59,7 @@ module.exports = async function handler(req, res) {
     if (!product) return json(res, 404, { error: 'Not found' });
     if (user.role === 'artist' && product.artist_id !== user.id) return json(res, 403, { error: 'Forbidden' });
     const allowed = ['title','price','original_price','category','categories','description','description_th','description_en','rich_description','image','cover_image_url','type','is_physical','is_digital','pages','tags','search_keywords','active','status','physical_stock','shipping_required','shipping_note','variants','title_th','title_en','price_thb','price_usd'];
-    if (user.role === 'admin') allowed.push('featured','bestseller','is_new','digital_download_url','download_instruction','artist_id','artist_name','r2_key','file_size','file_type');
+    if (user.role === 'admin') allowed.push('featured','bestseller','is_new','digital_download_url','download_instruction','artist_id','artist_name','r2_key','r2_file_name','file_size','file_type');
     const updates = { updated_at: new Date().toISOString() };
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
     // Recalculate type string from boolean fields
