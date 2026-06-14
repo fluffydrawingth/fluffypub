@@ -41,18 +41,18 @@ export default function FreeDownloadsPage() {
   const fileIcon = (t: string) => t === 'pdf' ? '📄' : t === 'zip' ? '🗜️' : t === 'png' ? '🖼️' : '📁';
   const fileBg   = (t: string) => t === 'pdf' ? '#fee2e2' : t === 'png' ? '#f3e8ff' : '#dbeafe';
   const fileColor= (t: string) => t === 'pdf' ? '#dc2626' : t === 'png' ? '#7c3aed' : '#1d4ed8';
-  const fileLabel = (t: string) => t?.toUpperCase() || 'FILE';
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: theme.fontFamily }}>
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '40px 24px' }}>
+    <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
+      <style>{`@media(max-width:640px){.fd-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important;}}`}</style>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 16px' }}>
 
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <h1 style={{ fontSize: 32, fontWeight: 900, color: theme.textColor, margin: '0 0 8px' }}>
+        <div style={{ marginBottom: 24 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 900, color: theme.textColor, margin: '0 0 6px' }}>
             ⬇️ {tRaw('ดาวน์โหลดฟรี', 'Free Downloads')}
           </h1>
-          <p style={{ fontSize: 15, color: '#64748b', margin: 0 }}>
+          <p style={{ color: theme.textColor + '88', margin: 0 }}>
             {tRaw('ดาวน์โหลดไฟล์ฟรี ไม่ต้องสมัครสมาชิก', 'Free files — no sign-up required')}
           </p>
         </div>
@@ -62,66 +62,58 @@ export default function FreeDownloadsPage() {
         )}
 
         {!loading && items.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '60px 24px', background: 'white', borderRadius: 20 }}>
+          <div style={{ textAlign: 'center', padding: '60px 24px', color: theme.textColor + '66' }}>
             <div style={{ fontSize: 56, marginBottom: 14 }}>📭</div>
-            <h3 style={{ color: '#1e293b', fontWeight: 800 }}>{tRaw('ยังไม่มีไฟล์', 'No files yet')}</h3>
+            <h3 style={{ fontWeight: 800, color: theme.textColor }}>{tRaw('ยังไม่มีไฟล์', 'No files yet')}</h3>
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 20 }}>
+        <div className="fd-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 20 }}>
           {items.map(item => (
             <div key={item.id}
-              style={{ background: 'white', borderRadius: 18, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1.5px solid #f3f4f6', display: 'flex', flexDirection: 'column' }}>
+              style={{ background: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: `1.5px solid ${p}15`, cursor: 'pointer', fontFamily: theme.fontFamily }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${p}20`; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)'; }}>
 
-              {/* Cover */}
-              {item.cover_image_url
-                ? <img src={item.cover_image_url} alt={title(item)}
-                    onClick={() => navigate(`/free-downloads/${item.slug}`)}
-                    style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', cursor: 'pointer', display: 'block' }} />
-                : <div onClick={() => navigate(`/free-downloads/${item.slug}`)}
-                    style={{ width: '100%', aspectRatio: '1/1', background: `${p}10`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, cursor: 'pointer' }}>
-                    {fileIcon(item.file_type)}
-                  </div>
-              }
-
-              <div style={{ padding: '14px 16px 16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                {/* File type badge */}
-                <div style={{ marginBottom: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, background: fileBg(item.file_type), color: fileColor(item.file_type), borderRadius: 6, padding: '2px 8px' }}>
-                    {fileIcon(item.file_type)} {fileLabel(item.file_type)}
-                  </span>
-                  {item.category && (
-                    <span style={{ marginLeft: 6, fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>{item.category}</span>
-                  )}
+              {/* Square cover */}
+              <div onClick={() => navigate(`/free-downloads/${item.slug}`)}
+                style={{ position: 'relative', width: '100%', paddingBottom: '100%', background: `linear-gradient(135deg,${p}12,${p}06)`, overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56 }}>
+                  {item.cover_image_url
+                    ? <img src={item.cover_image_url} alt={title(item)} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
+                    : <span>{fileIcon(item.file_type)}</span>
+                  }
                 </div>
+                {/* File type badge */}
+                {item.file_type && (
+                  <span style={{ position: 'absolute', bottom: 8, left: 8, background: fileBg(item.file_type), color: fileColor(item.file_type), borderRadius: 10, padding: '2px 8px', fontSize: 10, fontWeight: 700, zIndex: 1 }}>
+                    {item.file_type.toUpperCase()}
+                  </span>
+                )}
+                {/* Free badge */}
+                <span style={{ position: 'absolute', top: 8, right: 8, background: '#d1fae5', color: '#065f46', borderRadius: 10, padding: '2px 8px', fontSize: 10, fontWeight: 700, zIndex: 1 }}>
+                  🎁 {tRaw('ฟรี', 'FREE')}
+                </span>
+              </div>
 
-                {/* Title */}
+              {/* Card body */}
+              <div style={{ padding: '12px 14px 14px' }}>
+                <div style={{ fontSize: 11, color: p, fontWeight: 700, marginBottom: 3 }}>{item.category || ''}</div>
                 <div onClick={() => navigate(`/free-downloads/${item.slug}`)}
-                  style={{ fontSize: 15, fontWeight: 800, color: '#1e293b', marginBottom: 6, cursor: 'pointer', lineHeight: 1.35 }}>
+                  style={{ fontSize: 14, fontWeight: 800, color: theme.textColor, marginBottom: 8, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
                   {title(item)}
                 </div>
-
-                {/* Highlight */}
-                {item.highlight && (
-                  <div style={{ fontSize: 13, color: '#64748b', marginBottom: 10, lineHeight: 1.5, flex: 1 }}>
-                    {item.highlight}
-                  </div>
-                )}
-
-                {/* File size */}
-                {item.file_size && (
-                  <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 10 }}>
-                    {(item.file_size / 1024 / 1024).toFixed(2)} MB
-                  </div>
-                )}
-
-                {/* Download button */}
-                <button
-                  disabled={!!dlLoading[item.id] || !item.r2_file_name}
-                  onClick={() => handleDownload(item)}
-                  style={{ width: '100%', padding: '10px', background: (!item.r2_file_name) ? '#e5e7eb' : dlLoading[item.id] ? '#9ca3af' : p, color: (!item.r2_file_name) ? '#9ca3af' : 'white', border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: (!item.r2_file_name || dlLoading[item.id]) ? 'not-allowed' : 'pointer', fontFamily: theme.fontFamily, boxShadow: item.r2_file_name ? `0 4px 12px ${p}40` : 'none' }}>
-                  {dlLoading[item.id] ? '⏳ ' + tRaw('กำลังเตรียม…', 'Preparing…') : `⬇️ ${tRaw('ดาวน์โหลดฟรี', 'Download Free')}`}
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                  <span style={{ fontSize: 15, fontWeight: 900, color: '#065f46' }}>
+                    🎁 {tRaw('ฟรี', 'FREE')}
+                  </span>
+                  <button
+                    disabled={!!dlLoading[item.id] || !item.r2_file_name}
+                    onClick={e => { e.stopPropagation(); handleDownload(item); }}
+                    style={{ background: !item.r2_file_name ? '#e5e7eb' : dlLoading[item.id] ? '#9ca3af' : p, color: !item.r2_file_name ? '#9ca3af' : 'white', border: 'none', cursor: (!item.r2_file_name || dlLoading[item.id]) ? 'not-allowed' : 'pointer', padding: '6px 12px', borderRadius: 12, fontSize: 12, fontWeight: 700, fontFamily: theme.fontFamily, flexShrink: 0 }}>
+                    {dlLoading[item.id] ? '⏳' : '⬇️'}
+                  </button>
+                </div>
               </div>
             </div>
           ))}

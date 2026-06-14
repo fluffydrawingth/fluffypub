@@ -78,33 +78,47 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
 
   return (
     <div style={{ fontFamily:theme.fontFamily }}>
+      <style>{`
+        .artist-header{display:flex;align-items:flex-end;gap:16px;margin-bottom:16px;margin-top:-50px;position:relative;z-index:1;flex-wrap:wrap;}
+        .artist-links{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+        .artist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;}
+        .artist-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid ${p}15;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+        .artist-tabs::-webkit-scrollbar{display:none;}
+        .artist-tab{display:flex;align-items:center;gap:6px;padding:10px 16px;border-radius:12px 12px 0 0;border:none;cursor:pointer;font-size:14px;font-weight:700;white-space:nowrap;flex-shrink:0;}
+        @media(max-width:640px){
+          .artist-header{margin-top:-40px;}
+          .artist-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important;}
+          .artist-tab{padding:8px 12px;font-size:13px;}
+        }
+      `}</style>
+
       {/* Cover */}
-      <div style={{ height:280, position:'relative', background:`linear-gradient(135deg,${p}30,${theme.secondaryColor||'#c084fc'}30)`, overflow:'hidden' }}>
+      <div style={{ height:220, position:'relative', background:`linear-gradient(135deg,${p}30,${theme.secondaryColor||'#c084fc'}30)`, overflow:'hidden' }}>
         {artist.cover_image_url && <img src={artist.cover_image_url} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt="cover" />}
-        <button onClick={()=>navigate('/artists')} style={{ position:'absolute', top:20, left:24, background:'rgba(255,255,255,0.9)', border:'none', cursor:'pointer', padding:'8px 16px', borderRadius:20, fontSize:13, fontWeight:700, fontFamily:theme.fontFamily }}>← Artists</button>
+        <button onClick={()=>navigate('/artists')} style={{ position:'absolute', top:16, left:16, background:'rgba(255,255,255,0.9)', border:'none', cursor:'pointer', padding:'7px 14px', borderRadius:20, fontSize:13, fontWeight:700, fontFamily:theme.fontFamily }}>← {tRaw('ศิลปิน','Artists')}</button>
       </div>
 
-      <div style={{ maxWidth:960, margin:'0 auto', padding:'0 24px 60px', position:'relative' }}>
+      <div style={{ maxWidth:1200, margin:'0 auto', padding:'0 16px 60px', position:'relative' }}>
         {/* Avatar + name */}
-        <div style={{ display:'flex', alignItems:'flex-end', gap:20, marginBottom:24, marginTop:-50, position:'relative', zIndex:1, flexWrap:'wrap' as const }}>
-          <div style={{ width:100, height:100, borderRadius:'50%', border:'4px solid white', boxShadow:`0 4px 20px ${p}30`, background:'white', overflow:'hidden', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:50 }}>
+        <div className="artist-header">
+          <div style={{ width:88, height:88, borderRadius:'50%', border:'4px solid white', boxShadow:`0 4px 20px ${p}30`, background:'white', overflow:'hidden', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:44 }}>
             {artist.avatar_url ? <img src={artist.avatar_url} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={artist.name} /> : '🎨'}
           </div>
-          <div style={{ paddingBottom:8 }}>
-            <h1 style={{ fontSize:28, fontWeight:900, color:theme.textColor, margin:'0 0 4px' }}>{artist.name}</h1>
-            <div style={{ fontSize:13, color:'#9ca3af' }}>@{artist.artist_slug} · {totalCount} {tRaw('ผลงาน', 'items')}</div>
-          </div>
-          <div style={{ marginLeft:'auto', paddingBottom:8, display:'flex', gap:8, flexWrap:'wrap' as const }}>
-            {artist.website && <a href={artist.website} target="_blank" rel="noreferrer" style={{ padding:'8px 16px', borderRadius:20, background:p+'15', color:p, textDecoration:'none', fontSize:13, fontWeight:700 }}>🌐 Website</a>}
-            {social.instagram && <a href={`https://instagram.com/${social.instagram}`} target="_blank" rel="noreferrer" style={{ padding:'8px 16px', borderRadius:20, background:'#fce7f3', color:'#be185d', textDecoration:'none', fontSize:13, fontWeight:700 }}>📷 Instagram</a>}
-            {social.twitter && <a href={`https://twitter.com/${social.twitter}`} target="_blank" rel="noreferrer" style={{ padding:'8px 16px', borderRadius:20, background:'#dbeafe', color:'#1d4ed8', textDecoration:'none', fontSize:13, fontWeight:700 }}>🐦 Twitter</a>}
+          <div style={{ flex:1, minWidth:0, paddingBottom:6 }}>
+            <h1 style={{ fontSize:22, fontWeight:900, color:theme.textColor, margin:'0 0 3px', lineHeight:1.2 }}>{artist.name}</h1>
+            <div style={{ fontSize:12, color:'#9ca3af' }}>@{artist.artist_slug} · {totalCount} {tRaw('ผลงาน', 'items')}</div>
+            <div className="artist-links">
+              {artist.website && <a href={artist.website} target="_blank" rel="noreferrer" style={{ padding:'5px 12px', borderRadius:20, background:p+'15', color:p, textDecoration:'none', fontSize:12, fontWeight:700 }}>🌐</a>}
+              {social.instagram && <a href={`https://instagram.com/${social.instagram}`} target="_blank" rel="noreferrer" style={{ padding:'5px 12px', borderRadius:20, background:'#fce7f3', color:'#be185d', textDecoration:'none', fontSize:12, fontWeight:700 }}>📷 Instagram</a>}
+              {social.twitter && <a href={`https://twitter.com/${social.twitter}`} target="_blank" rel="noreferrer" style={{ padding:'5px 12px', borderRadius:20, background:'#dbeafe', color:'#1d4ed8', textDecoration:'none', fontSize:12, fontWeight:700 }}>🐦 Twitter</a>}
+            </div>
           </div>
         </div>
 
         {/* Bio */}
         {artist.bio && (
-          <div style={{ background:'white', borderRadius:16, padding:'20px 24px', marginBottom:32, boxShadow:'0 2px 8px rgba(0,0,0,0.05)', border:`1px solid ${p}15` }}>
-            <p style={{ fontSize:15, color:theme.textColor, lineHeight:1.7, margin:0 }}>{artist.bio}</p>
+          <div style={{ background:'white', borderRadius:16, padding:'16px 18px', marginBottom:20, boxShadow:'0 2px 8px rgba(0,0,0,0.05)', border:`1px solid ${p}15` }}>
+            <p style={{ fontSize:14, color:theme.textColor, lineHeight:1.7, margin:0 }}>{artist.bio}</p>
           </div>
         )}
 
@@ -121,22 +135,17 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
 
           return (
             <>
-              {/* Tab bar */}
-              <div style={{ display:'flex', gap:8, marginBottom:24, borderBottom:`2px solid ${p}15`, paddingBottom:0, flexWrap:'wrap' as const }}>
+              {/* Tab bar — horizontally scrollable on mobile */}
+              <div className="artist-tabs">
                 {tabs.map(tab => {
                   const active = validTab === tab.key;
                   return (
                     <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                      style={{ display:'flex', alignItems:'center', gap:7, padding:'10px 20px', borderRadius:'12px 12px 0 0', border:'none', cursor:'pointer', fontFamily:theme.fontFamily, fontSize:14, fontWeight:700, transition:'all 0.15s',
-                        background: active ? 'white' : 'transparent',
-                        color: active ? p : '#9ca3af',
-                        borderBottom: active ? `2px solid ${p}` : '2px solid transparent',
-                        marginBottom: active ? '-2px' : '0',
-                        boxShadow: active ? '0 -2px 8px rgba(0,0,0,0.05)' : 'none',
-                      }}>
+                      className="artist-tab"
+                      style={{ fontFamily:theme.fontFamily, background: active ? 'white' : 'transparent', color: active ? p : '#9ca3af', borderBottom: active ? `2px solid ${p}` : '2px solid transparent', marginBottom: active ? '-2px' : '0', boxShadow: active ? '0 -2px 8px rgba(0,0,0,0.05)' : 'none' }}>
                       <span>{tab.icon}</span>
                       <span>{lang === 'th' ? tab.labelTh : tab.label}</span>
-                      <span style={{ background: active ? tab.bg : '#f3f4f6', color: active ? tab.color : '#9ca3af', borderRadius:20, padding:'1px 8px', fontSize:12, fontWeight:800, minWidth:22, textAlign:'center' as const }}>
+                      <span style={{ background: active ? tab.bg : '#f3f4f6', color: active ? tab.color : '#9ca3af', borderRadius:20, padding:'1px 7px', fontSize:11, fontWeight:800 }}>
                         {tab.count}
                       </span>
                     </button>
@@ -146,7 +155,7 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
 
               {/* Tab content */}
               {validTab === 'physical' && (
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:20 }}>
+                <div className="artist-grid">
                   {physicalSection.map((pr:any) => (
                     <ProductCard key={pr.id} product={{ ...pr, artistName: artist.name }} />
                   ))}
@@ -154,7 +163,7 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
               )}
 
               {validTab === 'digital' && (
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:20 }}>
+                <div className="artist-grid">
                   {showDigital.map((pr:any) => (
                     <ProductCard key={pr.id} product={{ ...pr, artistName: artist.name }} />
                   ))}
@@ -162,21 +171,29 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
               )}
 
               {validTab === 'free' && (
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:20 }}>
+                <div className="artist-grid">
                   {freeDownloads.map((fd:any) => {
                     const fdTitle = (lang === 'th' && fd.title_th) ? fd.title_th : fd.title_en;
                     const ft = fd.file_type || '';
                     return (
                       <div key={fd.id} onClick={() => navigate(`/free-downloads/${fd.slug}`)}
-                        style={{ background:'white', borderRadius:16, overflow:'hidden', cursor:'pointer', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', border:`1.5px solid ${p}15` }}>
-                        {fd.cover_image_url
-                          ? <img src={fd.cover_image_url} alt={fdTitle} style={{ width:'100%', aspectRatio:'1/1', objectFit:'cover', display:'block' }} />
-                          : <div style={{ width:'100%', aspectRatio:'1/1', background:`${p}10`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:40 }}>{fileIcon(ft)}</div>
-                        }
-                        <div style={{ padding:'10px 12px 14px' }}>
-                          {ft && <span style={{ fontSize:10, fontWeight:700, background:fileBg(ft), color:fileColor(ft), borderRadius:5, padding:'2px 7px', marginBottom:6, display:'inline-block' }}>{ft.toUpperCase()}</span>}
-                          <div style={{ fontSize:13, fontWeight:700, color:'#1e293b', lineHeight:1.35, marginBottom:4 }}>{fdTitle}</div>
-                          <div style={{ fontSize:11, color:'#854d0e', fontWeight:700, background:'#fef9c3', borderRadius:20, padding:'2px 8px', display:'inline-block' }}>🎁 {tRaw('ฟรี', 'Free')}</div>
+                        style={{ background:'white', borderRadius:16, overflow:'hidden', cursor:'pointer', boxShadow:'0 2px 12px rgba(0,0,0,0.07)', border:`1.5px solid ${p}15` }}
+                        onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.boxShadow=`0 8px 24px ${p}20`;}}
+                        onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.boxShadow='0 2px 12px rgba(0,0,0,0.07)';}}>
+                        {/* Square cover */}
+                        <div style={{ position:'relative', width:'100%', paddingBottom:'100%', background:`${p}10`, overflow:'hidden' }}>
+                          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:40 }}>
+                            {fd.cover_image_url
+                              ? <img src={fd.cover_image_url} alt={fdTitle} style={{ width:'100%', height:'100%', objectFit:'cover', position:'absolute', inset:0 }} />
+                              : <span>{fileIcon(ft)}</span>
+                            }
+                          </div>
+                          {ft && <span style={{ position:'absolute', bottom:6, left:6, fontSize:9, fontWeight:700, background:fileBg(ft), color:fileColor(ft), borderRadius:8, padding:'2px 6px', zIndex:1 }}>{ft.toUpperCase()}</span>}
+                          <span style={{ position:'absolute', top:6, right:6, background:'#d1fae5', color:'#065f46', borderRadius:8, padding:'2px 6px', fontSize:9, fontWeight:700, zIndex:1 }}>🎁 {tRaw('ฟรี','FREE')}</span>
+                        </div>
+                        <div style={{ padding:'10px 12px 12px' }}>
+                          <div style={{ fontSize:13, fontWeight:800, color:'#1e293b', lineHeight:1.35, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' as any }}>{fdTitle}</div>
+                          <div style={{ fontSize:12, fontWeight:900, color:'#065f46', marginTop:4 }}>🎁 {tRaw('ฟรี','FREE')}</div>
                         </div>
                       </div>
                     );
