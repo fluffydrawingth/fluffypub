@@ -61,22 +61,34 @@ function OrdersTab({p,theme}:any) {
   const [qrDataUrl, setQrDataUrl] = useState<Record<string,string>>({});  // keyed by order id
   const [qrLoading, setQrLoading] = useState<Record<string,boolean>>({});
   const [dlLoading, setDlLoading] = useState<Record<number,boolean>>({});
+  const [dlError, setDlError] = useState<Record<number,string>>({});
 
   const downloadItem = async (orderId: string, itemIdx: number) => {
     setDlLoading(prev => ({ ...prev, [itemIdx]: true }));
+    setDlError(prev => ({ ...prev, [itemIdx]: '' }));
     try {
       const authToken = localStorage.getItem('fluffy_token') || '';
       const res = await fetch(`/api/orders?action=download&id=${orderId}&item=${itemIdx}`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       const data = await res.json();
-      if (data.error) { alert(data.error); return; }
+      if (data.error) {
+        setDlError(prev => ({ ...prev, [itemIdx]: data.error }));
+        return;
+      }
       const a = document.createElement('a');
       a.href = data.url;
       a.download = data.fileName || 'download';
       a.click();
+      // Refresh selected order to reflect updated download_count
+      const freshOrders = await api.myOrders().catch(() => null);
+      if (freshOrders) {
+        setOrders(freshOrders);
+        const fresh = freshOrders.find((o: any) => o.id === orderId);
+        if (fresh) setSelected(fresh);
+      }
     } catch (e: any) {
-      alert(e.message);
+      setDlError(prev => ({ ...prev, [itemIdx]: e.message }));
     } finally {
       setDlLoading(prev => ({ ...prev, [itemIdx]: false }));
     }
@@ -390,14 +402,26 @@ function OrdersTab({p,theme}:any) {
           {(selected.items||[]).map((i:any,idx:number)=>{
             if ((i.optionType||i.type)!=='digital') return null;
             const hasFile = i.r2_key || i.digital_download_url;
-            return hasFile
-              ? <button key={idx} disabled={!!dlLoading[idx]} onClick={()=>downloadItem(selected.id, idx)}
-                  style={{display:'block',width:'100%',background:dlLoading[idx]?'#9ca3af':p,color:'white',border:'none',cursor:dlLoading[idx]?'wait':'pointer',padding:'12px 16px',borderRadius:12,fontSize:14,fontWeight:700,textAlign:'center' as const,marginBottom:8,fontFamily:theme.fontFamily}}>
-                  {dlLoading[idx]?'⏳ กำลังเตรียมไฟล์…':(`⬇️ ${tRaw('ดาวน์โหลด','Download')}: ${i.title}`)}
-                </button>
-              : <div key={idx} style={{background:'#f9fafb',borderRadius:12,padding:'12px 16px',marginBottom:8,fontSize:13,color:'#6b7280',textAlign:'center' as const}}>
-                  📄 {i.title} — {tRaw('กรุณาติดต่อแอดมิน','Contact admin for download link')}
-                </div>;
+            const limit = i.download_limit ?? 3;
+            const count = i.download_count ?? 0;
+            const limitReached = count >= limit;
+            const err = dlError[idx];
+            return (
+              <div key={idx} style={{marginBottom:8}}>
+                {hasFile
+                  ? <button disabled={!!dlLoading[idx]||limitReached} onClick={()=>downloadItem(selected.id, idx)}
+                      style={{display:'block',width:'100%',background:limitReached?'#e5e7eb':dlLoading[idx]?'#9ca3af':p,color:limitReached?'#9ca3af':'white',border:'none',cursor:(dlLoading[idx]||limitReached)?'not-allowed':'pointer',padding:'12px 16px',borderRadius:12,fontSize:14,fontWeight:700,textAlign:'center' as const,boxShadow:limitReached?'none':`0 4px 12px ${p}44`,fontFamily:theme.fontFamily}}>
+                      {dlLoading[idx]?'⏳ กำลังเตรียมไฟล์…':limitReached?`🔒 ${tRaw('ดาวน์โหลดครบแล้ว','Download limit reached')}`:(`⬇️ ${tRaw('ดาวน์โหลด','Download')}: ${i.title}`)}
+                    </button>
+                  : <div style={{background:'#f9fafb',borderRadius:12,padding:'12px 16px',fontSize:13,color:'#6b7280',textAlign:'center' as const}}>
+                      📄 {i.title} — {tRaw('กรุณาติดต่อแอดมิน','Contact admin for download link')}
+                    </div>
+                }
+                {err&&<div style={{background:'#fee2e2',borderRadius:8,padding:'8px 12px',marginTop:4,fontSize:12,color:'#dc2626',fontWeight:600}}>{err}</div>}
+                {hasFile&&!limitReached&&<div style={{fontSize:11,color:'#9ca3af',textAlign:'center' as const,marginTop:3}}>{tRaw(`ดาวน์โหลดได้อีก ${limit-count} ครั้ง`,`${limit-count} download${limit-count===1?'':'s'} remaining`)}</div>}
+                {hasFile&&limitReached&&<div style={{fontSize:11,color:'#dc2626',textAlign:'center' as const,marginTop:3}}>{tRaw('กรุณาติดต่อแอดมินเพื่อรีเซ็ต','Please contact support to reset.')}</div>}
+              </div>
+            );
           })}
         </div>
       )}

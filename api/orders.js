@@ -585,6 +585,8 @@ module.exports = async function handler(req, res) {
           download_instruction: p?.download_instruction || null,
           r2_key: p?.r2_key || null,
           r2_file_name: p?.r2_file_name || null,
+          download_limit: 3,
+          download_count: 0,
         };
       });
     }
@@ -732,22 +734,22 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { success: true });
   }
 
-  // GET generate signed R2 download URL (guest token or auth)
+  // GET generate signed R2 download URL — enforces per-item download limit
   if (req.method === 'GET' && action === 'download') {
     const { token: accessToken, item: itemIdx } = req.query;
     let order = null;
+    let isAdmin = false;
 
     if (accessToken) {
-      // Guest: verify via access token
       const { data } = await supabase.from('orders').select('*').eq('access_token', accessToken).single();
       order = data;
     } else {
-      // Logged-in user or admin
       const user = await requireAuth(req, res);
       if (!user) return;
       const { data } = await supabase.from('orders').select('*').eq('id', id).single();
       if (!data) return json(res, 404, { error: 'Order not found' });
       if (data.user_id !== user.id && user.role !== 'admin') return json(res, 403, { error: 'Forbidden' });
+      isAdmin = user.role === 'admin';
       order = data;
     }
 
@@ -755,10 +757,23 @@ module.exports = async function handler(req, res) {
     if (order.payment_status !== 'paid') return json(res, 403, { error: 'Payment not confirmed' });
 
     const idx = parseInt(itemIdx) || 0;
-    const item = (order.items || [])[idx];
+    const items = [...(order.items || [])];
+    const item = items[idx];
     if (!item) return json(res, 404, { error: 'Item not found' });
+    if ((item.optionType || item.type) !== 'digital') return json(res, 400, { error: 'Not a digital item' });
 
-    // R2 signed URL takes priority; fall back to legacy direct URL
+    // Enforce download limit (admins bypass)
+    const limit = item.download_limit ?? 3;
+    const count = item.download_count ?? 0;
+    if (!isAdmin && count >= limit) {
+      return json(res, 429, { error: 'Download limit reached. Please contact support.' });
+    }
+
+    // Increment count before serving URL (even if URL generation fails, count the attempt)
+    items[idx] = { ...item, download_count: count + 1 };
+    await supabase.from('orders').update({ items, updated_at: new Date().toISOString() }).eq('id', order.id);
+
+    // Generate signed URL
     if (item.r2_key) {
       const accountId = process.env.R2_ACCOUNT_ID;
       const bucket    = process.env.R2_BUCKET_NAME;
@@ -776,14 +791,30 @@ module.exports = async function handler(req, res) {
         ResponseContentDisposition: `attachment; filename="${item.r2_file_name || 'download'}"`,
       });
       const url = await getSignedUrl(client, command, { expiresIn: 3600 });
-      return json(res, 200, { url, fileName: item.r2_file_name });
+      return json(res, 200, { url, fileName: item.r2_file_name, downloadsUsed: count + 1, downloadsLeft: Math.max(0, limit - count - 1) });
     }
 
     if (item.digital_download_url) {
-      return json(res, 200, { url: item.digital_download_url, fileName: item.title });
+      return json(res, 200, { url: item.digital_download_url, fileName: item.title, downloadsUsed: count + 1, downloadsLeft: Math.max(0, limit - count - 1) });
     }
 
     return json(res, 404, { error: 'No download file available for this item yet' });
+  }
+
+  // POST reset download count for a specific item (admin only)
+  if (req.method === 'POST' && action === 'reset-downloads') {
+    const user = await requireAuth(req, res, ['admin']);
+    if (!user) return;
+    const { item: itemIdx } = req.query;
+    const { data: order } = await supabase.from('orders').select('*').eq('id', id).single();
+    if (!order) return json(res, 404, { error: 'Order not found' });
+    const idx = parseInt(itemIdx) || 0;
+    const items = [...(order.items || [])];
+    if (!items[idx]) return json(res, 404, { error: 'Item not found' });
+    items[idx] = { ...items[idx], download_count: 0 };
+    const { data, error } = await supabase.from('orders').update({ items, updated_at: new Date().toISOString() }).eq('id', id).select().single();
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true, items: data.items });
   }
 
   // DELETE order (admin)

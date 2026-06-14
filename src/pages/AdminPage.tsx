@@ -712,6 +712,26 @@ function OrdersTab() {
   const [rejectReason, setRejectReason] = useState('');
   const [rejectNote, setRejectNote] = useState('');
   const [rejecting, setRejecting] = useState(false);
+  const [resettingDownload, setResettingDownload] = useState<Record<number,boolean>>({});
+
+  const resetDownloads = async (itemIdx: number) => {
+    if (!selected) return;
+    setResettingDownload(prev => ({ ...prev, [itemIdx]: true }));
+    const token = localStorage.getItem('fluffy_token') || '';
+    const r = await fetch(`/api/orders?action=reset-downloads&id=${selected.id}&item=${itemIdx}`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    });
+    const d = await r.json();
+    if (d.error) { setMsg('⚠️ ' + d.error); }
+    else {
+      const updated = { ...selected, items: d.items };
+      setSelected(updated);
+      setOrders((prev: any[]) => prev.map(o => o.id === selected.id ? updated : o));
+      setMsg('✓ Download count reset');
+      setTimeout(() => setMsg(''), 3000);
+    }
+    setResettingDownload(prev => ({ ...prev, [itemIdx]: false }));
+  };
 
   const loadEmailLogs = async (orderId: string) => {
     const token = localStorage.getItem('fluffy_token') || '';
@@ -1084,6 +1104,20 @@ function OrdersTab() {
                           </span>
                           <span style={{fontSize:11,color:'#6b7280',fontWeight:600}}>Qty: {qty}</span>
                         </div>
+                        {isDigital && selected.payment_status === 'paid' && (
+                          <div style={{display:'flex',alignItems:'center',gap:8,marginTop:6}}>
+                            <span style={{fontSize:11,fontWeight:700,color:(i.download_count??0)>=(i.download_limit??3)?'#dc2626':'#6b7280'}}>
+                              ⬇️ Downloads: {i.download_count??0} / {i.download_limit??3}
+                              {(i.download_count??0)>=(i.download_limit??3) && ' 🔒'}
+                            </span>
+                            <button
+                              disabled={!!resettingDownload[idx]}
+                              onClick={() => resetDownloads(idx)}
+                              style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:6,border:'1.5px solid #d1d5db',background:'white',color:'#374151',cursor:'pointer',fontFamily:'inherit'}}>
+                              {resettingDownload[idx] ? '…' : 'Reset'}
+                            </button>
+                          </div>
+                        )}
                       </div>
                       {/* Price */}
                       <div style={{textAlign:'right' as const,flexShrink:0,paddingTop:2}}>
