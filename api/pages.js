@@ -141,9 +141,12 @@ module.exports = async function handler(req, res) {
   // GET all published pages index (public)
   if (req.method === 'GET' && !slug && !id) {
     const user = req.headers.authorization ? (await require('./_lib').getUser(req)) : null;
+    // Admins get content too (needed for edit form); public list omits it to keep response small
+    const adminSelect = 'id,title,slug,content,excerpt,image_url,status,show_on_homepage,sort_order,created_at,updated_at';
+    const publicSelect = 'id,title,slug,excerpt,image_url,status,show_on_homepage,sort_order,created_at,updated_at';
     let q = supabase
       .from('pages')
-      .select('id,title,slug,excerpt,image_url,status,show_on_homepage,sort_order,created_at,updated_at')
+      .select(user?.role === 'admin' ? adminSelect : publicSelect)
       .order('sort_order')
       .order('created_at', { ascending: false });
     if (!user || user.role !== 'admin') q = q.eq('status', 'published');
