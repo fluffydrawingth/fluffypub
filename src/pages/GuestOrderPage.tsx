@@ -299,13 +299,25 @@ export default function GuestOrderPage({ token }: { token: string }) {
           </div>
         )}
 
-        {/* Digital downloads */}
-        {(order.items || []).filter((i: any) => i.digital_download_url).map((i: any, idx: number) => (
-          <a key={idx} href={i.digital_download_url} target="_blank" rel="noreferrer"
-            style={{ display: 'block', background: p, color: 'white', textDecoration: 'none', padding: '13px 20px', borderRadius: 14, fontSize: 14, fontWeight: 700, textAlign: 'center' as const, marginBottom: 10, boxShadow: `0 4px 12px ${p}44` }}>
-            ⬇️ {tRaw('ดาวน์โหลด', 'Download')}: {i.title}
-          </a>
-        ))}
+        {/* Digital downloads — only shown when paid */}
+        {order.status === 'paid' && (order.items || []).some((i: any) => (i.optionType || i.type) === 'digital') && (
+          <div style={{ background: 'white', borderRadius: 20, padding: '18px 20px', marginBottom: 16, boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', marginBottom: 6, letterSpacing: 0.5 }}>⬇️ {tRaw('ดาวน์โหลดไฟล์ดิจิทัล', 'DIGITAL DOWNLOADS')}</div>
+            <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#1e40af', fontWeight: 600 }}>
+              🎉 {tRaw('ไฟล์ดิจิทัลพร้อมดาวน์โหลดแล้ว', 'Your digital file is ready to download.')}
+            </div>
+            {(order.items || []).filter((i: any) => (i.optionType || i.type) === 'digital').map((i: any, idx: number) => (
+              i.digital_download_url
+                ? <a key={idx} href={i.digital_download_url} target="_blank" rel="noreferrer"
+                    style={{ display: 'block', background: p, color: 'white', textDecoration: 'none', padding: '13px 20px', borderRadius: 14, fontSize: 14, fontWeight: 700, textAlign: 'center' as const, marginBottom: 8, boxShadow: `0 4px 12px ${p}44` }}>
+                    ⬇️ {tRaw('ดาวน์โหลด', 'Download')}: {i.title}
+                  </a>
+                : <div key={idx} style={{ background: '#f9fafb', borderRadius: 12, padding: '12px 16px', marginBottom: 8, fontSize: 13, color: '#6b7280', textAlign: 'center' as const }}>
+                    📄 {i.title} — {tRaw('กรุณาติดต่อแอดมินเพื่อรับลิงค์', 'Contact admin for download link')}
+                  </div>
+            ))}
+          </div>
+        )}
 
         {/* Footer links */}
         <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>

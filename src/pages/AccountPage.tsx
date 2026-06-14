@@ -358,12 +358,23 @@ function OrdersTab({p,theme}:any) {
         );
       })()}
 
-      {/* Download links */}
-      {(selected.items||[]).filter((i:any)=>i.digital_download_url).map((i:any,idx:number)=>(
-        <a key={idx} href={i.digital_download_url} target="_blank" rel="noreferrer" style={{display:'block',background:p,color:'white',textDecoration:'none',padding:'12px 16px',borderRadius:12,fontSize:14,fontWeight:700,textAlign:'center' as const,marginBottom:8}}>
-          ⬇️ {tRaw('ดาวน์โหลด','Download')}: {i.title}
-        </a>
-      ))}
+      {/* Digital downloads — only when paid */}
+      {selected.status==='paid' && (selected.items||[]).some((i:any)=>(i.optionType||i.type)==='digital') && (
+        <div style={{marginBottom:8}}>
+          <div style={{background:'#eff6ff',borderRadius:12,padding:'10px 14px',marginBottom:10,fontSize:13,color:'#1e40af',fontWeight:600}}>
+            🎉 {tRaw('ไฟล์ดิจิทัลพร้อมดาวน์โหลดแล้ว','Your digital file is ready to download.')}
+          </div>
+          {(selected.items||[]).filter((i:any)=>(i.optionType||i.type)==='digital').map((i:any,idx:number)=>(
+            i.digital_download_url
+              ? <a key={idx} href={i.digital_download_url} target="_blank" rel="noreferrer" style={{display:'block',background:p,color:'white',textDecoration:'none',padding:'12px 16px',borderRadius:12,fontSize:14,fontWeight:700,textAlign:'center' as const,marginBottom:8}}>
+                  ⬇️ {tRaw('ดาวน์โหลด','Download')}: {i.title}
+                </a>
+              : <div key={idx} style={{background:'#f9fafb',borderRadius:12,padding:'12px 16px',marginBottom:8,fontSize:13,color:'#6b7280',textAlign:'center' as const}}>
+                  📄 {i.title} — {tRaw('กรุณาติดต่อแอดมิน','Contact admin for download link')}
+                </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 

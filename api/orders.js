@@ -121,25 +121,31 @@ async function tplPaymentReminder(order) {
       <div style="font-size:18px;font-weight:800;color:#92400e;margin-top:4px">฿${Number(total).toLocaleString('th-TH')}</div>
     </div>
     <p style="font-size:13px;color:#374151;margin:0 0 12px">กรุณาชำระเงินเพื่อยืนยันคำสั่งซื้อของคุณ / Please complete payment to confirm your order.</p>
-    <a href="${SITE}/account/orders" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:12px 24px;border-radius:20px;font-weight:700;font-size:14px">💳 ชำระเงินตอนนี้ / Pay Now →</a>
+    <a href="${order.access_token ? `${SITE}/#/guest-order/${order.access_token}` : `${SITE}/#/account/orders`}" style="display:inline-block;background:#f472b6;color:white;text-decoration:none;padding:12px 24px;border-radius:20px;font-weight:700;font-size:14px">💳 ชำระเงินตอนนี้ / Pay Now →</a>
     <p style="margin:16px 0 0;font-size:11px;color:#9ca3af">หากต้องการยกเลิก กรุณาติดต่อเรา / To cancel, please contact us. 🌸</p>
   `);
 }
 
 async function tplPaymentConfirmed(order) {
   const ref = (order.id || '').slice(-8).toUpperCase();
+  const orderLink = order.access_token
+    ? `${SITE}/#/guest-order/${order.access_token}`
+    : `${SITE}/#/account/orders`;
+  const hasDigital = (order.items || []).some(i => (i.optionType || i.type) === 'digital');
+  const isDigitalOnly = (order.items || []).every(i => (i.optionType || i.type) === 'digital');
   return await emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:20px">✅ ยืนยันการชำระเงินแล้ว!</h2>
-    <p style="margin:0 0 16px;color:#6b7280;font-size:13px">Payment confirmed! We're preparing your order. 🌸</p>
+    <p style="margin:0 0 16px;color:#6b7280;font-size:13px">Payment confirmed! ${isDigitalOnly ? 'Your digital files are ready. 🎉' : 'We\'re preparing your order. 🌸'}</p>
     <div style="background:#f0fdf4;border-radius:12px;padding:14px 16px;margin-bottom:20px;border:1.5px solid #86efac">
       <div style="font-size:12px;color:#065f46;font-weight:700;margin-bottom:4px">คำสั่งซื้อ / ORDER</div>
       <div style="font-size:22px;font-weight:900;color:#059669">#${ref}</div>
-      <div style="font-size:12px;color:#374151;margin-top:6px">🎁 กำลังเตรียมสินค้า / Preparing your items...</div>
+      <div style="font-size:12px;color:#374151;margin-top:6px">${isDigitalOnly ? '⬇️ ดาวน์โหลดพร้อมแล้ว / Ready to download' : '🎁 กำลังเตรียมสินค้า / Preparing your items...'}</div>
     </div>
     <h3 style="margin:0 0 10px;font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.5px">รายการสินค้า / Items</h3>
     ${orderSummaryHtml(order)}
-    <a href="${SITE}/account/orders" style="display:inline-block;margin-top:16px;background:#059669;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📦 ติดตามคำสั่งซื้อ / Track Order →</a>
-    <p style="margin:16px 0 0;font-size:12px;color:#9ca3af">ทีมงานจะดำเนินการจัดส่งภายใน 1-3 วันทำการ 🌸</p>
+    ${hasDigital ? `<div style="background:#eff6ff;border-radius:12px;padding:12px 16px;margin-top:16px;border:1.5px solid #93c5fd;font-size:13px;color:#1e40af">⬇️ ไฟล์ดิจิทัลพร้อมดาวน์โหลดแล้วในหน้าคำสั่งซื้อ / Your digital download is now available in your order page.</div>` : ''}
+    <a href="${orderLink}" style="display:inline-block;margin-top:16px;background:#059669;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">${isDigitalOnly ? '⬇️ ไปดาวน์โหลด / Download Now →' : '📦 ติดตามคำสั่งซื้อ / Track Order →'}</a>
+    ${!isDigitalOnly ? '<p style="margin:16px 0 0;font-size:12px;color:#9ca3af">ทีมงานจะดำเนินการจัดส่งภายใน 1-3 วันทำการ 🌸</p>' : ''}
   `);
 }
 
@@ -172,7 +178,7 @@ async function tplTrackingAdded(order) {
     <div style="font-size:13px;color:#374151;margin-bottom:16px">
       <strong>คำสั่งซื้อ / Order #${ref}</strong>
     </div>
-    <a href="${SITE}/account/orders" style="display:inline-block;background:#2563eb;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📦 ติดตามพัสดุ / Track Package →</a>
+    <a href="${order.access_token ? `${SITE}/#/guest-order/${order.access_token}` : `${SITE}/#/account/orders`}" style="display:inline-block;background:#2563eb;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📦 ติดตามพัสดุ / Track Package →</a>
     <p style="margin:16px 0 0;font-size:12px;color:#9ca3af">กรุณารอรับพัสดุภายใน 3-7 วันทำการ 🌸</p>
   `);
 }
@@ -541,10 +547,12 @@ module.exports = async function handler(req, res) {
     const { data: order } = await supabase.from('orders').select('*').eq('id', id).single();
     if (!order) return json(res, 404, { error: 'Order not found' });
     let enrichedItems = order.items || [];
-    if (order.type === 'digital') {
-      const productIds = enrichedItems.map(i => i.productId);
-      const { data: products } = await supabase.from('products').select('id,digital_download_url,download_instruction').in('id', productIds);
+    const hasAnyDigital = enrichedItems.some(i => (i.optionType || i.type) === 'digital');
+    if (hasAnyDigital) {
+      const digitalIds = enrichedItems.filter(i => (i.optionType || i.type) === 'digital').map(i => i.productId);
+      const { data: products } = await supabase.from('products').select('id,digital_download_url,download_instruction').in('id', digitalIds);
       enrichedItems = enrichedItems.map(item => {
+        if ((item.optionType || item.type) !== 'digital') return item;
         const p = products?.find(x => x.id === item.productId);
         return { ...item, digital_download_url: p?.digital_download_url || null, download_instruction: p?.download_instruction || null };
       });
