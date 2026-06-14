@@ -1,8 +1,10 @@
 import React from 'react';
 import { useTheme } from '../lib/theme';
+import { useRouter } from '../lib/router';
 
 export default function MaintenancePage() {
   const { theme } = useTheme();
+  const { navigate } = useRouter();
   const p = theme.primaryColor;
 
   return (
@@ -41,12 +43,22 @@ export default function MaintenancePage() {
       <div style={{ width: 48, height: 3, background: p, borderRadius: 99, marginBottom: 28, opacity: 0.5 }} />
 
       {/* Contact */}
-      <p style={{ fontSize: 13, color: theme.textColor + '88', margin: 0 }}>
+      <p style={{ fontSize: 13, color: theme.textColor + '88', margin: '0 0 48px' }}>
         ติดต่อเราได้ที่&nbsp;
         <a href="mailto:fluffydrawing.th@gmail.com" style={{ color: p, fontWeight: 700, textDecoration: 'none' }}>
           fluffydrawing.th@gmail.com
         </a>
       </p>
+
+      {/* Login link — always visible so admin/staff can sign in */}
+      <button
+        onClick={() => navigate('/login')}
+        style={{ background: 'none', border: `1.5px solid ${theme.textColor}25`, cursor: 'pointer', padding: '9px 22px', borderRadius: 20, fontSize: 13, fontWeight: 600, color: theme.textColor + '77', fontFamily: theme.fontFamily }}
+        onMouseEnter={e => { e.currentTarget.style.color = p; e.currentTarget.style.borderColor = p + '60'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = theme.textColor + '77'; e.currentTarget.style.borderColor = theme.textColor + '25'; }}
+      >
+        🔑 Admin / Staff Login
+      </button>
     </div>
   );
 }
