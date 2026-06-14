@@ -77,9 +77,9 @@ export default function FreeDownloadsPage() {
               {item.cover_image_url
                 ? <img src={item.cover_image_url} alt={title(item)}
                     onClick={() => navigate(`/free-downloads/${item.slug}`)}
-                    style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', cursor: 'pointer', display: 'block' }} />
+                    style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', cursor: 'pointer', display: 'block' }} />
                 : <div onClick={() => navigate(`/free-downloads/${item.slug}`)}
-                    style={{ width: '100%', aspectRatio: '4/3', background: `${p}10`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, cursor: 'pointer' }}>
+                    style={{ width: '100%', aspectRatio: '1/1', background: `${p}10`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, cursor: 'pointer' }}>
                     {fileIcon(item.file_type)}
                   </div>
               }

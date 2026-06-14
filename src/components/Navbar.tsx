@@ -24,7 +24,7 @@ export default function Navbar() {
   const navLinks = [
     [t('shop'), '/products'],
     [t('digital_products'), '/digital-products'],
-    ['⬇️ Free', '/free-downloads'],
+    [lang === 'th' ? '⬇️ ฟรี' : '⬇️ Free', '/free-downloads'],
     [t('artists'), '/artists'],
     [t('blog'), '/pages'],
   ];
