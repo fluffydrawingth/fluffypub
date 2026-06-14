@@ -448,22 +448,39 @@ function ProductsTab() {
   const uploadR2File = async (file: File) => {
     setR2Uploading(true); setR2UploadMsg('');
     try {
+      // Step 1: get presigned URL from our API
       const token = localStorage.getItem('fluffy_token');
-      const presignRes = await fetch('/api/upload?action=r2', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ fileName: file.name, fileType: file.type, fileSize: file.size }),
-      });
-      const presign = await presignRes.json();
+      let presign: any;
+      try {
+        const presignRes = await fetch('/api/upload?action=r2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ fileName: file.name, fileType: file.type, fileSize: file.size }),
+        });
+        presign = await presignRes.json();
+      } catch (e: any) {
+        setR2UploadMsg('⚠️ Could not reach server: ' + e.message); setR2Uploading(false); return;
+      }
       if (presign.error) { setR2UploadMsg('⚠️ ' + presign.error); setR2Uploading(false); return; }
 
-      // PUT directly to R2 using the presigned URL
-      const putRes = await fetch(presign.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type },
-        body: file,
-      });
-      if (!putRes.ok) { setR2UploadMsg('⚠️ Upload failed: ' + putRes.statusText); setR2Uploading(false); return; }
+      // Step 2: PUT file directly to R2 using the presigned URL
+      try {
+        const putRes = await fetch(presign.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type },
+          body: file,
+        });
+        if (!putRes.ok) {
+          setR2UploadMsg('⚠️ R2 upload failed (' + putRes.status + '). Check bucket CORS settings.');
+          setR2Uploading(false); return;
+        }
+      } catch (e: any) {
+        setR2UploadMsg('⚠️ R2 upload blocked — configure CORS on your R2 bucket (see console).');
+        console.error('[R2 upload] PUT failed. You need to add CORS rules to your R2 bucket.\n' +
+          'Cloudflare Dashboard → R2 → your bucket → Settings → CORS Policy:\n' +
+          JSON.stringify([{AllowedOrigins:['*'],AllowedMethods:['PUT'],AllowedHeaders:['Content-Type'],MaxAgeSeconds:3600}],null,2));
+        setR2Uploading(false); return;
+      }
 
       setR2Key(presign.r2Key);
       setR2FileName(file.name);

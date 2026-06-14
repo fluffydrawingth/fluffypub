@@ -4,9 +4,8 @@ const crypto = require('crypto');
 
 // ── Cloudflare R2 presigned PUT URL ─────────────────────────────────────────
 
-const R2_ALLOWED_TYPES = ['application/pdf', 'application/zip', 'application/x-zip-compressed', 'image/png'];
-const R2_ALLOWED_EXTS  = ['pdf', 'zip', 'png'];
-const R2_MAX_BYTES     = 200 * 1024 * 1024; // 200 MB
+const R2_ALLOWED_EXTS = ['pdf', 'zip', 'png'];
+const R2_MAX_BYTES    = 200 * 1024 * 1024; // 200 MB
 
 async function handleR2Upload(req, res) {
   const user = await requireAuth(req, res, ['admin']);
@@ -18,8 +17,6 @@ async function handleR2Upload(req, res) {
   const ext = (fileName.split('.').pop() || '').toLowerCase();
   if (!R2_ALLOWED_EXTS.includes(ext))
     return json(res, 400, { error: `File type .${ext} not allowed. Supported: PDF, ZIP, PNG` });
-  if (!R2_ALLOWED_TYPES.includes(fileType) && fileType !== 'application/octet-stream')
-    return json(res, 400, { error: `MIME type ${fileType} not allowed` });
   if (fileSize && fileSize > R2_MAX_BYTES)
     return json(res, 400, { error: 'File too large (max 200 MB)' });
 
@@ -42,15 +39,16 @@ async function handleR2Upload(req, res) {
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
       },
     });
+    // Do NOT include ContentLength — it gets signed and must match exactly,
+    // which browsers cannot guarantee when sending chunked.
     const command = new PutObjectCommand({
       Bucket: bucket,
       Key: key,
       ContentType: fileType,
-      ...(fileSize ? { ContentLength: fileSize } : {}),
     });
     // 15-minute window — enough for large files on slow connections
     const uploadUrl = await getSignedUrl(client, command, { expiresIn: 900 });
-    return json(res, 200, { uploadUrl, r2Key: key });
+    return json(res, 200, { uploadUrl, r2Key: key, fileName: key.split('/').pop() });
   } catch (e) {
     console.error('[r2-upload] Error:', e.message);
     return json(res, 500, { error: e.message });
