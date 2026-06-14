@@ -595,10 +595,9 @@ module.exports = async function handler(req, res) {
     // Decrease stock for physical items now that payment is confirmed
     await adjustStock(data.items, -1);
 
-    // Send payment confirmed emails
+    // Send payment confirmed email to customer only — admin chose to mark as paid themselves
     const ref = (data.id||'').slice(-8).toUpperCase();
     await sendEmail(data.customer_email, `✅ ยืนยันการชำระเงิน Order #${ref} — Fluffy Pub`, await tplPaymentConfirmed(data), { orderId: data.id, eventType: 'payment_confirmed' });
-    await sendEmail(ADMIN_EMAIL, `💰 Payment Confirmed — Order #${ref}`, await tplAdminPaymentConfirmed(data), { orderId: data.id, eventType: 'admin_payment_confirmed' });
 
     return json(res, 200, data);
   }

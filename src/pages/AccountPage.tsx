@@ -163,6 +163,7 @@ function OrdersTab({p,theme}:any) {
   const ACTIVE_STATUSES = ['pending_payment','payment_submitted','paid','packing','shipped'];
   const activeOrders    = orders.filter(o => ACTIVE_STATUSES.includes(o.status));
   const completedOrders = orders.filter(o => !ACTIVE_STATUSES.includes(o.status));
+  const [showCompleted, setShowCompleted] = React.useState(false);
 
   if (loading) return <div style={{ textAlign:'center', padding:40, color:'#888' }}>Loading...</div>;
   if (!orders.length) return (
@@ -423,10 +424,13 @@ function OrdersTab({p,theme}:any) {
       )}
       {completedOrders.length>0&&(
         <>
-          <div style={{ fontSize:11, fontWeight:800, color:'#9ca3af', letterSpacing:0.5, padding:'10px 0 2px', textTransform:'uppercase' as const, borderTop: activeOrders.length>0?'1px solid #f1f5f9':'none', marginTop: activeOrders.length>0?4:0 }}>
-            ✓ {tRaw('คำสั่งซื้อที่เสร็จสิ้นแล้ว','Completed Orders')} ({completedOrders.length})
-          </div>
-          {completedOrders.map(renderOrderCard)}
+          <button onClick={()=>setShowCompleted(v=>!v)} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', width:'100%', background:'none', border:'none', cursor:'pointer', padding:'10px 0 2px', borderTop: activeOrders.length>0?'1px solid #f1f5f9':'none', marginTop: activeOrders.length>0?4:0, fontFamily:'inherit' }}>
+            <span style={{ fontSize:11, fontWeight:800, color:'#9ca3af', letterSpacing:0.5, textTransform:'uppercase' as const }}>
+              ✓ {tRaw('คำสั่งซื้อที่เสร็จสิ้นแล้ว','Completed Orders')} ({completedOrders.length})
+            </span>
+            <span style={{ fontSize:14, color:'#9ca3af' }}>{showCompleted ? '▲' : '▼'}</span>
+          </button>
+          {showCompleted && completedOrders.map(renderOrderCard)}
         </>
       )}
     </div>
