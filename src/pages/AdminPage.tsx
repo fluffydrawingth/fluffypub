@@ -713,9 +713,17 @@ function OrdersTab() {
   const [rejectNote, setRejectNote] = useState('');
   const [rejecting, setRejecting] = useState(false);
   const [resettingDownload, setResettingDownload] = useState<Record<number,boolean>>({});
+  const [increasingLimit, setIncreasingLimit] = useState<Record<string,boolean>>({});
+
+  const applyDownloadItems = (newItems: any[]) => {
+    const updated = { ...selected, items: newItems };
+    setSelected(updated);
+    setOrders((prev: any[]) => prev.map(o => o.id === selected.id ? updated : o));
+  };
 
   const resetDownloads = async (itemIdx: number) => {
     if (!selected) return;
+    if (!confirm(`Reset download count for "${selected.items[itemIdx]?.title}"?\nThis will allow the customer to download again from 0.`)) return;
     setResettingDownload(prev => ({ ...prev, [itemIdx]: true }));
     const token = localStorage.getItem('fluffy_token') || '';
     const r = await fetch(`/api/orders?action=reset-downloads&id=${selected.id}&item=${itemIdx}`, {
@@ -724,13 +732,31 @@ function OrdersTab() {
     const d = await r.json();
     if (d.error) { setMsg('⚠️ ' + d.error); }
     else {
-      const updated = { ...selected, items: d.items };
-      setSelected(updated);
-      setOrders((prev: any[]) => prev.map(o => o.id === selected.id ? updated : o));
-      setMsg('✓ Download count reset');
-      setTimeout(() => setMsg(''), 3000);
+      applyDownloadItems(d.items);
+      setMsg('✓ Download count reset to 0');
+      await loadEmailLogs(selected.id);
+      setTimeout(() => setMsg(''), 4000);
     }
     setResettingDownload(prev => ({ ...prev, [itemIdx]: false }));
+  };
+
+  const increaseLimit = async (itemIdx: number, amount: number) => {
+    if (!selected) return;
+    const key = `${itemIdx}-${amount}`;
+    setIncreasingLimit(prev => ({ ...prev, [key]: true }));
+    const token = localStorage.getItem('fluffy_token') || '';
+    const r = await fetch(`/api/orders?action=increase-download-limit&id=${selected.id}&item=${itemIdx}&amount=${amount}`, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` },
+    });
+    const d = await r.json();
+    if (d.error) { setMsg('⚠️ ' + d.error); }
+    else {
+      applyDownloadItems(d.items);
+      setMsg(`✓ Download limit increased by +${amount}`);
+      await loadEmailLogs(selected.id);
+      setTimeout(() => setMsg(''), 4000);
+    }
+    setIncreasingLimit(prev => ({ ...prev, [key]: false }));
   };
 
   const loadEmailLogs = async (orderId: string) => {
@@ -1104,20 +1130,6 @@ function OrdersTab() {
                           </span>
                           <span style={{fontSize:11,color:'#6b7280',fontWeight:600}}>Qty: {qty}</span>
                         </div>
-                        {isDigital && selected.payment_status === 'paid' && (
-                          <div style={{display:'flex',alignItems:'center',gap:8,marginTop:6}}>
-                            <span style={{fontSize:11,fontWeight:700,color:(i.download_count??0)>=(i.download_limit??3)?'#dc2626':'#6b7280'}}>
-                              ⬇️ Downloads: {i.download_count??0} / {i.download_limit??3}
-                              {(i.download_count??0)>=(i.download_limit??3) && ' 🔒'}
-                            </span>
-                            <button
-                              disabled={!!resettingDownload[idx]}
-                              onClick={() => resetDownloads(idx)}
-                              style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:6,border:'1.5px solid #d1d5db',background:'white',color:'#374151',cursor:'pointer',fontFamily:'inherit'}}>
-                              {resettingDownload[idx] ? '…' : 'Reset'}
-                            </button>
-                          </div>
-                        )}
                       </div>
                       {/* Price */}
                       <div style={{textAlign:'right' as const,flexShrink:0,paddingTop:2}}>
@@ -1134,6 +1146,71 @@ function OrdersTab() {
                 <span>฿{Number(selected.total_thb||selected.total_amount||(parseFloat(selected.total||'0')*35)).toLocaleString('th-TH')}</span>
               </div>
             </div>
+
+            {/* Digital Download Management — shown for paid orders with digital items */}
+            {selected.payment_status === 'paid' && (selected.items||[]).some((i:any)=>(i.optionType||i.type)==='digital') && (
+              <div style={{marginBottom:12,borderTop:'1px solid #f3f4f6',paddingTop:12}}>
+                <div style={{fontSize:11,fontWeight:700,color:'#9ca3af',marginBottom:8,letterSpacing:0.5}}>⬇️ DIGITAL DOWNLOAD MANAGEMENT</div>
+                {(selected.items||[]).map((i:any,idx:number)=>{
+                  if ((i.optionType||i.type)!=='digital') return null;
+                  const count  = i.download_count  ?? 0;
+                  const limit  = i.download_limit  ?? 3;
+                  const left   = Math.max(0, limit - count);
+                  const hit    = count >= limit;
+                  const lastDl = i.last_download_at
+                    ? new Date(i.last_download_at).toLocaleString('en-GB',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})
+                    : '—';
+                  return (
+                    <div key={idx} style={{background: hit ? '#fff7ed' : '#f0fdf4', borderRadius:10, padding:'12px 14px', marginBottom:8, border:`1.5px solid ${hit?'#fed7aa':'#bbf7d0'}`}}>
+                      {/* Product name */}
+                      <div style={{fontSize:13,fontWeight:700,color:'#111827',marginBottom:8}}>{i.title}</div>
+
+                      {/* Stats grid */}
+                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6,marginBottom:10}}>
+                        <div style={{background:'white',borderRadius:8,padding:'8px 10px',textAlign:'center' as const}}>
+                          <div style={{fontSize:18,fontWeight:900,color: hit?'#dc2626':'#1e293b'}}>{count} / {limit}</div>
+                          <div style={{fontSize:10,color:'#9ca3af',fontWeight:600,marginTop:2}}>DOWNLOADS</div>
+                        </div>
+                        <div style={{background:'white',borderRadius:8,padding:'8px 10px',textAlign:'center' as const}}>
+                          <div style={{fontSize:18,fontWeight:900,color: left===0?'#dc2626':left<=1?'#f59e0b':'#059669'}}>{left}</div>
+                          <div style={{fontSize:10,color:'#9ca3af',fontWeight:600,marginTop:2}}>REMAINING</div>
+                        </div>
+                        <div style={{background:'white',borderRadius:8,padding:'8px 10px',textAlign:'center' as const}}>
+                          <div style={{fontSize:12,fontWeight:800,color: hit?'#dc2626':'#059669', paddingTop:4}}>{hit ? '🔒 Limit Reached' : '✅ Active'}</div>
+                          <div style={{fontSize:10,color:'#9ca3af',fontWeight:600,marginTop:2}}>STATUS</div>
+                        </div>
+                      </div>
+
+                      {/* Last download */}
+                      <div style={{fontSize:11,color:'#6b7280',marginBottom:10}}>
+                        🕐 Last Download: <span style={{fontWeight:700,color:'#374151'}}>{lastDl}</span>
+                      </div>
+
+                      {/* Actions */}
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap' as const}}>
+                        <button
+                          disabled={!!resettingDownload[idx]}
+                          onClick={()=>resetDownloads(idx)}
+                          style={{padding:'6px 12px',borderRadius:8,border:'1.5px solid #fca5a5',background:'#fef2f2',color:'#dc2626',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                          {resettingDownload[idx]?'…':'🔄 Reset Count'}
+                        </button>
+                        <div style={{display:'flex',gap:4,alignItems:'center'}}>
+                          <span style={{fontSize:11,color:'#6b7280',fontWeight:600}}>Increase Limit:</span>
+                          {[1,3,5].map(amt=>(
+                            <button key={amt}
+                              disabled={!!increasingLimit[`${idx}-${amt}`]}
+                              onClick={()=>increaseLimit(idx,amt)}
+                              style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #bfdbfe',background:'#eff6ff',color:'#1d4ed8',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                              {increasingLimit[`${idx}-${amt}`]?'…':`+${amt}`}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Slip */}
             {selected.slip_url&&(
@@ -1247,6 +1324,8 @@ function OrdersTab() {
                       slip_rejected:'Slip Rejected → Customer',
                       access_link_resent:'Order Link Resent → Customer',
                       custom_message:'Custom Message → Customer',
+                      download_reset:'⬇️ Download Count Reset (Admin)',
+                      download_limit_changed:'⬇️ Download Limit Increased (Admin)',
                     };
                     const isErr = log.status === 'error';
                     return (

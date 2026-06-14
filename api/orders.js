@@ -769,8 +769,8 @@ module.exports = async function handler(req, res) {
       return json(res, 429, { error: 'Download limit reached. Please contact support.' });
     }
 
-    // Increment count before serving URL (even if URL generation fails, count the attempt)
-    items[idx] = { ...item, download_count: count + 1 };
+    // Increment count before serving URL; record timestamp
+    items[idx] = { ...item, download_count: count + 1, last_download_at: new Date().toISOString() };
     await supabase.from('orders').update({ items, updated_at: new Date().toISOString() }).eq('id', order.id);
 
     // Generate signed URL
@@ -811,9 +811,46 @@ module.exports = async function handler(req, res) {
     const idx = parseInt(itemIdx) || 0;
     const items = [...(order.items || [])];
     if (!items[idx]) return json(res, 404, { error: 'Item not found' });
+    const prevCount = items[idx].download_count ?? 0;
     items[idx] = { ...items[idx], download_count: 0 };
     const { data, error } = await supabase.from('orders').update({ items, updated_at: new Date().toISOString() }).eq('id', id).select().single();
     if (error) return json(res, 400, { error: error.message });
+    await supabase.from('order_email_logs').insert({
+      order_id: id,
+      event_type: 'download_reset',
+      recipient_email: order.customer_email,
+      subject: `[Admin] Reset download count for "${items[idx].title}" (was ${prevCount}, now 0)`,
+      status: 'admin_action',
+      sent_by: user.email,
+    }).catch(() => {});
+    return json(res, 200, { success: true, items: data.items });
+  }
+
+  // POST increase download limit for a specific item (admin only)
+  if (req.method === 'POST' && action === 'increase-download-limit') {
+    const user = await requireAuth(req, res, ['admin']);
+    if (!user) return;
+    const { item: itemIdx, amount } = req.query;
+    const add = parseInt(amount) || 1;
+    if (![1, 3, 5].includes(add)) return json(res, 400, { error: 'amount must be 1, 3, or 5' });
+    const { data: order } = await supabase.from('orders').select('*').eq('id', id).single();
+    if (!order) return json(res, 404, { error: 'Order not found' });
+    const idx = parseInt(itemIdx) || 0;
+    const items = [...(order.items || [])];
+    if (!items[idx]) return json(res, 404, { error: 'Item not found' });
+    const prevLimit = items[idx].download_limit ?? 3;
+    const newLimit = prevLimit + add;
+    items[idx] = { ...items[idx], download_limit: newLimit };
+    const { data, error } = await supabase.from('orders').update({ items, updated_at: new Date().toISOString() }).eq('id', id).select().single();
+    if (error) return json(res, 400, { error: error.message });
+    await supabase.from('order_email_logs').insert({
+      order_id: id,
+      event_type: 'download_limit_changed',
+      recipient_email: order.customer_email,
+      subject: `[Admin] Increased download limit for "${items[idx].title}" from ${prevLimit} to ${newLimit} (+${add})`,
+      status: 'admin_action',
+      sent_by: user.email,
+    }).catch(() => {});
     return json(res, 200, { success: true, items: data.items });
   }
 
