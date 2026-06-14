@@ -575,11 +575,17 @@ module.exports = async function handler(req, res) {
     const hasAnyDigital = enrichedItems.some(i => (i.optionType || i.type) === 'digital');
     if (hasAnyDigital) {
       const digitalIds = enrichedItems.filter(i => (i.optionType || i.type) === 'digital').map(i => i.productId);
-      const { data: products } = await supabase.from('products').select('id,digital_download_url,download_instruction').in('id', digitalIds);
+      const { data: products } = await supabase.from('products').select('id,digital_download_url,download_instruction,r2_key,r2_file_name').in('id', digitalIds);
       enrichedItems = enrichedItems.map(item => {
         if ((item.optionType || item.type) !== 'digital') return item;
         const p = products?.find(x => x.id === item.productId);
-        return { ...item, digital_download_url: p?.digital_download_url || null, download_instruction: p?.download_instruction || null };
+        return {
+          ...item,
+          digital_download_url: p?.digital_download_url || null,
+          download_instruction: p?.download_instruction || null,
+          r2_key: p?.r2_key || null,
+          r2_file_name: p?.r2_file_name || null,
+        };
       });
     }
     const isDigitalOnly = enrichedItems.length > 0 && enrichedItems.every(i => (i.optionType || i.type) === 'digital');
@@ -724,6 +730,60 @@ module.exports = async function handler(req, res) {
     await sendEmail(order.customer_email, subject.trim(), html, {});
     await supabase.from('order_email_logs').insert({ order_id: order.id, event_type: 'custom_message', recipient_email: order.customer_email, subject: subject.trim(), status: 'sent', sent_by: user.email }).catch(() => {});
     return json(res, 200, { success: true });
+  }
+
+  // GET generate signed R2 download URL (guest token or auth)
+  if (req.method === 'GET' && action === 'download') {
+    const { token: accessToken, item: itemIdx } = req.query;
+    let order = null;
+
+    if (accessToken) {
+      // Guest: verify via access token
+      const { data } = await supabase.from('orders').select('*').eq('access_token', accessToken).single();
+      order = data;
+    } else {
+      // Logged-in user or admin
+      const user = await requireAuth(req, res);
+      if (!user) return;
+      const { data } = await supabase.from('orders').select('*').eq('id', id).single();
+      if (!data) return json(res, 404, { error: 'Order not found' });
+      if (data.user_id !== user.id && user.role !== 'admin') return json(res, 403, { error: 'Forbidden' });
+      order = data;
+    }
+
+    if (!order) return json(res, 404, { error: 'Order not found' });
+    if (order.payment_status !== 'paid') return json(res, 403, { error: 'Payment not confirmed' });
+
+    const idx = parseInt(itemIdx) || 0;
+    const item = (order.items || [])[idx];
+    if (!item) return json(res, 404, { error: 'Item not found' });
+
+    // R2 signed URL takes priority; fall back to legacy direct URL
+    if (item.r2_key) {
+      const accountId = process.env.R2_ACCOUNT_ID;
+      const bucket    = process.env.R2_BUCKET_NAME;
+      if (!accountId || !bucket) return json(res, 500, { error: 'R2 not configured' });
+      const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
+      const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+      const client = new S3Client({
+        region: 'auto',
+        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+        credentials: { accessKeyId: process.env.R2_ACCESS_KEY_ID || '', secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '' },
+      });
+      const command = new GetObjectCommand({
+        Bucket: bucket,
+        Key: item.r2_key,
+        ResponseContentDisposition: `attachment; filename="${item.r2_file_name || 'download'}"`,
+      });
+      const url = await getSignedUrl(client, command, { expiresIn: 3600 });
+      return json(res, 200, { url, fileName: item.r2_file_name });
+    }
+
+    if (item.digital_download_url) {
+      return json(res, 200, { url: item.digital_download_url, fileName: item.title });
+    }
+
+    return json(res, 404, { error: 'No download file available for this item yet' });
   }
 
   // DELETE order (admin)

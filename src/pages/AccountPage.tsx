@@ -60,6 +60,27 @@ function OrdersTab({p,theme}:any) {
   const [showReplace, setShowReplace] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<Record<string,string>>({});  // keyed by order id
   const [qrLoading, setQrLoading] = useState<Record<string,boolean>>({});
+  const [dlLoading, setDlLoading] = useState<Record<number,boolean>>({});
+
+  const downloadItem = async (orderId: string, itemIdx: number) => {
+    setDlLoading(prev => ({ ...prev, [itemIdx]: true }));
+    try {
+      const authToken = localStorage.getItem('fluffy_token') || '';
+      const res = await fetch(`/api/orders?action=download&id=${orderId}&item=${itemIdx}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      const a = document.createElement('a');
+      a.href = data.url;
+      a.download = data.fileName || 'download';
+      a.click();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setDlLoading(prev => ({ ...prev, [itemIdx]: false }));
+    }
+  };
   const { tRaw, lang } = useLang();
   const STATUS_COLORS: Record<string,string> = {
     pending_payment:'#fef3c7', payment_submitted:'#ede9fe', paid:'#d1fae5', packing:'#dbeafe', shipped:'#e0e7ff', delivered:'#d1fae5', cancelled:'#fee2e2',
@@ -366,15 +387,18 @@ function OrdersTab({p,theme}:any) {
           <div style={{background:'#eff6ff',borderRadius:12,padding:'10px 14px',marginBottom:10,fontSize:13,color:'#1e40af',fontWeight:600}}>
             🎉 {tRaw('ไฟล์ดิจิทัลพร้อมดาวน์โหลดแล้ว','Your digital file is ready to download.')}
           </div>
-          {(selected.items||[]).filter((i:any)=>(i.optionType||i.type)==='digital').map((i:any,idx:number)=>(
-            i.digital_download_url
-              ? <a key={idx} href={i.digital_download_url} target="_blank" rel="noreferrer" style={{display:'block',background:p,color:'white',textDecoration:'none',padding:'12px 16px',borderRadius:12,fontSize:14,fontWeight:700,textAlign:'center' as const,marginBottom:8}}>
-                  ⬇️ {tRaw('ดาวน์โหลด','Download')}: {i.title}
-                </a>
+          {(selected.items||[]).map((i:any,idx:number)=>{
+            if ((i.optionType||i.type)!=='digital') return null;
+            const hasFile = i.r2_key || i.digital_download_url;
+            return hasFile
+              ? <button key={idx} disabled={!!dlLoading[idx]} onClick={()=>downloadItem(selected.id, idx)}
+                  style={{display:'block',width:'100%',background:dlLoading[idx]?'#9ca3af':p,color:'white',border:'none',cursor:dlLoading[idx]?'wait':'pointer',padding:'12px 16px',borderRadius:12,fontSize:14,fontWeight:700,textAlign:'center' as const,marginBottom:8,fontFamily:theme.fontFamily}}>
+                  {dlLoading[idx]?'⏳ กำลังเตรียมไฟล์…':(`⬇️ ${tRaw('ดาวน์โหลด','Download')}: ${i.title}`)}
+                </button>
               : <div key={idx} style={{background:'#f9fafb',borderRadius:12,padding:'12px 16px',marginBottom:8,fontSize:13,color:'#6b7280',textAlign:'center' as const}}>
                   📄 {i.title} — {tRaw('กรุณาติดต่อแอดมิน','Contact admin for download link')}
-                </div>
-          ))}
+                </div>;
+          })}
         </div>
       )}
     </div>

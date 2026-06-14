@@ -32,6 +32,24 @@ export default function GuestOrderPage({ token }: { token: string }) {
   const [slipUploading, setSlipUploading] = useState(false);
   const [showReplace, setShowReplace] = useState(false);
   const [msg, setMsg] = useState('');
+  const [dlLoading, setDlLoading] = useState<Record<number,boolean>>({});
+
+  const downloadItem = async (orderId: string, itemIdx: number, accessToken: string) => {
+    setDlLoading(prev => ({ ...prev, [itemIdx]: true }));
+    try {
+      const res = await fetch(`/api/orders?action=download&id=${orderId}&item=${itemIdx}&token=${accessToken}`);
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      const a = document.createElement('a');
+      a.href = data.url;
+      a.download = data.fileName || 'download';
+      a.click();
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setDlLoading(prev => ({ ...prev, [itemIdx]: false }));
+    }
+  };
 
   useEffect(() => {
     if (!token) { setNotFound(true); setLoading(false); return; }
@@ -308,16 +326,18 @@ export default function GuestOrderPage({ token }: { token: string }) {
             <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#1e40af', fontWeight: 600 }}>
               🎉 {tRaw('ไฟล์ดิจิทัลพร้อมดาวน์โหลดแล้ว', 'Your digital file is ready to download.')}
             </div>
-            {(order.items || []).filter((i: any) => (i.optionType || i.type) === 'digital').map((i: any, idx: number) => (
-              i.digital_download_url
-                ? <a key={idx} href={i.digital_download_url} target="_blank" rel="noreferrer"
-                    style={{ display: 'block', background: p, color: 'white', textDecoration: 'none', padding: '13px 20px', borderRadius: 14, fontSize: 14, fontWeight: 700, textAlign: 'center' as const, marginBottom: 8, boxShadow: `0 4px 12px ${p}44` }}>
-                    ⬇️ {tRaw('ดาวน์โหลด', 'Download')}: {i.title}
-                  </a>
+            {(order.items || []).map((i: any, idx: number) => {
+              if ((i.optionType || i.type) !== 'digital') return null;
+              const hasFile = i.r2_key || i.digital_download_url;
+              return hasFile
+                ? <button key={idx} disabled={!!dlLoading[idx]} onClick={() => downloadItem(order.id, idx, order.access_token || token)}
+                    style={{ display: 'block', width: '100%', background: dlLoading[idx] ? '#9ca3af' : p, color: 'white', border: 'none', cursor: dlLoading[idx] ? 'wait' : 'pointer', padding: '13px 20px', borderRadius: 14, fontSize: 14, fontWeight: 700, textAlign: 'center' as const, marginBottom: 8, boxShadow: `0 4px 12px ${p}44`, fontFamily: theme.fontFamily }}>
+                    {dlLoading[idx] ? '⏳ กำลังเตรียมไฟล์… / Preparing…' : `⬇️ ${tRaw('ดาวน์โหลด', 'Download')}: ${i.title}`}
+                  </button>
                 : <div key={idx} style={{ background: '#f9fafb', borderRadius: 12, padding: '12px 16px', marginBottom: 8, fontSize: 13, color: '#6b7280', textAlign: 'center' as const }}>
                     📄 {i.title} — {tRaw('กรุณาติดต่อแอดมินเพื่อรับลิงค์', 'Contact admin for download link')}
-                  </div>
-            ))}
+                  </div>;
+            })}
           </div>
         )}
 
