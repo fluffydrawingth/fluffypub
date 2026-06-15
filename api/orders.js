@@ -104,13 +104,13 @@ async function tplOrderCreated(order) {
         <div style="font-weight:700;color:#1e40af;font-size:14px;margin-bottom:8px">🅿️ How to Pay via PayPal</div>
         <ol style="margin:0;padding-left:20px;color:#1e3a8a;font-size:13px;line-height:1.8">
           <li>Open your order page using the button below</li>
-          <li>Scan the PayPal QR code shown on the page</li>
-          <li>Send exactly ฿${Number(total).toLocaleString('en-US')} THB</li>
+          <li>Click the <strong>"Pay with PayPal →"</strong> button on the page</li>
+          <li>Complete the payment on PayPal (amount is pre-filled in USD)</li>
           <li>Screenshot your PayPal payment confirmation</li>
-          <li>Upload the screenshot on the order page as proof of payment</li>
+          <li>Return to the order page and upload the screenshot as proof of payment</li>
           <li>We'll confirm your payment within 24 hours 🌸</li>
         </ol>
-        <a href="${link}" style="display:inline-block;margin-top:12px;background:#1d4ed8;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📱 View My Order & Pay →</a>
+        <a href="${link}" style="display:inline-block;margin-top:12px;background:#0070ba;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">🅿️ View My Order & Pay with PayPal →</a>
       </div>
       <div style="background:#f0fdf4;border-radius:12px;padding:14px 16px;margin-top:16px;border:1px solid #bbf7d0;text-align:center">
         <div style="font-size:12px;color:#9ca3af;font-weight:700;margin-bottom:6px">⬇️ Your Digital Download</div>

@@ -2549,45 +2549,65 @@ function ThemeTab() {
         {section==='footer'&&<FooterCMSEditor footer={draft.footer} onFooterChange={upd} />}
         {section==='payment'&&(<>
           <h2 style={{fontSize:20,fontWeight:900,color:'#111827',marginBottom:4}}>Payment Settings</h2>
-          <p style={{fontSize:13,color:'#6b7280',marginBottom:20}}>Configure PayPal QR as an additional option for digital-only orders</p>
+          <p style={{fontSize:13,color:'#6b7280',marginBottom:20}}>
+            🇹🇭 Thai site uses <strong>PromptPay</strong> · 🌍 English site uses <strong>PayPal</strong> (payment link)
+          </p>
 
           {/* PayPal toggle */}
           <div style={{background:draft.paypal?.enabled?'#f0fdf4':'white',border:`1.5px solid ${draft.paypal?.enabled?'#86efac':'#f3f4f6'}`,borderRadius:14,padding:'18px 20px',marginBottom:20,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
             <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
-              <span style={{fontSize:18}}>💳</span>
-              <span style={{fontSize:15,fontWeight:800,color:'#111827'}}>PayPal QR Payment</span>
+              <span style={{fontSize:18}}>🅿️</span>
+              <span style={{fontSize:15,fontWeight:800,color:'#111827'}}>PayPal Payment Link</span>
               {draft.paypal?.enabled&&<span style={{fontSize:11,fontWeight:800,background:'#16a34a',color:'white',borderRadius:6,padding:'2px 8px',letterSpacing:0.5}}>ON</span>}
             </div>
-            <p style={{fontSize:12,color:'#6b7280',margin:'0 0 12px'}}>When enabled, customers with digital-only carts can choose PayPal QR instead of PromptPay.</p>
+            <p style={{fontSize:12,color:'#6b7280',margin:'0 0 12px'}}>When enabled, English-site customers see a "Pay with PayPal" button instead of PromptPay. Opens PayPal in a new tab with the order amount pre-filled.</p>
             <label style={{display:'flex',alignItems:'center',gap:12,cursor:'pointer',background:draft.paypal?.enabled?'#dcfce7':'#f9fafb',border:`1.5px solid ${draft.paypal?.enabled?'#86efac':'#e5e7eb'}`,borderRadius:10,padding:'12px 16px',width:'fit-content'}}>
               <input type="checkbox" checked={!!draft.paypal?.enabled} onChange={e=>setDraft((d:any)=>({...d,paypal:{...d.paypal,enabled:e.target.checked}}))} style={{width:18,height:18,accentColor:'#16a34a'}} />
               <span style={{fontSize:14,fontWeight:800,color:draft.paypal?.enabled?'#16a34a':'#374151'}}>
-                {draft.paypal?.enabled?'✅ PayPal QR Enabled':'⚪ PayPal QR Disabled'}
+                {draft.paypal?.enabled?'✅ PayPal Enabled for English site':'⚪ PayPal Disabled'}
               </span>
             </label>
           </div>
 
-          {/* PayPal fields */}
+          {/* PayPal.me username */}
           <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
-            <div style={{fontSize:14,fontWeight:800,color:'#374151',marginBottom:14}}>🖼️ PayPal QR Image</div>
-            <ImageUpload label="QR Code Image" value={draft.paypal?.qr_image||''} onChange={v=>setDraft((d:any)=>({...d,paypal:{...d.paypal,qr_image:v}}))} folder="uploads" hint="Upload your PayPal QR code image. Customers will scan this to pay." />
+            <div style={{fontSize:14,fontWeight:800,color:'#374151',marginBottom:14}}>🔗 PayPal.me Username</div>
+            <TF label="PayPal.me Username" val={draft.paypal?.username||''} set={v=>setDraft((d:any)=>({...d,paypal:{...d.paypal,username:v.replace(/^@/,'')}}))} ph="yourpaypalname" />
+            {draft.paypal?.username&&(
+              <div style={{marginTop:8,background:'#f0fdf4',borderRadius:8,padding:'8px 12px',fontSize:12,color:'#166534'}}>
+                🔗 Payment link preview: <strong>paypal.me/{draft.paypal.username}/[amount]USD</strong>
+              </div>
+            )}
+            <p style={{fontSize:11,color:'#9ca3af',marginTop:8}}>Your PayPal.me username (without @). Customers are sent to this link to complete payment.</p>
           </div>
 
+          {/* Exchange rate */}
           <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
-            <div style={{fontSize:14,fontWeight:800,color:'#374151',marginBottom:14}}>📧 PayPal Account</div>
-            <TF label="PayPal Email" val={draft.paypal?.email||''} set={v=>setDraft((d:any)=>({...d,paypal:{...d.paypal,email:v}}))} ph="your@paypal.com" />
-            <p style={{fontSize:11,color:'#9ca3af',marginTop:4}}>Shown to customers so they can verify they're paying the right account.</p>
-          </div>
-
-          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
-            <div style={{fontSize:14,fontWeight:800,color:'#374151',marginBottom:14}}>📝 Payment Instructions</div>
-            <div style={{marginBottom:8}}>
-              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:6}}>Instructions (shown to customer after ordering)</label>
-              <textarea value={draft.paypal?.instructions||''} onChange={e=>setDraft((d:any)=>({...d,paypal:{...d.paypal,instructions:e.target.value}}))}
-                rows={3} placeholder="e.g. Scan QR, enter the exact amount, upload screenshot as proof."
-                style={{width:'100%',padding:'10px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',resize:'vertical' as const,boxSizing:'border-box' as const}} />
+            <div style={{fontSize:14,fontWeight:800,color:'#374151',marginBottom:14}}>💱 THB → USD Exchange Rate</div>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}>
+              <span style={{fontSize:13,color:'#374151',fontWeight:600}}>1 USD =</span>
+              <input type="number" value={draft.paypal?.usd_rate||35} min={1} step={0.5}
+                onChange={e=>setDraft((d:any)=>({...d,paypal:{...d.paypal,usd_rate:parseFloat(e.target.value)||35}}))}
+                style={{width:90,padding:'8px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:14,fontWeight:700,fontFamily:'inherit'}} />
+              <span style={{fontSize:13,color:'#374151',fontWeight:600}}>THB</span>
             </div>
-            <p style={{fontSize:11,color:'#9ca3af'}}>Also included in the order confirmation email.</p>
+            <p style={{fontSize:11,color:'#9ca3af'}}>Used to convert the order total to USD for the PayPal link. Update when the exchange rate changes.</p>
+          </div>
+
+          {/* PayPal email */}
+          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{fontSize:14,fontWeight:800,color:'#374151',marginBottom:14}}>📧 PayPal Email (for reference)</div>
+            <TF label="PayPal Email" val={draft.paypal?.email||''} set={v=>setDraft((d:any)=>({...d,paypal:{...d.paypal,email:v}}))} ph="your@paypal.com" />
+            <p style={{fontSize:11,color:'#9ca3af',marginTop:4}}>Shown in confirmation email so customers know who they paid.</p>
+          </div>
+
+          {/* Custom instructions */}
+          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{fontSize:14,fontWeight:800,color:'#374151',marginBottom:14}}>📝 Extra Instructions (optional)</div>
+            <textarea value={draft.paypal?.instructions||''} onChange={e=>setDraft((d:any)=>({...d,paypal:{...d.paypal,instructions:e.target.value}}))}
+              rows={3} placeholder="e.g. Please include your order number in the PayPal note."
+              style={{width:'100%',padding:'10px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',resize:'vertical' as const,boxSizing:'border-box' as const}} />
+            <p style={{fontSize:11,color:'#9ca3af',marginTop:6}}>Shown below the PayPal button and included in the confirmation email.</p>
           </div>
         </>)}
       </div>

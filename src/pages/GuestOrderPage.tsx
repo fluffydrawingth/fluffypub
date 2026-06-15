@@ -275,28 +275,42 @@ export default function GuestOrderPage({ token }: { token: string }) {
                   </div>
                 )}
 
-                {/* QR */}
-                <div style={{ textAlign: 'center' as const, marginBottom: 16 }}>
-                  {order.payment_method === 'paypal' ? (<>
-                    <div style={{ fontWeight: 800, fontSize: 14, color: theme.textColor, marginBottom: 4 }}>🅿️ PayPal</div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
-                      {tRaw('สแกน QR เพื่อชำระผ่าน PayPal', 'Scan QR to pay via PayPal')}
-                    </div>
-                    {(theme as any).paypal?.qr_image ? (
-                      <img src={(theme as any).paypal.qr_image} alt="PayPal QR" style={{ width: 180, height: 180, margin: '0 auto', display: 'block', borderRadius: 8, objectFit: 'contain' as const }} />
-                    ) : (
-                      <div style={{ background: '#fef3c7', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#92400e' }}>
-                        {tRaw('ไม่พบรูป QR — ติดต่อแอดมิน', 'No QR image — contact admin')}
-                      </div>
-                    )}
-                    <div style={{ marginTop: 10, fontSize: 22, fontWeight: 900, color: theme.textColor }}>฿{Number(totalTHB).toLocaleString('th-TH')}</div>
-                    {(theme as any).paypal?.email && <div style={{ fontSize: 12, color: '#64748b', marginTop: 6 }}>📧 {(theme as any).paypal.email}</div>}
-                    {(theme as any).paypal?.instructions && (
-                      <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 13px', marginTop: 10, fontSize: 12, color: '#1e40af', textAlign: 'left' as const, lineHeight: 1.6 }}>
-                        {(theme as any).paypal.instructions}
-                      </div>
-                    )}
-                  </>) : (<>
+                {/* Payment section — PayPal link or PromptPay QR */}
+                {order.payment_method === 'paypal' ? (
+                  <div style={{ textAlign: 'center' as const, marginBottom: 16 }}>
+                    <div style={{ fontSize: 36, marginBottom: 6 }}>🅿️</div>
+                    <div style={{ fontWeight: 900, fontSize: 16, color: '#003087', marginBottom: 4 }}>Pay with PayPal</div>
+                    {(() => {
+                      const pp = (theme as any).paypal;
+                      const rate = pp?.usd_rate || 35;
+                      const usd = (totalTHB / rate).toFixed(2);
+                      const link = pp?.username ? `https://www.paypal.com/paypalme/${pp.username}/${usd}USD` : '';
+                      return (<>
+                        <div style={{ fontSize: 22, fontWeight: 900, color: theme.textColor, marginBottom: 2 }}>${usd} USD</div>
+                        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 14 }}>≈ ฿{Number(totalTHB).toLocaleString('th-TH')} THB{pp?.email ? ` · ${pp.email}` : ''}</div>
+                        {link ? (
+                          <a href={link} target="_blank" rel="noreferrer"
+                            style={{ display: 'block', background: '#0070ba', color: 'white', textDecoration: 'none', padding: '13px 20px', borderRadius: 14, fontSize: 14, fontWeight: 800, marginBottom: 12, boxShadow: '0 4px 14px #0070ba44' }}>
+                            🅿️ Pay with PayPal →
+                          </a>
+                        ) : (
+                          <div style={{ background: '#fef3c7', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#92400e' }}>
+                            PayPal not configured — contact admin
+                          </div>
+                        )}
+                        {pp?.instructions && (
+                          <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 13px', fontSize: 12, color: '#1e40af', textAlign: 'left' as const, lineHeight: 1.6 }}>
+                            {pp.instructions}
+                          </div>
+                        )}
+                        <div style={{ background: '#f0fdf4', borderRadius: 10, padding: '10px 13px', marginTop: 10, fontSize: 12, color: '#166534', fontWeight: 600, textAlign: 'left' as const, lineHeight: 1.6 }}>
+                          ✅ After paying on PayPal, return here and upload your payment screenshot below.
+                        </div>
+                      </>);
+                    })()}
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center' as const, marginBottom: 16 }}>
                     <div style={{ fontWeight: 800, fontSize: 14, color: theme.textColor, marginBottom: 4 }}>💳 PromptPay</div>
                     <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
                       {tRaw('สแกนด้วยแอปธนาคารเพื่อชำระเงิน', 'Scan with your banking app to pay')}
@@ -313,8 +327,8 @@ export default function GuestOrderPage({ token }: { token: string }) {
                     <div style={{ marginTop: 10, fontSize: 22, fontWeight: 900, color: theme.textColor }}>
                       ฿{Number(totalTHB).toLocaleString('th-TH')}
                     </div>
-                  </>)}
-                </div>
+                  </div>
+                )}
 
                 {/* Steps */}
                 {order.payment_method !== 'paypal' && (

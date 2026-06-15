@@ -33,7 +33,7 @@ export interface ThemeConfig {
   featuredProductIds: string[];
   showNewsletter: boolean;
   maintenance_mode: boolean;
-  paypal?: { enabled: boolean; qr_image: string; email: string; instructions: string };
+  paypal?: { enabled: boolean; username: string; email: string; usd_rate: number; instructions: string };
   labels: {
     featured_eyebrow: string; featured_eyebrow_th?: string;
     featured_title: string; featured_title_th?: string;

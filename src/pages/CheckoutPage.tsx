@@ -11,8 +11,9 @@ export default function CheckoutPage() {
   const { items, subtotalTHB, shippingTHB, totalTHB, clear } = useCart();
   const { navigate } = useRouter();
   const { user } = useAuth();
-  const { tRaw } = useLang();
+  const { tRaw, lang } = useLang();
   const p = theme.primaryColor;
+  const paypal = (theme as any).paypal;
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -31,14 +32,22 @@ export default function CheckoutPage() {
   const [slipBusy, setSlipBusy] = useState(false);
   const [slipSubmitted, setSlipSubmitted] = useState(false);
   const [showReplace, setShowReplace] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'promptpay'|'paypal'>('promptpay');
+  const [paypalClicked, setPaypalClicked] = useState(false);
 
   const hasPhysical = items.some(i => i.optionType === 'physical');
   const isDigitalOnly = !hasPhysical;
-  const paypalEnabled = !!(theme as any).paypal?.enabled && isDigitalOnly;
+  // English site + PayPal enabled + digital-only cart → use PayPal
+  const usePayPal = lang === 'en' && !!paypal?.enabled && !!paypal?.username && isDigitalOnly;
+  const paymentMethod = usePayPal ? 'paypal' : 'promptpay';
 
-  // Pre-fill from profile — fetch directly from API (same as ProfileTab)
-  // This ensures checkout always has the latest saved profile data
+  // USD amount for PayPal link
+  const usdRate = paypal?.usd_rate || 35;
+  const amountUSD = (totalTHB / usdRate).toFixed(2);
+  const paypalLink = paypal?.username
+    ? `https://www.paypal.com/paypalme/${paypal.username}/${amountUSD}USD`
+    : '';
+
+  // Pre-fill from profile
   useEffect(() => {
     const token = localStorage.getItem('fluffy_token');
     if (!token) return;
@@ -56,12 +65,11 @@ export default function CheckoutPage() {
         setPostalCode(profile.postal_code || sa.postal_code || '');
       })
       .catch(() => {});
-  }, [user?.id]); // re-fetch when user changes
+  }, [user?.id]);
 
-  // Load PromptPay QR after order created (skip for PayPal)
+  // Load PromptPay QR (only for PromptPay orders)
   useEffect(() => {
-    if (step !== 'payment' || !order) return;
-    if (paymentMethod === 'paypal') return;
+    if (step !== 'payment' || !order || usePayPal) return;
     const amt = order.total_thb || order.total_amount || totalTHB;
     if (amt <= 0) return;
     setQrLoading(true);
@@ -69,9 +77,7 @@ export default function CheckoutPage() {
       headers: { Authorization: `Bearer ${localStorage.getItem('fluffy_token') || ''}` },
     }).then(r => r.json()).then(d => {
       if (d.qrDataUrl) setQrDataUrl(d.qrDataUrl);
-      else console.error('[QR]', d.error);
-    }).catch(e => console.error('[QR fetch]', e.message))
-      .finally(() => setQrLoading(false));
+    }).catch(() => {}).finally(() => setQrLoading(false));
   }, [step, order?.id]);
 
   if (items.length === 0 && step === 'info') return (
@@ -121,31 +127,25 @@ export default function CheckoutPage() {
         total_thb: totalTHB,
         shipping_thb: shippingTHB,
         subtotal_thb: subtotalTHB,
-        payment_method: paypalEnabled ? paymentMethod : 'promptpay',
+        payment_method: paymentMethod,
       });
       if (result?.error) { setError(result.error); setBusy(false); return; }
       clear();
       setOrder(result);
       setStep('payment');
-      // Save customer info back to profile for future use
       if (user) {
         const token = localStorage.getItem('fluffy_token') || '';
         fetch('/api/users?action=me', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
-            first_name: firstName,
-            last_name: lastName,
-            delivery_email: email,
-            phone: phone || undefined,
-            province: province || undefined,
-            postal_code: postalCode || undefined,
+            first_name: firstName, last_name: lastName, delivery_email: email,
+            phone: phone || undefined, province: province || undefined, postal_code: postalCode || undefined,
             shipping_address: hasPhysical ? { address, province, postal_code: postalCode, country: 'Thailand' } : undefined,
           }),
-        }).catch(() => {}); // fire and forget
+        }).catch(() => {});
       }
     } catch (e: any) {
-      console.error('[checkout] error:', e.message, e);
       setError(e.message || tRaw('เกิดข้อผิดพลาด กรุณาลองใหม่','Something went wrong. Please try again.'));
     }
     setBusy(false);
@@ -163,7 +163,6 @@ export default function CheckoutPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
         body: JSON.stringify({ slip_url: up.publicUrl }),
       });
-      // Safe parse — Vercel may timeout after saving but before responding
       let data: any = null;
       try { data = await res.json(); } catch {}
       if (data?.error) { alert(tRaw('บันทึกไม่สำเร็จ: ','Save failed: ') + data.error); }
@@ -176,6 +175,107 @@ export default function CheckoutPage() {
   if (step === 'payment' && order) {
     const ref = (order.id || '').slice(-8).toUpperCase();
     const payAmt = order.total_thb || order.total_amount || totalTHB;
+
+    // ── PayPal payment step (English site) ────────────────────────────
+    if (usePayPal) {
+      return (
+        <div style={{background:theme.bgColor,fontFamily:theme.fontFamily,padding:'24px 16px',minHeight:'70vh'}}>
+          <style>{`@media(max-width:640px){.pg{grid-template-columns:1fr!important;}}`}</style>
+          <div style={{maxWidth:760,margin:'0 auto'}}>
+            <h1 style={{fontSize:24,fontWeight:900,color:theme.textColor,marginBottom:4}}>🧾 Order Placed!</h1>
+            <p style={{color:'#64748b',marginBottom:20}}>Order: <strong style={{color:p}}>#{ref}</strong></p>
+            <div className="pg" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,alignItems:'start'}}>
+
+              {/* PayPal button card */}
+              <div style={{background:'white',borderRadius:20,padding:24,boxShadow:`0 4px 20px ${p}12`,textAlign:'center' as const}}>
+                <div style={{fontSize:40,marginBottom:8}}>🅿️</div>
+                <h3 style={{fontSize:18,fontWeight:900,color:'#003087',marginBottom:6}}>Pay with PayPal</h3>
+                <div style={{fontSize:22,fontWeight:900,color:theme.textColor,marginBottom:4}}>
+                  ${amountUSD} USD
+                </div>
+                <div style={{fontSize:12,color:'#94a3b8',marginBottom:20}}>
+                  ≈ ฿{Number(payAmt).toLocaleString('th-TH')} THB
+                  {paypal?.email && <span> · {paypal.email}</span>}
+                </div>
+
+                {/* PayPal button */}
+                <a href={paypalLink} target="_blank" rel="noreferrer"
+                  onClick={()=>setPaypalClicked(true)}
+                  style={{display:'block',background:'#0070ba',color:'white',textDecoration:'none',padding:'14px 20px',borderRadius:14,fontSize:15,fontWeight:800,marginBottom:12,boxShadow:'0 4px 16px #0070ba44'}}>
+                  🅿️ Pay with PayPal →
+                </a>
+
+                {paypalClicked && (
+                  <div style={{background:'#eff6ff',borderRadius:12,padding:'10px 14px',fontSize:12,color:'#1e40af',fontWeight:600,marginBottom:12,lineHeight:1.6,textAlign:'left' as const}}>
+                    ✅ Paid on PayPal? Come back here and upload your payment screenshot below so we can confirm your order.
+                  </div>
+                )}
+
+                {paypal?.instructions && (
+                  <div style={{background:'#f8fafc',borderRadius:10,padding:'10px 13px',fontSize:12,color:'#475569',marginBottom:12,textAlign:'left' as const,lineHeight:1.6}}>
+                    {paypal.instructions}
+                  </div>
+                )}
+
+                {/* Screenshot upload */}
+                <div style={{marginTop:4,paddingTop:14,borderTop:'1px solid #f3f4f6'}}>
+                  <div style={{fontSize:13,fontWeight:700,color:theme.textColor,marginBottom:8}}>
+                    📸 Upload Payment Screenshot
+                  </div>
+                  {slipSubmitted && !showReplace ? (
+                    <div>
+                      <div style={{background:'#d1fae5',borderRadius:10,padding:'10px 12px',fontSize:12,color:'#065f46',fontWeight:700,marginBottom:8}}>
+                        ✅ Screenshot submitted — we'll confirm your payment shortly!
+                      </div>
+                      {slipUrl && <img src={slipUrl} alt="proof" style={{width:'100%',borderRadius:8,border:'1px solid #e5e7eb',marginBottom:8}} />}
+                      <button onClick={()=>setShowReplace(true)} style={{width:'100%',padding:'8px',background:'#f9fafb',border:'1.5px solid #d1d5db',color:'#374151',borderRadius:8,cursor:'pointer',fontSize:12,fontWeight:700,fontFamily:theme.fontFamily}}>
+                        🔄 Replace Screenshot
+                      </button>
+                    </div>
+                  ) : (
+                    <label style={{display:'block',cursor:slipBusy?'not-allowed':'pointer'}}>
+                      <div style={{background:'#003087'+'10',border:`2px dashed #003087`+'40',borderRadius:12,padding:12,fontSize:12,color:'#003087',fontWeight:600,textAlign:'center' as const}}>
+                        {slipBusy ? '⏳ Uploading...' : '📷 Upload PayPal payment screenshot'}
+                      </div>
+                      <input type="file" accept="image/*" style={{display:'none'}} disabled={slipBusy} onChange={e=>{const f=e.target.files?.[0];if(f)uploadSlip(f);}} />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {/* Steps card */}
+              <div style={{background:'white',borderRadius:20,padding:22,boxShadow:`0 4px 20px ${p}12`}}>
+                <h3 style={{fontSize:15,fontWeight:800,color:theme.textColor,marginBottom:14}}>Payment Steps</h3>
+                {[
+                  'Click "Pay with PayPal" button',
+                  `Complete your payment of $${amountUSD} USD on PayPal`,
+                  'Return to this page',
+                  'Upload a screenshot of your PayPal payment',
+                  'We\'ll confirm and send your download link within 24 hours 🌸',
+                ].map((s,i)=>(
+                  <div key={i} style={{display:'flex',gap:10,alignItems:'flex-start',marginBottom:12}}>
+                    <div style={{width:22,height:22,borderRadius:'50%',background:'#0070ba',color:'white',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,flexShrink:0}}>{i+1}</div>
+                    <div style={{fontSize:13,color:theme.textColor,paddingTop:2,lineHeight:1.5}}>{s}</div>
+                  </div>
+                ))}
+                <div style={{marginTop:16,padding:'11px 14px',background:'#eff6ff',borderRadius:12,fontSize:12,color:'#1e40af',lineHeight:1.6}}>
+                  ⬇️ Your download link will be emailed to <strong>{order.customer_email}</strong> after payment is confirmed.
+                </div>
+                <div style={{marginTop:14,display:'flex',flexDirection:'column' as const,gap:8}}>
+                  {user
+                    ? <button onClick={()=>navigate('/account/orders')} style={{width:'100%',padding:'11px',background:p,color:'white',border:'none',cursor:'pointer',borderRadius:14,fontSize:13,fontWeight:700,fontFamily:theme.fontFamily}}>View My Orders</button>
+                    : order?.access_token && <button onClick={()=>navigate(`/guest-order/${order.access_token}`)} style={{width:'100%',padding:'11px',background:p,color:'white',border:'none',cursor:'pointer',borderRadius:14,fontSize:13,fontWeight:700,fontFamily:theme.fontFamily}}>📱 View My Order</button>
+                  }
+                  <button onClick={()=>navigate('/products')} style={{width:'100%',padding:'11px',background:'transparent',border:`1.5px solid ${p}30`,color:p,cursor:'pointer',borderRadius:14,fontSize:13,fontWeight:600,fontFamily:theme.fontFamily}}>Continue Shopping</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── PromptPay payment step (Thai site) ────────────────────────────
     return (
       <div style={{background:theme.bgColor,fontFamily:theme.fontFamily,padding:'24px 16px',minHeight:'70vh'}}>
         <style>{`@media(max-width:640px){.pg{grid-template-columns:1fr!important;}}`}</style>
@@ -189,30 +289,15 @@ export default function CheckoutPage() {
           <div className="pg" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,alignItems:'start'}}>
             {/* QR */}
             <div style={{background:'white',borderRadius:20,padding:24,boxShadow:`0 4px 20px ${p}12`,textAlign:'center' as const}}>
-              {paymentMethod === 'paypal' ? (<>
-                <h3 style={{fontSize:16,fontWeight:800,color:theme.textColor,marginBottom:4}}>💳 PayPal</h3>
-                <p style={{fontSize:12,color:'#64748b',marginBottom:16}}>{tRaw('สแกน QR เพื่อชำระผ่าน PayPal','Scan QR to pay via PayPal')}</p>
-                {(theme as any).paypal?.qr_image
-                  ? <img src={(theme as any).paypal.qr_image} alt="PayPal QR" style={{width:200,height:200,margin:'0 auto',display:'block',borderRadius:12,objectFit:'contain' as const}} />
-                  : <div style={{background:'#fef3c7',borderRadius:12,padding:16,fontSize:13,color:'#92400e'}}>{tRaw('ไม่พบรูป QR — ติดต่อแอดมิน','No QR image — contact admin')}</div>
-                }
-                {payAmt > 0 && <div style={{marginTop:10,fontSize:18,fontWeight:900,color:theme.textColor}}>฿{Number(payAmt).toLocaleString('th-TH')}</div>}
-                {(theme as any).paypal?.email && (
-                  <div style={{marginTop:8,fontSize:12,color:'#64748b'}}>📧 {(theme as any).paypal.email}</div>
-                )}
-              </>) : (<>
-                <h3 style={{fontSize:16,fontWeight:800,color:theme.textColor,marginBottom:4}}>💳 PromptPay</h3>
-                <p style={{fontSize:12,color:'#64748b',marginBottom:16}}>{tRaw('สแกนด้วยแอปธนาคาร','Scan with banking app')}</p>
-                {qrLoading
-                  ? <div style={{width:200,height:200,margin:'0 auto',background:'#f3f4f6',borderRadius:16,display:'flex',alignItems:'center',justifyContent:'center',fontSize:32}}>⏳</div>
-                  : qrDataUrl
-                    ? <img src={qrDataUrl} alt="QR" style={{width:200,height:200,margin:'0 auto',display:'block',borderRadius:12}} />
-                    : <div style={{background:'#fef3c7',borderRadius:12,padding:16,fontSize:13,color:'#92400e'}}>{tRaw('ไม่พบ PROMPTPAY_ID','Set PROMPTPAY_ID in Vercel env')}</div>
-                }
-                {payAmt > 0 && (
-                  <div style={{marginTop:10,fontSize:18,fontWeight:900,color:theme.textColor}}>฿{Number(payAmt).toLocaleString('th-TH')}</div>
-                )}
-              </>)}
+              <h3 style={{fontSize:16,fontWeight:800,color:theme.textColor,marginBottom:4}}>💳 PromptPay</h3>
+              <p style={{fontSize:12,color:'#64748b',marginBottom:16}}>{tRaw('สแกนด้วยแอปธนาคาร','Scan with banking app')}</p>
+              {qrLoading
+                ? <div style={{width:200,height:200,margin:'0 auto',background:'#f3f4f6',borderRadius:16,display:'flex',alignItems:'center',justifyContent:'center',fontSize:32}}>⏳</div>
+                : qrDataUrl
+                  ? <img src={qrDataUrl} alt="QR" style={{width:200,height:200,margin:'0 auto',display:'block',borderRadius:12}} />
+                  : <div style={{background:'#fef3c7',borderRadius:12,padding:16,fontSize:13,color:'#92400e'}}>{tRaw('ไม่พบ PROMPTPAY_ID','Set PROMPTPAY_ID in Vercel env')}</div>
+              }
+              <div style={{marginTop:10,fontSize:18,fontWeight:900,color:theme.textColor}}>฿{Number(payAmt).toLocaleString('th-TH')}</div>
               {/* Slip upload */}
               <div style={{marginTop:18,paddingTop:14,borderTop:'1px solid #f3f4f6'}}>
                 <div style={{fontSize:13,fontWeight:700,color:theme.textColor,marginBottom:8}}>{tRaw('อัปโหลดสลิป','Upload Slip')}</div>
@@ -247,22 +332,12 @@ export default function CheckoutPage() {
             {/* Instructions */}
             <div style={{background:'white',borderRadius:20,padding:22,boxShadow:`0 4px 20px ${p}12`}}>
               <h3 style={{fontSize:15,fontWeight:800,color:theme.textColor,marginBottom:14}}>{tRaw('วิธีชำระเงิน','Payment Steps')}</h3>
-              {paymentMethod === 'paypal' && (theme as any).paypal?.instructions && (
-                <div style={{background:'#eff6ff',borderRadius:10,padding:'10px 13px',marginBottom:12,fontSize:13,color:'#1e40af',lineHeight:1.6}}>
-                  {(theme as any).paypal.instructions}
-                </div>
-              )}
-              {(paymentMethod === 'paypal' ? [
-                tRaw('สแกน QR PayPal ด้านซ้าย','Scan the PayPal QR on the left'),
-                tRaw(`ชำระเงิน ฿${Number(payAmt).toLocaleString('th-TH')} บาท`,`Pay ฿${Number(payAmt).toLocaleString('th-TH')} THB`),
-                tRaw('ถ่ายสกรีนช็อต แล้วอัปโหลด','Screenshot the receipt and upload'),
-                tRaw('รอการยืนยันจากร้านค้า','Wait for confirmation'),
-              ] : [
+              {[
                 tRaw('สแกน QR Code','Scan QR Code'),
                 tRaw(`โอนเงิน ฿${Number(payAmt).toLocaleString('th-TH')} บาท`,`Transfer ฿${Number(payAmt).toLocaleString('th-TH')} THB`),
                 tRaw('ถ่ายสลิปและอัปโหลด','Screenshot slip and upload'),
                 tRaw('รอการยืนยันจากร้านค้า','Wait for confirmation'),
-              ]).map((s,i)=>(
+              ].map((s,i)=>(
                 <div key={i} style={{display:'flex',gap:10,alignItems:'flex-start',marginBottom:12}}>
                   <div style={{width:22,height:22,borderRadius:'50%',background:p,color:'white',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,flexShrink:0}}>{i+1}</div>
                   <div style={{fontSize:13,color:theme.textColor,paddingTop:2,lineHeight:1.5}}>{s}</div>
@@ -286,12 +361,21 @@ export default function CheckoutPage() {
     );
   }
 
-  // ── Info step ────────────────────────────────────────────────────────
+  // ── Info step ─────────────────────────────────────────────────────────
   return (
     <div style={{background:theme.bgColor,minHeight:'70vh',fontFamily:theme.fontFamily}}>
       <style>{`@media(max-width:640px){.cg2{grid-template-columns:1fr!important;}.cs2{position:static!important;}.cn{grid-template-columns:1fr!important;}}`}</style>
       <div style={{maxWidth:860,margin:'0 auto',padding:'24px 16px'}}>
         <h1 style={{fontSize:26,fontWeight:900,color:theme.textColor,marginBottom:20}}>{tRaw('ชำระเงิน','Checkout')} 🛍️</h1>
+
+        {/* Payment method banner for English site */}
+        {usePayPal && (
+          <div style={{background:'#eff6ff',border:'1.5px solid #bfdbfe',borderRadius:14,padding:'12px 16px',marginBottom:20,display:'flex',alignItems:'center',gap:10,fontSize:13,color:'#1e40af',fontWeight:600}}>
+            <span style={{fontSize:20}}>🅿️</span>
+            <span>Payment via <strong>PayPal</strong> — you can pay in USD, EUR, GBP or your local currency</span>
+          </div>
+        )}
+
         <div className="cg2" style={{display:'grid',gridTemplateColumns:'1fr 290px',gap:20,alignItems:'start'}}>
 
           {/* Form */}
@@ -317,25 +401,10 @@ export default function CheckoutPage() {
               </>
             )}
 
-            {/* Payment method selector — digital-only + PayPal enabled */}
-            {paypalEnabled && (
-              <div style={{marginBottom:16}}>
-                <div style={{fontSize:13,fontWeight:700,color:theme.textColor,marginBottom:10}}>💳 {tRaw('วิธีชำระเงิน','Payment Method')}</div>
-                <div style={{display:'flex',gap:10}}>
-                  {([['promptpay','💳 PromptPay'],['paypal','🅿️ PayPal']] as const).map(([method,label])=>(
-                    <button key={method} onClick={()=>setPaymentMethod(method)}
-                      style={{flex:1,padding:'11px 8px',border:`2px solid ${paymentMethod===method?p:p+'30'}`,borderRadius:12,background:paymentMethod===method?p+'12':'white',color:paymentMethod===method?p:theme.textColor+'88',fontWeight:700,fontSize:13,cursor:'pointer',fontFamily:theme.fontFamily,transition:'all 0.15s'}}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {error && <div style={{background:'#fef2f2',border:'1.5px solid #fca5a5',borderRadius:11,padding:'9px 13px',marginBottom:14,fontSize:13,color:'#dc2626',fontWeight:600}}>⚠️ {error}</div>}
             <button onClick={placeOrder} disabled={busy}
               style={{width:'100%',padding:'14px',background:busy?p+'88':p,color:'white',border:'none',cursor:busy?'wait':'pointer',borderRadius:16,fontSize:15,fontWeight:800,fontFamily:theme.fontFamily,boxShadow:`0 6px 20px ${p}40`,marginTop:4}}>
-              {busy ? '⏳...' : tRaw('สั่งซื้อ & ดู QR →','Place Order & Pay →')}
+              {busy ? '⏳...' : usePayPal ? 'Place Order & Pay with PayPal →' : tRaw('สั่งซื้อ & ดู QR →','Place Order & Pay →')}
             </button>
           </div>
 
@@ -367,6 +436,11 @@ export default function CheckoutPage() {
               <span>{tRaw('ยอดรวม','Total')}</span>
               <span style={{color:p}}>฿{totalTHB.toLocaleString('th-TH')}</span>
             </div>
+            {usePayPal && (
+              <div style={{marginTop:10,padding:'8px 10px',background:'#eff6ff',borderRadius:10,fontSize:12,color:'#1e40af',fontWeight:600,textAlign:'center' as const}}>
+                ≈ ${amountUSD} USD via PayPal
+              </div>
+            )}
           </div>
         </div>
       </div>
