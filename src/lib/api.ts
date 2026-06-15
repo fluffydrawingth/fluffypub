@@ -120,6 +120,13 @@ export const api = {
   getAdminCategories: () => fetch('/api/categories', { headers: h() }).then(r => r.json()),
   getPages: () => fetch('/api/pages', { headers: h() }).then(r => r.json()),
   getPage: (slug: string) => fetch(`/api/pages?slug=${slug}`).then(r => r.json()),
+
+  // Legal Pages
+  getLegalPages: () => fetch('/api/pages?type=legal', { headers: h() }).then(r => r.json()),
+  getLegalPage: (slug: string) => fetch(`/api/pages?type=legal&slug=${encodeURIComponent(slug)}`).then(r => r.json()),
+  createLegalPage: (data: any) => fetch('/api/pages?type=legal', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  updateLegalPage: (id: string, data: any) => fetch(`/api/pages?type=legal&id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  deleteLegalPage: (id: string) => fetch(`/api/pages?type=legal&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
   getTheme: () => fetch('/api/theme').then(r => r.json()),
   saveTheme: (data: any) => fetch('/api/theme', { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
 };

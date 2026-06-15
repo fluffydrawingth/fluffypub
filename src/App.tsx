@@ -25,6 +25,7 @@ import TrackOrderPage from './pages/TrackOrderPage';
 import FreeDownloadsPage from './pages/FreeDownloadsPage';
 import FreeDownloadDetailPage from './pages/FreeDownloadDetailPage';
 import MaintenancePage from './pages/MaintenancePage';
+import LegalPage from './pages/LegalPage';
 import { LangProvider } from './lib/lang';
 import { FavoritesProvider } from './lib/favorites';
 
@@ -80,6 +81,10 @@ function AppContent() {
       case '/track-order': return <TrackOrderPage />;
       case '/free-downloads': return <FreeDownloadsPage />;
       case '/free-downloads/:slug': return <FreeDownloadDetailPage slug={route.params?.slug||''} />;
+      case '/about-us':          return <LegalPage slug="about-us" />;
+      case '/privacy-policy':    return <LegalPage slug="privacy-policy" />;
+      case '/terms-of-service':  return <LegalPage slug="terms-of-service" />;
+      case '/artist-guidelines': return <LegalPage slug="artist-guidelines" />;
       case '/artists': return <ArtistsPage />;
       case '/login': return <LoginPage />;
       case '/account': return <ProtectedRoute roles={['customer','artist','admin']}><AccountPage /></ProtectedRoute>;

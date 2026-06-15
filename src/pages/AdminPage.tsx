@@ -12,7 +12,7 @@ import ImageCropEditor from '../components/ImageCropEditor';
 import HtmlEditor from '../components/HtmlEditor';
 
 const ADMIN_EMAIL = 'fluffydrawing.th@gmail.com';
-type Tab = 'dashboard'|'products'|'orders'|'artists'|'categories'|'pages'|'free-downloads'|'theme'|'lang';
+type Tab = 'dashboard'|'products'|'orders'|'artists'|'categories'|'pages'|'free-downloads'|'legal'|'theme'|'lang';
 
 function NavItem({icon,label,active,onClick}:any) {
   return (
@@ -63,6 +63,7 @@ export default function AdminPage() {
         <NavItem icon="🏷️" label="Categories"   active={tab==='categories'} onClick={()=>selectTab('categories')} />
         <NavItem icon="📄" label="Pages"          active={tab==='pages'}           onClick={()=>selectTab('pages')} />
         <NavItem icon="⬇️" label="Free Downloads" active={tab==='free-downloads'}  onClick={()=>selectTab('free-downloads')} />
+        <NavItem icon="⚖️" label="Legal Pages"    active={tab==='legal'}           onClick={()=>selectTab('legal')} />
         <NavItem icon="✨" label="Theme & CMS"    active={tab==='theme'}           onClick={()=>selectTab('theme')} />
         <NavItem icon="🌐" label="Language CMS" active={tab==='lang'}       onClick={()=>selectTab('lang')} />
       </nav>
@@ -108,6 +109,7 @@ export default function AdminPage() {
         {tab==='categories' && <CategoriesTab />}
         {tab==='pages'           && <PagesCMSTab />}
         {tab==='free-downloads'  && <FreeDownloadsTab />}
+        {tab==='legal'           && <LegalPagesTab />}
         {tab==='theme'           && <ThemeTab />}
         {tab==='lang'       && <LanguageCMSTab />}
       </div>
@@ -1983,6 +1985,210 @@ function FeaturedProductsPicker({ draft, setDraft }: any) {
         })}
       </div>
       {ids.length > 0 && <div style={{marginTop:6,fontSize:12,color:P,fontWeight:600}}>{ids.length} product{ids.length!==1?'s':''} selected</div>}
+    </div>
+  );
+}
+
+// ── Legal Pages Tab ───────────────────────────────────────────────────────────
+
+function LegalPagesTab() {
+  const P = '#f472b6';
+  const card = { background:'white', borderRadius:16, boxShadow:'0 2px 10px rgba(0,0,0,0.06)' };
+  const [pages, setPages]   = useState<any[]>([]);
+  const [editing, setEditing] = useState<any>(null);
+  const [title, setTitle]   = useState('');
+  const [slug, setSlug]     = useState('');
+  const [content, setContent] = useState('');
+  const [published, setPublished] = useState(false);
+  const [msg, setMsg]       = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const tok = () => localStorage.getItem('fluffy_token') || '';
+
+  const load = async () => {
+    const r = await fetch('/api/pages?type=legal', { headers: { Authorization: `Bearer ${tok()}` } });
+    const d = await r.json();
+    if (Array.isArray(d)) setPages(d);
+  };
+  useEffect(() => { load(); }, []);
+
+  const DEFAULT_PAGES = [
+    { slug: 'about-us',          title: 'About Us' },
+    { slug: 'privacy-policy',    title: 'Privacy Policy' },
+    { slug: 'terms-of-service',  title: 'Terms of Service' },
+    { slug: 'artist-guidelines', title: 'Artist Guidelines' },
+  ];
+
+  const startEdit = (p: any) => {
+    setEditing(p);
+    setTitle(p.title || '');
+    setSlug(p.slug || '');
+    setContent(p.content || '');
+    setPublished(p.published || false);
+    setMsg('');
+  };
+
+  const startNew = () => {
+    setEditing({});
+    setTitle(''); setSlug(''); setContent(''); setPublished(false); setMsg('');
+  };
+
+  const cancel = () => { setEditing(null); setMsg(''); };
+
+  const save = async () => {
+    if (!title.trim() || !slug.trim()) { setMsg('⚠️ Title and slug required'); return; }
+    setSaving(true); setMsg('');
+    const body = { title: title.trim(), slug: slug.trim(), content, published };
+    let result: any;
+    if (editing?.id) {
+      const r = await fetch(`/api/pages?type=legal&id=${editing.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` }, body: JSON.stringify(body) });
+      result = await r.json();
+    } else {
+      const r = await fetch('/api/pages?type=legal', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` }, body: JSON.stringify(body) });
+      result = await r.json();
+    }
+    setSaving(false);
+    if (result.error) { setMsg('⚠️ ' + result.error); return; }
+    setEditing(result);
+    setMsg('✓ Saved!');
+    load();
+  };
+
+  const del = async (id: string, t: string) => {
+    if (!confirm(`Delete "${t}"?`)) return;
+    await fetch(`/api/pages?type=legal&id=${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${tok()}` } });
+    load();
+  };
+
+  const togglePublish = async (p: any) => {
+    await fetch(`/api/pages?type=legal&id=${p.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` }, body: JSON.stringify({ published: !p.published }) });
+    load();
+  };
+
+  const missingDefaults = DEFAULT_PAGES.filter(d => !pages.find(p => p.slug === d.slug));
+
+  const seedMissing = async () => {
+    for (const d of missingDefaults) {
+      await fetch('/api/pages?type=legal', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` }, body: JSON.stringify({ title: d.title, slug: d.slug, content: '', published: false }) });
+    }
+    load();
+  };
+
+  if (editing !== null) return (
+    <div style={{ padding: 28, maxWidth: 720 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 900, color: '#111827', margin: 0 }}>{editing?.id ? `Edit: ${title}` : 'New Legal Page'}</h1>
+        <button onClick={cancel} style={{ background: '#f3f4f6', border: 'none', cursor: 'pointer', padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600 }}>✕ Cancel</button>
+      </div>
+      <div style={{ ...card, padding: 24 }}>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 4 }}>Title *</label>
+          <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Privacy Policy"
+            style={{ width: '100%', padding: '10px 13px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' as const }}
+            onFocus={e => e.target.style.borderColor = P} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 4 }}>Slug *</label>
+          <input value={slug} onChange={e => setSlug(e.target.value)} placeholder="privacy-policy"
+            style={{ width: '100%', padding: '10px 13px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box' as const }}
+            onFocus={e => e.target.style.borderColor = P} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+          <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>URL: /{slug || 'page-slug'}</div>
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 4 }}>Content</label>
+          <HtmlEditor value={content} onChange={setContent} />
+        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: published ? P + '10' : '#f9fafb', border: `1.5px solid ${published ? P : '#e5e7eb'}`, borderRadius: 10, padding: '11px 16px', marginBottom: 16, width: 'fit-content' }}>
+          <input type="checkbox" checked={published} onChange={e => setPublished(e.target.checked)} style={{ width: 16, height: 16, accentColor: P }} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: published ? P : '#374151' }}>{published ? '✅ Published — visible to public' : '📝 Draft — not visible to public'}</span>
+        </label>
+        {msg && <div style={{ marginBottom: 12, fontSize: 13, fontWeight: 600, color: msg.startsWith('✓') ? '#059669' : '#dc2626' }}>{msg}</div>}
+        <button onClick={save} disabled={saving} style={{ padding: '12px 28px', background: saving ? P + '88' : P, color: 'white', border: 'none', cursor: 'pointer', borderRadius: 12, fontSize: 14, fontWeight: 700, fontFamily: 'inherit' }}>
+          {saving ? 'Saving…' : '💾 Save Page'}
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ padding: 28 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 900, color: '#111827', margin: '0 0 4px' }}>Legal Pages ({pages.length})</h1>
+          <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>Accessible via footer links only. Never shown in Blog or Pages listing.</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {missingDefaults.length > 0 && (
+            <button onClick={seedMissing} style={{ background: '#fff7ed', border: '1.5px solid #fb923c', color: '#c2410c', cursor: 'pointer', padding: '9px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700 }}>
+              ＋ Seed {missingDefaults.length} default page{missingDefaults.length > 1 ? 's' : ''}
+            </button>
+          )}
+          <button onClick={startNew} style={{ background: P, color: 'white', border: 'none', cursor: 'pointer', padding: '10px 20px', borderRadius: 20, fontSize: 14, fontWeight: 700, fontFamily: 'inherit', boxShadow: `0 4px 14px ${P}44` }}>+ New Page</button>
+        </div>
+      </div>
+
+      <div style={{ ...card, overflow: 'hidden' }}>
+        {pages.length === 0 ? (
+          <div style={{ textAlign: 'center' as const, padding: '48px', color: '#9ca3af' }}>
+            No legal pages yet. Run the SQL below or click "Seed default pages".
+          </div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead><tr style={{ borderBottom: '2px solid #f3f4f6', background: '#fafafa' }}>
+              {['Title', 'Slug / URL', 'Status', 'Updated', ''].map(h => (
+                <th key={h} style={{ textAlign: 'left' as const, padding: '11px 16px', fontSize: 11, color: '#9ca3af', fontWeight: 700 }}>{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>{pages.map((p: any) => (
+              <tr key={p.id} style={{ borderBottom: '1px solid #f9fafb' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#fafafa'}
+                onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                <td style={{ padding: '12px 16px', fontWeight: 700, color: '#111827', fontSize: 14 }}>{p.title}</td>
+                <td style={{ padding: '12px 16px', fontSize: 12, color: '#6b7280', fontFamily: 'monospace' }}>/{p.slug}</td>
+                <td style={{ padding: '12px 16px' }}>
+                  <button onClick={() => togglePublish(p)} style={{ padding: '4px 12px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, background: p.published ? '#d1fae5' : '#f3f4f6', color: p.published ? '#065f46' : '#6b7280' }}>
+                    {p.published ? '✅ Published' : '📝 Draft'}
+                  </button>
+                </td>
+                <td style={{ padding: '12px 16px', fontSize: 11, color: '#9ca3af' }}>
+                  {p.updated_at ? new Date(p.updated_at).toLocaleDateString('th-TH') : '—'}
+                </td>
+                <td style={{ padding: '12px 16px' }}>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => startEdit(p)} style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Edit</button>
+                    <a href={`/#/${p.slug}`} target="_blank" rel="noreferrer" style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #e5e7eb', background: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 600, textDecoration: 'none', color: '#374151' }}>👁 View</a>
+                    <button onClick={() => del(p.id, p.title)} style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #fca5a5', background: '#fef2f2', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#ef4444' }}>Delete</button>
+                  </div>
+                </td>
+              </tr>
+            ))}</tbody>
+          </table>
+        )}
+      </div>
+
+      {/* SQL setup instructions */}
+      <div style={{ marginTop: 24, background: '#1e293b', borderRadius: 14, padding: '20px 24px' }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', marginBottom: 10 }}>📋 Supabase SQL — run once to create the table and seed defaults</div>
+        <pre style={{ margin: 0, fontSize: 12, color: '#e2e8f0', lineHeight: 1.6, whiteSpace: 'pre-wrap' as const, fontFamily: 'monospace' }}>{`CREATE TABLE IF NOT EXISTS legal_pages (
+  id        uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  slug      text UNIQUE NOT NULL,
+  title     text NOT NULL,
+  content   text DEFAULT '',
+  published boolean DEFAULT false,
+  updated_at timestamptz DEFAULT now()
+);
+
+INSERT INTO legal_pages (slug, title) VALUES
+  ('about-us',          'About Us'),
+  ('privacy-policy',    'Privacy Policy'),
+  ('terms-of-service',  'Terms of Service'),
+  ('artist-guidelines', 'Artist Guidelines')
+ON CONFLICT (slug) DO NOTHING;`}</pre>
+        <button onClick={() => navigator.clipboard.writeText(`CREATE TABLE IF NOT EXISTS legal_pages (\n  id        uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  slug      text UNIQUE NOT NULL,\n  title     text NOT NULL,\n  content   text DEFAULT '',\n  published boolean DEFAULT false,\n  updated_at timestamptz DEFAULT now()\n);\n\nINSERT INTO legal_pages (slug, title) VALUES\n  ('about-us',          'About Us'),\n  ('privacy-policy',    'Privacy Policy'),\n  ('terms-of-service',  'Terms of Service'),\n  ('artist-guidelines', 'Artist Guidelines')\nON CONFLICT (slug) DO NOTHING;`)}
+          style={{ marginTop: 12, background: '#334155', border: 'none', cursor: 'pointer', padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, color: '#e2e8f0' }}>
+          📋 Copy SQL
+        </button>
+      </div>
     </div>
   );
 }

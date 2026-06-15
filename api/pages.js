@@ -118,10 +118,74 @@ async function handleFreeDownloads(req, res) {
   return json(res, 405, { error: 'Method not allowed' });
 }
 
+// ── Legal Pages ────────────────────────────────────────────────────────────────
+
+async function handleLegalPages(req, res) {
+  const { id, slug } = req.query;
+
+  // GET list — admin sees all, public sees published only
+  if (req.method === 'GET' && !slug && !id) {
+    const user = req.headers.authorization ? await getUser(req) : null;
+    let q = supabase.from('legal_pages').select('id,slug,title,content,published,updated_at').order('slug');
+    if (!user || user.role !== 'admin') q = q.eq('published', true);
+    const { data, error } = await q;
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, data || []);
+  }
+
+  // GET single by slug (public if published)
+  if (req.method === 'GET' && slug) {
+    const user = req.headers.authorization ? await getUser(req) : null;
+    let q = supabase.from('legal_pages').select('id,slug,title,content,published,updated_at').eq('slug', slug);
+    if (!user || user.role !== 'admin') q = q.eq('published', true);
+    const { data, error } = await q.single();
+    if (error || !data) return json(res, 404, { error: 'Not found' });
+    return json(res, 200, data);
+  }
+
+  // POST create (admin)
+  if (req.method === 'POST') {
+    const user = await requireAuth(req, res, ['admin']); if (!user) return;
+    const { title, slug: rawSlug, content, published } = req.body || {};
+    if (!title || !rawSlug) return json(res, 400, { error: 'title and slug required' });
+    const cleanSlug = rawSlug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
+    const { data, error } = await supabase.from('legal_pages')
+      .insert({ title, slug: cleanSlug, content: content || '', published: !!published })
+      .select().single();
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 201, data);
+  }
+
+  // PUT update (admin)
+  if (req.method === 'PUT' && id) {
+    const user = await requireAuth(req, res, ['admin']); if (!user) return;
+    const updates = { updated_at: new Date().toISOString() };
+    const { title, slug: rawSlug, content, published } = req.body || {};
+    if (title     !== undefined) updates.title     = title;
+    if (rawSlug   !== undefined) updates.slug      = rawSlug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
+    if (content   !== undefined) updates.content   = content;
+    if (published !== undefined) updates.published = !!published;
+    const { data, error } = await supabase.from('legal_pages').update(updates).eq('id', id).select().single();
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, data);
+  }
+
+  // DELETE (admin)
+  if (req.method === 'DELETE' && id) {
+    const user = await requireAuth(req, res, ['admin']); if (!user) return;
+    const { error } = await supabase.from('legal_pages').delete().eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
+  }
+
+  return json(res, 405, { error: 'Method not allowed' });
+}
+
 // ── Pages CMS ──────────────────────────────────────────────────────────────────
 
 module.exports = async function handler(req, res) {
   if (req.query.type === 'free-download') return handleFreeDownloads(req, res);
+  if (req.query.type === 'legal') return handleLegalPages(req, res);
 
   const { slug, id, homepage } = req.query;
 
