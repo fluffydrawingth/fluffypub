@@ -28,34 +28,44 @@ async function emailWrapper(bodyHtml) {
 </body></html>`;
 }
 
-function orderItemsHtml(items) {
+function fmtOrderAmount(value, isUSD) {
+  if (isUSD) return `$${Number(value || 0).toFixed(2)}`;
+  return `฿${Number(value || 0).toLocaleString('th-TH')}`;
+}
+
+function orderItemsHtml(items, isUSD) {
   return (items || []).map(i => {
     const isDigital = (i.optionType || i.type) === 'digital';
     const qty = i.qty || 1;
-    const price = i.unitPriceTHB || i.price_thb || 0;
-    const line = i.lineTotalTHB || price * qty;
+    let lineAmt;
+    if (isUSD) {
+      lineAmt = fmtOrderAmount((i.unitPriceUSD ?? 0) * qty, true);
+    } else {
+      const price = i.unitPriceTHB || i.price_thb || 0;
+      lineAmt = fmtOrderAmount(i.lineTotalTHB || price * qty, false);
+    }
     return `<tr style="border-bottom:1px solid #f3f4f6">
       <td style="padding:10px 0;font-size:13px">
         <div style="font-weight:700;color:#111827">${i.title || ''}</div>
         ${i.optionName ? `<div style="font-size:11px;color:#6b7280;margin-top:2px">📌 ${i.optionName}</div>` : ''}
         <div style="font-size:11px;color:${isDigital?'#1d4ed8':'#065f46'};font-weight:600;margin-top:3px">${isDigital?'⬇️ Digital':'📦 Physical'} · Qty: ${qty}</div>
       </td>
-      <td style="padding:10px 0;text-align:right;font-weight:800;color:#111827;font-size:13px">฿${Number(line).toLocaleString('th-TH')}</td>
+      <td style="padding:10px 0;text-align:right;font-weight:800;color:#111827;font-size:13px">${lineAmt}</td>
     </tr>`;
   }).join('');
 }
 
 function orderSummaryHtml(order) {
-  const ref = (order.id || '').slice(-8).toUpperCase();
-  const total = order.total_thb || order.total_amount || 0;
-  const shipping = order.shipping_thb || 0;
+  const isUSD = order.currency === 'USD';
+  const total = isUSD ? order.total_usd : (order.total_thb || order.total_amount || 0);
+  const shipping = isUSD ? 0 : (order.shipping_thb || 0);
   return `
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px">
-      ${orderItemsHtml(order.items)}
+      ${orderItemsHtml(order.items, isUSD)}
     </table>
-    ${shipping > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;margin-bottom:4px"><span>Shipping</span><span>฿${Number(shipping).toLocaleString('th-TH')}</span></div>` : ''}
+    ${shipping > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;margin-bottom:4px"><span>Shipping</span><span>${fmtOrderAmount(shipping, false)}</span></div>` : ''}
     <div style="border-top:2px solid #f3f4f6;padding-top:10px;display:flex;justify-content:space-between;font-weight:900;font-size:16px;color:#111827">
-      <span>Total</span><span style="color:#f472b6">฿${Number(total).toLocaleString('th-TH')}</span>
+      <span>Total</span><span style="color:#f472b6">${fmtOrderAmount(total, isUSD)}</span>
     </div>`;
 }
 
@@ -154,11 +164,13 @@ async function tplOrderCreated(order) {
 
 async function tplAdminNewOrder(order) {
   const ref = (order.id || '').slice(-8).toUpperCase();
-  const total = order.total_thb || order.total_amount || 0;
+  const isUSD = order.currency === 'USD';
+  const total = isUSD ? order.total_usd : (order.total_thb || order.total_amount || 0);
+  const totalDisplay = fmtOrderAmount(total, isUSD);
   return await emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:18px">🛍️ New Order Received</h2>
     <div style="background:#f0fdf4;border-radius:10px;padding:12px 14px;margin:14px 0;border:1px solid #86efac">
-      <div style="font-weight:700;color:#065f46;font-size:14px">#${ref} · ฿${Number(total).toLocaleString('th-TH')}</div>
+      <div style="font-weight:700;color:#065f46;font-size:14px">#${ref} · ${totalDisplay}</div>
       <div style="font-size:12px;color:#374151;margin-top:4px">👤 ${order.customer_name} · ${order.customer_email}</div>
       ${order.customer_phone ? `<div style="font-size:12px;color:#374151">📞 ${order.customer_phone}</div>` : ''}
     </div>
@@ -212,11 +224,13 @@ async function tplPaymentConfirmed(order) {
 
 async function tplAdminPaymentConfirmed(order) {
   const ref = (order.id || '').slice(-8).toUpperCase();
-  const total = order.total_thb || order.total_amount || 0;
+  const isUSD = order.currency === 'USD';
+  const total = isUSD ? order.total_usd : (order.total_thb || order.total_amount || 0);
+  const totalDisplay = fmtOrderAmount(total, isUSD);
   return await emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:18px">💰 Payment Received</h2>
     <div style="background:#f0fdf4;border-radius:10px;padding:12px 14px;margin:14px 0;border:1px solid #86efac">
-      <div style="font-weight:700;color:#065f46;font-size:14px">#${ref} · ฿${Number(total).toLocaleString('th-TH')}</div>
+      <div style="font-weight:700;color:#065f46;font-size:14px">#${ref} · ${totalDisplay}</div>
       <div style="font-size:12px;color:#374151;margin-top:4px">👤 ${order.customer_name} · ${order.customer_email}</div>
     </div>
     <p style="font-size:13px;color:#374151">Payment confirmed. Order is ready for fulfillment.</p>
@@ -464,7 +478,7 @@ module.exports = async function handler(req, res) {
 
   // POST create order
   if (req.method === 'POST' && !action) {
-    const { items, customerName, customerEmail, customerPhone, shippingAddress, promoCode, total_thb, total_usd, shipping_thb: shippingFromCart, subtotal_thb, subtotal_usd, payment_method } = req.body || {};
+    const { items, customerName, customerEmail, customerPhone, shippingAddress, promoCode, total_thb, total_usd, shipping_thb: shippingFromCart, subtotal_thb, subtotal_usd, payment_method, currency: reqCurrency } = req.body || {};
     if (!items?.length || !customerName || !customerEmail) return json(res, 400, { error: 'items, name, email required' });
 
     // Validate products exist and get image/artist data only (do NOT override prices or types)
@@ -528,6 +542,7 @@ module.exports = async function handler(req, res) {
       total_amount: grand_total_thb,
       total_usd: total_usd || null,
       subtotal_usd: subtotal_usd || null,
+      currency: reqCurrency === 'USD' ? 'USD' : 'THB',
       promo_code: promoCode || null,
       status: 'pending_payment',
       payment_status: 'pending',
@@ -542,7 +557,8 @@ module.exports = async function handler(req, res) {
     // Send confirmation emails
     const orderRef = (order.id || '').slice(-8).toUpperCase();
     await sendEmail(customerEmail, `✅ คำสั่งซื้อ #${orderRef} รับแล้ว — Fluffy Pub`, await tplOrderCreated(order), { orderId: order.id, eventType: 'order_created' });
-    await sendEmail(ADMIN_EMAIL, `🛍️ New Order #${orderRef} — ฿${Number(order.total_thb||0).toLocaleString('th-TH')}`, await tplAdminNewOrder(order), { orderId: order.id, eventType: 'admin_order_created' });
+    const _adminTotal = order.currency === 'USD' ? fmtOrderAmount(order.total_usd, true) : fmtOrderAmount(order.total_thb || 0, false);
+    await sendEmail(ADMIN_EMAIL, `🛍️ New Order #${orderRef} — ${_adminTotal}`, await tplAdminNewOrder(order), { orderId: order.id, eventType: 'admin_order_created' });
 
     return json(res, 201, order);
   }
@@ -567,11 +583,13 @@ module.exports = async function handler(req, res) {
     if (error) return json(res, 400, { error: error.message });
 
     const ref = (order.id||'').slice(-8).toUpperCase();
-    const total = order.total_thb || order.total_amount || 0;
+    const _isUSD = order.currency === 'USD';
+    const _total = _isUSD ? order.total_usd : (order.total_thb || order.total_amount || 0);
+    const _totalDisplay = fmtOrderAmount(_total, _isUSD);
     // No eventType → bypasses dedup so every re-upload notifies admin
     await sendEmail(ADMIN_EMAIL, `💳 Payment Slip Uploaded — Order #${ref}`,
       await emailWrapper(`<h2 style="margin:0 0 10px;color:#111827;font-size:18px">💳 Payment Slip Uploaded</h2>
-        <p style="color:#374151;font-size:13px"><strong>${order.customer_name}</strong> uploaded a payment slip for Order <strong>#${ref}</strong> · ฿${Number(total).toLocaleString('th-TH')}</p>
+        <p style="color:#374151;font-size:13px"><strong>${order.customer_name}</strong> uploaded a payment slip for Order <strong>#${ref}</strong> · ${_totalDisplay}</p>
         <img src="${slip_url}" alt="slip" style="width:100%;max-width:320px;border-radius:8px;border:1px solid #e5e7eb;margin:8px 0">
         <a href="${SITE}/admin" style="display:inline-block;margin-top:8px;background:#f472b6;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">⚙️ Review in Admin →</a>`)
     );

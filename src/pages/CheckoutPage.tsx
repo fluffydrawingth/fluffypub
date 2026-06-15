@@ -139,6 +139,7 @@ export default function CheckoutPage() {
         subtotal_thb: subtotalTHB,
         subtotal_usd: subtotalUSD,
         payment_method: paymentMethod,
+        currency,
       });
       if (result?.error) { setError(result.error); setBusy(false); return; }
       setFrozenTotalTHB(totalTHB);

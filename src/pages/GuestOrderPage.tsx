@@ -160,11 +160,12 @@ export default function GuestOrderPage({ token }: { token: string }) {
   );
 
   const ref = '#' + (order.id || '').slice(-8).toUpperCase();
+  const isUSDOrder = order.currency === 'USD' || order.payment_method === 'paypal';
   const totalTHB = order.total_thb || order.total_amount || 0;
   const totalUSD: number | null = order.total_usd ?? null;
   const st = STATUS_TEXT[order.status];
   const hasPhysicalItems = (order.items || []).some((i: any) => i.optionType === 'physical');
-  const isPayPalOrder = isPayPalOrder && !hasPhysicalItems;
+  const isPayPalOrder = order.payment_method === 'paypal' && !hasPhysicalItems;
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: theme.fontFamily, padding: '32px 16px' }}>
@@ -194,8 +195,17 @@ export default function GuestOrderPage({ token }: { token: string }) {
           {(order.items || []).map((i: any, idx: number) => {
             const isDigital = (i.optionType || i.type) === 'digital';
             const qty = i.qty || 1;
-            const unit = i.unitPriceTHB || i.price_thb || 0;
-            const line = i.lineTotalTHB || unit * qty;
+            let lineDisplay: string;
+            let unitDisplay: string;
+            if (isUSDOrder && i.unitPriceUSD != null) {
+              lineDisplay = `$${((i.unitPriceUSD ?? 0) * qty).toFixed(2)}`;
+              unitDisplay = `$${Number(i.unitPriceUSD).toFixed(2)}`;
+            } else {
+              const unit = i.unitPriceTHB || i.price_thb || 0;
+              const line = i.lineTotalTHB || unit * qty;
+              lineDisplay = `฿${Number(line).toLocaleString('th-TH')}`;
+              unitDisplay = `฿${Number(unit).toLocaleString('th-TH')}`;
+            }
             return (
               <div key={idx} style={{ background: '#f9fafb', borderRadius: 10, padding: '10px 12px', marginBottom: 8, border: `1.5px solid ${isDigital ? '#bfdbfe' : '#bbf7d0'}` }}>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -208,14 +218,14 @@ export default function GuestOrderPage({ token }: { token: string }) {
                     </span>
                   </div>
                   <div style={{ textAlign: 'right' as const, flexShrink: 0 }}>
-                    <div style={{ fontWeight: 800, color: '#1e293b', fontSize: 13 }}>฿{Number(line).toLocaleString('th-TH')}</div>
-                    {qty > 1 && <div style={{ fontSize: 10, color: '#9ca3af' }}>฿{Number(unit).toLocaleString('th-TH')} ×{qty}</div>}
+                    <div style={{ fontWeight: 800, color: '#1e293b', fontSize: 13 }}>{lineDisplay}</div>
+                    {qty > 1 && <div style={{ fontSize: 10, color: '#9ca3af' }}>{unitDisplay} ×{qty}</div>}
                   </div>
                 </div>
               </div>
             );
           })}
-          {order.shipping_thb > 0 && (
+          {!isUSDOrder && order.shipping_thb > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#64748b', marginTop: 8 }}>
               <span>{tRaw('ค่าจัดส่ง', 'Shipping')}</span>
               <span>฿{Number(order.shipping_thb).toLocaleString('th-TH')}</span>
@@ -223,7 +233,9 @@ export default function GuestOrderPage({ token }: { token: string }) {
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, color: '#1e293b', fontSize: 16, marginTop: 8, paddingTop: 8, borderTop: '1px solid #f3f4f6' }}>
             <span>{tRaw('ยอดรวม', 'Total')}</span>
-            <span style={{ color: p }}>฿{Number(totalTHB).toLocaleString('th-TH')}</span>
+            <span style={{ color: p }}>
+              {isUSDOrder && totalUSD != null ? `$${Number(totalUSD).toFixed(2)} USD` : `฿${Number(totalTHB).toLocaleString('th-TH')}`}
+            </span>
           </div>
         </div>
 
@@ -383,7 +395,7 @@ export default function GuestOrderPage({ token }: { token: string }) {
               return (
                 <div key={idx} style={{ marginBottom: 8 }}>
                   {hasFile
-                    ? <button disabled={!!dlLoading[idx] || limitReached} onClick={() => downloadItem(order.id, idx, order.access_token || token)}
+                    ? <button disabled={!!dlLoading[idx] || limitReached} onClick={() => downloadItem(order.id, idx, token)}
                         style={{ display: 'block', width: '100%', background: limitReached ? '#e5e7eb' : dlLoading[idx] ? '#9ca3af' : p, color: limitReached ? '#9ca3af' : 'white', border: 'none', cursor: (dlLoading[idx] || limitReached) ? 'not-allowed' : 'pointer', padding: '13px 20px', borderRadius: 14, fontSize: 14, fontWeight: 700, textAlign: 'center' as const, boxShadow: limitReached ? 'none' : `0 4px 12px ${p}44`, fontFamily: theme.fontFamily }}>
                         {dlLoading[idx] ? '⏳ กำลังเตรียมไฟล์… / Preparing…' : limitReached ? `🔒 ${tRaw('ดาวน์โหลดครบแล้ว', 'Download limit reached')}` : `⬇️ ${tRaw('ดาวน์โหลด', 'Download')}: ${i.title}`}
                       </button>

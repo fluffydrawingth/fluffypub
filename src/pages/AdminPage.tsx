@@ -127,6 +127,15 @@ function Badge({color,bg,text}:{color:string,bg:string,text:string}) {
 const STATUS_COLOR:any = { pending_payment:['#d97706','#fef3c7'], payment_submitted:['#7c3aed','#ede9fe'], paid:['#059669','#d1fae5'], packing:['#2563eb','#dbeafe'], shipped:['#7c3aed','#ede9fe'], delivered:['#059669','#d1fae5'], cancelled:['#dc2626','#fee2e2'] };
 const STATUS_TEXT:any  = { pending_payment:'Pending Payment', payment_submitted:'Payment Submitted', paid:'Paid', packing:'Packing', shipped:'Shipped', delivered:'Delivered', cancelled:'Cancelled' };
 
+function fmtOrderTotal(o: any): string {
+  if (o.currency === 'USD' || o.payment_method === 'paypal') {
+    const usd = o.total_usd ?? o.total_usd;
+    if (usd != null) return `$${Number(usd).toFixed(2)} USD`;
+  }
+  const thb = o.total_thb || o.total_amount || 0;
+  return `฿${Number(thb).toLocaleString('th-TH')}`;
+}
+
 // ── Dashboard ──────────────────────────────────────────────────────────────
 function DashboardTab() {
   const now = new Date();
@@ -253,7 +262,7 @@ function DashboardTab() {
               <tr key={o.id} style={{borderBottom:'1px solid #f9fafb'}}>
                 <td style={{padding:'10px',fontSize:12,fontWeight:700,color:P}}>#{(o.id||'').slice(-8).toUpperCase()}</td>
                 <td style={{padding:'10px',fontSize:12,color:'#374151'}}>{o.customer_name||''}</td>
-                <td style={{padding:'10px',fontWeight:800,color:'#111827',fontSize:12}}>฿{(o.total_thb||o.total_amount||(parseFloat(o.total||'0')*35)).toLocaleString('th-TH')}</td>
+                <td style={{padding:'10px',fontWeight:800,color:'#111827',fontSize:12}}>{fmtOrderTotal(o)}</td>
                 <td style={{padding:'10px'}}><Badge color={cl} bg={bg} text={STATUS_TEXT[o.status]||o.status}/></td>
                 <td style={{padding:'10px',fontSize:11,color:'#9ca3af'}}>{new Date(o.created_at).toLocaleDateString('th-TH')}</td>
               </tr>
@@ -1041,7 +1050,7 @@ function OrdersTab() {
                     <div style={{fontWeight:600}}>{o.customer_name}</div>
                     <div style={{fontSize:10,color:'#9ca3af'}}>{o.customer_phone}</div>
                   </td>
-                  <td style={{padding:'11px 12px',fontWeight:800,color:'#111827',fontSize:13}}>฿{Number(thb).toLocaleString('th-TH')}</td>
+                  <td style={{padding:'11px 12px',fontWeight:800,color:'#111827',fontSize:13}}>{fmtOrderTotal(o)}</td>
                   <td style={{padding:'11px 12px'}}><Badge color={c} bg={bg} text={STATUS_TEXT[o.status]||o.status}/></td>
                   <td style={{padding:'11px 12px'}}>
                     {o.payment_reminder_sent_at&&<span style={{fontSize:10,background:'#fef3c7',color:'#92400e',borderRadius:6,padding:'2px 6px',fontWeight:600,whiteSpace:'nowrap' as const}}>reminded</span>}
@@ -1112,47 +1121,55 @@ function OrdersTab() {
             {/* Products */}
             <div style={{borderTop:'1px solid #f3f4f6',borderBottom:'1px solid #f3f4f6',padding:'10px 0',marginBottom:12}}>
               <div style={{fontSize:11,fontWeight:700,color:'#9ca3af',marginBottom:8}}>PRODUCTS</div>
-              {(selected.items||[]).map((i:any,idx:number)=>{
-                // Read from snapshot fields — support both old and new order formats
-                const optionType: string = i.optionType || (i.type==='digital' ? 'digital' : i.type==='both' ? 'both' : 'physical');
-                const optionName = i.optionName || i.variant?.name || '';
-                const qty = i.qty || 1;
-                const unitPrice = i.unitPriceTHB || i.price_thb || (i.price ? Math.round(i.price*35) : 0);
-                const lineTotal = i.lineTotalTHB || (unitPrice * qty);
-                const isDigital = optionType === 'digital';
-
-                return (
-                  <div key={idx} style={{background:'#f9fafb',borderRadius:10,padding:'10px 12px',marginBottom:6,border:`1.5px solid ${isDigital?'#bfdbfe':'#bbf7d0'}`}}>
-                    <div style={{display:'flex',alignItems:'flex-start',gap:8}}>
-                      <span style={{fontSize:18,flexShrink:0}}>{i.image}</span>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:13,color:'#111827',fontWeight:700,lineHeight:1.3,marginBottom:5}}>{i.title}</div>
-                        {/* Variant / option name row */}
-                        {optionName && (
-                          <div style={{fontSize:12,color:'#374151',fontWeight:600,marginBottom:4}}>
-                            📌 {optionName}
+              {(()=>{
+                const selIsUSD = selected.currency === 'USD' || selected.payment_method === 'paypal';
+                return (selected.items||[]).map((i:any,idx:number)=>{
+                  const optionType: string = i.optionType || (i.type==='digital' ? 'digital' : i.type==='both' ? 'both' : 'physical');
+                  const optionName = i.optionName || i.variant?.name || '';
+                  const qty = i.qty || 1;
+                  const isDigital = optionType === 'digital';
+                  let lineFmt: string;
+                  let unitFmt: string;
+                  if (selIsUSD && i.unitPriceUSD != null) {
+                    lineFmt = `$${((i.unitPriceUSD ?? 0) * qty).toFixed(2)}`;
+                    unitFmt = `$${Number(i.unitPriceUSD).toFixed(2)}`;
+                  } else {
+                    const unitPrice = i.unitPriceTHB || i.price_thb || (i.price ? Math.round(i.price*35) : 0);
+                    const lineTotal = i.lineTotalTHB || (unitPrice * qty);
+                    lineFmt = `฿${Number(lineTotal).toLocaleString('th-TH')}`;
+                    unitFmt = `฿${Number(unitPrice).toLocaleString('th-TH')}`;
+                  }
+                  return (
+                    <div key={idx} style={{background:'#f9fafb',borderRadius:10,padding:'10px 12px',marginBottom:6,border:`1.5px solid ${isDigital?'#bfdbfe':'#bbf7d0'}`}}>
+                      <div style={{display:'flex',alignItems:'flex-start',gap:8}}>
+                        <span style={{fontSize:18,flexShrink:0}}>{i.image}</span>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:13,color:'#111827',fontWeight:700,lineHeight:1.3,marginBottom:5}}>{i.title}</div>
+                          {optionName && (
+                            <div style={{fontSize:12,color:'#374151',fontWeight:600,marginBottom:4}}>
+                              📌 {optionName}
+                            </div>
+                          )}
+                          <div style={{display:'flex',gap:5,flexWrap:'wrap' as const,alignItems:'center'}}>
+                            <span style={{fontSize:11,fontWeight:700,background:isDigital?'#dbeafe':'#d1fae5',color:isDigital?'#1d4ed8':'#065f46',borderRadius:6,padding:'2px 8px'}}>
+                              {isDigital ? '⬇️ Digital' : '📦 Physical'}
+                            </span>
+                            <span style={{fontSize:11,color:'#6b7280',fontWeight:600}}>Qty: {qty}</span>
                           </div>
-                        )}
-                        <div style={{display:'flex',gap:5,flexWrap:'wrap' as const,alignItems:'center'}}>
-                          <span style={{fontSize:11,fontWeight:700,background:isDigital?'#dbeafe':'#d1fae5',color:isDigital?'#1d4ed8':'#065f46',borderRadius:6,padding:'2px 8px'}}>
-                            {isDigital ? '⬇️ Digital' : '📦 Physical'}
-                          </span>
-                          <span style={{fontSize:11,color:'#6b7280',fontWeight:600}}>Qty: {qty}</span>
+                        </div>
+                        <div style={{textAlign:'right' as const,flexShrink:0,paddingTop:2}}>
+                          <div style={{fontWeight:800,color:'#111827',fontSize:14}}>{lineFmt}</div>
+                          {qty>1&&<div style={{fontSize:10,color:'#9ca3af'}}>{unitFmt} × {qty}</div>}
                         </div>
                       </div>
-                      {/* Price */}
-                      <div style={{textAlign:'right' as const,flexShrink:0,paddingTop:2}}>
-                        <div style={{fontWeight:800,color:'#111827',fontSize:14}}>฿{Number(lineTotal).toLocaleString('th-TH')}</div>
-                        {qty>1&&<div style={{fontSize:10,color:'#9ca3af'}}>฿{Number(unitPrice).toLocaleString('th-TH')} × {qty}</div>}
-                      </div>
                     </div>
-                  </div>
-                );
-              })}
-              {selected.shipping_thb>0&&<div style={{display:'flex',justifyContent:'space-between',marginTop:8,fontSize:12,color:'#6b7280'}}><span>Shipping</span><span>฿{selected.shipping_thb}</span></div>}
+                  );
+                });
+              })()}
+              {selected.shipping_thb>0&&selected.currency!=='USD'&&<div style={{display:'flex',justifyContent:'space-between',marginTop:8,fontSize:12,color:'#6b7280'}}><span>Shipping</span><span>฿{selected.shipping_thb}</span></div>}
               <div style={{display:'flex',justifyContent:'space-between',marginTop:6,fontWeight:900,color:'#111827',fontSize:14}}>
                 <span>Total</span>
-                <span>฿{Number(selected.total_thb||selected.total_amount||(parseFloat(selected.total||'0')*35)).toLocaleString('th-TH')}</span>
+                <span>{fmtOrderTotal(selected)}</span>
               </div>
             </div>
 
