@@ -2570,9 +2570,7 @@ function ThemeTab() {
           {/* PayPal fields */}
           <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
             <div style={{fontSize:14,fontWeight:800,color:'#374151',marginBottom:14}}>🖼️ PayPal QR Image</div>
-            <TF label="QR Image URL" val={draft.paypal?.qr_image||''} set={v=>setDraft((d:any)=>({...d,paypal:{...d.paypal,qr_image:v}}))} ph="https://..." />
-            {draft.paypal?.qr_image&&<img src={draft.paypal.qr_image} alt="PayPal QR Preview" style={{width:160,height:160,borderRadius:10,border:'1.5px solid #e5e7eb',objectFit:'contain',display:'block',marginTop:8}} />}
-            <p style={{fontSize:11,color:'#9ca3af',marginTop:8}}>Upload your PayPal QR code image and paste the URL here. Customers will scan this to pay.</p>
+            <ImageUpload label="QR Code Image" value={draft.paypal?.qr_image||''} onChange={v=>setDraft((d:any)=>({...d,paypal:{...d.paypal,qr_image:v}}))} folder="uploads" hint="Upload your PayPal QR code image. Customers will scan this to pay." />
           </div>
 
           <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
