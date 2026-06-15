@@ -85,6 +85,9 @@ export const api = {
         body: JSON.stringify({ fileName: file.name, fileType: file.type, folder }),
       });
       const meta = await metaRes.json();
+      if (metaRes.status === 401 || meta.error === 'Not authenticated') {
+        return { error: 'Session expired — please log out and log back in, then try again.' };
+      }
       if (meta.error) {
         console.error('[upload] meta error:', meta.error);
         return { error: meta.error };
