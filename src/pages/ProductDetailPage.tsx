@@ -13,7 +13,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const { theme } = useTheme();
   const { add, items, increment } = useCart();
   const { navigate } = useRouter();
-  const { lang, t, tRaw, price: fmtPrice } = useLang();
+  const { lang, t, tRaw, price: fmtPrice, currency } = useLang();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState<any>(null);
@@ -95,6 +95,10 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     options.push({ id: 'digital', name: tRaw('ไฟล์ดิจิทัล','Digital file'), type: 'digital', priceTHB: dTHB, priceUSD: dUSD, inStock: true });
   }
 
+  const isUSD = currency === 'USD';
+  const isPhysicalOnly = options.length > 0 && options.every(o => o.type === 'physical');
+  const hasDigital = options.some(o => o.type === 'digital');
+
   // Display price: selected option or base
   const displayTHB = selectedOption ? selectedOption.priceTHB : priceTHB;
   const displayUSD = selectedOption ? selectedOption.priceUSD : priceUSD;
@@ -102,12 +106,20 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const alreadyInCart = selectedOption && items.some(i => `${i.id}::${i.optionId}` === cartKey);
 
   const handleAddToCart = () => {
+    if (isUSD && isPhysicalOnly) {
+      setOptionError('Physical products are available in THB only. Please switch to THB to purchase this item.');
+      return;
+    }
     if (options.length > 1 && !selectedOption) {
       setOptionError(tRaw('กรุณาเลือกรูปแบบก่อน','Please select an option.'));
       return;
     }
     const opt = selectedOption || options[0];
     if (!opt) return;
+    if (isUSD && opt.type === 'physical') {
+      setOptionError('Physical option is available in THB only. Please select the digital option or switch to THB.');
+      return;
+    }
     if (opt.priceTHB <= 0) { setOptionError(tRaw('ราคาไม่ถูกต้อง','Price not configured.')); return; }
     if (!opt.inStock) { setOptionError(tRaw('สินค้าหมด','This option is out of stock.')); return; }
     setOptionError('');
@@ -184,23 +196,37 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
             {description && <p style={{color:theme.textColor+'cc',fontSize:14,lineHeight:1.7,marginBottom:16,margin:'0 0 16px'}}>{description}</p>}
 
+            {/* USD + physical-only product warning */}
+            {isUSD && isPhysicalOnly && (
+              <div style={{background:'#fef3c7',border:'1.5px solid #fcd34d',borderRadius:12,padding:'10px 14px',marginBottom:14,fontSize:13,color:'#92400e',fontWeight:600}}>
+                ⚠️ Physical products are available in THB only. Please switch to ฿ THB to purchase this item.
+              </div>
+            )}
+
             {/* Option selector — only if more than one option */}
             {options.length > 1 && (
               <div style={{marginBottom:16}}>
                 <label style={{display:'block',fontSize:13,fontWeight:700,color:theme.textColor,marginBottom:8}}>{tRaw('เลือกรูปแบบ','Select option')}:</label>
                 <div style={{display:'flex',flexDirection:'column' as const,gap:7}}>
-                  {options.map(o => (
-                    <button key={o.id}
-                      onClick={()=>{ if(!o.inStock) return; setSelectedOption(o); setOptionError(''); }}
-                      disabled={!o.inStock}
-                      style={{padding:'11px 14px',borderRadius:12,cursor:o.inStock?'pointer':'not-allowed',textAlign:'left' as const,border:`2px solid ${!o.inStock?'#e5e7eb':selectedOption?.id===o.id?p:'#e5e7eb'}`,background:!o.inStock?'#f9fafb':selectedOption?.id===o.id?p+'10':'white',fontFamily:theme.fontFamily,display:'flex',justifyContent:'space-between',alignItems:'center',transition:'all 0.12s',opacity:o.inStock?1:0.6}}>
-                      <span style={{fontSize:14,fontWeight:selectedOption?.id===o.id?700:500,color:o.inStock?theme.textColor:'#9ca3af'}}>
-                        {selectedOption?.id===o.id && '✓ '}{o.name}
-                        {!o.inStock && <span style={{fontSize:11,color:'#ef4444',marginLeft:8,fontWeight:600}}>Out of stock</span>}
-                      </span>
-                      <span style={{fontSize:14,fontWeight:800,color:o.inStock?p:'#9ca3af'}}>{fmtPrice(o.priceTHB, o.priceUSD)}</span>
-                    </button>
-                  ))}
+                  {options.map(o => {
+                    const optBlockedUSD = isUSD && o.type === 'physical';
+                    const isClickable = o.inStock && !optBlockedUSD;
+                    return (
+                      <button key={o.id}
+                        onClick={()=>{ if(!isClickable) return; setSelectedOption(o); setOptionError(''); }}
+                        disabled={!isClickable}
+                        style={{padding:'11px 14px',borderRadius:12,cursor:isClickable?'pointer':'not-allowed',textAlign:'left' as const,border:`2px solid ${!isClickable?'#e5e7eb':selectedOption?.id===o.id?p:'#e5e7eb'}`,background:!isClickable?'#f9fafb':selectedOption?.id===o.id?p+'10':'white',fontFamily:theme.fontFamily,display:'flex',justifyContent:'space-between',alignItems:'center',transition:'all 0.12s',opacity:isClickable?1:0.6}}>
+                        <span style={{display:'flex',flexDirection:'column' as const,alignItems:'flex-start',gap:2}}>
+                          <span style={{fontSize:14,fontWeight:selectedOption?.id===o.id?700:500,color:isClickable?theme.textColor:'#9ca3af'}}>
+                            {selectedOption?.id===o.id && '✓ '}{o.name}
+                            {!o.inStock && <span style={{fontSize:11,color:'#ef4444',marginLeft:8,fontWeight:600}}>Out of stock</span>}
+                          </span>
+                          {optBlockedUSD && <span style={{fontSize:11,color:'#f59e0b',fontWeight:700}}>฿ THB only</span>}
+                        </span>
+                        <span style={{fontSize:14,fontWeight:800,color:isClickable?p:'#9ca3af'}}>{fmtPrice(o.priceTHB, o.priceUSD)}</span>
+                      </button>
+                    );
+                  })}
                 </div>
                 {optionError && <div style={{marginTop:6,fontSize:12,color:'#ef4444',fontWeight:600}}>⚠️ {optionError}</div>}
               </div>
@@ -230,9 +256,9 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               >
                 {isFav(product.id) ? '❤️' : '🤍'}
               </button>
-              <button onClick={handleAddToCart} disabled={options.length===0}
-                style={{flex:1,minWidth:140,padding:'14px',borderRadius:20,background:options.length===0?'#e5e7eb':btnInCart?'#10b981':p,color:'white',border:'none',cursor:options.length===0?'not-allowed':'pointer',fontSize:15,fontWeight:800,fontFamily:theme.fontFamily,boxShadow:btnInCart||options.length===0?'none':`0 6px 20px ${p}40`,transition:'all 0.2s'}}>
-                {options.length===0 ? tRaw('ไม่มีสินค้า','Not available') : btnInCart ? `✓ ${tRaw('อยู่ในตะกร้า','In cart')} +` : t('add_to_cart')}
+              <button onClick={handleAddToCart} disabled={options.length===0 || (isUSD && isPhysicalOnly)}
+                style={{flex:1,minWidth:140,padding:'14px',borderRadius:20,background:options.length===0||(isUSD&&isPhysicalOnly)?'#e5e7eb':btnInCart?'#10b981':p,color:options.length===0||(isUSD&&isPhysicalOnly)?'#9ca3af':'white',border:'none',cursor:options.length===0||(isUSD&&isPhysicalOnly)?'not-allowed':'pointer',fontSize:15,fontWeight:800,fontFamily:theme.fontFamily,boxShadow:btnInCart||options.length===0||(isUSD&&isPhysicalOnly)?'none':`0 6px 20px ${p}40`,transition:'all 0.2s'}}>
+                {options.length===0 ? tRaw('ไม่มีสินค้า','Not available') : (isUSD&&isPhysicalOnly) ? '฿ THB only' : btnInCart ? `✓ ${tRaw('อยู่ในตะกร้า','In cart')} +` : t('add_to_cart')}
               </button>
               {items.some(i=>i.id===product.id) && (
                 <button onClick={()=>navigate('/cart')} style={{padding:'14px 18px',borderRadius:20,background:'transparent',border:`2px solid ${p}`,color:p,cursor:'pointer',fontSize:13,fontWeight:700,fontFamily:theme.fontFamily}}>

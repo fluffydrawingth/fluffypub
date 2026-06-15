@@ -107,6 +107,10 @@ export default function CheckoutPage() {
 
   const placeOrder = async () => {
     setError('');
+    if (currency === 'USD' && hasPhysical) {
+      setError('Physical products cannot be purchased in USD. Please switch to ฿ THB to checkout.');
+      return;
+    }
     if (!firstName.trim()) { setError(tRaw('กรุณากรอกชื่อ', 'Please enter your first name.')); return; }
     if (!email.trim()) { setError(tRaw('กรุณากรอกอีเมล', 'Please enter your email.')); return; }
     if (hasPhysical && (!phone.trim() || !address.trim() || !province.trim())) {

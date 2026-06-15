@@ -39,11 +39,16 @@ export default function ProductCard({ product }: { product: any }) {
   const cartKeys = items.map(i => `${i.id}::${i.optionId}`);
   const inCartAny = items.some(i => i.id === product.id);
 
+  const isUSD = currency === 'USD';
+  const availableOptions = isUSD ? options.filter(o => o.type === 'digital') : options;
+  const isPhysicalOnly = options.length > 0 && options.every(o => o.type === 'physical');
+  const blockedByUSD = isUSD && isPhysicalOnly;
+
   const handleCartBtn = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (options.length === 0) return;
-    if (options.length === 1) {
-      const o = options[0];
+    if (blockedByUSD || availableOptions.length === 0) return;
+    if (availableOptions.length === 1) {
+      const o = availableOptions[0];
       const k = `${product.id}::${o.id}`;
       if (cartKeys.includes(k)) { increment(product.id, o.id); return; }
       if (o.priceTHB <= 0) return;
@@ -54,6 +59,7 @@ export default function ProductCard({ product }: { product: any }) {
   };
 
   const handleOption = (o: { id: string; name: string; type: 'physical' | 'digital'; priceTHB: number; priceUSD: number | null }) => {
+    if (isUSD && o.type === 'physical') return;
     const k = `${product.id}::${o.id}`;
     if (cartKeys.includes(k)) { increment(product.id, o.id); }
     else if (o.priceTHB > 0) {
@@ -62,8 +68,9 @@ export default function ProductCard({ product }: { product: any }) {
     setModal(false);
   };
 
-  const btnLabel = options.length === 0 ? '—' : inCartAny ? '✓' : options.length > 1 ? '⚙️' : '+';
+  const btnLabel = blockedByUSD ? '฿' : availableOptions.length === 0 ? '—' : inCartAny ? '✓' : availableOptions.length > 1 ? '⚙️' : '+';
   const displayPrice = price(priceTHB, priceUSD);
+  const isDisabled = blockedByUSD || availableOptions.length === 0;
 
   return (
     <>
@@ -99,11 +106,12 @@ export default function ProductCard({ product }: { product: any }) {
             {title}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-            <span style={{ fontSize: 16, fontWeight: 900, color: theme.textColor }}>
-              {displayPrice}
-            </span>
-            <button onClick={handleCartBtn} disabled={options.length === 0}
-              style={{ background: inCartAny ? '#10b981' : options.length === 0 ? '#e5e7eb' : p, color: 'white', border: 'none', cursor: options.length === 0 ? 'not-allowed' : 'pointer', padding: '6px 12px', borderRadius: 12, fontSize: 12, fontWeight: 700, fontFamily: theme.fontFamily, flexShrink: 0 }}>
+            <div>
+              <span style={{ fontSize: 16, fontWeight: 900, color: theme.textColor }}>{displayPrice}</span>
+              {blockedByUSD && <div style={{ fontSize: 10, color: '#f59e0b', fontWeight: 700, marginTop: 2 }}>฿ THB only</div>}
+            </div>
+            <button onClick={handleCartBtn} disabled={isDisabled}
+              style={{ background: inCartAny ? '#10b981' : isDisabled ? '#e5e7eb' : p, color: isDisabled ? '#9ca3af' : 'white', border: 'none', cursor: isDisabled ? 'not-allowed' : 'pointer', padding: '6px 12px', borderRadius: 12, fontSize: 12, fontWeight: 700, fontFamily: theme.fontFamily, flexShrink: 0 }}>
               {btnLabel}
             </button>
           </div>
@@ -121,13 +129,15 @@ export default function ProductCard({ product }: { product: any }) {
               {options.map(o => {
                 const inCart = cartKeys.includes(`${product.id}::${o.id}`);
                 const optPrice = price(o.priceTHB, o.priceUSD);
+                const optBlocked = isUSD && o.type === 'physical';
                 return (
-                  <button key={o.id} onClick={() => handleOption(o)}
-                    style={{ padding: '12px 16px', borderRadius: 12, border: `1.5px solid ${inCart ? '#10b981' : p}30`, background: inCart ? '#d1fae5' : 'white', cursor: 'pointer', fontFamily: theme.fontFamily, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14, fontWeight: 600, color: '#374151' }}
-                    onMouseEnter={e => { e.currentTarget.style.background = inCart ? '#a7f3d0' : p + '10'; e.currentTarget.style.borderColor = inCart ? '#10b981' : p; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = inCart ? '#d1fae5' : 'white'; e.currentTarget.style.borderColor = inCart ? '#10b981' : p + '30'; }}>
-                    <span>{inCart ? '✓ ' : ''}{o.name}</span>
-                    <span style={{ fontWeight: 800, color: inCart ? '#10b981' : p }}>{optPrice}</span>
+                  <button key={o.id} onClick={() => handleOption(o)} disabled={optBlocked}
+                    style={{ padding: '12px 16px', borderRadius: 12, border: `1.5px solid ${optBlocked ? '#e5e7eb' : inCart ? '#10b981' : p}30`, background: optBlocked ? '#f9fafb' : inCart ? '#d1fae5' : 'white', cursor: optBlocked ? 'not-allowed' : 'pointer', fontFamily: theme.fontFamily, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14, fontWeight: 600, color: optBlocked ? '#9ca3af' : '#374151', opacity: optBlocked ? 0.6 : 1 }}>
+                    <span style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'flex-start', gap: 2 }}>
+                      <span>{inCart ? '✓ ' : ''}{o.name}</span>
+                      {optBlocked && <span style={{ fontSize: 10, color: '#f59e0b', fontWeight: 700 }}>฿ THB only</span>}
+                    </span>
+                    <span style={{ fontWeight: 800, color: optBlocked ? '#9ca3af' : inCart ? '#10b981' : p }}>{optPrice}</span>
                   </button>
                 );
               })}
