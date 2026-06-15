@@ -72,6 +72,7 @@ export default function GuestOrderPage({ token }: { token: string }) {
   useEffect(() => {
     const needsQR = (order?.status === 'pending_payment' || (order?.status === 'payment_submitted' && showReplace));
     if (!order || !needsQR || order.slip_url) return;
+    if (order.payment_method === 'paypal') return; // PayPal uses static QR image from theme
     if (qrDataUrl || qrLoading) return;
     const amt = order.total_thb || order.total_amount;
     if (!amt) return;
@@ -276,34 +277,57 @@ export default function GuestOrderPage({ token }: { token: string }) {
 
                 {/* QR */}
                 <div style={{ textAlign: 'center' as const, marginBottom: 16 }}>
-                  <div style={{ fontWeight: 800, fontSize: 14, color: theme.textColor, marginBottom: 4 }}>💳 PromptPay</div>
-                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
-                    {tRaw('สแกนด้วยแอปธนาคารเพื่อชำระเงิน', 'Scan with your banking app to pay')}
-                  </div>
-                  {qrLoading ? (
-                    <div style={{ width: 180, height: 180, margin: '0 auto', background: '#f3f4f6', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>⏳</div>
-                  ) : qrDataUrl ? (
-                    <img src={qrDataUrl} alt="PromptPay QR" style={{ width: 180, height: 180, margin: '0 auto', display: 'block', borderRadius: 8 }} />
-                  ) : (
-                    <div style={{ background: '#fef3c7', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#92400e' }}>
-                      {tRaw('ไม่พบ QR — ติดต่อแอดมิน', 'QR unavailable — contact admin')}
+                  {order.payment_method === 'paypal' ? (<>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: theme.textColor, marginBottom: 4 }}>🅿️ PayPal</div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+                      {tRaw('สแกน QR เพื่อชำระผ่าน PayPal', 'Scan QR to pay via PayPal')}
                     </div>
-                  )}
-                  <div style={{ marginTop: 10, fontSize: 22, fontWeight: 900, color: theme.textColor }}>
-                    ฿{Number(totalTHB).toLocaleString('th-TH')}
-                  </div>
+                    {(theme as any).paypal?.qr_image ? (
+                      <img src={(theme as any).paypal.qr_image} alt="PayPal QR" style={{ width: 180, height: 180, margin: '0 auto', display: 'block', borderRadius: 8, objectFit: 'contain' as const }} />
+                    ) : (
+                      <div style={{ background: '#fef3c7', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#92400e' }}>
+                        {tRaw('ไม่พบรูป QR — ติดต่อแอดมิน', 'No QR image — contact admin')}
+                      </div>
+                    )}
+                    <div style={{ marginTop: 10, fontSize: 22, fontWeight: 900, color: theme.textColor }}>฿{Number(totalTHB).toLocaleString('th-TH')}</div>
+                    {(theme as any).paypal?.email && <div style={{ fontSize: 12, color: '#64748b', marginTop: 6 }}>📧 {(theme as any).paypal.email}</div>}
+                    {(theme as any).paypal?.instructions && (
+                      <div style={{ background: '#eff6ff', borderRadius: 10, padding: '10px 13px', marginTop: 10, fontSize: 12, color: '#1e40af', textAlign: 'left' as const, lineHeight: 1.6 }}>
+                        {(theme as any).paypal.instructions}
+                      </div>
+                    )}
+                  </>) : (<>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: theme.textColor, marginBottom: 4 }}>💳 PromptPay</div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+                      {tRaw('สแกนด้วยแอปธนาคารเพื่อชำระเงิน', 'Scan with your banking app to pay')}
+                    </div>
+                    {qrLoading ? (
+                      <div style={{ width: 180, height: 180, margin: '0 auto', background: '#f3f4f6', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>⏳</div>
+                    ) : qrDataUrl ? (
+                      <img src={qrDataUrl} alt="PromptPay QR" style={{ width: 180, height: 180, margin: '0 auto', display: 'block', borderRadius: 8 }} />
+                    ) : (
+                      <div style={{ background: '#fef3c7', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: '#92400e' }}>
+                        {tRaw('ไม่พบ QR — ติดต่อแอดมิน', 'QR unavailable — contact admin')}
+                      </div>
+                    )}
+                    <div style={{ marginTop: 10, fontSize: 22, fontWeight: 900, color: theme.textColor }}>
+                      ฿{Number(totalTHB).toLocaleString('th-TH')}
+                    </div>
+                  </>)}
                 </div>
 
                 {/* Steps */}
-                <div style={{ background: '#f9fafb', borderRadius: 12, padding: '12px 14px', marginBottom: 12, fontSize: 12, color: '#374151', lineHeight: 1.7 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 4 }}>{tRaw('วิธีชำระเงิน', 'Payment Steps')}</div>
-                  {[
-                    `1. ${tRaw('สแกน QR ด้วยแอปธนาคาร', 'Scan QR with banking app')}`,
-                    `2. ${tRaw(`โอนเงิน ฿${Number(totalTHB).toLocaleString('th-TH')}`, `Transfer ฿${Number(totalTHB).toLocaleString('th-TH')}`)}`,
-                    `3. ${tRaw('ถ่ายสลิป แล้วอัปโหลดด้านล่าง', 'Screenshot slip and upload below')}`,
-                    `4. ${tRaw('รอการยืนยัน', 'Wait for confirmation')}`,
-                  ].map((s, i) => <div key={i}>{s}</div>)}
-                </div>
+                {order.payment_method !== 'paypal' && (
+                  <div style={{ background: '#f9fafb', borderRadius: 12, padding: '12px 14px', marginBottom: 12, fontSize: 12, color: '#374151', lineHeight: 1.7 }}>
+                    <div style={{ fontWeight: 700, marginBottom: 4 }}>{tRaw('วิธีชำระเงิน', 'Payment Steps')}</div>
+                    {[
+                      `1. ${tRaw('สแกน QR ด้วยแอปธนาคาร', 'Scan QR with banking app')}`,
+                      `2. ${tRaw(`โอนเงิน ฿${Number(totalTHB).toLocaleString('th-TH')}`, `Transfer ฿${Number(totalTHB).toLocaleString('th-TH')}`)}`,
+                      `3. ${tRaw('ถ่ายสลิป แล้วอัปโหลดด้านล่าง', 'Screenshot slip and upload below')}`,
+                      `4. ${tRaw('รอการยืนยัน', 'Wait for confirmation')}`,
+                    ].map((s, i) => <div key={i}>{s}</div>)}
+                  </div>
+                )}
 
                 {msg && (
                   <div style={{ background: msg.startsWith('✓') ? '#d1fae5' : '#fee2e2', borderRadius: 10, padding: '9px 13px', marginBottom: 10, fontSize: 13, color: msg.startsWith('✓') ? '#065f46' : '#dc2626', fontWeight: 600 }}>

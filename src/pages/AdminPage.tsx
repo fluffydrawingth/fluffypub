@@ -1216,6 +1216,13 @@ function OrdersTab() {
               </div>
             )}
 
+            {/* Payment method badge */}
+            {selected.payment_method&&selected.payment_method!=='promptpay'&&(
+              <div style={{background:'#eff6ff',borderRadius:8,padding:'7px 11px',marginBottom:10,fontSize:12,color:'#1d4ed8',fontWeight:700}}>
+                💳 Payment via: {selected.payment_method==='paypal'?'PayPal QR':'PromptPay'}
+              </div>
+            )}
+
             {/* Slip */}
             {selected.slip_url&&(
               <div style={{marginBottom:12}}>
@@ -2183,7 +2190,7 @@ function ThemeTab() {
     setSaved('✓ Saved!'); setTimeout(()=>setSaved(''),3000);
   }, [saveTheme]);
 
-  const SECTIONS=[['brand','🏷️','Brand & Logo'],['colors','🎨','Colors'],['hero','⭐','Hero Section'],['banner','📢','Banner'],['pages','📐','Page Sections'],['background','🖼️','Background'],['footer','🦶','Footer CMS']] as const;
+  const SECTIONS=[['brand','🏷️','Brand & Logo'],['colors','🎨','Colors'],['hero','⭐','Hero Section'],['banner','📢','Banner'],['pages','📐','Page Sections'],['background','🖼️','Background'],['footer','🦶','Footer CMS'],['payment','💳','Payment Settings']] as const;
   const PRESETS=[
     {name:'Sakura',primaryColor:'#f472b6',secondaryColor:'#c084fc',accentColor:'#fb923c',bgColor:'#fdf2f8',bgColor2:'#faf5ff',textColor:'#4a1942'},
     {name:'Ocean', primaryColor:'#38bdf8',secondaryColor:'#818cf8',accentColor:'#34d399',bgColor:'#f0f9ff',bgColor2:'#eef2ff',textColor:'#0c4a6e'},
@@ -2540,6 +2547,51 @@ function ThemeTab() {
           <ImageCropEditor title="Background Image" hint="Large image. Set focal point for responsive display." value={draft.bgImageCrop} aspectRatio={16/9} onChange={v=>upd('bgImageCrop',v)} />
         </>)}
         {section==='footer'&&<FooterCMSEditor footer={draft.footer} onFooterChange={upd} />}
+        {section==='payment'&&(<>
+          <h2 style={{fontSize:20,fontWeight:900,color:'#111827',marginBottom:4}}>Payment Settings</h2>
+          <p style={{fontSize:13,color:'#6b7280',marginBottom:20}}>Configure PayPal QR as an additional option for digital-only orders</p>
+
+          {/* PayPal toggle */}
+          <div style={{background:draft.paypal?.enabled?'#f0fdf4':'white',border:`1.5px solid ${draft.paypal?.enabled?'#86efac':'#f3f4f6'}`,borderRadius:14,padding:'18px 20px',marginBottom:20,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+              <span style={{fontSize:18}}>💳</span>
+              <span style={{fontSize:15,fontWeight:800,color:'#111827'}}>PayPal QR Payment</span>
+              {draft.paypal?.enabled&&<span style={{fontSize:11,fontWeight:800,background:'#16a34a',color:'white',borderRadius:6,padding:'2px 8px',letterSpacing:0.5}}>ON</span>}
+            </div>
+            <p style={{fontSize:12,color:'#6b7280',margin:'0 0 12px'}}>When enabled, customers with digital-only carts can choose PayPal QR instead of PromptPay.</p>
+            <label style={{display:'flex',alignItems:'center',gap:12,cursor:'pointer',background:draft.paypal?.enabled?'#dcfce7':'#f9fafb',border:`1.5px solid ${draft.paypal?.enabled?'#86efac':'#e5e7eb'}`,borderRadius:10,padding:'12px 16px',width:'fit-content'}}>
+              <input type="checkbox" checked={!!draft.paypal?.enabled} onChange={e=>setDraft((d:any)=>({...d,paypal:{...d.paypal,enabled:e.target.checked}}))} style={{width:18,height:18,accentColor:'#16a34a'}} />
+              <span style={{fontSize:14,fontWeight:800,color:draft.paypal?.enabled?'#16a34a':'#374151'}}>
+                {draft.paypal?.enabled?'✅ PayPal QR Enabled':'⚪ PayPal QR Disabled'}
+              </span>
+            </label>
+          </div>
+
+          {/* PayPal fields */}
+          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{fontSize:14,fontWeight:800,color:'#374151',marginBottom:14}}>🖼️ PayPal QR Image</div>
+            <TF label="QR Image URL" val={draft.paypal?.qr_image||''} set={v=>setDraft((d:any)=>({...d,paypal:{...d.paypal,qr_image:v}}))} ph="https://..." />
+            {draft.paypal?.qr_image&&<img src={draft.paypal.qr_image} alt="PayPal QR Preview" style={{width:160,height:160,borderRadius:10,border:'1.5px solid #e5e7eb',objectFit:'contain',display:'block',marginTop:8}} />}
+            <p style={{fontSize:11,color:'#9ca3af',marginTop:8}}>Upload your PayPal QR code image and paste the URL here. Customers will scan this to pay.</p>
+          </div>
+
+          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{fontSize:14,fontWeight:800,color:'#374151',marginBottom:14}}>📧 PayPal Account</div>
+            <TF label="PayPal Email" val={draft.paypal?.email||''} set={v=>setDraft((d:any)=>({...d,paypal:{...d.paypal,email:v}}))} ph="your@paypal.com" />
+            <p style={{fontSize:11,color:'#9ca3af',marginTop:4}}>Shown to customers so they can verify they're paying the right account.</p>
+          </div>
+
+          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{fontSize:14,fontWeight:800,color:'#374151',marginBottom:14}}>📝 Payment Instructions</div>
+            <div style={{marginBottom:8}}>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:6}}>Instructions (shown to customer after ordering)</label>
+              <textarea value={draft.paypal?.instructions||''} onChange={e=>setDraft((d:any)=>({...d,paypal:{...d.paypal,instructions:e.target.value}}))}
+                rows={3} placeholder="e.g. Scan QR, enter the exact amount, upload screenshot as proof."
+                style={{width:'100%',padding:'10px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',resize:'vertical' as const,boxSizing:'border-box' as const}} />
+            </div>
+            <p style={{fontSize:11,color:'#9ca3af'}}>Also included in the order confirmation email.</p>
+          </div>
+        </>)}
       </div>
     </div>
   );

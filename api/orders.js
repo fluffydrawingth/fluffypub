@@ -96,6 +96,17 @@ async function tplOrderCreated(order) {
     </div>
     <h3 style="margin:0 0 10px;font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.5px">รายการสินค้า / Items</h3>
     ${orderSummaryHtml(order)}
+    ${order.payment_method === 'paypal' ? `
+    <div style="background:#eff6ff;border-radius:12px;padding:16px;margin-top:20px;border:1px solid #bfdbfe">
+      <div style="font-weight:700;color:#1e40af;font-size:14px;margin-bottom:8px">🅿️ วิธีชำระผ่าน PayPal / PayPal Payment Instructions</div>
+      <ol style="margin:0;padding-left:20px;color:#1e3a8a;font-size:13px;line-height:1.8">
+        <li>สแกน QR Code PayPal ในหน้าคำสั่งซื้อ / Scan the PayPal QR on the order page</li>
+        <li>ชำระเงินตามยอดที่ระบุ ฿${Number(total).toLocaleString('th-TH')} / Pay the exact amount</li>
+        <li>ถ่ายสกรีนช็อตการชำระเงิน / Screenshot your payment receipt</li>
+        <li>อัปโหลดสกรีนช็อตในหน้าคำสั่งซื้อ / Upload the screenshot on the order page</li>
+      </ol>
+      <a href="${link}" style="display:inline-block;margin-top:12px;background:#1d4ed8;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📱 ดูคำสั่งซื้อ / View Order →</a>
+    </div>` : `
     <div style="background:#fef3c7;border-radius:12px;padding:16px;margin-top:20px;border:1px solid #fcd34d">
       <div style="font-weight:700;color:#92400e;font-size:14px;margin-bottom:8px">💳 วิธีชำระเงิน / Payment Instructions</div>
       <ol style="margin:0;padding-left:20px;color:#78350f;font-size:13px;line-height:1.8">
@@ -104,7 +115,7 @@ async function tplOrderCreated(order) {
         <li>อัปโหลดสลิปในหน้าคำสั่งซื้อ</li>
       </ol>
       <a href="${link}" style="display:inline-block;margin-top:12px;background:#f472b6;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📱 ดูคำสั่งซื้อ / View Order →</a>
-    </div>
+    </div>`}
     <div style="background:#fdf2f8;border-radius:12px;padding:14px 16px;margin-top:16px;border:1px solid #f9a8d4;text-align:center">
       <div style="font-size:12px;color:#9ca3af;font-weight:700;margin-bottom:6px">🔗 ติดตามคำสั่งซื้อ / Track Your Order</div>
       <p style="margin:0 0 12px;font-size:12px;color:#374151">บันทึกลิงก์นี้ไว้เพื่อดูสถานะออเดอร์ / Click the button to view your order.</p>
@@ -426,7 +437,7 @@ module.exports = async function handler(req, res) {
 
   // POST create order
   if (req.method === 'POST' && !action) {
-    const { items, customerName, customerEmail, customerPhone, shippingAddress, promoCode, total_thb, shipping_thb: shippingFromCart, subtotal_thb } = req.body || {};
+    const { items, customerName, customerEmail, customerPhone, shippingAddress, promoCode, total_thb, shipping_thb: shippingFromCart, subtotal_thb, payment_method } = req.body || {};
     if (!items?.length || !customerName || !customerEmail) return json(res, 400, { error: 'items, name, email required' });
 
     // Validate products exist and get image/artist data only (do NOT override prices or types)
@@ -491,6 +502,7 @@ module.exports = async function handler(req, res) {
       status: 'pending_payment',
       payment_status: 'pending',
       type: hasPhysical ? 'physical' : 'digital',
+      payment_method: payment_method || 'promptpay',
       access_token: accessToken,
     }).select().single();
     if (error) {
