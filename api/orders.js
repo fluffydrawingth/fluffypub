@@ -87,6 +87,41 @@ async function tplOrderCreated(order) {
   const ref = (order.id || '').slice(-8).toUpperCase();
   const total = order.total_thb || order.total_amount || 0;
   const link = orderLink(order);
+  const isPayPal = order.payment_method === 'paypal';
+
+  if (isPayPal) {
+    // English-only email for international PayPal customers
+    return await emailWrapper(`
+      <h2 style="margin:0 0 6px;color:#111827;font-size:20px">🎉 Thank you for your order!</h2>
+      <p style="margin:0 0 20px;color:#6b7280;font-size:13px">We've received your order and it's waiting for payment confirmation.</p>
+      <div style="background:#fdf2f8;border-radius:12px;padding:14px 16px;margin-bottom:20px;border:1.5px solid #f9a8d4">
+        <div style="font-size:12px;color:#9ca3af;font-weight:700;letter-spacing:0.5px;margin-bottom:4px">ORDER NUMBER</div>
+        <div style="font-size:22px;font-weight:900;color:#f472b6">#${ref}</div>
+      </div>
+      <h3 style="margin:0 0 10px;font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.5px">Your Items</h3>
+      ${orderSummaryHtml(order)}
+      <div style="background:#eff6ff;border-radius:12px;padding:16px;margin-top:20px;border:1px solid #bfdbfe">
+        <div style="font-weight:700;color:#1e40af;font-size:14px;margin-bottom:8px">🅿️ How to Pay via PayPal</div>
+        <ol style="margin:0;padding-left:20px;color:#1e3a8a;font-size:13px;line-height:1.8">
+          <li>Open your order page using the button below</li>
+          <li>Scan the PayPal QR code shown on the page</li>
+          <li>Send exactly ฿${Number(total).toLocaleString('en-US')} THB</li>
+          <li>Screenshot your PayPal payment confirmation</li>
+          <li>Upload the screenshot on the order page as proof of payment</li>
+          <li>We'll confirm your payment within 24 hours 🌸</li>
+        </ol>
+        <a href="${link}" style="display:inline-block;margin-top:12px;background:#1d4ed8;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📱 View My Order & Pay →</a>
+      </div>
+      <div style="background:#f0fdf4;border-radius:12px;padding:14px 16px;margin-top:16px;border:1px solid #bbf7d0;text-align:center">
+        <div style="font-size:12px;color:#9ca3af;font-weight:700;margin-bottom:6px">⬇️ Your Digital Download</div>
+        <p style="margin:0 0 12px;font-size:12px;color:#374151">Once your payment is confirmed, your download link will be sent to this email address automatically.</p>
+        <a href="${link}" style="display:inline-block;background:#16a34a;color:white;text-decoration:none;padding:10px 24px;border-radius:20px;font-weight:700;font-size:13px">🔍 Track My Order →</a>
+      </div>
+      <p style="margin:20px 0 0;font-size:12px;color:#9ca3af">Questions? Reply to this email and we'll be happy to help. 💕</p>
+    `);
+  }
+
+  // Thai/English bilingual email for PromptPay customers
   return await emailWrapper(`
     <h2 style="margin:0 0 6px;color:#111827;font-size:20px">🎉 ขอบคุณสำหรับการสั่งซื้อ!</h2>
     <p style="margin:0 0 20px;color:#6b7280;font-size:13px">Thank you for your order! We've received it and are waiting for payment.</p>
@@ -96,17 +131,6 @@ async function tplOrderCreated(order) {
     </div>
     <h3 style="margin:0 0 10px;font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.5px">รายการสินค้า / Items</h3>
     ${orderSummaryHtml(order)}
-    ${order.payment_method === 'paypal' ? `
-    <div style="background:#eff6ff;border-radius:12px;padding:16px;margin-top:20px;border:1px solid #bfdbfe">
-      <div style="font-weight:700;color:#1e40af;font-size:14px;margin-bottom:8px">🅿️ วิธีชำระผ่าน PayPal / PayPal Payment Instructions</div>
-      <ol style="margin:0;padding-left:20px;color:#1e3a8a;font-size:13px;line-height:1.8">
-        <li>สแกน QR Code PayPal ในหน้าคำสั่งซื้อ / Scan the PayPal QR on the order page</li>
-        <li>ชำระเงินตามยอดที่ระบุ ฿${Number(total).toLocaleString('th-TH')} / Pay the exact amount</li>
-        <li>ถ่ายสกรีนช็อตการชำระเงิน / Screenshot your payment receipt</li>
-        <li>อัปโหลดสกรีนช็อตในหน้าคำสั่งซื้อ / Upload the screenshot on the order page</li>
-      </ol>
-      <a href="${link}" style="display:inline-block;margin-top:12px;background:#1d4ed8;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📱 ดูคำสั่งซื้อ / View Order →</a>
-    </div>` : `
     <div style="background:#fef3c7;border-radius:12px;padding:16px;margin-top:20px;border:1px solid #fcd34d">
       <div style="font-weight:700;color:#92400e;font-size:14px;margin-bottom:8px">💳 วิธีชำระเงิน / Payment Instructions</div>
       <ol style="margin:0;padding-left:20px;color:#78350f;font-size:13px;line-height:1.8">
@@ -115,7 +139,7 @@ async function tplOrderCreated(order) {
         <li>อัปโหลดสลิปในหน้าคำสั่งซื้อ</li>
       </ol>
       <a href="${link}" style="display:inline-block;margin-top:12px;background:#f472b6;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">📱 ดูคำสั่งซื้อ / View Order →</a>
-    </div>`}
+    </div>
     <div style="background:#fdf2f8;border-radius:12px;padding:14px 16px;margin-top:16px;border:1px solid #f9a8d4;text-align:center">
       <div style="font-size:12px;color:#9ca3af;font-weight:700;margin-bottom:6px">🔗 ติดตามคำสั่งซื้อ / Track Your Order</div>
       <p style="margin:0 0 12px;font-size:12px;color:#374151">บันทึกลิงก์นี้ไว้เพื่อดูสถานะออเดอร์ / Click the button to view your order.</p>
