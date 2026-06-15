@@ -2994,7 +2994,7 @@ function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v:
             <div style={{ position: 'relative' }}>
               <input type="number" min="0"
                 value={v.stock_quantity !== undefined && v.stock_quantity !== '' ? v.stock_quantity : (v.stock !== undefined && v.stock !== '' ? v.stock : '')}
-                onChange={e => { const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value)||0); update(v.id, 'stock_quantity', val); update(v.id, 'stock', val); }}
+                onChange={e => { const val = e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value)||0); onChange(variants.map(v2 => v2.id === v.id ? { ...v2, stock_quantity: val, stock: val } : v2)); }}
                 placeholder="∞"
                 style={{ padding: '7px 6px', borderRadius: 8, border: `1.5px solid ${(v.stock_quantity===0||v.stock===0)?'#fca5a5':'#e5e7eb'}`, fontSize: 12, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const, background: (v.stock_quantity===0||v.stock===0)?'#fef2f2':'white' }}
                 onFocus={e => e.target.style.borderColor = P}
