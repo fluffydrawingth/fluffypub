@@ -41,6 +41,11 @@ function parse(hash: string): Route {
   if (p[0]==='track-order') return { path:'/track-order' };
   if (p[0]==='free-downloads' && p[1]) return { path:'/free-downloads/:slug', params:{ slug:p[1] } };
   if (p[0]==='free-downloads') return { path:'/free-downloads' };
+  // Legal pages — fixed slugs
+  if (p[0]==='about-us')          return { path:'/about-us' };
+  if (p[0]==='privacy-policy')    return { path:'/privacy-policy' };
+  if (p[0]==='terms-of-service')  return { path:'/terms-of-service' };
+  if (p[0]==='artist-guidelines') return { path:'/artist-guidelines' };
   return { path:'/' };
 }
 
