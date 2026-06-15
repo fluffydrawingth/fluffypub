@@ -90,6 +90,8 @@ async function tplOrderCreated(order) {
   const isPayPal = order.payment_method === 'paypal';
 
   if (isPayPal) {
+    const totalUSD = order.total_usd;
+    const usdDisplay = totalUSD != null ? `$${Number(totalUSD).toFixed(2)} USD` : '(see order page for amount)';
     // English-only email for international PayPal customers
     return await emailWrapper(`
       <h2 style="margin:0 0 6px;color:#111827;font-size:20px">🎉 Thank you for your order!</h2>
@@ -97,6 +99,7 @@ async function tplOrderCreated(order) {
       <div style="background:#fdf2f8;border-radius:12px;padding:14px 16px;margin-bottom:20px;border:1.5px solid #f9a8d4">
         <div style="font-size:12px;color:#9ca3af;font-weight:700;letter-spacing:0.5px;margin-bottom:4px">ORDER NUMBER</div>
         <div style="font-size:22px;font-weight:900;color:#f472b6">#${ref}</div>
+        ${totalUSD != null ? `<div style="font-size:16px;font-weight:700;color:#0070ba;margin-top:4px">${usdDisplay}</div>` : ''}
       </div>
       <h3 style="margin:0 0 10px;font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.5px">Your Items</h3>
       ${orderSummaryHtml(order)}
@@ -105,7 +108,7 @@ async function tplOrderCreated(order) {
         <ol style="margin:0;padding-left:20px;color:#1e3a8a;font-size:13px;line-height:1.8">
           <li>Open your order page using the button below</li>
           <li>Click the <strong>"Pay with PayPal →"</strong> button on the page</li>
-          <li>Complete the payment on PayPal (amount is pre-filled in USD)</li>
+          <li>Complete your payment of <strong>${usdDisplay}</strong> on PayPal</li>
           <li>Screenshot your PayPal payment confirmation</li>
           <li>Return to the order page and upload the screenshot as proof of payment</li>
           <li>We'll confirm your payment within 24 hours 🌸</li>
@@ -461,7 +464,7 @@ module.exports = async function handler(req, res) {
 
   // POST create order
   if (req.method === 'POST' && !action) {
-    const { items, customerName, customerEmail, customerPhone, shippingAddress, promoCode, total_thb, shipping_thb: shippingFromCart, subtotal_thb, payment_method } = req.body || {};
+    const { items, customerName, customerEmail, customerPhone, shippingAddress, promoCode, total_thb, total_usd, shipping_thb: shippingFromCart, subtotal_thb, subtotal_usd, payment_method } = req.body || {};
     if (!items?.length || !customerName || !customerEmail) return json(res, 400, { error: 'items, name, email required' });
 
     // Validate products exist and get image/artist data only (do NOT override prices or types)
@@ -488,6 +491,7 @@ module.exports = async function handler(req, res) {
         optionName: cartItem.optionName || '',
         optionType: cartItem.optionType || 'digital',  // NEVER default - must come from cart
         unitPriceTHB,
+        unitPriceUSD: cartItem.unitPriceUSD ?? null,
         qty,
         lineTotalTHB: unitPriceTHB * qty,
         // Digital download links (unlocked after payment)
@@ -522,6 +526,8 @@ module.exports = async function handler(req, res) {
       shipping_thb: shipping_thb,
       total_thb: grand_total_thb,
       total_amount: grand_total_thb,
+      total_usd: total_usd || null,
+      subtotal_usd: subtotal_usd || null,
       promo_code: promoCode || null,
       status: 'pending_payment',
       payment_status: 'pending',

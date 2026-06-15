@@ -13,7 +13,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const { theme } = useTheme();
   const { add, items, increment } = useCart();
   const { navigate } = useRouter();
-  const { lang, t, tRaw } = useLang();
+  const { lang, t, tRaw, price: fmtPrice } = useLang();
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState<any>(null);
@@ -77,23 +77,27 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const title = (lang === 'th' && product.title_th) ? product.title_th : product.title;
   const description = (lang === 'th' && product.description_th) ? product.description_th : product.description;
   const priceTHB = Number(product.price_thb) || 0;
+  const priceUSD = Number(product.price_usd) || null;
 
   // Build options from product config
-  const options: { id: string; name: string; type: 'physical'|'digital'; price: number; stock?: number|null; inStock: boolean }[] = [];
+  const options: { id: string; name: string; type: 'physical'|'digital'; priceTHB: number; priceUSD: number|null; stock?: number|null; inStock: boolean }[] = [];
   const physicalVariants = (product.variants || []).filter((v: any) => v.enabled !== false);
   physicalVariants.forEach((v: any) => {
-    const price = Number(v.price_thb) > 0 ? Number(v.price_thb) : priceTHB;
+    const vTHB = Number(v.price_thb) > 0 ? Number(v.price_thb) : priceTHB;
+    const vUSD = Number(v.price_usd) > 0 ? Number(v.price_usd) : priceUSD;
     const stock = v.stock_quantity !== undefined ? Number(v.stock_quantity) : (v.stock !== undefined ? Number(v.stock) : null);
-    const inStock = stock === null || stock > 0; // null = unlimited
-    options.push({ id: v.id, name: v.name, type: 'physical', price, stock, inStock });
+    const inStock = stock === null || stock > 0;
+    options.push({ id: v.id, name: v.name, type: 'physical', priceTHB: vTHB, priceUSD: vUSD, stock, inStock });
   });
   if (product.is_digital === true || (product.is_digital == null && (product.type === 'digital' || product.type === 'both'))) {
-    const dPrice = Number(product.digital_price_thb || product.price_thb) || priceTHB;
-    options.push({ id: 'digital', name: tRaw('ไฟล์ดิจิทัล','Digital file'), type: 'digital', price: dPrice, inStock: true });
+    const dTHB = Number(product.digital_price_thb || product.price_thb) || priceTHB;
+    const dUSD = Number(product.digital_price_usd || product.price_usd) || priceUSD;
+    options.push({ id: 'digital', name: tRaw('ไฟล์ดิจิทัล','Digital file'), type: 'digital', priceTHB: dTHB, priceUSD: dUSD, inStock: true });
   }
 
   // Display price: selected option or base
-  const displayTHB = selectedOption ? selectedOption.price : priceTHB;
+  const displayTHB = selectedOption ? selectedOption.priceTHB : priceTHB;
+  const displayUSD = selectedOption ? selectedOption.priceUSD : priceUSD;
   const cartKey = `${product.id}::${selectedOption?.id || ''}`;
   const alreadyInCart = selectedOption && items.some(i => `${i.id}::${i.optionId}` === cartKey);
 
@@ -104,14 +108,14 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     }
     const opt = selectedOption || options[0];
     if (!opt) return;
-    if (opt.price <= 0) { setOptionError(tRaw('ราคาไม่ถูกต้อง','Price not configured.')); return; }
+    if (opt.priceTHB <= 0) { setOptionError(tRaw('ราคาไม่ถูกต้อง','Price not configured.')); return; }
     if (!opt.inStock) { setOptionError(tRaw('สินค้าหมด','This option is out of stock.')); return; }
     setOptionError('');
     const k = `${product.id}::${opt.id}`;
     if (items.some(i => `${i.id}::${i.optionId}` === k)) {
       increment(product.id, opt.id);
     } else {
-      add({ id: product.id, title, image: product.image, coverImageUrl: product.cover_image_url || undefined, artist: product.artistName || product.artist_name || product.artist || '', slug: product.slug, optionId: opt.id, optionName: opt.name, optionType: opt.type, unitPriceTHB: opt.price });
+      add({ id: product.id, title, image: product.image, coverImageUrl: product.cover_image_url || undefined, artist: product.artistName || product.artist_name || product.artist || '', slug: product.slug, optionId: opt.id, optionName: opt.name, optionType: opt.type, unitPriceTHB: opt.priceTHB, unitPriceUSD: opt.priceUSD });
     }
   };
 
@@ -174,7 +178,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             {/* Price */}
             <div style={{marginBottom:16}}>
               <span className="pd-price" style={{fontWeight:900,color:theme.textColor}}>
-                {displayTHB > 0 ? `฿${displayTHB.toLocaleString('th-TH')}` : '—'}
+                {fmtPrice(displayTHB, displayUSD)}
               </span>
             </div>
 
@@ -194,7 +198,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                         {selectedOption?.id===o.id && '✓ '}{o.name}
                         {!o.inStock && <span style={{fontSize:11,color:'#ef4444',marginLeft:8,fontWeight:600}}>Out of stock</span>}
                       </span>
-                      <span style={{fontSize:14,fontWeight:800,color:o.inStock?p:'#9ca3af'}}>฿{o.price.toLocaleString('th-TH')}</span>
+                      <span style={{fontSize:14,fontWeight:800,color:o.inStock?p:'#9ca3af'}}>{fmtPrice(o.priceTHB, o.priceUSD)}</span>
                     </button>
                   ))}
                 </div>

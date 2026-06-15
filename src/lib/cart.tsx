@@ -7,11 +7,11 @@ export interface CartItem {
   coverImageUrl?: string;
   artist: string;
   slug?: string;
-  // Option (variant or digital)
-  optionId: string;          // variant.id or 'digital'
-  optionName: string;        // e.g. "สันห่วงปกติ" or "Digital file"
+  optionId: string;
+  optionName: string;
   optionType: 'physical' | 'digital';
   unitPriceTHB: number;
+  unitPriceUSD: number | null;
   qty: number;
 }
 
@@ -25,12 +25,16 @@ interface CartCtx {
   subtotalTHB: number;
   shippingTHB: number;
   totalTHB: number;
+  subtotalUSD: number | null;
+  totalUSD: number | null;
   totalCount: number;
 }
 
 const CartContext = createContext<CartCtx>({
-  items: [], add: ()=>{}, increment: ()=>{}, decrement: ()=>{}, remove: ()=>{}, clear: ()=>{},
-  subtotalTHB: 0, shippingTHB: 0, totalTHB: 0, totalCount: 0,
+  items: [], add: () => {}, increment: () => {}, decrement: () => {}, remove: () => {}, clear: () => {},
+  subtotalTHB: 0, shippingTHB: 0, totalTHB: 0,
+  subtotalUSD: null, totalUSD: null,
+  totalCount: 0,
 });
 
 const key = (id: string, optionId: string) => `${id}::${optionId}`;
@@ -75,17 +79,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const subtotalTHB = items.reduce((s, i) => s + i.unitPriceTHB * i.qty, 0);
 
-  // Shipping: total qty of physical items
-  const physicalQty = items
-    .filter(i => i.optionType === 'physical')
-    .reduce((s, i) => s + i.qty, 0);
+  const physicalQty = items.filter(i => i.optionType === 'physical').reduce((s, i) => s + i.qty, 0);
   const shippingTHB = physicalQty === 0 ? 0 : physicalQty === 1 ? 25 : 0;
 
   const totalTHB = subtotalTHB + shippingTHB;
   const totalCount = items.reduce((s, i) => s + i.qty, 0);
 
+  // USD totals — null if any item is missing a USD price
+  const hasAllUSD = items.length > 0 && items.every(i => i.unitPriceUSD != null && i.unitPriceUSD > 0);
+  const subtotalUSD = hasAllUSD
+    ? items.reduce((s, i) => s + (i.unitPriceUSD ?? 0) * i.qty, 0)
+    : null;
+  // Shipping is THB-only (physical books ship within Thailand); digital-only orders have no shipping
+  const totalUSD = subtotalUSD != null ? subtotalUSD : null;
+
   return (
-    <CartContext.Provider value={{ items, add, increment, decrement, remove, clear, subtotalTHB, shippingTHB, totalTHB, totalCount }}>
+    <CartContext.Provider value={{ items, add, increment, decrement, remove, clear, subtotalTHB, shippingTHB, totalTHB, subtotalUSD, totalUSD, totalCount }}>
       {children}
     </CartContext.Provider>
   );

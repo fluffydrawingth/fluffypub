@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
 export type Lang = 'th' | 'en';
+export type Currency = 'THB' | 'USD';
 
 // Default translations
 export const DEFAULT_TRANSLATIONS: Record<string, { th: string; en: string }> = {
@@ -61,30 +62,45 @@ export const DEFAULT_TRANSLATIONS: Record<string, { th: string; en: string }> = 
   select_option: { th: 'เลือกรูปแบบ',    en: 'Select Option' },
 };
 
+function detectDefaultCurrency(): Currency {
+  try {
+    const stored = localStorage.getItem('fluffy_currency') as Currency | null;
+    if (stored === 'THB' || stored === 'USD') return stored;
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return tz === 'Asia/Bangkok' ? 'THB' : 'USD';
+  } catch {
+    return 'THB';
+  }
+}
+
 interface LangCtx {
   lang: Lang;
   setLang: (l: Lang) => void;
+  currency: Currency;
+  setCurrency: (c: Currency) => void;
+  currencySymbol: string;
   t: (key: string, fallbackEn?: string) => string;
   tRaw: (th: string, en: string) => string;
-  price: (thb?: number|null, usd?: number|null, base?: number) => string;
-  currency: string;
+  price: (thb?: number | null, usd?: number | null) => string;
   translations: Record<string, { th: string; en: string }>;
   setTranslations: (t: Record<string, { th: string; en: string }>) => void;
 }
 
 const LangContext = createContext<LangCtx>({
-  lang: 'th', setLang: ()=>{},
+  lang: 'th', setLang: () => {},
+  currency: 'THB', setCurrency: () => {},
+  currencySymbol: '฿',
   t: (k) => DEFAULT_TRANSLATIONS[k]?.th || k,
   tRaw: (th) => th,
-  price: (t,u,b) => `฿${Math.round(t ?? (b ? b*35 : 0))}`,
-  currency: '฿',
+  price: (thb) => `฿${Math.round(thb ?? 0)}`,
   translations: DEFAULT_TRANSLATIONS,
-  setTranslations: ()=>{},
+  setTranslations: () => {},
 });
 
 export function LangProvider({ children }: { children: React.ReactNode }) {
   const stored = (typeof localStorage !== 'undefined' && localStorage.getItem('fluffy_lang') as Lang) || 'th';
   const [lang, setLangState] = useState<Lang>(stored);
+  const [currency, setCurrencyState] = useState<Currency>(() => detectDefaultCurrency());
   const [translations, setTranslations] = useState(DEFAULT_TRANSLATIONS);
 
   const setLang = useCallback((l: Lang) => {
@@ -92,34 +108,34 @@ export function LangProvider({ children }: { children: React.ReactNode }) {
     if (typeof localStorage !== 'undefined') localStorage.setItem('fluffy_lang', l);
   }, []);
 
-  // Translate by key
+  const setCurrency = useCallback((c: Currency) => {
+    setCurrencyState(c);
+    if (typeof localStorage !== 'undefined') localStorage.setItem('fluffy_currency', c);
+  }, []);
+
   const t = useCallback((key: string, fallbackEn?: string) => {
     const entry = translations[key];
     if (!entry) return fallbackEn || key;
     return lang === 'th' ? entry.th : entry.en;
   }, [lang, translations]);
 
-  // Translate raw TH/EN strings directly
   const tRaw = useCallback((th: string, en: string) => lang === 'th' ? th : en, [lang]);
 
-  // Price formatting — strict: TH=THB only, EN=USD only, never multiply
-  const price = useCallback((thb?: number|null, usd?: number|null, base?: number) => {
-    if (lang === 'th') {
-      // Use price_thb if available; never multiply USD by 35
+  // Price formatting — uses currency, not language
+  const price = useCallback((thb?: number | null, usd?: number | null): string => {
+    if (currency === 'THB') {
       if (thb != null && thb > 0) return `฿${Number(thb).toLocaleString('th-TH', { maximumFractionDigits: 0 })}`;
-      // base is only used if it IS already a THB amount (e.g. passed from THB context)
-      if (base != null && base > 0) return `฿${Number(base).toLocaleString('th-TH', { maximumFractionDigits: 0 })}`;
       return '฿—';
     }
+    // USD
     if (usd != null && usd > 0) return `$${Number(usd).toFixed(2)}`;
-    if (base != null && base > 0) return `$${Number(base).toFixed(2)}`;
     return '$—';
-  }, [lang]);
+  }, [currency]);
 
-  const currency = lang === 'th' ? '฿' : '$';
+  const currencySymbol = currency === 'THB' ? '฿' : '$';
 
   return (
-    <LangContext.Provider value={{ lang, setLang, t, tRaw, price, currency, translations, setTranslations }}>
+    <LangContext.Provider value={{ lang, setLang, currency, setCurrency, currencySymbol, t, tRaw, price, translations, setTranslations }}>
       {children}
     </LangContext.Provider>
   );

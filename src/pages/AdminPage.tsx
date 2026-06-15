@@ -364,6 +364,7 @@ function ProductsTab() {
   const [titleTh, setTitleTh] = useState('');
   const [titleEn, setTitleEn] = useState('');
   const [priceTHB, setPriceTHB] = useState('');
+  const [priceUSD, setPriceUSD] = useState('');
 
   const [descTh, setDescTh] = useState('');
 
@@ -408,6 +409,7 @@ function ProductsTab() {
     setVariants(Array.isArray(pr.variants) ? pr.variants : []);
     setTitleTh(pr.title_th||''); setTitleEn(pr.title_en||'');
     setPriceTHB(String(pr.price_thb||''));
+    setPriceUSD(String(pr.price_usd||''));
     setDescTh(pr.description_th||'');
     setR2Key(pr.r2_key||''); setR2FileName(pr.r2_file_name||'');
     setR2FileSize(pr.file_size||0); setR2FileType(pr.file_type||''); setR2UploadMsg('');
@@ -440,6 +442,7 @@ function ProductsTab() {
       variants:variants,
       title_th:titleTh||null, title_en:titleEn||null,
       price_thb:priceTHB?parseFloat(priceTHB):null,
+      price_usd:priceUSD?parseFloat(priceUSD):null,
       description_th:descTh||null };
     if (originalPrice) body.original_price = parseFloat(originalPrice);
     const result = editingId ? await api.updateProduct(editingId, body) : await api.createProduct(body);
@@ -531,6 +534,7 @@ function ProductsTab() {
             {inp('Title (TH)', titleTh, setTitleTh, 'ชื่อสินค้าภาษาไทย')}
             {inp('Title (EN fallback)', titleEn, setTitleEn, 'English title fallback')}
             {inp('ราคาขาย (THB ฿) *', priceTHB, setPriceTHB, '350', 'number')}
+            {inp('Price (USD $)', priceUSD, setPriceUSD, '9.99', 'number')}
             {inp('ราคาเปรียบเทียบ (THB ฿)', originalPrice, setOriginalPrice, '490', 'number')}
             <div>
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Category *</label>
@@ -582,6 +586,7 @@ function ProductsTab() {
                 <div style={{fontSize:13,fontWeight:800,color:'#1d4ed8',marginBottom:12}}>⬇️ Digital File Settings</div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
                   {inp('ราคาไฟล์ดิจิทัล (THB ฿)', priceTHB, setPriceTHB, '149', 'number')}
+                  {inp('Digital Price (USD $)', priceUSD, setPriceUSD, '3.99', 'number')}
                 </div>
 
                 {/* R2 file upload */}
@@ -2891,7 +2896,7 @@ function FooterCMSEditor({ footer, onFooterChange }: { footer: FooterConfig; onF
 function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v: any[]) => void }) {
   const vuid = () => Math.random().toString(36).slice(2, 9);
 
-  const add = () => onChange([...variants, { id: vuid(), name: '', price_thb: '', enabled: true, stock: '', stock_quantity: '' }]);
+  const add = () => onChange([...variants, { id: vuid(), name: '', price_thb: '', price_usd: '', enabled: true, stock: '', stock_quantity: '' }]);
   const update = (id: string, key: string, val: any) => onChange(variants.map(v => v.id === id ? { ...v, [key]: val } : v));
   const del = (id: string) => onChange(variants.filter(v => v.id !== id));
   const move = (i: number, dir: number) => {
@@ -2909,9 +2914,10 @@ function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v:
         <button onClick={add} style={{ padding: '4px 12px', borderRadius: 8, border: `1.5px solid ${P}`, background: '#fdf2f8', color: P, cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'inherit' }}>+ Add Variant</button>
       </div>
       {variants.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 64px 44px auto auto auto', gap: 6, padding: '0 0 4px', marginBottom: 4 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 64px 44px auto auto auto', gap: 6, padding: '0 0 4px', marginBottom: 4 }}>
           <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, paddingLeft: 10 }}>VARIANT NAME</span>
           <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, paddingLeft: 18 }}>PRICE ฿</span>
+          <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, paddingLeft: 18 }}>PRICE $</span>
           <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, textAlign: 'center' as const }}>STOCK</span>
           <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700 }}>ON</span>
         </div>
@@ -2925,7 +2931,7 @@ function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v:
 
       {variants.map((v, i) => (
         <div key={v.id} style={{ background: '#f9fafb', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 64px 44px auto auto auto', gap: 6, alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 90px 64px 44px auto auto auto', gap: 6, alignItems: 'center' }}>
             <input
               value={v.name}
               onChange={e => update(v.id, 'name', e.target.value)}
@@ -2937,6 +2943,12 @@ function VariantsEditor({ variants, onChange }: { variants: any[]; onChange: (v:
             <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: 12 }}>฿</span>
               <input type="number" value={v.price_thb||v.price||''} onChange={e => update(v.id, 'price_thb', e.target.value)} placeholder="THB"
+                style={{ padding: '7px 6px 7px 18px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 12, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const }}
+                onFocus={e => e.target.style.borderColor = P} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
+            </div>
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 7, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', fontSize: 12 }}>$</span>
+              <input type="number" value={v.price_usd||''} onChange={e => update(v.id, 'price_usd', e.target.value)} placeholder="USD"
                 style={{ padding: '7px 6px 7px 18px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 12, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' as const }}
                 onFocus={e => e.target.style.borderColor = P} onBlur={e => e.target.style.borderColor = '#e5e7eb'} />
             </div>

@@ -161,6 +161,7 @@ export default function GuestOrderPage({ token }: { token: string }) {
 
   const ref = '#' + (order.id || '').slice(-8).toUpperCase();
   const totalTHB = order.total_thb || order.total_amount || 0;
+  const totalUSD: number | null = order.total_usd ?? null;
   const st = STATUS_TEXT[order.status];
 
   return (
@@ -282,12 +283,11 @@ export default function GuestOrderPage({ token }: { token: string }) {
                     <div style={{ fontWeight: 900, fontSize: 16, color: '#003087', marginBottom: 4 }}>Pay with PayPal</div>
                     {(() => {
                       const pp = (theme as any).paypal;
-                      const rate = pp?.usd_rate || 35;
-                      const usd = (totalTHB / rate).toFixed(2);
-                      const link = pp?.username ? `https://www.paypal.com/paypalme/${pp.username}/${usd}USD` : '';
+                      const usd = totalUSD != null ? totalUSD.toFixed(2) : null;
+                      const link = pp?.username && usd ? `https://www.paypal.com/paypalme/${pp.username}/${usd}USD` : '';
                       return (<>
-                        <div style={{ fontSize: 22, fontWeight: 900, color: theme.textColor, marginBottom: 2 }}>${usd} USD</div>
-                        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 14 }}>≈ ฿{Number(totalTHB).toLocaleString('th-TH')} THB{pp?.email ? ` · ${pp.email}` : ''}</div>
+                        <div style={{ fontSize: 22, fontWeight: 900, color: theme.textColor, marginBottom: 2 }}>{usd != null ? `$${usd} USD` : '$— USD'}</div>
+                        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 14 }}>฿{Number(totalTHB).toLocaleString('th-TH')} THB{pp?.email ? ` · ${pp.email}` : ''}</div>
                         {link ? (
                           <a href={link} target="_blank" rel="noreferrer"
                             style={{ display: 'block', background: '#0070ba', color: 'white', textDecoration: 'none', padding: '13px 20px', borderRadius: 14, fontSize: 14, fontWeight: 800, marginBottom: 12, boxShadow: '0 4px 14px #0070ba44' }}>
