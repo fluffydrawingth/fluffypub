@@ -54,7 +54,20 @@ function HeroSection() {
   const { lang } = useLang();
   const tl = (en: string, th?: string) => (lang === 'th' && th) ? th : en;
   const p = theme.primaryColor;
-  const stats = theme.heroStats || [];
+
+  const heroBadge = tl(theme.heroBadge || '', theme.heroBadge_th);
+  const shopBtnText = tl(theme.heroShopBtn || 'Shop Now 🛍️', theme.heroShopBtn_th);
+  const artistsBtnText = tl(theme.heroArtistsBtn || 'Meet Artists 🎨', theme.heroArtistsBtn_th);
+
+  // Named stat fields — only show if value is set
+  const namedStats = [
+    theme.statBooks      ? { value: theme.statBooks,      label: tl('Books', 'หนังสือ') }            : null,
+    theme.statColorists  ? { value: theme.statColorists,  label: tl('Happy Colorists', 'นักระบายสี') } : null,
+    theme.statArtists    ? { value: theme.statArtists,    label: tl('Artists', 'ศิลปิน') }            : null,
+    theme.statRating     ? { value: theme.statRating,     label: tl('Rating', 'คะแนน') }              : null,
+  ].filter(Boolean) as { value: string; label: string }[];
+  const stats = namedStats.length > 0 ? namedStats : (theme.heroStats || []);
+
   return (
     <section style={{
       background: theme.heroCrop?.croppedDataUrl
@@ -74,9 +87,11 @@ function HeroSection() {
         <span key={i} style={{ position:'absolute', top:`${10+(i*11)%70}%`, left:`${5+(i*13)%90}%`, fontSize:`${18+(i*7)%20}px`, opacity:0.4, pointerEvents:'none' }}>{emoji}</span>
       ))}
       <div className="hp-hero-inner" style={{ position:'relative', zIndex:1, width:'100%', maxWidth:720, margin:'0 auto', display:'flex', flexDirection:'column', alignItems:'center' }}>
-        <div style={{ display:'inline-block', background:'rgba(255,255,255,0.6)', backdropFilter:'blur(10px)', borderRadius:16, padding:'6px 20px', fontSize:13, fontWeight:700, color:p, marginBottom:20, letterSpacing:1, border:`1.5px solid ${p}30` }}>
-          🌸 Digital Coloring Books — Download Instantly
-        </div>
+        {heroBadge && (
+          <div style={{ display:'inline-block', background:'rgba(255,255,255,0.6)', backdropFilter:'blur(10px)', borderRadius:16, padding:'6px 20px', fontSize:13, fontWeight:700, color:p, marginBottom:20, letterSpacing:1, border:`1.5px solid ${p}30` }}>
+            {heroBadge}
+          </div>
+        )}
         <h1 style={{ fontSize:'clamp(30px,6vw,72px)', fontWeight:900, lineHeight:1.1, color:theme.textColor, margin:'0 0 16px', textShadow:'0 2px 20px rgba(255,255,255,0.8)', fontFamily:theme.fontFamily, textAlign:'center' }}>
           {tl(theme.heroTitle || 'Color Your World ✨', theme.heroTitle_th)}
         </h1>
@@ -84,8 +99,8 @@ function HeroSection() {
           {tl(theme.heroSubtitle || 'Adorable coloring books for every dreamer 🌸', theme.heroSubtitle_th)}
         </p>
         <div className="hp-hero-btns" style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap' }}>
-          <button onClick={()=>navigate('/products')} style={{ background:p, color:'white', border:'none', cursor:'pointer', padding:'14px 32px', borderRadius:30, fontSize:17, fontWeight:800, boxShadow:`0 8px 24px ${p}44`, fontFamily:theme.fontFamily }}>Shop Now 🛍️</button>
-          <button onClick={()=>navigate('/artists')} style={{ background:'rgba(255,255,255,0.8)', color:theme.textColor, border:`2px solid ${p}40`, cursor:'pointer', padding:'14px 32px', borderRadius:30, fontSize:17, fontWeight:700, fontFamily:theme.fontFamily }}>Meet Artists 🎨</button>
+          <button onClick={()=>navigate('/products')} style={{ background:p, color:'white', border:'none', cursor:'pointer', padding:'14px 32px', borderRadius:30, fontSize:17, fontWeight:800, boxShadow:`0 8px 24px ${p}44`, fontFamily:theme.fontFamily }}>{shopBtnText}</button>
+          <button onClick={()=>navigate('/artists')} style={{ background:'rgba(255,255,255,0.8)', color:theme.textColor, border:`2px solid ${p}40`, cursor:'pointer', padding:'14px 32px', borderRadius:30, fontSize:17, fontWeight:700, fontFamily:theme.fontFamily }}>{artistsBtnText}</button>
         </div>
         {stats.length > 0 && (
           <div className="hp-hero-stats" style={{ display:'flex', gap:32, justifyContent:'center', marginTop:48, flexWrap:'wrap' }}>

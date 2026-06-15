@@ -398,6 +398,10 @@ function ProductsTab() {
   const [descTh, setDescTh] = useState('');
 
   const [categories, setCategories] = useState<string[]>([]);
+  const [searchQ, setSearchQ] = useState('');
+  const [filterArtist, setFilterArtist] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+
   useEffect(() => {
     // Load categories from DB (admin sees all, including inactive)
     fetch('/api/categories', { headers: { Authorization: `Bearer ${localStorage.getItem('fluffy_token')||''}` } })
@@ -412,6 +416,19 @@ function ProductsTab() {
   }, []);
 
   useEffect(()=>{load();},[load]);
+
+  const filteredProducts = products.filter(pr => {
+    const prCats = pr.categories?.length ? pr.categories : (pr.category ? [pr.category] : []);
+    const prArtist = pr.artist_name || pr.artistName || '';
+    if (filterArtist && prArtist !== filterArtist) return false;
+    if (filterCategory && !prCats.includes(filterCategory)) return false;
+    if (searchQ.trim()) {
+      const q = searchQ.trim().toLowerCase();
+      const haystack = [pr.title, prArtist, ...prCats].join(' ').toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
+  });
 
   const resetForm = () => {
     setTitle(''); setPrice(''); setOriginalPrice(''); setCategories_sel([]);
@@ -695,10 +712,30 @@ function ProductsTab() {
         </div>
       )}
 
+      {/* Search + filters */}
+      <div style={{display:'flex',gap:10,marginBottom:14,flexWrap:'wrap' as const,alignItems:'center'}}>
+        <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} placeholder="Search title, artist, category…"
+          style={{flex:'1 1 200px',padding:'9px 14px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit'}}
+          onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+        <select value={filterArtist} onChange={e=>setFilterArtist(e.target.value)}
+          style={{padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',background:'white',cursor:'pointer'}}>
+          <option value="">All Artists</option>
+          {artists.map((a:any)=><option key={a.id} value={a.name}>{a.name}</option>)}
+        </select>
+        <select value={filterCategory} onChange={e=>setFilterCategory(e.target.value)}
+          style={{padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',background:'white',cursor:'pointer'}}>
+          <option value="">All Categories</option>
+          {categories.map(c=><option key={c} value={c}>{c}</option>)}
+        </select>
+        <span style={{fontSize:12,color:'#9ca3af',fontWeight:600,whiteSpace:'nowrap' as const}}>
+          Showing {filteredProducts.length} product{filteredProducts.length!==1?'s':''}
+        </span>
+      </div>
+
       <div style={{...card,overflow:'hidden'}}>
         <table style={{width:'100%',borderCollapse:'collapse'}}>
           <thead><tr style={{borderBottom:'2px solid #f3f4f6',background:'#fafafa'}}>{['','TITLE','ARTIST','CATEGORY','PRICE','STATUS',''].map((h,i)=><th key={i} style={{textAlign:'left',padding:'12px 16px',fontSize:11,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}</tr></thead>
-          <tbody>{products.map(pr=>(
+          <tbody>{filteredProducts.map(pr=>(
             <tr key={pr.id} style={{borderBottom:'1px solid #f9fafb'}}
               onMouseEnter={e=>(e.currentTarget.style.background='#fafafa')}
               onMouseLeave={e=>(e.currentTarget.style.background='white')}>
@@ -723,7 +760,7 @@ function ProductsTab() {
             </tr>
           ))}</tbody>
         </table>
-        {products.length===0&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>No products yet. Click "+ Add Product" to get started!</div>}
+        {filteredProducts.length===0&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>{products.length===0?'No products yet. Click "+ Add Product" to get started!':'No products match your search.'}</div>}
       </div>
     </div>
   );
@@ -2329,6 +2366,25 @@ function ThemeTab() {
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
             <TF label="Subtitle (EN)" val={draft.heroSubtitle} set={v=>upd('heroSubtitle',v)} />
             <TF label="Subtitle (TH)" val={draft.heroSubtitle_th||''} set={v=>upd('heroSubtitle_th',v)} ph="ภาษาไทย (ไม่บังคับ)" />
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
+            <TF label="Hero Badge (EN)" val={draft.heroBadge||''} set={v=>upd('heroBadge',v)} ph="e.g. 🌸 Digital Coloring Books — Download Instantly" />
+            <TF label="Hero Badge (TH)" val={draft.heroBadge_th||''} set={v=>upd('heroBadge_th',v)} ph="ภาษาไทย (ไม่บังคับ)" />
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
+            <TF label="Shop Button (EN)" val={draft.heroShopBtn||''} set={v=>upd('heroShopBtn',v)} ph="Shop Now 🛍️" />
+            <TF label="Shop Button (TH)" val={draft.heroShopBtn_th||''} set={v=>upd('heroShopBtn_th',v)} ph="ช้อปเลย 🛍️" />
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
+            <TF label="Artists Button (EN)" val={draft.heroArtistsBtn||''} set={v=>upd('heroArtistsBtn',v)} ph="Meet Artists 🎨" />
+            <TF label="Artists Button (TH)" val={draft.heroArtistsBtn_th||''} set={v=>upd('heroArtistsBtn_th',v)} ph="พบศิลปิน 🎨" />
+          </div>
+          <div style={{marginBottom:6,fontSize:13,fontWeight:700,color:'#374151'}}>Stats (leave empty to hide)</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
+            <TF label="Books Count" val={draft.statBooks||''} set={v=>upd('statBooks',v)} ph="500+" />
+            <TF label="Happy Colorists Count" val={draft.statColorists||''} set={v=>upd('statColorists',v)} ph="12K+" />
+            <TF label="Artists Count" val={draft.statArtists||''} set={v=>upd('statArtists',v)} ph="50+" />
+            <TF label="Rating" val={draft.statRating||''} set={v=>upd('statRating',v)} ph="4.9 ⭐" />
           </div>
           <TF label="Background Gradient (CSS)" val={draft.heroBgColor} set={v=>upd('heroBgColor',v)} />
           <ImageCropEditor title="Hero Image (Desktop)" hint="Wide image 1600×600px." value={draft.heroCrop} aspectRatio={16/6} onChange={v=>upd('heroCrop',v)} />
