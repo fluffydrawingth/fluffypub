@@ -37,6 +37,7 @@ export default function Navbar() {
   const handleNav = (path: string) => { navigate(path); setNavOpen(false); };
 
   return (
+    <>
     <nav style={{ background:'rgba(255,255,255,0.95)', backdropFilter:'blur(16px)', borderBottom:`2px solid ${p}22`, position:'sticky', top:0, zIndex:100, fontFamily:theme.fontFamily }}>
       <style>{`
         .nb-links { display:flex; gap:4; align-items:center; }
@@ -153,5 +154,22 @@ export default function Navbar() {
 
       {menuOpen && <div style={{ position:'fixed', inset:0, zIndex:150 }} onClick={()=>setMenuOpen(false)} />}
     </nav>
+
+    {/* Floating lang + currency switcher — always visible while scrolling */}
+    <div style={{ position:'fixed', bottom:20, right:16, zIndex:200, display:'flex', flexDirection:'column' as const, gap:6, alignItems:'flex-end' }}>
+      <button
+        onClick={()=>setLang(lang==='th'?'en':'th')}
+        style={{ background:'white', border:`1.5px solid ${p}30`, borderRadius:20, padding:'7px 14px', fontSize:12, fontWeight:800, color:p, cursor:'pointer', fontFamily:theme.fontFamily, boxShadow:'0 2px 12px rgba(0,0,0,0.12)', display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap' as const }}
+      >
+        🌐 {lang==='th'?'ไทย':'EN'} → {lang==='th'?'EN':'ไทย'}
+      </button>
+      <button
+        onClick={()=>setCurrency(currency==='THB'?'USD':'THB')}
+        style={{ background:'white', border:'1.5px solid #86efac', borderRadius:20, padding:'7px 14px', fontSize:12, fontWeight:800, color:'#16a34a', cursor:'pointer', fontFamily:theme.fontFamily, boxShadow:'0 2px 12px rgba(0,0,0,0.12)', display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap' as const }}
+      >
+        💱 {currency==='THB'?'฿ THB':'$ USD'} → {currency==='THB'?'$ USD':'฿ THB'}
+      </button>
+    </div>
+  </>
   );
 }
