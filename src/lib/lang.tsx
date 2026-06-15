@@ -100,15 +100,27 @@ const LangContext = createContext<LangCtx>({
 export function LangProvider({ children }: { children: React.ReactNode }) {
   const stored = (typeof localStorage !== 'undefined' && localStorage.getItem('fluffy_lang') as Lang) || 'th';
   const [lang, setLangState] = useState<Lang>(stored);
-  const [currency, setCurrencyState] = useState<Currency>(() => detectDefaultCurrency());
+  // If lang is TH, always start with THB regardless of stored currency
+  const [currency, setCurrencyState] = useState<Currency>(() => {
+    if (stored === 'th') return 'THB';
+    return detectDefaultCurrency();
+  });
   const [translations, setTranslations] = useState(DEFAULT_TRANSLATIONS);
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
     if (typeof localStorage !== 'undefined') localStorage.setItem('fluffy_lang', l);
+    // TH language always forces THB
+    if (l === 'th') {
+      setCurrencyState('THB');
+      if (typeof localStorage !== 'undefined') localStorage.setItem('fluffy_currency', 'THB');
+    }
   }, []);
 
-  const setCurrency = useCallback((c: Currency) => {
+  const setCurrency = useCallback((c: Currency, currentLang?: Lang) => {
+    // Block USD when language is Thai
+    const activeLang = currentLang ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('fluffy_lang') as Lang : 'th');
+    if (c === 'USD' && activeLang === 'th') return;
     setCurrencyState(c);
     if (typeof localStorage !== 'undefined') localStorage.setItem('fluffy_currency', c);
   }, []);

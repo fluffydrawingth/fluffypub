@@ -14,6 +14,12 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [navOpen, setNavOpen] = React.useState(false);
 
+  // Routes where currency must be locked (order already placed)
+  const lockedRoutes = ['/checkout', '/guest-order', '/account/orders'];
+  const currencyLocked = lockedRoutes.some(r => route.path === r || route.path.startsWith(r + '/'));
+  // TH language always uses THB — hide currency switcher entirely
+  const showCurrencySwitcher = lang === 'en' && !currencyLocked;
+
   const handleSwitchCurrency = (next: 'THB' | 'USD') => {
     if (next === 'USD' && items.some(i => i.optionType === 'physical')) {
       alert('Your cart contains physical products. Please remove them before switching to USD.');
@@ -80,9 +86,11 @@ export default function Navbar() {
           <button onClick={()=>setLang(lang==='th'?'en':'th')} style={{ background:p+'12', border:`1.5px solid ${p}30`, cursor:'pointer', padding:'5px 10px', borderRadius:14, fontSize:11, fontWeight:700, color:p, fontFamily:theme.fontFamily, flexShrink:0 }}>
             {lang==='th'?'EN':'TH'}
           </button>
+          {showCurrencySwitcher && (
           <button onClick={()=>handleSwitchCurrency(currency==='THB'?'USD':'THB')} style={{ background:'#f0fdf4', border:'1.5px solid #86efac', cursor:'pointer', padding:'5px 10px', borderRadius:14, fontSize:11, fontWeight:700, color:'#16a34a', fontFamily:theme.fontFamily, flexShrink:0 }}>
             {currency==='THB'?'$ USD':'฿ THB'}
           </button>
+          )}
           {user ? (
             <div style={{ position:'relative' }}>
               <button onClick={()=>setMenuOpen(x=>!x)} style={{ background:p+'15', border:`1.5px solid ${p}30`, cursor:'pointer', padding:'6px 12px', borderRadius:18, fontSize:13, fontWeight:700, color:p, fontFamily:theme.fontFamily, display:'flex', alignItems:'center', gap:5 }}>
@@ -118,9 +126,11 @@ export default function Navbar() {
           <button onClick={()=>setLang(lang==='th'?'en':'th')} style={{ background:p+'12', border:`1.5px solid ${p}30`, cursor:'pointer', padding:'5px 8px', borderRadius:12, fontSize:11, fontWeight:700, color:p, fontFamily:theme.fontFamily }}>
             {lang==='th'?'EN':'TH'}
           </button>
+          {showCurrencySwitcher && (
           <button onClick={()=>handleSwitchCurrency(currency==='THB'?'USD':'THB')} style={{ background:'#f0fdf4', border:'1.5px solid #86efac', cursor:'pointer', padding:'5px 8px', borderRadius:12, fontSize:11, fontWeight:700, color:'#16a34a', fontFamily:theme.fontFamily }}>
             {currency==='THB'?'$':'฿'}
           </button>
+          )}
           <button onClick={()=>navigate('/cart')} style={{ background:p, border:'none', cursor:'pointer', padding:'7px 12px', borderRadius:18, display:'flex', alignItems:'center', gap:4, fontSize:13, fontWeight:700, color:'white', fontFamily:theme.fontFamily }}>
             🛒{count>0&&<span style={{ background:'white', color:p, borderRadius:'50%', width:16, height:16, display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:800 }}>{count}</span>}
           </button>

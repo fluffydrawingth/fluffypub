@@ -35,12 +35,13 @@ export default function CheckoutPage() {
   const [paypalClicked, setPaypalClicked] = useState(false);
   const [frozenTotalTHB, setFrozenTotalTHB] = useState(0);
   const [frozenTotalUSD, setFrozenTotalUSD] = useState<number | null>(null);
+  const [frozenUsePayPal, setFrozenUsePayPal] = useState<boolean | null>(null);
 
   const hasPhysical = items.some(i => i.optionType === 'physical');
   const isDigitalOnly = !hasPhysical;
 
-  // Payment method determined by currency, not language
-  const usePayPal = currency === 'USD' && !!paypal?.enabled && !!paypal?.username && isDigitalOnly;
+  // Payment method determined by currency at time of order placement (frozen after)
+  const usePayPal = frozenUsePayPal ?? (currency === 'USD' && !!paypal?.enabled && !!paypal?.username && isDigitalOnly);
   const paymentMethod = usePayPal ? 'paypal' : 'promptpay';
 
   // PayPal link uses exact USD total (not a conversion)
@@ -142,6 +143,7 @@ export default function CheckoutPage() {
       if (result?.error) { setError(result.error); setBusy(false); return; }
       setFrozenTotalTHB(totalTHB);
       setFrozenTotalUSD(totalUSD);
+      setFrozenUsePayPal(currency === 'USD' && !!paypal?.enabled && !!paypal?.username && isDigitalOnly);
       clear();
       setOrder(result);
       setStep('payment');
