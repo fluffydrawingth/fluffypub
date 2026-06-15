@@ -72,7 +72,7 @@ export default function GuestOrderPage({ token }: { token: string }) {
   useEffect(() => {
     const needsQR = (order?.status === 'pending_payment' || (order?.status === 'payment_submitted' && showReplace));
     if (!order || !needsQR || order.slip_url) return;
-    if (order.payment_method === 'paypal') return; // PayPal uses static QR image from theme
+    if (isPayPalOrder) return; // PayPal uses button link, no QR needed
     if (qrDataUrl || qrLoading) return;
     const amt = order.total_thb || order.total_amount;
     if (!amt) return;
@@ -163,6 +163,8 @@ export default function GuestOrderPage({ token }: { token: string }) {
   const totalTHB = order.total_thb || order.total_amount || 0;
   const totalUSD: number | null = order.total_usd ?? null;
   const st = STATUS_TEXT[order.status];
+  const hasPhysicalItems = (order.items || []).some((i: any) => i.optionType === 'physical');
+  const isPayPalOrder = isPayPalOrder && !hasPhysicalItems;
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: theme.fontFamily, padding: '32px 16px' }}>
@@ -277,7 +279,7 @@ export default function GuestOrderPage({ token }: { token: string }) {
                 )}
 
                 {/* Payment section — PayPal link or PromptPay QR */}
-                {order.payment_method === 'paypal' ? (
+                {isPayPalOrder ? (
                   <div style={{ textAlign: 'center' as const, marginBottom: 16 }}>
                     <div style={{ fontSize: 36, marginBottom: 6 }}>🅿️</div>
                     <div style={{ fontWeight: 900, fontSize: 16, color: '#003087', marginBottom: 4 }}>Pay with PayPal</div>
