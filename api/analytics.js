@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
   // Fetch ALL orders with full data for export or filtering
   const { data: allOrders } = await supabase
     .from('orders')
-    .select('id,created_at,customer_name,customer_phone,customer_email,shipping_address,items,subtotal_thb,shipping_thb,total_thb,total_amount,total,payment_status,status,tracking_number,shipping_provider')
+    .select('id,created_at,customer_name,customer_phone,customer_email,shipping_address,items,subtotal_thb,shipping_thb,total_thb,total_amount,total,total_usd,currency,payment_method,payment_status,status,tracking_number,shipping_provider')
     .order('created_at', { ascending: false });
 
   const orders = allOrders || [];
@@ -70,6 +70,7 @@ module.exports = async function handler(req, res) {
   const salesOrders = monthOrders.filter(o => SALES_STATUSES.includes(o.status));
   const salesMap = {};
   for (const o of salesOrders) {
+    const isUSD = o.currency === 'USD' || o.payment_method === 'paypal';
     const items = Array.isArray(o.items) ? o.items : [];
     for (const item of items) {
       const key = `${item.productId||item.product_id||item.id||item.title}__${item.optionName||item.variantName||item.variant?.name||''}`;
@@ -78,17 +79,30 @@ module.exports = async function handler(req, res) {
           productName: item.title || '',
           artistName: item.artistName || item.artist_name || '',
           variantName: item.optionName || item.variantName || item.variant?.name || '',
-          qty: 0, grossSales: 0, orderIds: new Set(),
+          qty: 0, grossSalesTHB: 0, grossSalesUSD: 0, orderIds: new Set(),
         };
       }
-      const unitPrice = item.price_thb || item.unitPriceTHB || item.priceTHB || 0;
       salesMap[key].qty += (item.qty || 1);
-      salesMap[key].grossSales += unitPrice * (item.qty || 1);
+      if (isUSD) {
+        const unitPriceUSD = item.unitPriceUSD ?? 0;
+        salesMap[key].grossSalesUSD += unitPriceUSD * (item.qty || 1);
+      } else {
+        const unitPrice = item.price_thb || item.unitPriceTHB || item.priceTHB || 0;
+        salesMap[key].grossSalesTHB += unitPrice * (item.qty || 1);
+      }
       salesMap[key].orderIds.add(o.id);
     }
   }
   const productSales = Object.values(salesMap)
-    .map(s => ({ productName: s.productName, artistName: s.artistName, variantName: s.variantName, qty: s.qty, grossSales: Math.round(s.grossSales), orderCount: s.orderIds.size }))
+    .map(s => ({
+      productName: s.productName, artistName: s.artistName, variantName: s.variantName,
+      qty: s.qty,
+      grossSalesTHB: Math.round(s.grossSalesTHB),
+      grossSalesUSD: Math.round(s.grossSalesUSD * 100) / 100,
+      // legacy field for CSV
+      grossSales: Math.round(s.grossSalesTHB),
+      orderCount: s.orderIds.size,
+    }))
     .sort((a, b) => b.qty - a.qty);
 
   // Sales CSV export
@@ -103,7 +117,10 @@ module.exports = async function handler(req, res) {
 
   // Stats for selected month
   const paid = monthOrders.filter(o => o.payment_status === 'paid');
-  const revenue_thb = paid.reduce((s, o) => s + (parseFloat(o.total_thb) || parseFloat(o.total_amount) || (parseFloat(o.total || '0') * 35) || 0), 0);
+  const paidTHB = paid.filter(o => o.currency !== 'USD' && o.payment_method !== 'paypal');
+  const paidUSD = paid.filter(o => o.currency === 'USD' || o.payment_method === 'paypal');
+  const revenue_thb = paidTHB.reduce((s, o) => s + (parseFloat(o.total_thb) || parseFloat(o.total_amount) || 0), 0);
+  const revenue_usd = paidUSD.reduce((s, o) => s + (parseFloat(o.total_usd) || 0), 0);
 
   const today = new Date(); today.setHours(0,0,0,0);
   const [usersRes, productsRes] = await Promise.all([
@@ -115,6 +132,7 @@ module.exports = async function handler(req, res) {
     month: filterMonth,
     year: filterYear,
     revenue_thb: Math.round(revenue_thb),
+    revenue_usd: Math.round(revenue_usd * 100) / 100,
     ordersToday: orders.filter(o => new Date(o.created_at) >= today).length,
     ordersThisMonth: monthOrders.length,
     totalOrders: orders.length,

@@ -199,10 +199,30 @@ async function tplPaymentReminder(order) {
 async function tplPaymentConfirmed(order) {
   const ref = (order.id || '').slice(-8).toUpperCase();
   const link = orderLink(order);
-  const hasDigital = (order.items || []).some(i => (i.optionType || i.type) === 'digital');
   const isDigitalOnly = (order.items || []).length > 0 && (order.items || []).every(i => (i.optionType || i.type) === 'digital');
-  // Download links are NOT included in email — customer must visit the order page.
-  // This keeps future download-limit enforcement on the website side.
+  const isUSD = order.currency === 'USD';
+
+  // English-only email for USD orders
+  if (isUSD) {
+    return await emailWrapper(`
+      <h2 style="margin:0 0 6px;color:#111827;font-size:20px">✅ Payment Confirmed!</h2>
+      <p style="margin:0 0 16px;color:#6b7280;font-size:13px">${isDigitalOnly ? 'Your digital files are ready on your order page. 🎉' : "We're preparing your order. 🌸"}</p>
+      <div style="background:#f0fdf4;border-radius:12px;padding:14px 16px;margin-bottom:20px;border:1.5px solid #86efac">
+        <div style="font-size:12px;color:#065f46;font-weight:700;margin-bottom:4px">ORDER</div>
+        <div style="font-size:22px;font-weight:900;color:#059669">#${ref}</div>
+        <div style="font-size:12px;color:#374151;margin-top:6px">${isDigitalOnly ? '⬇️ Ready to download on your order page' : '🎁 Preparing your items...'}</div>
+      </div>
+      <h3 style="margin:0 0 10px;font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.5px">Items</h3>
+      ${orderSummaryHtml(order)}
+      ${isDigitalOnly ? `<div style="background:#eff6ff;border-radius:12px;padding:12px 16px;margin-top:16px;border:1.5px solid #93c5fd;font-size:13px;color:#1e40af">⬇️ Your digital files are ready on your order page.</div>` : ''}
+      <a href="${link}" style="display:inline-block;margin-top:16px;background:#059669;color:white;text-decoration:none;padding:10px 20px;border-radius:20px;font-weight:700;font-size:13px">${isDigitalOnly ? '⬇️ View Order →' : '📦 Track Order →'}</a>
+      ${!isDigitalOnly ? '<p style="margin:16px 0 0;font-size:12px;color:#9ca3af">Your order will be shipped within 1-3 business days. 🌸</p>' : ''}
+      <p style="margin:20px 0 0;font-size:12px;color:#9ca3af">Questions? Reply to this email and we'll be happy to help. 💕</p>
+    `);
+  }
+
+  // Thai/English bilingual email for THB orders
+  const hasDigital = (order.items || []).some(i => (i.optionType || i.type) === 'digital');
   const digitalNote = hasDigital
     ? `<div style="background:#eff6ff;border-radius:12px;padding:12px 16px;margin-top:16px;border:1.5px solid #93c5fd;font-size:13px;color:#1e40af">⬇️ ไฟล์ดิจิทัลพร้อมในหน้าคำสั่งซื้อแล้ว / Your digital files are ready on your order page.</div>`
     : '';
@@ -665,7 +685,10 @@ module.exports = async function handler(req, res) {
 
     // Send payment confirmed email to customer only — admin chose to mark as paid themselves
     const ref = (data.id||'').slice(-8).toUpperCase();
-    await sendEmail(data.customer_email, `✅ ยืนยันการชำระเงิน Order #${ref} — Fluffy Pub`, await tplPaymentConfirmed(data), { orderId: data.id, eventType: 'payment_confirmed' });
+    const _confirmSubject = data.currency === 'USD'
+      ? `✅ Payment Confirmed – Your Digital Files Are Ready — Fluffy Pub`
+      : `✅ ยืนยันการชำระเงิน Order #${ref} — Fluffy Pub`;
+    await sendEmail(data.customer_email, _confirmSubject, await tplPaymentConfirmed(data), { orderId: data.id, eventType: 'payment_confirmed' });
 
     return json(res, 200, data);
   }

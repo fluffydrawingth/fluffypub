@@ -143,6 +143,7 @@ function DashboardTab() {
   const [selYear,  setSelYear]  = useState(now.getFullYear());
   const [stats, setStats] = useState<any>(null);
   const [exporting, setExporting] = useState(false);
+  const [ordersExpanded, setOrdersExpanded] = useState(false);
 
   const loadStats = (month: number, year: number) => {
     setStats(null);
@@ -197,7 +198,8 @@ function DashboardTab() {
   ] : [];
 
   const topCards = stats ? [
-    {label:'Revenue (THB)',value:`฿${(stats.revenue_thb||0).toLocaleString('th-TH')}`,icon:'💰',color:'#10b981',bg:'#d1fae5'},
+    {label:'Revenue (฿ THB)',value:`฿${(stats.revenue_thb||0).toLocaleString('th-TH')}`,icon:'💰',color:'#10b981',bg:'#d1fae5'},
+    {label:'Revenue ($ USD)',value:`$${(stats.revenue_usd||0).toFixed(2)}`,icon:'💵',color:'#0070ba',bg:'#eff6ff'},
     {label:'Orders This Period',value:stats.ordersThisMonth||0,icon:'📦',color:P,bg:'#fce7f3'},
     {label:'Total Products',value:stats.totalProducts||0,icon:'📚',color:'#f59e0b',bg:'#fef3c7'},
     {label:'Customers',value:stats.totalCustomers||0,icon:'👥',color:'#8b5cf6',bg:'#ede9fe'},
@@ -225,7 +227,7 @@ function DashboardTab() {
       </div>
 
       {/* Top stats */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14,marginBottom:20}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:14,marginBottom:20}}>
         {topCards.map(s=>(
           <div key={s.label} style={{...card,padding:18}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
@@ -250,12 +252,19 @@ function DashboardTab() {
         ))}
       </div>
 
-      {/* Recent orders — from selected month */}
+      {/* Recent orders — collapsible */}
       <div style={{...card,padding:20,marginBottom:20}}>
-        <h3 style={{fontSize:15,fontWeight:800,color:'#111827',margin:'0 0 14px'}}>
-          Orders — {['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][selMonth]} {selYear}
-        </h3>
-        {!stats?<div style={{textAlign:'center',padding:'20px',color:'#9ca3af'}}>Loading...</div>:(stats.recentOrders||[]).length===0?<div style={{textAlign:'center',padding:'20px',color:'#9ca3af'}}>No orders this month</div>:(
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom: ordersExpanded ? 14 : 0}}>
+          <h3 style={{fontSize:15,fontWeight:800,color:'#111827',margin:0}}>
+            Orders — {['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][selMonth]} {selYear}
+            {stats && <span style={{fontSize:12,fontWeight:600,color:'#9ca3af',marginLeft:8}}>({(stats.recentOrders||[]).length})</span>}
+          </h3>
+          <button onClick={()=>setOrdersExpanded(x=>!x)}
+            style={{padding:'5px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:700,color:'#374151',fontFamily:'inherit'}}>
+            {ordersExpanded ? '▲ Hide Orders' : '▼ Show Orders'}
+          </button>
+        </div>
+        {ordersExpanded && (!stats ? <div style={{textAlign:'center',padding:'20px',color:'#9ca3af'}}>Loading...</div> : (stats.recentOrders||[]).length===0 ? <div style={{textAlign:'center',padding:'20px',color:'#9ca3af'}}>No orders this month</div> : (
           <table style={{width:'100%',borderCollapse:'collapse'}}>
             <thead><tr style={{borderBottom:'2px solid #f3f4f6'}}>{['Order','Customer','Amount','Status','Date'].map(h=><th key={h} style={{textAlign:'left' as const,padding:'8px 10px',fontSize:11,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}</tr></thead>
             <tbody>{(stats.recentOrders||[]).map((o:any)=>{const[cl,bg]=STATUS_COLOR[o.status]||['#6b7280','#f1f5f9'];return(
@@ -268,7 +277,7 @@ function DashboardTab() {
               </tr>
             );})}</tbody>
           </table>
-        )}
+        ))}
       </div>
 
       {/* Product Sales Summary */}
@@ -289,10 +298,10 @@ function DashboardTab() {
           <div style={{textAlign:'center',padding:'20px',color:'#9ca3af'}}>No sales data for this period</div>
         ) : (
           <div style={{overflowX:'auto' as const}}>
-            <table style={{width:'100%',borderCollapse:'collapse',minWidth:560}}>
+            <table style={{width:'100%',borderCollapse:'collapse',minWidth:580}}>
               <thead>
                 <tr style={{borderBottom:'2px solid #f3f4f6'}}>
-                  {['Product','Artist','Variant','Qty Sold','Gross Sales','Orders'].map(h=>(
+                  {['Product','Artist','Variant','Qty','Gross Sales','Orders'].map(h=>(
                     <th key={h} style={{textAlign:'left' as const,padding:'8px 10px',fontSize:11,color:'#9ca3af',fontWeight:700,letterSpacing:0.5,whiteSpace:'nowrap' as const}}>{h}</th>
                   ))}
                 </tr>
@@ -304,7 +313,11 @@ function DashboardTab() {
                     <td style={{padding:'10px',fontSize:12,color:'#6b7280'}}>{s.artistName||'—'}</td>
                     <td style={{padding:'10px',fontSize:12,color:'#6b7280'}}>{s.variantName||'—'}</td>
                     <td style={{padding:'10px',fontSize:13,fontWeight:700,color:'#111827',textAlign:'center' as const}}>{s.qty}</td>
-                    <td style={{padding:'10px',fontSize:13,fontWeight:700,color:'#059669'}}>฿{(s.grossSales||0).toLocaleString('th-TH')}</td>
+                    <td style={{padding:'10px',fontSize:13,fontWeight:700}}>
+                      {s.grossSalesTHB > 0 && <div style={{color:'#059669'}}>฿{Number(s.grossSalesTHB).toLocaleString('th-TH')}</div>}
+                      {s.grossSalesUSD > 0 && <div style={{color:'#0070ba'}}>${Number(s.grossSalesUSD).toFixed(2)}</div>}
+                      {!s.grossSalesTHB && !s.grossSalesUSD && <span style={{color:'#9ca3af'}}>—</span>}
+                    </td>
                     <td style={{padding:'10px',fontSize:12,color:'#6b7280',textAlign:'center' as const}}>{s.orderCount}</td>
                   </tr>
                 ))}
@@ -315,8 +328,15 @@ function DashboardTab() {
                   <td style={{padding:'10px',fontSize:13,fontWeight:900,color:'#111827',textAlign:'center' as const}}>
                     {(stats.productSales||[]).reduce((s:number,r:any)=>s+r.qty,0)}
                   </td>
-                  <td style={{padding:'10px',fontSize:13,fontWeight:900,color:'#059669'}}>
-                    ฿{(stats.productSales||[]).reduce((s:number,r:any)=>s+r.grossSales,0).toLocaleString('th-TH')}
+                  <td style={{padding:'10px',fontSize:13,fontWeight:900}}>
+                    {(()=>{
+                      const totalTHB = (stats.productSales||[]).reduce((s:number,r:any)=>s+(r.grossSalesTHB||0),0);
+                      const totalUSD = (stats.productSales||[]).reduce((s:number,r:any)=>s+(r.grossSalesUSD||0),0);
+                      return (<>
+                        {totalTHB > 0 && <div style={{color:'#059669'}}>฿{totalTHB.toLocaleString('th-TH')}</div>}
+                        {totalUSD > 0 && <div style={{color:'#0070ba'}}>${totalUSD.toFixed(2)}</div>}
+                      </>);
+                    })()}
                   </td>
                   <td style={{padding:'10px',fontSize:12,fontWeight:700,color:'#374151',textAlign:'center' as const}}>
                     {(stats.productSales||[]).reduce((s:number,r:any)=>s+r.orderCount,0)}
