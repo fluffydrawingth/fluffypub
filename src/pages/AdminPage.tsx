@@ -2166,29 +2166,6 @@ function LegalPagesTab() {
         )}
       </div>
 
-      {/* SQL setup instructions */}
-      <div style={{ marginTop: 24, background: '#1e293b', borderRadius: 14, padding: '20px 24px' }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', marginBottom: 10 }}>📋 Supabase SQL — run once to create the table and seed defaults</div>
-        <pre style={{ margin: 0, fontSize: 12, color: '#e2e8f0', lineHeight: 1.6, whiteSpace: 'pre-wrap' as const, fontFamily: 'monospace' }}>{`CREATE TABLE IF NOT EXISTS legal_pages (
-  id        uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  slug      text UNIQUE NOT NULL,
-  title     text NOT NULL,
-  content   text DEFAULT '',
-  published boolean DEFAULT false,
-  updated_at timestamptz DEFAULT now()
-);
-
-INSERT INTO legal_pages (slug, title) VALUES
-  ('about-us',          'About Us'),
-  ('privacy-policy',    'Privacy Policy'),
-  ('terms-of-service',  'Terms of Service'),
-  ('artist-guidelines', 'Artist Guidelines')
-ON CONFLICT (slug) DO NOTHING;`}</pre>
-        <button onClick={() => navigator.clipboard.writeText(`CREATE TABLE IF NOT EXISTS legal_pages (\n  id        uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  slug      text UNIQUE NOT NULL,\n  title     text NOT NULL,\n  content   text DEFAULT '',\n  published boolean DEFAULT false,\n  updated_at timestamptz DEFAULT now()\n);\n\nINSERT INTO legal_pages (slug, title) VALUES\n  ('about-us',          'About Us'),\n  ('privacy-policy',    'Privacy Policy'),\n  ('terms-of-service',  'Terms of Service'),\n  ('artist-guidelines', 'Artist Guidelines')\nON CONFLICT (slug) DO NOTHING;`)}
-          style={{ marginTop: 12, background: '#334155', border: 'none', cursor: 'pointer', padding: '7px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600, color: '#e2e8f0' }}>
-          📋 Copy SQL
-        </button>
-      </div>
     </div>
   );
 }
