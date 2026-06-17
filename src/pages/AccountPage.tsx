@@ -659,7 +659,19 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
       </button>
     </div>
     {user.role === 'customer' && <ArtistRequestCard p={p} theme={theme} />}
+    {user.role === 'artist' && <ArtistStudioCard p={p} theme={theme} />}
    </>
+  );
+}
+
+function ArtistStudioCard({p,theme}:any) {
+  const { navigate } = useRouter();
+  return (
+    <div style={{background:'white',borderRadius:20,padding:28,boxShadow:'0 2px 10px rgba(0,0,0,0.05)',marginTop:20}}>
+      <h3 style={{fontSize:18,fontWeight:800,color:'#1e293b',marginBottom:8}}>🎨 Artist Studio</h3>
+      <p style={{fontSize:13,color:'#64748b',marginBottom:18,lineHeight:1.6}}>You're an approved artist on Fluffy Pub. Open your studio to view products, sales, and your artist profile.</p>
+      <button onClick={()=>navigate('/artist-dashboard')} style={{background:p,color:'white',border:'none',cursor:'pointer',padding:'11px 24px',borderRadius:14,fontSize:14,fontWeight:800,fontFamily:theme.fontFamily}}>Open Artist Studio →</button>
+    </div>
   );
 }
 
