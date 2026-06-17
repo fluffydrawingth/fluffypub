@@ -17,6 +17,8 @@ export default function ArtistDashboardPage() {
   const p = theme.primaryColor;
 
   useEffect(() => { if (!user) navigate('/login'); }, [user]);
+  // Pull fresh role/artist_id on entry so a revoked artist is bounced out (no stale access).
+  useEffect(() => { refreshUser(); }, []);
   if (!user || user.role !== 'artist') {
     if (user && user.role !== 'artist') return <div style={{textAlign:'center',padding:'80px 24px',fontFamily:theme.fontFamily}}><div style={{fontSize:64}}>🚫</div><h2>Artist access required</h2></div>;
     return null;

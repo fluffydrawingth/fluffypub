@@ -665,13 +665,23 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
 
 function ArtistRequestCard({p,theme}:any) {
   const { navigate } = useRouter();
+  const { refreshUser } = useAuth();
   const [request, setRequest] = useState<any>(null);
   const [loaded, setLoaded] = useState(false);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
-  useEffect(() => { api.myArtistRequest().then(r => { setRequest(r && !r.error ? r : null); setLoaded(true); }).catch(() => setLoaded(true)); }, []);
+  useEffect(() => {
+    api.myArtistRequest().then(r => {
+      const req = r && !r.error ? r : null;
+      setRequest(req);
+      setLoaded(true);
+      // If approved, sync the session so role flips to 'artist' (this card then unmounts
+      // and the navbar shows Artist Studio). Avoids a stale 'customer' role / blank dashboard.
+      if (req?.status === 'approved') refreshUser();
+    }).catch(() => setLoaded(true));
+  }, []);
 
   const submit = async () => {
     setBusy(true); setErr('');
@@ -694,12 +704,13 @@ function ArtistRequestCard({p,theme}:any) {
       {status === 'approved' && (
         <div>
           <div style={{background:'#d1fae5',border:'1.5px solid #6ee7b7',borderRadius:12,padding:'12px 16px',fontSize:13,color:'#065f46',fontWeight:700,marginBottom:14}}>✅ You're an artist! Open your studio to manage products and sales.</div>
-          <button onClick={()=>navigate('/artist-dashboard')} style={{background:p,color:'white',border:'none',cursor:'pointer',padding:'11px 24px',borderRadius:14,fontSize:14,fontWeight:800,fontFamily:theme.fontFamily}}>Go to Artist Studio →</button>
+          <button onClick={async()=>{ await refreshUser(); navigate('/artist-dashboard'); }} style={{background:p,color:'white',border:'none',cursor:'pointer',padding:'11px 24px',borderRadius:14,fontSize:14,fontWeight:800,fontFamily:theme.fontFamily}}>Go to Artist Studio →</button>
         </div>
       )}
-      {(!status || status === 'rejected') && (
+      {(!status || status === 'rejected' || status === 'revoked') && (
         <div>
           {status === 'rejected' && <div style={{background:'#fef2f2',border:'1.5px solid #fca5a5',borderRadius:12,padding:'12px 16px',fontSize:13,color:'#991b1b',fontWeight:600,marginBottom:14}}>Your previous request was not approved. You may submit a new one.</div>}
+          {status === 'revoked' && <div style={{background:'#fffbeb',border:'1.5px solid #fcd34d',borderRadius:12,padding:'12px 16px',fontSize:13,color:'#92400e',fontWeight:600,marginBottom:14}}>Your artist access was removed. You may request it again.</div>}
           <label style={{display:'block',fontSize:13,fontWeight:700,color:'#374151',marginBottom:6}}>Message <span style={{color:'#9ca3af',fontWeight:400}}>(optional)</span></label>
           <textarea value={message} onChange={e=>setMessage(e.target.value)} rows={3} placeholder="Tell us about your art..."
             style={{width:'100%',padding:'11px 14px',borderRadius:12,border:`1.5px solid ${p}30`,fontSize:14,outline:'none',fontFamily:theme.fontFamily,resize:'vertical',boxSizing:'border-box',marginBottom:14}} />

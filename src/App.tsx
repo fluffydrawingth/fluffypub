@@ -30,13 +30,24 @@ import { LangProvider } from './lib/lang';
 import { FavoritesProvider } from './lib/favorites';
 
 function ProtectedRoute({ roles, children }: { roles: string[]; children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshUser } = useAuth();
   const { navigate } = useRouter();
+  const [verifying, setVerifying] = React.useState(false);
+  const triedRef = React.useRef(false);
   React.useEffect(() => {
-    if (!loading && !user) navigate('/login');
-    if (!loading && user && !roles.includes(user.role)) navigate('/');
-  }, [user, loading]);
-  if (loading) return <div style={{minHeight:'60vh',display:'flex',alignItems:'center',justifyContent:'center',fontSize:32}}>⏳</div>;
+    if (loading || verifying) return;
+    if (user && roles.includes(user.role)) return; // access granted
+    // Role mismatch or no user — the cached role may be stale (e.g. just approved/revoked).
+    // Try one fresh profile fetch before deciding to redirect.
+    if (!triedRef.current) {
+      triedRef.current = true;
+      setVerifying(true);
+      refreshUser().finally(() => setVerifying(false));
+      return;
+    }
+    if (!user) navigate('/login'); else navigate('/');
+  }, [user, loading, verifying]);
+  if (loading || verifying) return <div style={{minHeight:'60vh',display:'flex',alignItems:'center',justifyContent:'center',fontSize:32}}>⏳</div>;
   if (!user || !roles.includes(user.role)) return null;
   return <>{children}</>;
 }

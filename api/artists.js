@@ -70,8 +70,11 @@ module.exports = async function handler(req, res) {
     if (!admin) return;
     const { id } = req.query;
     if (!id) return json(res, 400, { error: 'user id required' });
-    const { error } = await supabase.from('profiles').update({ role: 'customer', updated_at: new Date().toISOString() }).eq('id', id);
+    // Role back to customer + unlink. Products/orders/sales are intentionally untouched.
+    const { error } = await supabase.from('profiles').update({ role: 'customer', artist_id: null, updated_at: new Date().toISOString() }).eq('id', id);
     if (error) return json(res, 400, { error: error.message });
+    // So the user no longer sees the "approved" state in their profile.
+    await supabase.from('artist_requests').update({ status: 'revoked' }).eq('user_id', id).eq('status', 'approved');
     return json(res, 200, { success: true });
   }
 
@@ -103,10 +106,12 @@ module.exports = async function handler(req, res) {
       return json(res, 200, { ...data, products: products || [] });
     }
     const { data: artists } = await supabase.from('profiles')
-      .select('id,name,artist_slug,bio,cover_image_url,avatar_url,website,social_links,artist_status,created_at')
+      .select('id,name,artist_slug,bio,cover_image_url,avatar_url,website,social_links,artist_status,created_at,artist_id')
       .eq('role', 'artist').order('name');
+    // Only real artist profiles — exclude promoted user accounts linked to another artist.
+    const realArtists = (artists || []).filter(a => !a.artist_id || a.artist_id === a.id);
     const { data: products } = await supabase.from('products').select('artist_id').eq('active', true);
-    const result = (artists || []).map(a => ({
+    const result = realArtists.map(a => ({
       ...a,
       productCount: (products || []).filter(p => p.artist_id === a.id).length,
     }));
