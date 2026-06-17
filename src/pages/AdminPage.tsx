@@ -2381,10 +2381,12 @@ function ThemeTab() {
           </div>
           <div style={{marginBottom:6,fontSize:13,fontWeight:700,color:'#374151'}}>Stats (leave empty to hide)</div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
-            <TF label="Books Count" val={draft.statBooks||''} set={v=>upd('statBooks',v)} ph="500+" />
-            <TF label="Happy Colorists Count" val={draft.statColorists||''} set={v=>upd('statColorists',v)} ph="12K+" />
-            <TF label="Artists Count" val={draft.statArtists||''} set={v=>upd('statArtists',v)} ph="50+" />
-            <TF label="Rating" val={draft.statRating||''} set={v=>upd('statRating',v)} ph="4.9 ⭐" />
+            {([['statBooks','Books Count','500+'],['statColorists','Happy Colorists Count','12K+'],['statArtists','Artists Count','50+'],['statRating','Rating','4.9 ⭐']] as [keyof typeof draft, string, string][]).map(([k,lbl,ph])=>(
+              <div key={k} style={{marginBottom:14}}>
+                <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:6}}>{lbl}</label>
+                <input value={(draft as any)[k]||''} placeholder={ph} onChange={e=>upd(k,e.target.value)} style={{width:'100%',padding:'10px 14px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box'}} onFocus={e=>e.target.style.borderColor='#f472b6'} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+              </div>
+            ))}
           </div>
           <TF label="Background Gradient (CSS)" val={draft.heroBgColor} set={v=>upd('heroBgColor',v)} />
           <ImageCropEditor title="Hero Image (Desktop)" hint="Wide image 1600×600px." value={draft.heroCrop} aspectRatio={16/6} onChange={v=>upd('heroCrop',v)} />
