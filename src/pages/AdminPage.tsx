@@ -1678,11 +1678,20 @@ function ArtistRequestsTab() {
     setMsg('✓ Rejected.'); load();
     setTimeout(() => setMsg(''), 4000);
   };
+  // Revoke targets the requesting USER (works for both linked and self-promoted artists).
+  const revoke = async (userId: string) => {
+    if (!confirm('Revoke artist access (set this user back to customer)? Their products, orders and sales history are kept.')) return;
+    const res = await api.revokeArtist(userId);
+    if (res?.error) { setMsg('⚠️ ' + res.error); return; }
+    setMsg('✓ Artist access revoked.'); load();
+    setTimeout(() => setMsg(''), 4000);
+  };
 
   const STATUS: Record<string,{c:string,bg:string,t:string}> = {
     pending:  { c:'#92400e', bg:'#fef3c7', t:'Pending' },
     approved: { c:'#065f46', bg:'#d1fae5', t:'Approved' },
     rejected: { c:'#991b1b', bg:'#fee2e2', t:'Rejected' },
+    revoked:  { c:'#92400e', bg:'#fffbeb', t:'Revoked' },
   };
 
   return (
@@ -1708,6 +1717,9 @@ function ArtistRequestsTab() {
                     <button onClick={()=>{setApproving(approving===r.id?null:r.id);setLinkChoice('');}} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #6ee7b7',background:'#d1fae5',cursor:'pointer',fontSize:12,fontWeight:700,color:'#065f46'}}>Approve</button>
                     <button onClick={()=>reject(r.id)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:12,fontWeight:700,color:'#ef4444'}}>Reject</button>
                   </div>
+                )}
+                {r.status==='approved'&&(
+                  <button onClick={()=>revoke(r.user_id)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fcd34d',background:'#fffbeb',cursor:'pointer',fontSize:12,fontWeight:700,color:'#b45309'}}>Revoke</button>
                 )}
               </td>
             </tr>
