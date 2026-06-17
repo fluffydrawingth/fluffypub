@@ -30,6 +30,7 @@ export interface ThemeConfig {
   bannerText: string; bannerText_th?: string; bannerBg: string; bannerImageCrop: any | null;
   bgImageCrop: any | null; sections: string[];
   heroStats: { value: string; label: string }[];
+  statBooks?: string | null; statColorists?: string | null; statArtists?: string | null; statRating?: string | null;
   featuredProductIds: string[];
   showNewsletter: boolean;
   maintenance_mode: boolean;
@@ -91,6 +92,7 @@ const DEFAULT: ThemeConfig = {
   bannerBg:'#f472b6', bannerImageCrop:null, bgImageCrop:null,
   sections:['hero','featured','digital_products','categories','artists','newsletter'],
   heroStats:[],
+  statBooks: null, statColorists: null, statArtists: null, statRating: null,
   featuredProductIds:[],
   showNewsletter: false,
   maintenance_mode: false,
