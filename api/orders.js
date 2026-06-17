@@ -480,10 +480,11 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET' && action === 'artist') {
     const user = await requireAuth(req, res, ['artist']);
     if (!user) return;
+    const effectiveArtistId = user.artist_id || user.id;
     const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
     if (error) return json(res, 500, { error: error.message });
-    const filtered = (data || []).filter(o => (o.items||[]).some(i => i.artistId === user.id))
-      .map(o => ({ ...o, items: (o.items||[]).filter(i => i.artistId === user.id) }));
+    const filtered = (data || []).filter(o => (o.items||[]).some(i => i.artistId === effectiveArtistId))
+      .map(o => ({ ...o, items: (o.items||[]).filter(i => i.artistId === effectiveArtistId) }));
     return json(res, 200, filtered);
   }
 

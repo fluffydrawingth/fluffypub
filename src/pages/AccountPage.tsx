@@ -632,6 +632,7 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
   );
 
   return (
+   <>
     <div style={{background:'white',borderRadius:20,padding:28,boxShadow:'0 2px 10px rgba(0,0,0,0.05)'}}>
       <h3 style={{fontSize:18,fontWeight:800,color:'#1e293b',marginBottom:24}}>Edit Profile</h3>
 
@@ -656,6 +657,58 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
       <button onClick={save} disabled={saving} style={{background:saving?p+'88':p,color:'white',border:'none',cursor:saving?'wait':'pointer',padding:'12px 28px',borderRadius:14,fontSize:14,fontWeight:800,fontFamily:theme.fontFamily}}>
         {saving?'Saving...':'Save Changes'}
       </button>
+    </div>
+    {user.role === 'customer' && <ArtistRequestCard p={p} theme={theme} />}
+   </>
+  );
+}
+
+function ArtistRequestCard({p,theme}:any) {
+  const { navigate } = useRouter();
+  const [request, setRequest] = useState<any>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  useEffect(() => { api.myArtistRequest().then(r => { setRequest(r && !r.error ? r : null); setLoaded(true); }).catch(() => setLoaded(true)); }, []);
+
+  const submit = async () => {
+    setBusy(true); setErr('');
+    const res = await api.requestArtist(message);
+    if (res?.error) { setErr(res.error); setBusy(false); return; }
+    setRequest(res); setBusy(false);
+  };
+
+  if (!loaded) return null;
+
+  const status = request?.status;
+  return (
+    <div style={{background:'white',borderRadius:20,padding:28,boxShadow:'0 2px 10px rgba(0,0,0,0.05)',marginTop:20}}>
+      <h3 style={{fontSize:18,fontWeight:800,color:'#1e293b',marginBottom:8}}>🎨 Become an Artist</h3>
+      <p style={{fontSize:13,color:'#64748b',marginBottom:18,lineHeight:1.6}}>Sell your own coloring books on the store. Request artist access and an admin will review it.</p>
+
+      {status === 'pending' && (
+        <div style={{background:'#fef3c7',border:'1.5px solid #fde68a',borderRadius:12,padding:'12px 16px',fontSize:13,color:'#92400e',fontWeight:700}}>⏳ Your request is under review.</div>
+      )}
+      {status === 'approved' && (
+        <div>
+          <div style={{background:'#d1fae5',border:'1.5px solid #6ee7b7',borderRadius:12,padding:'12px 16px',fontSize:13,color:'#065f46',fontWeight:700,marginBottom:14}}>✅ You're an artist! Open your studio to manage products and sales.</div>
+          <button onClick={()=>navigate('/artist-dashboard')} style={{background:p,color:'white',border:'none',cursor:'pointer',padding:'11px 24px',borderRadius:14,fontSize:14,fontWeight:800,fontFamily:theme.fontFamily}}>Go to Artist Studio →</button>
+        </div>
+      )}
+      {(!status || status === 'rejected') && (
+        <div>
+          {status === 'rejected' && <div style={{background:'#fef2f2',border:'1.5px solid #fca5a5',borderRadius:12,padding:'12px 16px',fontSize:13,color:'#991b1b',fontWeight:600,marginBottom:14}}>Your previous request was not approved. You may submit a new one.</div>}
+          <label style={{display:'block',fontSize:13,fontWeight:700,color:'#374151',marginBottom:6}}>Message <span style={{color:'#9ca3af',fontWeight:400}}>(optional)</span></label>
+          <textarea value={message} onChange={e=>setMessage(e.target.value)} rows={3} placeholder="Tell us about your art..."
+            style={{width:'100%',padding:'11px 14px',borderRadius:12,border:`1.5px solid ${p}30`,fontSize:14,outline:'none',fontFamily:theme.fontFamily,resize:'vertical',boxSizing:'border-box',marginBottom:14}} />
+          {err && <div style={{background:'#fef2f2',border:'1.5px solid #fca5a5',borderRadius:11,padding:'9px 13px',marginBottom:14,fontSize:13,color:'#dc2626',fontWeight:600}}>⚠️ {err}</div>}
+          <button onClick={submit} disabled={busy} style={{background:busy?p+'88':p,color:'white',border:'none',cursor:busy?'wait':'pointer',padding:'12px 28px',borderRadius:14,fontSize:14,fontWeight:800,fontFamily:theme.fontFamily}}>
+            {busy?'Submitting...':'Request Artist Mode'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

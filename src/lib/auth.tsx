@@ -9,6 +9,7 @@ export interface AuthUser {
   role: UserRole;
   bio?: string;
   artistSlug?: string;
+  artistId?: string | null;
   favorites?: string[];
 }
 
@@ -65,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const r = await fetch('/api/auth?action=me', { headers: { Authorization: `Bearer ${t}` } });
       if (r.ok) {
         const u = await r.json();
+        if (u.artist_id !== undefined && u.artistId === undefined) u.artistId = u.artist_id;
         if (u.email === ADMIN_EMAIL) u.role = 'admin';
         localStorage.setItem(USER_KEY, JSON.stringify(u));
         setUser(u);

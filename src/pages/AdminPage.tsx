@@ -12,7 +12,7 @@ import ImageCropEditor from '../components/ImageCropEditor';
 import HtmlEditor from '../components/HtmlEditor';
 
 const ADMIN_EMAIL = 'fluffydrawing.th@gmail.com';
-type Tab = 'dashboard'|'products'|'orders'|'artists'|'categories'|'pages'|'free-downloads'|'legal'|'theme'|'lang';
+type Tab = 'dashboard'|'products'|'orders'|'artists'|'artist-requests'|'categories'|'pages'|'free-downloads'|'legal'|'theme'|'lang';
 
 function NavItem({icon,label,active,onClick}:any) {
   return (
@@ -38,8 +38,8 @@ export default function AdminPage() {
   if (!user || user.role !== 'admin' || user.email !== ADMIN_EMAIL) return null;
 
   const TAB_LABELS: Record<Tab, string> = {
-    dashboard:'Dashboard', products:'Products', orders:'Orders', artists:'Artists',
-    categories:'Categories', pages:'Pages', 'free-downloads':'Free Downloads', theme:'Theme & CMS', lang:'Language CMS',
+    dashboard:'Dashboard', products:'Products', orders:'Orders', artists:'Artists', 'artist-requests':'Artist Requests',
+    categories:'Categories', pages:'Pages', 'free-downloads':'Free Downloads', legal:'Legal Pages', theme:'Theme & CMS', lang:'Language CMS',
   };
 
   const selectTab = (t: Tab) => { setTab(t); setSidebarOpen(false); };
@@ -60,6 +60,7 @@ export default function AdminPage() {
         <NavItem icon="📚" label="Products"     active={tab==='products'}   onClick={()=>selectTab('products')} />
         <NavItem icon="📦" label="Orders"       active={tab==='orders'}     onClick={()=>selectTab('orders')} />
         <NavItem icon="🎨" label="Artists"      active={tab==='artists'}    onClick={()=>selectTab('artists')} />
+        <NavItem icon="🙋" label="Artist Requests" active={tab==='artist-requests'} onClick={()=>selectTab('artist-requests')} />
         <NavItem icon="🏷️" label="Categories"   active={tab==='categories'} onClick={()=>selectTab('categories')} />
         <NavItem icon="📄" label="Pages"          active={tab==='pages'}           onClick={()=>selectTab('pages')} />
         <NavItem icon="⬇️" label="Free Downloads" active={tab==='free-downloads'}  onClick={()=>selectTab('free-downloads')} />
@@ -106,6 +107,7 @@ export default function AdminPage() {
         {tab==='products'   && <ProductsTab />}
         {tab==='orders'     && <OrdersTab />}
         {tab==='artists'    && <ArtistsTab />}
+        {tab==='artist-requests' && <ArtistRequestsTab />}
         {tab==='categories' && <CategoriesTab />}
         {tab==='pages'           && <PagesCMSTab />}
         {tab==='free-downloads'  && <FreeDownloadsTab />}
@@ -1503,6 +1505,13 @@ function ArtistsTab() {
     await api.deleteArtist(id); load();
   };
 
+  const revoke = async (id:string) => {
+    if(!confirm('Revoke artist access (set this account back to customer)? Their products, orders and sales history are kept.'))return;
+    const res = await api.revokeArtist(id);
+    if(res?.error){setMsg('⚠️ '+res.error);}else{setMsg('✓ Artist access revoked.');load();}
+    setTimeout(()=>setMsg(''),4000);
+  };
+
   const inp = (label:string, value:string, onChange:(v:string)=>void, placeholder='', type='text') => (
     <div>
       <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>{label}</label>
@@ -1623,6 +1632,7 @@ function ArtistsTab() {
                 <div style={{display:'flex',gap:6}}>
                   <button onClick={()=>navigate(`/artists/${a.artist_slug}`)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:600,color:'#374151'}}>View</button>
                   <button onClick={()=>startEdit(a)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:600,color:'#374151'}}>Edit</button>
+                  <button onClick={()=>revoke(a.id)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fcd34d',background:'#fffbeb',cursor:'pointer',fontSize:12,fontWeight:600,color:'#b45309'}}>Revoke</button>
                   <button onClick={()=>del(a.id)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:12,fontWeight:600,color:'#ef4444'}}>Delete</button>
                 </div>
               </td>
@@ -1630,6 +1640,97 @@ function ArtistsTab() {
           ))}</tbody>
         </table>
         {artists.length===0&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>No artists yet. Click "+ Add Artist" to get started!</div>}
+      </div>
+    </div>
+  );
+}
+
+// ── Artist Requests ─────────────────────────────────────────────────────────
+function ArtistRequestsTab() {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [artists, setArtists] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState('');
+  const [approving, setApproving] = useState<string|null>(null);  // request id being approved
+  const [linkChoice, setLinkChoice] = useState('');               // selected artist profile id
+
+  const load = useCallback(() => {
+    setLoading(true);
+    Promise.all([api.getArtistRequests(), api.getArtists()]).then(([reqs, arts]) => {
+      setRequests(Array.isArray(reqs) ? reqs : []);
+      setArtists(Array.isArray(arts) ? arts : []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const approve = async (id: string) => {
+    setMsg('');
+    const res = await api.approveArtistRequest(id, linkChoice || undefined);
+    if (res?.error) { setMsg('⚠️ ' + res.error); return; }
+    setApproving(null); setLinkChoice(''); setMsg('✓ Approved.'); load();
+    setTimeout(() => setMsg(''), 4000);
+  };
+  const reject = async (id: string) => {
+    if (!confirm('Reject this artist request?')) return;
+    const res = await api.rejectArtistRequest(id);
+    if (res?.error) { setMsg('⚠️ ' + res.error); return; }
+    setMsg('✓ Rejected.'); load();
+    setTimeout(() => setMsg(''), 4000);
+  };
+
+  const STATUS: Record<string,{c:string,bg:string,t:string}> = {
+    pending:  { c:'#92400e', bg:'#fef3c7', t:'Pending' },
+    approved: { c:'#065f46', bg:'#d1fae5', t:'Approved' },
+    rejected: { c:'#991b1b', bg:'#fee2e2', t:'Rejected' },
+  };
+
+  return (
+    <div style={{padding:32}}>
+      <h1 style={{fontSize:28,fontWeight:900,color:'#111827',margin:'0 0 8px'}}>Artist Requests</h1>
+      <p style={{fontSize:13,color:'#6b7280',margin:'0 0 24px'}}>Review customers who want to become artists. Approving promotes them to the artist role.</p>
+      {msg&&<div style={{marginBottom:16,padding:'10px 16px',borderRadius:12,background:msg.startsWith('✓')?'#d1fae5':'#fee2e2',color:msg.startsWith('✓')?'#065f46':'#991b1b',fontSize:13,fontWeight:600}}>{msg}</div>}
+
+      <div style={{...card,overflow:'hidden'}}>
+        <table style={{width:'100%',borderCollapse:'collapse'}}>
+          <thead><tr style={{borderBottom:'2px solid #f3f4f6',background:'#fafafa'}}>{['NAME','EMAIL','MESSAGE','DATE','STATUS',''].map((h,i)=><th key={i} style={{textAlign:'left',padding:'12px 16px',fontSize:11,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}</tr></thead>
+          <tbody>{requests.map(r=>(
+            <React.Fragment key={r.id}>
+            <tr style={{borderBottom:'1px solid #f9fafb'}}>
+              <td style={{padding:'12px 16px',fontWeight:700,color:'#111827',fontSize:14}}>{r.username||'—'}</td>
+              <td style={{padding:'12px 16px',fontSize:13,color:'#6b7280'}}>{r.email||'—'}</td>
+              <td style={{padding:'12px 16px',fontSize:12,color:'#6b7280',maxWidth:280}}>{r.message||<span style={{color:'#cbd5e1'}}>—</span>}</td>
+              <td style={{padding:'12px 16px',fontSize:12,color:'#9ca3af'}}>{r.request_date?new Date(r.request_date).toLocaleDateString():'—'}</td>
+              <td style={{padding:'12px 16px'}}><Badge color={STATUS[r.status]?.c||'#6b7280'} bg={STATUS[r.status]?.bg||'#f3f4f6'} text={STATUS[r.status]?.t||r.status}/></td>
+              <td style={{padding:'12px 16px'}}>
+                {r.status==='pending'&&(
+                  <div style={{display:'flex',gap:6}}>
+                    <button onClick={()=>{setApproving(approving===r.id?null:r.id);setLinkChoice('');}} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #6ee7b7',background:'#d1fae5',cursor:'pointer',fontSize:12,fontWeight:700,color:'#065f46'}}>Approve</button>
+                    <button onClick={()=>reject(r.id)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:12,fontWeight:700,color:'#ef4444'}}>Reject</button>
+                  </div>
+                )}
+              </td>
+            </tr>
+            {approving===r.id&&(
+              <tr style={{background:'#fafafa'}}>
+                <td colSpan={6} style={{padding:'14px 16px'}}>
+                  <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+                    <span style={{fontSize:13,fontWeight:700,color:'#374151'}}>Link to existing artist profile (optional):</span>
+                    <select value={linkChoice} onChange={e=>setLinkChoice(e.target.value)} style={{padding:'8px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit'}}>
+                      <option value="">— Self (promote this user as a new artist) —</option>
+                      {artists.map(a=><option key={a.id} value={a.id}>{a.name} (/{a.artist_slug})</option>)}
+                    </select>
+                    <button onClick={()=>approve(r.id)} style={{padding:'8px 18px',borderRadius:10,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:700}}>Confirm Approve</button>
+                    <button onClick={()=>{setApproving(null);setLinkChoice('');}} style={{padding:'8px 14px',borderRadius:10,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:13,fontWeight:600,color:'#6b7280'}}>Cancel</button>
+                  </div>
+                </td>
+              </tr>
+            )}
+            </React.Fragment>
+          ))}</tbody>
+        </table>
+        {!loading&&requests.length===0&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>No artist requests yet.</div>}
+        {loading&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>Loading...</div>}
       </div>
     </div>
   );

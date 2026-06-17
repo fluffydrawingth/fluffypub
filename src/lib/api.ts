@@ -66,6 +66,16 @@ export const api = {
   getArtist: (id: string) => fetch(`/api/artists?id=${id}`).then(r => r.json()),
   getArtistBySlug: (slug: string) => fetch(`/api/artists?slug=${slug}`).then(r => r.json()),
   createArtist: (data: any) => fetch('/api/artists', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+
+  // Artist requests / role management
+  requestArtist: (message: string) => fetch('/api/artists?action=request', { method: 'POST', headers: h(), body: JSON.stringify({ message }) }).then(r => r.json()),
+  myArtistRequest: () => fetch('/api/artists?action=my-request', { headers: h() }).then(r => r.json()),
+  getArtistRequests: () => fetch('/api/artists?action=requests', { headers: h() }).then(r => r.json()),
+  approveArtistRequest: (id: string, artistId?: string) => fetch(`/api/artists?action=approve&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify({ artist_id: artistId || undefined }) }).then(r => r.json()),
+  rejectArtistRequest: (id: string) => fetch(`/api/artists?action=reject&id=${id}`, { method: 'POST', headers: h() }).then(r => r.json()),
+  revokeArtist: (userId: string) => fetch(`/api/artists?action=revoke&id=${userId}`, { method: 'POST', headers: h() }).then(r => r.json()),
+  updateArtistMe: (data: any) => fetch('/api/artists?action=me', { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  getMyProducts: () => fetch('/api/products?mine=1', { headers: h() }).then(r => r.json()).then((d: any) => Array.isArray(d) ? d.map(normalize) : d),
   updateArtist: (id: string, data: any) => fetch(`/api/artists?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   deleteArtist: (id: string) => fetch(`/api/artists?id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 

@@ -31,7 +31,7 @@ async function getUser(req) {
     const email = payload.email || '';
     const { data: profile, error: fetchErr } = await supabase
       .from('profiles')
-      .select('id, email, name, role, bio, artist_slug, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
+      .select('id, email, name, role, bio, artist_slug, artist_id, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
       .eq('id', userId)
       .single();
 
@@ -46,7 +46,7 @@ async function getUser(req) {
         name: payload.user_metadata?.name || email.split('@')[0] || '',
         role: 'customer',
       }, { onConflict: 'id' })
-      .select('id, email, name, role, bio, artist_slug, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
+      .select('id, email, name, role, bio, artist_slug, artist_id, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
       .single();
 
     return created || { id: userId, email, name: email.split('@')[0], role: 'customer' };

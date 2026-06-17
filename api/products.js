@@ -1,8 +1,20 @@
 // /api/products, /api/products?id=xxx
 const { supabase, requireAuth, getUser, json } = require('./_lib');
 
+const PRODUCT_SELECT = 'id,title,slug,price,original_price,artist_id,artist_name,artist_slug,category,categories,description,description_th,description_en,rich_description,image,cover_image_url,type,is_physical,is_digital,pages,rating,reviews,tags,search_keywords,featured,bestseller,is_new,active,status,shipping_required,shipping_note,digital_download_url,download_instruction,physical_stock,variants,title_th,title_en,price_thb,price_usd,r2_key,r2_file_name,file_size,file_type,created_at';
+
 module.exports = async function handler(req, res) {
   const id = req.query.id;
+
+  // GET /api/products?mine=1 — artist's own products (any status, incl. pending/rejected)
+  if (req.method === 'GET' && req.query.mine) {
+    const user = await requireAuth(req, res, ['artist']);
+    if (!user) return;
+    const effectiveArtistId = user.artist_id || user.id;
+    const { data, error } = await supabase.from('products').select(PRODUCT_SELECT).eq('artist_id', effectiveArtistId).order('created_at', { ascending: false });
+    if (error) return json(res, 500, { error: error.message });
+    return json(res, 200, data || []);
+  }
 
   // GET all products
   if (req.method === 'GET' && !id) {
