@@ -1888,6 +1888,7 @@ function AffiliatesTab() {
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
   const [expanded, setExpanded] = useState<string|null>(null);
+  const [selId, setSelId] = useState('');   // selected affiliate (dropdown)
 
   const load = useCallback(() => {
     setLoading(true);
@@ -1942,7 +1943,18 @@ function AffiliatesTab() {
       {loading&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>Loading...</div>}
       {!loading&&affiliates.length===0&&<div style={{...card,textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>No affiliates yet.</div>}
 
-      {affiliates.map(a=>(
+      {/* Affiliate selector (same pattern as Artist Payouts) */}
+      {!loading&&affiliates.length>0&&(
+        <div style={{...card,padding:16,marginBottom:16}}>
+          <label style={{display:'block',fontSize:12,fontWeight:800,color:'#374151',marginBottom:6}}>Select affiliate</label>
+          <select value={selId} onChange={e=>{setSelId(e.target.value);setExpanded(null);}} style={{width:'100%',maxWidth:360,padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',background:'white'}}>
+            <option value="">— Select an affiliate —</option>
+            {affiliates.map((a:any)=><option key={a.id} value={a.id}>{(a.name||a.email)}{a.affiliate_enabled?'':' (disabled)'}</option>)}
+          </select>
+        </div>
+      )}
+
+      {(selId ? affiliates.filter(a=>a.id===selId) : []).map(a=>(
         <div key={a.id} style={{...card,marginBottom:16,padding:20}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}}>
             <div>
