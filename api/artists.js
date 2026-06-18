@@ -78,6 +78,28 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { success: true });
   }
 
+  // DELETE /api/artists?action=delete-request&id=<requestId> — admin permanently deletes a request row
+  if (req.method === 'DELETE' && action === 'delete-request') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { id } = req.query;
+    if (!id) return json(res, 400, { error: 'id required' });
+    const { error } = await supabase.from('artist_requests').delete().eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
+  }
+
+  // DELETE /api/artists?action=delete-payout&id=<payoutId> — admin permanently deletes a payout record
+  if (req.method === 'DELETE' && action === 'delete-payout') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { id } = req.query;
+    if (!id) return json(res, 400, { error: 'id required' });
+    const { error } = await supabase.from('artist_payouts').delete().eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
+  }
+
   // GET /api/artists?action=payouts — list payout records (admin: all/by artist_id; artist: own)
   if (req.method === 'GET' && action === 'payouts') {
     const user = await requireAuth(req, res);

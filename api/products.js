@@ -18,7 +18,11 @@ module.exports = async function handler(req, res) {
 
   // GET all products
   if (req.method === 'GET' && !id) {
-    const { data, error } = await supabase.from('products').select('id,title,slug,price,original_price,artist_id,artist_name,artist_slug,category,categories,description,description_th,description_en,rich_description,image,cover_image_url,type,is_physical,is_digital,pages,rating,reviews,tags,search_keywords,featured,bestseller,is_new,active,status,shipping_required,shipping_note,digital_download_url,download_instruction,physical_stock,variants,title_th,title_en,price_thb,price_usd,r2_key,r2_file_name,file_size,file_type,created_at').eq('active', true).eq('status', 'published').order('created_at', { ascending: false });
+    const isAdmin = req.query.admin === '1';
+    const selectCols = isAdmin ? PRODUCT_SELECT : 'id,title,slug,price,original_price,artist_id,artist_name,artist_slug,category,categories,description,description_th,description_en,rich_description,image,cover_image_url,type,is_physical,is_digital,pages,rating,reviews,tags,search_keywords,featured,bestseller,is_new,active,status,shipping_required,shipping_note,digital_download_url,download_instruction,physical_stock,variants,title_th,title_en,price_thb,price_usd,r2_key,r2_file_name,file_size,file_type,created_at';
+    let q = supabase.from('products').select(selectCols).order('created_at', { ascending: false });
+    if (!isAdmin) q = q.eq('active', true).eq('status', 'published');
+    const { data, error } = await q;
     if (error) return json(res, 500, { error: error.message });
     return json(res, 200, data);
   }

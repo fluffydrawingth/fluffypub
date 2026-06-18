@@ -417,7 +417,7 @@ function ProductsTab() {
   }, []);
 
   const load = useCallback(() => {
-    fetch('/api/products',{headers:{Authorization:`Bearer ${localStorage.getItem('fluffy_token')}`}})
+    fetch('/api/products?admin=1',{headers:{Authorization:`Bearer ${localStorage.getItem('fluffy_token')}`}})
       .then(r=>r.json()).then(d=>setProducts(Array.isArray(d)?d:[]));
     api.getArtists().then((a:any)=>setArtists(Array.isArray(a)?a:[]));
   }, []);
@@ -1684,6 +1684,14 @@ function ArtistRequestsTab() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  const deleteRequest = async (id: string, name: string) => {
+    if (!confirm(`Permanently delete the request from "${name}"? This cannot be undone.`)) return;
+    const res = await (api as any).deleteArtistRequest(id);
+    if (res?.error) { setMsg('⚠️ ' + res.error); return; }
+    setMsg('✓ Request deleted.'); load();
+    setTimeout(() => setMsg(''), 4000);
+  };
+
   const approve = async (id: string) => {
     setMsg('');
     const res = await api.approveArtistRequest(id, linkChoice || undefined);
@@ -1732,15 +1740,16 @@ function ArtistRequestsTab() {
               <td style={{padding:'12px 16px',fontSize:12,color:'#9ca3af'}}>{r.request_date?new Date(r.request_date).toLocaleDateString():'—'}</td>
               <td style={{padding:'12px 16px'}}><Badge color={STATUS[r.status]?.c||'#6b7280'} bg={STATUS[r.status]?.bg||'#f3f4f6'} text={STATUS[r.status]?.t||r.status}/></td>
               <td style={{padding:'12px 16px'}}>
-                {r.status==='pending'&&(
-                  <div style={{display:'flex',gap:6}}>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {r.status==='pending'&&(<>
                     <button onClick={()=>{setApproving(approving===r.id?null:r.id);setLinkChoice('');}} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #6ee7b7',background:'#d1fae5',cursor:'pointer',fontSize:12,fontWeight:700,color:'#065f46'}}>Approve</button>
                     <button onClick={()=>reject(r.id)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:12,fontWeight:700,color:'#ef4444'}}>Reject</button>
-                  </div>
-                )}
-                {r.status==='approved'&&(
-                  <button onClick={()=>revoke(r.user_id)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fcd34d',background:'#fffbeb',cursor:'pointer',fontSize:12,fontWeight:700,color:'#b45309'}}>Revoke</button>
-                )}
+                  </>)}
+                  {r.status==='approved'&&(
+                    <button onClick={()=>revoke(r.user_id)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fcd34d',background:'#fffbeb',cursor:'pointer',fontSize:12,fontWeight:700,color:'#b45309'}}>Revoke</button>
+                  )}
+                  <button onClick={()=>deleteRequest(r.id, r.username||r.email||'this user')} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:12,fontWeight:700,color:'#dc2626'}}>Delete</button>
+                </div>
               </td>
             </tr>
             {approving===r.id&&(
@@ -3584,6 +3593,7 @@ function ArtistPayoutsTab() {
   const [payouts, setPayouts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [delConfirm, setDelConfirm] = useState<string|null>(null);
   const [msg, setMsg] = useState('');
   const [editId, setEditId] = useState<string|null>(null);
   const [calcEarning, setCalcEarning] = useState('');
@@ -3632,6 +3642,16 @@ function ArtistPayoutsTab() {
     else { setProofUrl(result.publicUrl); setMsg('✓ Proof uploaded'); }
     setProofUploading(false);
     setTimeout(() => setMsg(''), 3000);
+  };
+
+  const deletePayout = async (id: string) => {
+    const res = await (api as any).deleteArtistPayout(id);
+    if (res?.error) { setMsg('⚠️ ' + res.error); setDelConfirm(null); return; }
+    setDelConfirm(null);
+    if (editId === id) clearForm();
+    setMsg('✓ Payout record deleted.');
+    loadPayouts(selArtist);
+    setTimeout(() => setMsg(''), 4000);
   };
 
   const save = async () => {
@@ -3773,14 +3793,35 @@ function ArtistPayoutsTab() {
                     <td style={{ padding:'10px 14px' }}><span style={{ background:py.status==='paid'?'#d1fae5':'#fef3c7', color:py.status==='paid'?'#059669':'#d97706', borderRadius:20, padding:'3px 10px', fontSize:11, fontWeight:700 }}>{py.status==='paid'?'✅ Paid':'⏳ Pending'}</span></td>
                     <td style={{ padding:'10px 14px' }}>{py.payout_proof_url ? <a href={py.payout_proof_url} target="_blank" rel="noreferrer" style={{ color:P, fontWeight:700, fontSize:12 }}>View</a> : <span style={{ color:'#9ca3af', fontSize:12 }}>—</span>}</td>
                     <td style={{ padding:'10px 14px' }}>
-                      <button onClick={()=>{ setSelMonth(py.month); setSelYear(py.year); fillForm(py); }}
-                        style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #e5e7eb', background:'white', cursor:'pointer', fontSize:12, fontWeight:600, color:'#374151' }}>Edit</button>
+                      <div style={{ display:'flex', gap:6 }}>
+                        <button onClick={()=>{ setSelMonth(py.month); setSelYear(py.year); fillForm(py); }}
+                          style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #e5e7eb', background:'white', cursor:'pointer', fontSize:12, fontWeight:600, color:'#374151' }}>Edit</button>
+                        <button onClick={()=>setDelConfirm(py.id)}
+                          style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #fca5a5', background:'#fef2f2', cursor:'pointer', fontSize:12, fontWeight:700, color:'#dc2626' }}>Delete</button>
+                      </div>
                     </td>
                   </tr>
                 ))}</tbody>
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {delConfirm && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ background:'white', borderRadius:20, padding:32, maxWidth:400, width:'90%', boxShadow:'0 8px 32px rgba(0,0,0,0.18)' }}>
+            <div style={{ fontSize:36, textAlign:'center', marginBottom:12 }}>🗑️</div>
+            <h3 style={{ fontSize:17, fontWeight:800, color:'#111827', textAlign:'center', marginBottom:10 }}>Delete Payout Record?</h3>
+            <p style={{ fontSize:13, color:'#6b7280', textAlign:'center', lineHeight:1.6, marginBottom:24 }}>
+              This permanently removes the payout record. Orders, products, and sales history are not affected.
+            </p>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={()=>setDelConfirm(null)} style={{ flex:1, padding:'10px', borderRadius:12, border:'1.5px solid #e5e7eb', background:'white', cursor:'pointer', fontSize:14, fontWeight:700, color:'#374151' }}>Cancel</button>
+              <button onClick={()=>deletePayout(delConfirm)} style={{ flex:1, padding:'10px', borderRadius:12, border:'none', background:'#dc2626', cursor:'pointer', fontSize:14, fontWeight:700, color:'white' }}>Delete</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
