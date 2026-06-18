@@ -477,6 +477,21 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { ok: true });
   }
 
+  // GET /api/orders?action=admin-artist&artist_id=X — admin fetches orders for a specific artist
+  // Used for auto-calculating payout earnings in the admin payout tab.
+  if (req.method === 'GET' && action === 'admin-artist') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const artistId = req.query.artist_id;
+    if (!artistId) return json(res, 400, { error: 'artist_id required' });
+    const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+    if (error) return json(res, 500, { error: error.message });
+    const filtered = (data || [])
+      .filter(o => (o.items||[]).some(i => i.artistId === artistId))
+      .map(o => ({ ...o, items: (o.items||[]).filter(i => i.artistId === artistId) }));
+    return json(res, 200, filtered);
+  }
+
   if (req.method === 'GET' && action === 'artist') {
     const user = await requireAuth(req, res, ['artist']);
     if (!user) return;

@@ -79,6 +79,7 @@ export const api = {
   saveArtistPayout: (data: any) => fetch('/api/artists?action=payout', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   deleteArtistRequest: (id: string) => fetch(`/api/artists?action=delete-request&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
   deleteArtistPayout: (id: string) => fetch(`/api/artists?action=delete-payout&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
+  getArtistOrdersForAdmin: (artistId: string) => fetch(`/api/orders?action=admin-artist&artist_id=${artistId}`, { headers: h() }).then(r => r.json()).then((d: any) => Array.isArray(d) ? d.map(normalizeOrder) : d),
   getMyProducts: () => fetch('/api/products?mine=1', { headers: h() }).then(r => r.json()).then((d: any) => Array.isArray(d) ? d.map(normalize) : d),
   updateArtist: (id: string, data: any) => fetch(`/api/artists?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   deleteArtist: (id: string) => fetch(`/api/artists?id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),

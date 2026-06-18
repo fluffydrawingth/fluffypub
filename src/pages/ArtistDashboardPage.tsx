@@ -453,19 +453,55 @@ function ArtistEarnings({ user, p }: any) {
       {thisPayout ? (
         <div style={{ background:'white', borderRadius:16, padding:20, boxShadow:'0 2px 10px rgba(0,0,0,0.05)', marginBottom:20 }}>
           <h3 style={{ fontSize:15, fontWeight:800, color:'#1e293b', marginBottom:12 }}>💸 Payout — {MONTHS[selMonth]} {selYear}</h3>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))', gap:10, marginBottom:14 }}>
+
+          {/* Breakdown summary if available */}
+          {(thisPayout.physical_qty > 0 || thisPayout.digital_qty_thb > 0 || thisPayout.digital_qty_usd > 0) && (
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))', gap:8, marginBottom:14 }}>
+              {thisPayout.physical_qty > 0 && (
+                <div style={{ background:'#fef9c3', borderRadius:10, padding:'10px 12px', border:'1px solid #fde68a' }}>
+                  <div style={{ fontSize:10, color:'#92400e', fontWeight:700, marginBottom:3 }}>📦 Physical</div>
+                  <div style={{ fontSize:11, color:'#374151' }}>Qty: {thisPayout.physical_qty}</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:'#78350f' }}>{thb(thisPayout.physical_earning_thb)}</div>
+                </div>
+              )}
+              {thisPayout.digital_qty_thb > 0 && (
+                <div style={{ background:'#f0fdf4', borderRadius:10, padding:'10px 12px', border:'1px solid #bbf7d0' }}>
+                  <div style={{ fontSize:10, color:'#065f46', fontWeight:700, marginBottom:3 }}>⬇️ Digital (THB)</div>
+                  <div style={{ fontSize:11, color:'#374151' }}>Qty: {thisPayout.digital_qty_thb}</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:'#065f46' }}>{thb(thisPayout.digital_earning_thb)}</div>
+                </div>
+              )}
+              {thisPayout.digital_qty_usd > 0 && (
+                <div style={{ background:'#eff6ff', borderRadius:10, padding:'10px 12px', border:'1px solid #bfdbfe' }}>
+                  <div style={{ fontSize:10, color:'#1e40af', fontWeight:700, marginBottom:3 }}>⬇️ Digital (USD)</div>
+                  <div style={{ fontSize:11, color:'#374151' }}>Qty: {thisPayout.digital_qty_usd}</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:'#1e3a8a' }}>{usd(thisPayout.digital_earning_usd)}</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Payout amounts */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))', gap:8, marginBottom:14 }}>
             {[
-              ['Calculated', thb(thisPayout.calculated_earning)],
-              ['Paid Amount', thb(thisPayout.paid_amount)],
+              ['Calc THB', thb(thisPayout.calculated_earning_thb ?? thisPayout.calculated_earning ?? 0)],
+              ['Calc USD', usd(thisPayout.calculated_earning_usd ?? 0)],
+              ['Paid THB', thb(thisPayout.paid_amount_thb ?? thisPayout.paid_amount ?? 0)],
+              ['Paid USD', usd(thisPayout.paid_amount_usd ?? 0)],
               ['Status', thisPayout.status === 'paid' ? '✅ Paid' : '⏳ Pending'],
               ['Paid On', thisPayout.paid_at ? new Date(thisPayout.paid_at).toLocaleDateString() : '—'],
             ].map(([k,v])=>(
               <div key={k as string} style={{ background:'#f8fafc', borderRadius:10, padding:'10px 12px' }}>
-                <div style={{ fontSize:11, color:'#888', fontWeight:600, marginBottom:3 }}>{k}</div>
-                <div style={{ fontSize:14, fontWeight:800, color:'#1e293b' }}>{v}</div>
+                <div style={{ fontSize:10, color:'#888', fontWeight:600, marginBottom:2 }}>{k}</div>
+                <div style={{ fontSize:13, fontWeight:800, color:'#1e293b' }}>{v}</div>
               </div>
             ))}
           </div>
+          {thisPayout.usd_to_thb_rate && thisPayout.calculated_earning_usd > 0 && (
+            <div style={{ background:'#f0f9ff', border:'1px solid #bae6fd', borderRadius:10, padding:'8px 12px', fontSize:12, color:'#0369a1', marginBottom:10 }}>
+              💱 USD → THB rate: ×{thisPayout.usd_to_thb_rate} = ฿{(thisPayout.calculated_earning_usd * thisPayout.usd_to_thb_rate).toLocaleString('th-TH', { minimumFractionDigits:2 })} equivalent
+            </div>
+          )}
           {thisPayout.payout_note && (
             <div style={{ background:'#fef3c7', border:'1px solid #fde68a', borderRadius:10, padding:'10px 14px', fontSize:13, color:'#92400e', marginBottom:10 }}>
               📝 {thisPayout.payout_note}
@@ -504,16 +540,17 @@ function ArtistEarnings({ user, p }: any) {
         <div style={{ background:'white', borderRadius:16, overflow:'hidden', boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>
           <div style={{ padding:'16px 20px', borderBottom:'1px solid #f1f5f9', fontWeight:800, fontSize:15, color:'#1e293b' }}>📋 Payout History</div>
           <div style={{ overflowX:'auto' as const }}>
-            <table style={{ width:'100%', borderCollapse:'collapse', minWidth:420 }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', minWidth:480 }}>
               <thead><tr style={{ background:'#f8fafc', borderBottom:'2px solid #f1f5f9' }}>
-                {['Period','Currency','Earning','Paid','Status','Proof'].map(h=><th key={h} style={{ textAlign:'left', padding:'10px 14px', fontSize:11, color:'#888', fontWeight:700 }}>{h}</th>)}
+                {['Period','Calc THB','Calc USD','Paid THB','Paid USD','Status','Proof'].map(h=><th key={h} style={{ textAlign:'left', padding:'10px 14px', fontSize:11, color:'#888', fontWeight:700, whiteSpace:'nowrap' as const }}>{h}</th>)}
               </tr></thead>
               <tbody>{payouts.map(py=>(
                 <tr key={py.id} style={{ borderBottom:'1px solid #f8fafc' }}>
-                  <td style={{ padding:'10px 14px', fontWeight:700, fontSize:13, color:'#1e293b' }}>{MONTHS[py.month]} {py.year}</td>
-                  <td style={{ padding:'10px 14px', fontSize:12, color:'#64748b' }}>{py.currency}</td>
-                  <td style={{ padding:'10px 14px', fontWeight:700 }}>{py.currency==='USD' ? usd(py.calculated_earning) : thb(py.calculated_earning)}</td>
-                  <td style={{ padding:'10px 14px', fontWeight:700 }}>{py.currency==='USD' ? usd(py.paid_amount) : thb(py.paid_amount)}</td>
+                  <td style={{ padding:'10px 14px', fontWeight:700, fontSize:13, color:'#1e293b', whiteSpace:'nowrap' as const }}>{MONTHS[py.month]} {py.year}</td>
+                  <td style={{ padding:'10px 14px', fontWeight:700, fontSize:12 }}>{thb(py.calculated_earning_thb ?? py.calculated_earning ?? 0)}</td>
+                  <td style={{ padding:'10px 14px', fontWeight:700, fontSize:12, color:'#1e40af' }}>{usd(py.calculated_earning_usd ?? 0)}</td>
+                  <td style={{ padding:'10px 14px', fontWeight:700, fontSize:12, color:'#059669' }}>{thb(py.paid_amount_thb ?? py.paid_amount ?? 0)}</td>
+                  <td style={{ padding:'10px 14px', fontWeight:700, fontSize:12, color:'#0070ba' }}>{usd(py.paid_amount_usd ?? 0)}</td>
                   <td style={{ padding:'10px 14px' }}><span style={{ background:py.status==='paid'?'#d1fae5':'#fef3c7', color:py.status==='paid'?'#059669':'#d97706', borderRadius:20, padding:'3px 10px', fontSize:11, fontWeight:700 }}>{py.status==='paid'?'✅ Paid':'⏳ Pending'}</span></td>
                   <td style={{ padding:'10px 14px' }}>
                     {py.payout_proof_url

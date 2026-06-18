@@ -122,27 +122,34 @@ module.exports = async function handler(req, res) {
   if (req.method === 'POST' && action === 'payout') {
     const admin = await requireAuth(req, res, ['admin']);
     if (!admin) return;
-    const { id, artist_id, month, year, currency, calculated_earning, paid_amount, status, payout_proof_url, payout_note, paid_at } = req.body || {};
+    const b = req.body || {};
+    const { id, artist_id, month, year } = b;
+
+    const PAYOUT_FIELDS = [
+      'calculated_earning_thb','calculated_earning_usd',
+      'paid_amount_thb','paid_amount_usd',
+      'usd_to_thb_rate',
+      'physical_qty','physical_earning_thb',
+      'digital_qty_thb','digital_gross_thb','digital_earning_thb',
+      'digital_qty_usd','digital_gross_usd','digital_earning_usd',
+      'status','payout_proof_url','payout_note','paid_at',
+      // legacy
+      'calculated_earning','paid_amount','currency',
+    ];
+
     if (id) {
       const updates = { updated_at: new Date().toISOString() };
-      ['calculated_earning','paid_amount','status','payout_proof_url','payout_note','paid_at'].forEach(k => {
-        if (req.body[k] !== undefined) updates[k] = req.body[k];
-      });
+      PAYOUT_FIELDS.forEach(k => { if (b[k] !== undefined) updates[k] = b[k]; });
       const { data, error } = await supabase.from('artist_payouts').update(updates).eq('id', id).select().single();
       if (error) return json(res, 400, { error: error.message });
       return json(res, 200, data);
     }
     if (!artist_id || !month || !year) return json(res, 400, { error: 'artist_id, month, year required' });
-    const { data, error } = await supabase.from('artist_payouts').insert({
-      artist_id, month: parseInt(month), year: parseInt(year),
-      currency: currency || 'THB',
-      calculated_earning: calculated_earning || 0,
-      paid_amount: paid_amount || 0,
-      status: status || 'pending',
-      payout_proof_url: payout_proof_url || null,
-      payout_note: payout_note || null,
-      paid_at: paid_at || null,
-    }).select().single();
+    const row = { artist_id, month: parseInt(month), year: parseInt(year), status: b.status || 'pending' };
+    PAYOUT_FIELDS.filter(k => !['status'].includes(k)).forEach(k => {
+      if (b[k] !== undefined) row[k] = b[k];
+    });
+    const { data, error } = await supabase.from('artist_payouts').insert(row).select().single();
     if (error) return json(res, 400, { error: error.message });
     return json(res, 201, data);
   }
