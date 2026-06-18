@@ -14,7 +14,7 @@ module.exports = async function handler(req, res) {
     const { data: existing } = await supabase.from('artist_requests').select('id').eq('user_id', user.id).eq('status', 'pending').limit(1);
     if (existing && existing.length) return json(res, 409, { error: 'You already have a pending request.' });
     const { data, error } = await supabase.from('artist_requests').insert({
-      user_id: user.id, username: user.name || '', email: user.email || '', message: message || '', status: 'pending',
+      user_id: user.id, username: user.username || user.name || '', email: user.email || '', message: message || '', status: 'pending',
     }).select().single();
     if (error) return json(res, 400, { error: error.message });
     return json(res, 201, data);

@@ -35,7 +35,7 @@ export default function AccountPage() {
         <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:32 }}>
           <div style={{ width:56, height:56, borderRadius:'50%', background:p+'20', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26 }}>👤</div>
           <div>
-            <h1 style={{ fontSize:24, fontWeight:900, color:'#1e293b', margin:0 }}>{user.name}</h1>
+            <h1 style={{ fontSize:24, fontWeight:900, color:'#1e293b', margin:0 }}>{user.username || user.name}</h1>
             <div style={{ fontSize:13, color:'#64748b' }}>{user.email}</div>
           </div>
           <button onClick={async()=>{await logout();navigate('/');}} style={{ marginLeft:'auto', background:'#fef2f2', border:'1.5px solid #fca5a5', color:'#ef4444', cursor:'pointer', padding:'8px 16px', borderRadius:12, fontSize:13, fontWeight:700, fontFamily:theme.fontFamily }}>Sign Out</button>

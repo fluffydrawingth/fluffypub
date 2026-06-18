@@ -46,7 +46,7 @@ export default function AffiliateApplicationPage() {
   useEffect(() => {
     if (!user) return;
     if (user.affiliate_enabled) { navigate('/affiliate-dashboard'); return; }
-    setName(user.name || '');
+    setName((user as any).username || user.name || '');
     api.myAffiliateRequest().then(r => {
       setExisting(r && !r.error ? r : null);
       setLoaded(true);
