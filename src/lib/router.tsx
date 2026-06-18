@@ -46,6 +46,8 @@ function parse(hash: string): Route {
   if (p[0]==='privacy-policy')    return { path:'/privacy-policy' };
   if (p[0]==='terms-of-service')  return { path:'/terms-of-service' };
   if (p[0]==='artist-guidelines') return { path:'/artist-guidelines' };
+  if (p[0]==='artist-agreement')  return { path:'/artist-agreement' };
+  if (p[0]==='artist-application') return { path:'/artist-application' };
   return { path:'/' };
 }
 
