@@ -159,7 +159,7 @@ module.exports = async function handler(req, res) {
     const admin = await requireAuth(req, res, ['admin']);
     if (!admin) return;
     const { data: profiles } = await supabase.from('profiles')
-      .select('id,name,email,role,affiliate_enabled,payout_account_name,payout_bank_name,payout_account_number,payout_payment_method,payout_note')
+      .select('id,name,username,email,role,affiliate_enabled,payout_account_name,payout_bank_name,payout_account_number,payout_payment_method,payout_note')
       .eq('affiliate_enabled', true).order('name');
     const { data: codes } = await supabase.from('affiliate_codes').select('*').order('created_at', { ascending: false });
     const { data: orders } = await supabase.from('orders').select('id,status,items,total_thb,affiliate_user_id,affiliate_code,affiliate_discount_thb,affiliate_commission_thb,affiliate_paid_at,created_at,delivered_at').not('affiliate_user_id', 'is', null);

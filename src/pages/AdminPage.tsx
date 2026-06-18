@@ -1949,7 +1949,7 @@ function AffiliatesTab() {
           <label style={{display:'block',fontSize:12,fontWeight:800,color:'#374151',marginBottom:6}}>Select affiliate</label>
           <select value={selId} onChange={e=>{setSelId(e.target.value);setExpanded(null);}} style={{width:'100%',maxWidth:360,padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',background:'white'}}>
             <option value="">— Select an affiliate —</option>
-            {affiliates.map((a:any)=><option key={a.id} value={a.id}>{(a.name||a.email)}{a.affiliate_enabled?'':' (disabled)'}</option>)}
+            {affiliates.map((a:any)=><option key={a.id} value={a.id}>{(a.username||a.name||a.email)}{a.affiliate_enabled?'':' (disabled)'}</option>)}
           </select>
         </div>
       )}
@@ -1958,8 +1958,8 @@ function AffiliatesTab() {
         <div key={a.id} style={{...card,marginBottom:16,padding:20}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}}>
             <div>
-              <div style={{fontSize:16,fontWeight:800,color:'#111827'}}>{a.name||a.email} {a.role==='artist'&&<span style={{fontSize:11,color:'#7c3aed',fontWeight:700}}>· artist</span>}</div>
-              <div style={{fontSize:12,color:'#6b7280'}}>{a.email}</div>
+              <div style={{fontSize:16,fontWeight:800,color:'#111827'}}>{a.username||a.name||a.email} {a.role==='artist'&&<span style={{fontSize:11,color:'#7c3aed',fontWeight:700}}>· artist</span>}</div>
+              <div style={{fontSize:12,color:'#6b7280'}}>{a.name&&a.username?`${a.name} · `:''}{a.email}</div>
             </div>
             <div style={{display:'flex',gap:8,alignItems:'center'}}>
               <Badge color={a.affiliate_enabled?'#065f46':'#6b7280'} bg={a.affiliate_enabled?'#d1fae5':'#f3f4f6'} text={a.affiliate_enabled?'Enabled':'Disabled'}/>
