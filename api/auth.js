@@ -26,8 +26,8 @@ module.exports = async function handler(req, res) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return json(res, 401, { error: 'Invalid email or password.' });
     if (!data.user.email_confirmed_at) return json(res, 403, { error: 'Please verify your email first. Check your inbox for a confirmation link.' });
-    const { data: profile } = await supabase.from('profiles').select('id,email,name,role,bio,artist_slug,artist_id,favorites').eq('id', data.user.id).single();
-    return json(res, 200, { success: true, token: data.session.access_token, user: { id: data.user.id, email: data.user.email, name: profile?.name || '', role: profile?.role || 'customer', artistId: profile?.artist_id || null } });
+    const { data: profile } = await supabase.from('profiles').select('id,email,name,role,bio,artist_slug,artist_id,affiliate_enabled,favorites').eq('id', data.user.id).single();
+    return json(res, 200, { success: true, token: data.session.access_token, user: { id: data.user.id, email: data.user.email, name: profile?.name || '', role: profile?.role || 'customer', artistId: profile?.artist_id || null, affiliate_enabled: !!profile?.affiliate_enabled } });
   }
 
   if (req.method === 'POST' && action === 'register') {

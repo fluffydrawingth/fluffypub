@@ -84,6 +84,25 @@ export const api = {
   updateArtist: (id: string, data: any) => fetch(`/api/artists?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   deleteArtist: (id: string) => fetch(`/api/artists?id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 
+  // Affiliate program
+  requestAffiliate: (data: { social_media_link: string; platform: string; message?: string }) =>
+    fetch('/api/users?action=affiliate-request', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  myAffiliateRequest: () => fetch('/api/users?action=affiliate-my-request', { headers: h() }).then(r => r.json()),
+  getAffiliateRequests: () => fetch('/api/users?action=affiliate-requests', { headers: h() }).then(r => r.json()),
+  approveAffiliate: (id: string, data: { code: string; discount_amount?: number; affiliate_commission?: number }) =>
+    fetch(`/api/users?action=affiliate-approve&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  rejectAffiliate: (id: string) => fetch(`/api/users?action=affiliate-reject&id=${id}`, { method: 'POST', headers: h() }).then(r => r.json()),
+  deleteAffiliateRequest: (id: string) => fetch(`/api/users?action=affiliate-delete-request&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
+  revokeAffiliate: (userId: string) => fetch(`/api/users?action=affiliate-revoke&id=${userId}`, { method: 'POST', headers: h() }).then(r => r.json()),
+  enableAffiliate: (userId: string) => fetch(`/api/users?action=affiliate-enable&id=${userId}`, { method: 'POST', headers: h() }).then(r => r.json()),
+  getAffiliates: () => fetch('/api/users?action=affiliate-list', { headers: h() }).then(r => r.json()),
+  getMyAffiliate: () => fetch('/api/users?action=affiliate-my', { headers: h() }).then(r => r.json()),
+  createAffiliateCode: (data: any) => fetch('/api/users?action=affiliate-code', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  updateAffiliateCode: (id: string, data: any) => fetch(`/api/users?action=affiliate-code&id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  deleteAffiliateCode: (id: string) => fetch(`/api/users?action=affiliate-code&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
+  markAffiliatePaid: (orderId: string, data: any) => fetch(`/api/users?action=affiliate-mark-paid&id=${orderId}`, { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  validateAffiliateCode: (code: string) => fetch(`/api/orders?action=affiliate-validate&code=${encodeURIComponent(code)}`, { headers: h() }).then(r => r.json()),
+
   // Analytics
   getAnalytics: () => fetch('/api/analytics', { headers: h() }).then(r => r.json()),
 

@@ -503,6 +503,20 @@ module.exports = async function handler(req, res) {
     return json(res, 200, filtered);
   }
 
+  // GET ?action=affiliate-validate&code=XXX — check an affiliate code at checkout.
+  // Physical-only / min-subtotal / once-per-customer are enforced authoritatively at
+  // order creation; this just confirms the code exists & is active and returns its terms.
+  if (req.method === 'GET' && action === 'affiliate-validate') {
+    const code = (req.query.code || '').toUpperCase().trim();
+    if (!code) return json(res, 400, { error: 'code required' });
+    const { data: row } = await supabase.from('affiliate_codes').select('*').eq('code', code).eq('active', true).single();
+    if (!row) return json(res, 404, { error: 'Invalid or inactive affiliate code.' });
+    // Don't let an affiliate use their own code
+    const authUser = await getUser(req);
+    if (authUser && authUser.id === row.user_id) return json(res, 400, { error: 'You cannot use your own affiliate code.' });
+    return json(res, 200, { code: row.code, discount_amount: Number(row.discount_amount || 0), affiliate_commission: Number(row.affiliate_commission || 0), min_subtotal_thb: 200 });
+  }
+
   // GET all (admin)
   if (req.method === 'GET' && !action) {
     const user = await requireAuth(req, res, ['admin']);
@@ -514,7 +528,7 @@ module.exports = async function handler(req, res) {
 
   // POST create order
   if (req.method === 'POST' && !action) {
-    const { items, customerName, customerEmail, customerPhone, shippingAddress, promoCode, total_thb, total_usd, shipping_thb: shippingFromCart, subtotal_thb, subtotal_usd, payment_method, currency: reqCurrency } = req.body || {};
+    const { items, customerName, customerEmail, customerPhone, shippingAddress, promoCode, affiliateCode, total_thb, total_usd, shipping_thb: shippingFromCart, subtotal_thb, subtotal_usd, payment_method, currency: reqCurrency } = req.body || {};
     if (!items?.length || !customerName || !customerEmail) return json(res, 400, { error: 'items, name, email required' });
 
     // Validate products exist and get image/artist data only (do NOT override prices or types)
@@ -558,6 +572,32 @@ module.exports = async function handler(req, res) {
     const physicalQtyFromCart = orderItems.filter(i => i.optionType === 'physical').reduce((s, i) => s + i.qty, 0);
 
     const authUser = await getUser(req);
+
+    // ── Affiliate code (physical-only, THB-only, flat discount, validated server-side) ──
+    let affiliate = null;        // { code, user_id, discount_thb, commission_thb }
+    if (affiliateCode && reqCurrency !== 'USD') {
+      const code = String(affiliateCode).toUpperCase().trim();
+      const physicalSubtotalTHB = orderItems
+        .filter(i => i.optionType === 'physical')
+        .reduce((s, i) => s + (i.lineTotalTHB || 0), 0);
+      const { data: codeRow } = await supabase.from('affiliate_codes').select('*').eq('code', code).eq('active', true).single();
+      if (!codeRow) return json(res, 400, { error: 'Invalid or inactive affiliate code.' });
+      if (!hasPhysical) return json(res, 400, { error: 'Affiliate codes apply to physical products only.' });
+      if (physicalSubtotalTHB < 200) return json(res, 400, { error: 'Affiliate code requires at least ฿200 of physical products.' });
+      if (authUser && authUser.id === codeRow.user_id) return json(res, 400, { error: 'You cannot use your own affiliate code.' });
+      // One use per customer (by account if logged in, else by email)
+      let usedQuery = supabase.from('orders').select('id').eq('affiliate_code', code).neq('status', 'cancelled');
+      usedQuery = authUser ? usedQuery.eq('user_id', authUser.id) : usedQuery.eq('customer_email', customerEmail);
+      const { data: prior } = await usedQuery.limit(1);
+      if (prior && prior.length) return json(res, 400, { error: 'You have already used this affiliate code.' });
+      const discount = Math.min(Number(codeRow.discount_amount || 0), physicalSubtotalTHB);
+      affiliate = { code, user_id: codeRow.user_id, discount_thb: discount, commission_thb: Number(codeRow.affiliate_commission || 0) };
+    }
+
+    // Affiliate discount reduces the THB grand total (server is authoritative).
+    const affiliateDiscount = affiliate ? affiliate.discount_thb : 0;
+    const final_total_thb = Math.max(0, grand_total_thb - affiliateDiscount);
+
     const accessToken = crypto.randomBytes(32).toString('hex');
     const { data: order, error } = await supabase.from('orders').insert({
       user_id: authUser?.id || null,
@@ -569,17 +609,22 @@ module.exports = async function handler(req, res) {
       items: orderItems,
       // Required NOT NULL columns (original schema)
       subtotal: subtotal_thb || grand_total_thb,
-      total: grand_total_thb,
-      discount: 0,
+      total: final_total_thb,
+      discount: affiliateDiscount,
       // THB columns (added via migration)
       subtotal_thb: subtotal_thb || 0,
       shipping_thb: shipping_thb,
-      total_thb: grand_total_thb,
-      total_amount: grand_total_thb,
+      total_thb: final_total_thb,
+      total_amount: final_total_thb,
       total_usd: total_usd || null,
       subtotal_usd: subtotal_usd || null,
       currency: reqCurrency === 'USD' ? 'USD' : 'THB',
       promo_code: promoCode || null,
+      // Affiliate attribution + commission snapshot (commission counts only at delivery)
+      affiliate_code: affiliate ? affiliate.code : null,
+      affiliate_user_id: affiliate ? affiliate.user_id : null,
+      affiliate_discount_thb: affiliateDiscount,
+      affiliate_commission_thb: affiliate ? affiliate.commission_thb : 0,
       status: 'pending_payment',
       payment_status: 'pending',
       type: hasPhysical ? 'physical' : 'digital',

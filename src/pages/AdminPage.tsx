@@ -12,7 +12,7 @@ import ImageCropEditor from '../components/ImageCropEditor';
 import HtmlEditor from '../components/HtmlEditor';
 
 const ADMIN_EMAIL = 'fluffydrawing.th@gmail.com';
-type Tab = 'dashboard'|'products'|'orders'|'artists'|'artist-requests'|'payouts'|'categories'|'pages'|'free-downloads'|'legal'|'theme'|'lang';
+type Tab = 'dashboard'|'products'|'orders'|'artists'|'artist-requests'|'payouts'|'affiliate-requests'|'affiliates'|'categories'|'pages'|'free-downloads'|'legal'|'theme'|'lang';
 
 function NavItem({icon,label,active,onClick}:any) {
   return (
@@ -39,6 +39,7 @@ export default function AdminPage() {
 
   const TAB_LABELS: Record<Tab, string> = {
     dashboard:'Dashboard', products:'Products', orders:'Orders', artists:'Artists', 'artist-requests':'Artist Requests', payouts:'Artist Payouts',
+    'affiliate-requests':'Affiliate Requests', affiliates:'Affiliates',
     categories:'Categories', pages:'Pages', 'free-downloads':'Free Downloads', legal:'Legal Pages', theme:'Theme & CMS', lang:'Language CMS',
   };
 
@@ -62,6 +63,8 @@ export default function AdminPage() {
         <NavItem icon="🎨" label="Artists"      active={tab==='artists'}    onClick={()=>selectTab('artists')} />
         <NavItem icon="🙋" label="Artist Requests" active={tab==='artist-requests'} onClick={()=>selectTab('artist-requests')} />
         <NavItem icon="💸" label="Artist Payouts"  active={tab==='payouts'}          onClick={()=>selectTab('payouts')} />
+        <NavItem icon="🤝" label="Affiliate Requests" active={tab==='affiliate-requests'} onClick={()=>selectTab('affiliate-requests')} />
+        <NavItem icon="💵" label="Affiliates"      active={tab==='affiliates'}       onClick={()=>selectTab('affiliates')} />
         <NavItem icon="🏷️" label="Categories"   active={tab==='categories'} onClick={()=>selectTab('categories')} />
         <NavItem icon="📄" label="Pages"          active={tab==='pages'}           onClick={()=>selectTab('pages')} />
         <NavItem icon="⬇️" label="Free Downloads" active={tab==='free-downloads'}  onClick={()=>selectTab('free-downloads')} />
@@ -110,6 +113,8 @@ export default function AdminPage() {
         {tab==='artists'    && <ArtistsTab />}
         {tab==='artist-requests' && <ArtistRequestsTab />}
         {tab==='payouts'         && <ArtistPayoutsTab />}
+        {tab==='affiliate-requests' && <AffiliateRequestsTab />}
+        {tab==='affiliates'      && <AffiliatesTab />}
         {tab==='categories' && <CategoriesTab />}
         {tab==='pages'           && <PagesCMSTab />}
         {tab==='free-downloads'  && <FreeDownloadsTab />}
@@ -1769,6 +1774,259 @@ function ArtistRequestsTab() {
         {!loading&&requests.length===0&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>No artist requests yet.</div>}
         {loading&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>Loading...</div>}
       </div>
+    </div>
+  );
+}
+
+// ── Affiliate Requests ──────────────────────────────────────────────────────
+function AffiliateRequestsTab() {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState('');
+  const [approving, setApproving] = useState<string|null>(null);
+  const [code, setCode] = useState('');
+  const [discount, setDiscount] = useState('10');
+  const [commission, setCommission] = useState('20');
+
+  const load = useCallback(() => {
+    setLoading(true);
+    api.getAffiliateRequests().then(reqs => { setRequests(Array.isArray(reqs)?reqs:[]); setLoading(false); }).catch(()=>setLoading(false));
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const startApprove = (id: string) => { setApproving(approving===id?null:id); setCode(''); setDiscount('10'); setCommission('20'); setMsg(''); };
+  const approve = async (id: string) => {
+    const c = code.toUpperCase().trim();
+    if (!/^[A-Z0-9]{1,10}$/.test(c)) { setMsg('⚠️ Code must be uppercase letters/numbers, max 10 chars.'); return; }
+    const res = await api.approveAffiliate(id, { code: c, discount_amount: Number(discount)||10, affiliate_commission: Number(commission)||20 });
+    if (res?.error) { setMsg('⚠️ ' + res.error); return; }
+    setApproving(null); setMsg('✓ Approved & code created.'); load();
+    setTimeout(()=>setMsg(''), 4000);
+  };
+  const reject = async (id: string) => {
+    if (!confirm('Reject this affiliate request?')) return;
+    const res = await api.rejectAffiliate(id);
+    if (res?.error) { setMsg('⚠️ ' + res.error); return; }
+    setMsg('✓ Rejected.'); load(); setTimeout(()=>setMsg(''), 4000);
+  };
+  const del = async (id: string, name: string) => {
+    if (!confirm(`Permanently delete the request from "${name}"?`)) return;
+    const res = await api.deleteAffiliateRequest(id);
+    if (res?.error) { setMsg('⚠️ ' + res.error); return; }
+    setMsg('✓ Request deleted.'); load(); setTimeout(()=>setMsg(''), 4000);
+  };
+
+  const STATUS: Record<string,{c:string,bg:string,t:string}> = {
+    pending:{c:'#92400e',bg:'#fef3c7',t:'Pending'}, approved:{c:'#065f46',bg:'#d1fae5',t:'Approved'}, rejected:{c:'#991b1b',bg:'#fee2e2',t:'Rejected'},
+  };
+
+  return (
+    <div style={{padding:32}}>
+      <h1 style={{fontSize:28,fontWeight:900,color:'#111827',margin:'0 0 8px'}}>Affiliate Requests</h1>
+      <p style={{fontSize:13,color:'#6b7280',margin:'0 0 24px'}}>Approving grants affiliate access (keeps existing role) and creates the affiliate's code.</p>
+      {msg&&<div style={{marginBottom:16,padding:'10px 16px',borderRadius:12,background:msg.startsWith('✓')?'#d1fae5':'#fee2e2',color:msg.startsWith('✓')?'#065f46':'#991b1b',fontSize:13,fontWeight:600}}>{msg}</div>}
+      <div style={{...card,overflow:'hidden'}}>
+        <table style={{width:'100%',borderCollapse:'collapse'}}>
+          <thead><tr style={{borderBottom:'2px solid #f3f4f6',background:'#fafafa'}}>{['NAME','EMAIL','PLATFORM','LINK','DATE','STATUS',''].map((h,i)=><th key={i} style={{textAlign:'left',padding:'12px 16px',fontSize:11,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}</tr></thead>
+          <tbody>{requests.map(r=>(
+            <React.Fragment key={r.id}>
+            <tr style={{borderBottom:'1px solid #f9fafb'}}>
+              <td style={{padding:'12px 16px',fontWeight:700,color:'#111827',fontSize:14}}>{r.username||'—'}</td>
+              <td style={{padding:'12px 16px',fontSize:13,color:'#6b7280'}}>{r.email||'—'}</td>
+              <td style={{padding:'12px 16px',fontSize:12,color:'#6b7280',textTransform:'capitalize'}}>{r.platform||'—'}</td>
+              <td style={{padding:'12px 16px',fontSize:12,maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.social_media_link?<a href={r.social_media_link} target="_blank" rel="noreferrer" style={{color:P}}>{r.social_media_link}</a>:'—'}</td>
+              <td style={{padding:'12px 16px',fontSize:12,color:'#9ca3af'}}>{r.request_date?new Date(r.request_date).toLocaleDateString():'—'}</td>
+              <td style={{padding:'12px 16px'}}><Badge color={STATUS[r.status]?.c||'#6b7280'} bg={STATUS[r.status]?.bg||'#f3f4f6'} text={STATUS[r.status]?.t||r.status}/></td>
+              <td style={{padding:'12px 16px'}}>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  {r.status==='pending'&&(<>
+                    <button onClick={()=>startApprove(r.id)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #6ee7b7',background:'#d1fae5',cursor:'pointer',fontSize:12,fontWeight:700,color:'#065f46'}}>Approve</button>
+                    <button onClick={()=>reject(r.id)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:12,fontWeight:700,color:'#ef4444'}}>Reject</button>
+                  </>)}
+                  <button onClick={()=>del(r.id, r.username||r.email||'this user')} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:12,fontWeight:700,color:'#dc2626'}}>Delete</button>
+                </div>
+              </td>
+            </tr>
+            {approving===r.id&&(
+              <tr style={{background:'#fafafa'}}>
+                <td colSpan={7} style={{padding:'14px 16px'}}>
+                  <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+                    <span style={{fontSize:13,fontWeight:700,color:'#374151'}}>Code:</span>
+                    <input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} placeholder="YING10" maxLength={10} style={{padding:'8px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',textTransform:'uppercase',width:140}} />
+                    <span style={{fontSize:13,fontWeight:700,color:'#374151'}}>Discount ฿:</span>
+                    <input value={discount} onChange={e=>setDiscount(e.target.value)} type="number" style={{padding:'8px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',width:80}} />
+                    <span style={{fontSize:13,fontWeight:700,color:'#374151'}}>Commission ฿:</span>
+                    <input value={commission} onChange={e=>setCommission(e.target.value)} type="number" style={{padding:'8px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',width:80}} />
+                    <button onClick={()=>approve(r.id)} style={{padding:'8px 18px',borderRadius:10,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:700}}>Confirm Approve</button>
+                    <button onClick={()=>setApproving(null)} style={{padding:'8px 14px',borderRadius:10,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:13,fontWeight:600,color:'#6b7280'}}>Cancel</button>
+                  </div>
+                </td>
+              </tr>
+            )}
+            </React.Fragment>
+          ))}</tbody>
+        </table>
+        {!loading&&requests.length===0&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>No affiliate requests yet.</div>}
+        {loading&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>Loading...</div>}
+      </div>
+    </div>
+  );
+}
+
+// ── Affiliates (management + earnings + payouts) ─────────────────────────────
+function AffiliatesTab() {
+  const [affiliates, setAffiliates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState('');
+  const [expanded, setExpanded] = useState<string|null>(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    api.getAffiliates().then(d => { setAffiliates(Array.isArray(d)?d:[]); setLoading(false); }).catch(()=>setLoading(false));
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const flash = (m: string) => { setMsg(m); setTimeout(()=>setMsg(''), 4000); };
+
+  const toggleAccess = async (a: any) => {
+    const res = a.affiliate_enabled ? await api.revokeAffiliate(a.id) : await api.enableAffiliate(a.id);
+    if (res?.error) return flash('⚠️ ' + res.error);
+    flash(a.affiliate_enabled ? '✓ Affiliate disabled.' : '✓ Affiliate enabled.'); load();
+  };
+  const saveCode = async (codeRow: any, updates: any) => {
+    const res = await api.updateAffiliateCode(codeRow.id, updates);
+    if (res?.error) return flash('⚠️ ' + res.error);
+    flash('✓ Code updated.'); load();
+  };
+  const delCode = async (id: string) => {
+    if (!confirm('Delete this code? (Test records only — historical orders keep their snapshot.)')) return;
+    const res = await api.deleteAffiliateCode(id);
+    if (res?.error) return flash('⚠️ ' + res.error);
+    flash('✓ Code deleted.'); load();
+  };
+  const addCode = async (userId: string) => {
+    const c = (prompt('New code (uppercase, max 10):')||'').toUpperCase().trim();
+    if (!c) return;
+    const res = await api.createAffiliateCode({ user_id: userId, code: c, discount_amount: 10, affiliate_commission: 20 });
+    if (res?.error) return flash('⚠️ ' + res.error);
+    flash('✓ Code created.'); load();
+  };
+  const markPaid = async (order: any, unpay: boolean) => {
+    let note: string|undefined, proof: string|undefined;
+    if (!unpay) {
+      note = prompt('Payout note (optional):') || undefined;
+      proof = prompt('Payout proof URL (optional):') || undefined;
+    }
+    const res = await api.markAffiliatePaid(order.id, { unpay, payout_note: note, payout_proof_url: proof });
+    if (res?.error) return flash('⚠️ ' + res.error);
+    flash(unpay ? '✓ Marked unpaid.' : '✓ Marked paid.'); load();
+  };
+
+  const thb = (n:number)=>`฿${Number(n||0).toLocaleString('th-TH')}`;
+
+  return (
+    <div style={{padding:32}}>
+      <h1 style={{fontSize:28,fontWeight:900,color:'#111827',margin:'0 0 8px'}}>Affiliates</h1>
+      <p style={{fontSize:13,color:'#6b7280',margin:'0 0 24px'}}>Manage affiliate access, codes, earnings, and commission payouts. Commission counts only on delivered orders.</p>
+      {msg&&<div style={{marginBottom:16,padding:'10px 16px',borderRadius:12,background:msg.startsWith('✓')?'#d1fae5':'#fee2e2',color:msg.startsWith('✓')?'#065f46':'#991b1b',fontSize:13,fontWeight:600}}>{msg}</div>}
+
+      {loading&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>Loading...</div>}
+      {!loading&&affiliates.length===0&&<div style={{...card,textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>No affiliates yet.</div>}
+
+      {affiliates.map(a=>(
+        <div key={a.id} style={{...card,marginBottom:16,padding:20}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:12}}>
+            <div>
+              <div style={{fontSize:16,fontWeight:800,color:'#111827'}}>{a.name||a.email} {a.role==='artist'&&<span style={{fontSize:11,color:'#7c3aed',fontWeight:700}}>· artist</span>}</div>
+              <div style={{fontSize:12,color:'#6b7280'}}>{a.email}</div>
+            </div>
+            <div style={{display:'flex',gap:8,alignItems:'center'}}>
+              <Badge color={a.affiliate_enabled?'#065f46':'#6b7280'} bg={a.affiliate_enabled?'#d1fae5':'#f3f4f6'} text={a.affiliate_enabled?'Enabled':'Disabled'}/>
+              <button onClick={()=>toggleAccess(a)} style={{padding:'6px 14px',borderRadius:10,border:a.affiliate_enabled?'1px solid #fcd34d':'1px solid #6ee7b7',background:a.affiliate_enabled?'#fffbeb':'#d1fae5',cursor:'pointer',fontSize:12,fontWeight:700,color:a.affiliate_enabled?'#b45309':'#065f46'}}>{a.affiliate_enabled?'Disable':'Enable'}</button>
+            </div>
+          </div>
+
+          {/* Earnings */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))',gap:10,margin:'16px 0'}}>
+            {[
+              ['Orders', a.summary?.ordersReferred ?? 0],
+              ['Physical Rev.', thb(a.summary?.physicalRevenueTHB)],
+              ['Earned', thb(a.summary?.commissionEarned)],
+              ['Pending', thb(a.summary?.pendingCommission)],
+              ['Paid', thb(a.summary?.paidCommission)],
+            ].map(([l,v])=>(
+              <div key={l as string} style={{background:'#fafafa',borderRadius:12,padding:'10px 12px'}}>
+                <div style={{fontSize:10,color:'#9ca3af',fontWeight:700}}>{l}</div>
+                <div style={{fontSize:15,fontWeight:900,color:'#111827'}}>{v}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Codes */}
+          <div style={{marginBottom:12}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+              <span style={{fontSize:13,fontWeight:800,color:'#374151'}}>Codes</span>
+              <button onClick={()=>addCode(a.id)} style={{padding:'4px 10px',borderRadius:8,border:`1px solid ${P}`,background:'white',cursor:'pointer',fontSize:11,fontWeight:700,color:P}}>+ Add Code</button>
+            </div>
+            {(a.codes||[]).map((c:any)=><AffiliateCodeRow key={c.id} codeRow={c} onSave={saveCode} onDelete={delCode} />)}
+            {(!a.codes||a.codes.length===0)&&<div style={{fontSize:12,color:'#9ca3af'}}>No codes.</div>}
+          </div>
+
+          {/* Orders / payouts */}
+          <button onClick={()=>setExpanded(expanded===a.id?null:a.id)} style={{padding:'6px 12px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:700,color:'#6b7280'}}>
+            {expanded===a.id?'Hide':'View'} referred orders ({(a.orders||[]).length})
+          </button>
+          {expanded===a.id&&(
+            <div style={{marginTop:12,overflow:'auto'}}>
+              <table style={{width:'100%',borderCollapse:'collapse',minWidth:680}}>
+                <thead><tr style={{borderBottom:'2px solid #f3f4f6',background:'#fafafa'}}>{['ORDER','DATE','CODE','AMOUNT','DISCOUNT','COMMISSION','STATUS','PAYOUT'].map((h,i)=><th key={i} style={{textAlign:'left',padding:'8px 12px',fontSize:10,color:'#9ca3af',fontWeight:700}}>{h}</th>)}</tr></thead>
+                <tbody>{(a.orders||[]).map((o:any)=>{
+                  const delivered = o.status==='delivered';
+                  return (
+                    <tr key={o.id} style={{borderBottom:'1px solid #f9fafb'}}>
+                      <td style={{padding:'8px 12px',fontSize:12,fontWeight:700,color:P}}>#{(o.id||'').slice(-8).toUpperCase()}</td>
+                      <td style={{padding:'8px 12px',fontSize:11,color:'#9ca3af'}}>{o.created_at?new Date(o.created_at).toLocaleDateString():'—'}</td>
+                      <td style={{padding:'8px 12px',fontSize:12,fontWeight:700}}>{o.affiliate_code}</td>
+                      <td style={{padding:'8px 12px',fontSize:12}}>{thb(o.total_thb)}</td>
+                      <td style={{padding:'8px 12px',fontSize:12,color:'#dc2626'}}>−{thb(o.affiliate_discount_thb)}</td>
+                      <td style={{padding:'8px 12px',fontSize:12,fontWeight:800,color:delivered?'#059669':'#9ca3af'}}>{thb(o.affiliate_commission_thb)}</td>
+                      <td style={{padding:'8px 12px',fontSize:11,textTransform:'capitalize'}}>{o.status}</td>
+                      <td style={{padding:'8px 12px'}}>
+                        {delivered ? (
+                          o.affiliate_paid_at
+                            ? <button onClick={()=>markPaid(o,true)} style={{padding:'4px 10px',borderRadius:8,border:'1px solid #6ee7b7',background:'#d1fae5',cursor:'pointer',fontSize:11,fontWeight:700,color:'#065f46'}}>✓ Paid</button>
+                            : <button onClick={()=>markPaid(o,false)} style={{padding:'4px 10px',borderRadius:8,border:`1px solid ${P}`,background:'white',cursor:'pointer',fontSize:11,fontWeight:700,color:P}}>Mark Paid</button>
+                        ) : <span style={{fontSize:11,color:'#9ca3af'}}>—</span>}
+                        {o.affiliate_payout_proof_url&&<a href={o.affiliate_payout_proof_url} target="_blank" rel="noreferrer" style={{marginLeft:6,fontSize:11,color:P}}>proof</a>}
+                      </td>
+                    </tr>
+                  );
+                })}</tbody>
+              </table>
+              {(a.orders||[]).length===0&&<div style={{textAlign:'center',padding:'24px',color:'#9ca3af',fontSize:13}}>No referred orders.</div>}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AffiliateCodeRow({codeRow,onSave,onDelete}:{codeRow:any,onSave:(c:any,u:any)=>void,onDelete:(id:string)=>void}) {
+  const [code, setCode] = useState(codeRow.code);
+  const [discount, setDiscount] = useState(String(codeRow.discount_amount ?? 10));
+  const [commission, setCommission] = useState(String(codeRow.affiliate_commission ?? 20));
+  const dirty = code!==codeRow.code || Number(discount)!==Number(codeRow.discount_amount) || Number(commission)!==Number(codeRow.affiliate_commission);
+  return (
+    <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',padding:'8px 0',borderBottom:'1px solid #f9fafb'}}>
+      <input value={code} onChange={e=>setCode(e.target.value.toUpperCase())} maxLength={10} style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,fontWeight:700,textTransform:'uppercase',width:120,fontFamily:'inherit'}} />
+      <span style={{fontSize:12,color:'#6b7280'}}>Discount ฿</span>
+      <input value={discount} onChange={e=>setDiscount(e.target.value)} type="number" style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,width:70,fontFamily:'inherit'}} />
+      <span style={{fontSize:12,color:'#6b7280'}}>Commission ฿</span>
+      <input value={commission} onChange={e=>setCommission(e.target.value)} type="number" style={{padding:'6px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,width:70,fontFamily:'inherit'}} />
+      <button onClick={()=>onSave(codeRow,{active:!codeRow.active})} style={{padding:'5px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:codeRow.active?'#d1fae5':'#f3f4f6',cursor:'pointer',fontSize:11,fontWeight:700,color:codeRow.active?'#065f46':'#6b7280'}}>{codeRow.active?'Active':'Inactive'}</button>
+      {dirty&&<button onClick={()=>onSave(codeRow,{code:code.toUpperCase().trim(),discount_amount:Number(discount),affiliate_commission:Number(commission)})} style={{padding:'5px 12px',borderRadius:8,border:'none',background:P,color:'white',cursor:'pointer',fontSize:11,fontWeight:700}}>Save</button>}
+      <button onClick={()=>onDelete(codeRow.id)} style={{padding:'5px 10px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:11,fontWeight:700,color:'#dc2626'}}>Delete</button>
     </div>
   );
 }

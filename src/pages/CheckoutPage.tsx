@@ -40,6 +40,30 @@ export default function CheckoutPage() {
   const hasPhysical = items.some(i => i.optionType === 'physical');
   const isDigitalOnly = !hasPhysical;
 
+  // Affiliate code (physical-only, THB-only, min ฿200 of physical products)
+  const physicalSubtotalTHB = items.filter(i => i.optionType === 'physical').reduce((s, i) => s + (i.unitPriceTHB || 0) * (i.qty || 1), 0);
+  const [affCode, setAffCode] = useState('');
+  const [affApplied, setAffApplied] = useState<{ code: string; discount_amount: number; affiliate_commission: number } | null>(null);
+  const [affErr, setAffErr] = useState('');
+  const [affBusy, setAffBusy] = useState(false);
+  const affEligible = hasPhysical && currency !== 'USD' && physicalSubtotalTHB >= 200;
+  const affiliateDiscount = affApplied ? Math.min(affApplied.discount_amount, physicalSubtotalTHB) : 0;
+
+  const applyAffiliate = async () => {
+    setAffErr('');
+    const code = affCode.toUpperCase().trim();
+    if (!code) return;
+    if (!hasPhysical) { setAffErr(tRaw('โค้ดใช้ได้กับสินค้าจริงเท่านั้น', 'Codes apply to physical products only.')); return; }
+    if (currency === 'USD') { setAffErr(tRaw('โค้ดใช้ได้กับการชำระเงินแบบ THB เท่านั้น', 'Codes can only be used with THB payment.')); return; }
+    if (physicalSubtotalTHB < 200) { setAffErr(tRaw('ต้องมีสินค้าจริงอย่างน้อย ฿200', 'Requires at least ฿200 of physical products.')); return; }
+    setAffBusy(true);
+    const res = await api.validateAffiliateCode(code);
+    setAffBusy(false);
+    if (res?.error) { setAffErr(res.error); setAffApplied(null); return; }
+    setAffApplied({ code: res.code, discount_amount: res.discount_amount, affiliate_commission: res.affiliate_commission });
+  };
+  const removeAffiliate = () => { setAffApplied(null); setAffCode(''); setAffErr(''); };
+
   // Payment method determined by currency at time of order placement (frozen after)
   const usePayPal = frozenUsePayPal ?? (currency === 'USD' && !!paypal?.enabled && !!paypal?.username && isDigitalOnly);
   const paymentMethod = usePayPal ? 'paypal' : 'promptpay';
@@ -140,6 +164,7 @@ export default function CheckoutPage() {
         subtotal_usd: subtotalUSD,
         payment_method: paymentMethod,
         currency,
+        affiliateCode: affEligible && affApplied ? affApplied.code : undefined,
       });
       if (result?.error) { setError(result.error); setBusy(false); return; }
       setFrozenTotalTHB(totalTHB);
@@ -415,6 +440,30 @@ export default function CheckoutPage() {
               </>
             )}
 
+            {affEligible && (
+              <div style={{ marginTop: 14, borderTop: `1px solid ${p}15`, paddingTop: 14 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: theme.textColor, marginBottom: 8 }}>
+                  🤝 {tRaw('โค้ดแอฟฟิลิเอต', 'Affiliate Code')} <span style={{ color: '#9ca3af', fontWeight: 500 }}>({tRaw('ไม่บังคับ', 'optional')})</span>
+                </label>
+                {affApplied ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#d1fae5', border: '1.5px solid #6ee7b7', borderRadius: 12, padding: '10px 14px' }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#065f46' }}>✓ {affApplied.code} · −฿{affiliateDiscount}</span>
+                    <button onClick={removeAffiliate} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 12, fontWeight: 700 }}>{tRaw('ลบ', 'Remove')}</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input value={affCode} onChange={e => setAffCode(e.target.value.toUpperCase())} placeholder={tRaw('กรอกโค้ด', 'Enter code')} maxLength={10}
+                      style={{ flex: 1, padding: '10px 13px', borderRadius: 12, border: `1.5px solid ${p}30`, fontSize: 14, outline: 'none', fontFamily: theme.fontFamily, textTransform: 'uppercase', boxSizing: 'border-box' }} />
+                    <button onClick={applyAffiliate} disabled={affBusy || !affCode.trim()}
+                      style={{ padding: '10px 18px', borderRadius: 12, border: 'none', cursor: affBusy || !affCode.trim() ? 'not-allowed' : 'pointer', background: affBusy || !affCode.trim() ? '#e2e8f0' : p, color: affBusy || !affCode.trim() ? '#94a3b8' : 'white', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>
+                      {affBusy ? '…' : tRaw('ใช้', 'Apply')}
+                    </button>
+                  </div>
+                )}
+                {affErr && <div style={{ fontSize: 12, color: '#dc2626', fontWeight: 600, marginTop: 6 }}>⚠️ {affErr}</div>}
+              </div>
+            )}
+
             {isUSD && !isDigitalOnly && (
               <div style={{ background: '#fef3c7', borderRadius: 10, padding: '9px 13px', marginBottom: 12, fontSize: 12, color: '#92400e', fontWeight: 600 }}>
                 ⚠️ Physical book orders must be paid via PromptPay (THB). Switch to ฿ THB currency for physical items.
@@ -459,9 +508,15 @@ export default function CheckoutPage() {
                 </span>
               </div>
             )}
+            {affiliateDiscount > 0 && !isUSD && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#059669', fontWeight: 700, marginBottom: 4 }}>
+                <span>{tRaw('ส่วนลดแอฟฟิลิเอต', 'Affiliate discount')} ({affApplied?.code})</span>
+                <span>−฿{affiliateDiscount.toLocaleString('th-TH')}</span>
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, color: theme.textColor, fontSize: 17, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${p}15` }}>
               <span>{tRaw('ยอดรวม', 'Total')}</span>
-              <span style={{ color: p }}>{displayTotal}</span>
+              <span style={{ color: p }}>{isUSD && totalUSD != null ? displayTotal : `฿${Math.max(0, totalTHB - affiliateDiscount).toLocaleString('th-TH')}`}</span>
             </div>
             {isUSD && usePayPal && (
               <div style={{ marginTop: 8, fontSize: 11, color: '#0070ba', fontWeight: 600, textAlign: 'center' as const }}>

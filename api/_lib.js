@@ -29,11 +29,23 @@ async function getUser(req) {
     
     // Get profile from DB — upsert creates row if missing (guarantees per-user row)
     const email = payload.email || '';
-    const { data: profile, error: fetchErr } = await supabase
+    let { data: profile, error: fetchErr } = await supabase
       .from('profiles')
-      .select('id, email, name, role, bio, artist_slug, artist_id, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
+      .select('id, email, name, role, bio, artist_slug, artist_id, affiliate_enabled, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
       .eq('id', userId)
       .single();
+
+    // Resilience: if affiliate_enabled column doesn't exist yet (migration not run),
+    // retry with the legacy column set so auth never breaks site-wide on deploy.
+    if (fetchErr && fetchErr.code === '42703') {
+      const legacy = await supabase
+        .from('profiles')
+        .select('id, email, name, role, bio, artist_slug, artist_id, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
+        .eq('id', userId)
+        .single();
+      profile = legacy.data; fetchErr = legacy.error;
+      if (profile) profile.affiliate_enabled = false;
+    }
 
     if (profile) return profile;
 
@@ -55,14 +67,14 @@ async function getUser(req) {
         name: payload.user_metadata?.name || email.split('@')[0] || '',
         role: 'customer',
       })
-      .select('id, email, name, role, bio, artist_slug, artist_id, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
+      .select('id, email, name, role, bio, artist_slug, artist_id, affiliate_enabled, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
       .single();
 
     // If the insert raced/conflicted, re-read the existing row rather than assume customer.
     if (created) return created;
     const { data: reread } = await supabase
       .from('profiles')
-      .select('id, email, name, role, bio, artist_slug, artist_id, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
+      .select('id, email, name, role, bio, artist_slug, artist_id, affiliate_enabled, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
       .eq('id', userId)
       .single();
     return reread || { id: userId, email, name: email.split('@')[0], role: 'customer' };

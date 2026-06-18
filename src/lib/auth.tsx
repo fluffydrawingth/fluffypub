@@ -10,6 +10,7 @@ export interface AuthUser {
   bio?: string;
   artistSlug?: string;
   artistId?: string | null;
+  affiliate_enabled?: boolean;
   favorites?: string[];
 }
 
