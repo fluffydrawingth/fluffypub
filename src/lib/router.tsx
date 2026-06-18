@@ -57,6 +57,10 @@ function parse(hash: string): Route {
   if (p[0]==='affiliate-agreement') return { path:'/affiliate-agreement' };
   if (p[0]==='affiliate-application') return { path:'/affiliate-application' };
   if (p[0]==='affiliate-dashboard') return { path:'/affiliate-dashboard' };
+  // Any other single-segment path is treated as a legal page slug, so admin-created
+  // legal pages (e.g. /contactus) resolve dynamically instead of falling back to Home.
+  // LegalPage shows its own "not found" if the slug isn't a published legal page.
+  if (p.length === 1) return { path:'/legal-page', params:{ slug:p[0] } };
   return { path:'/' };
 }
 
