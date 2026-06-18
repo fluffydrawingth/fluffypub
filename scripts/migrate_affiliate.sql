@@ -47,7 +47,33 @@ alter table orders
   add column if not exists affiliate_payout_note text;
 create index if not exists idx_orders_affiliate_user on orders (affiliate_user_id);
 
--- 5. Grants — the API talks to these tables with the service role. Without explicit
+-- 5. Payout account details (shared by artists & affiliates — both live on profiles)
+alter table profiles
+  add column if not exists payout_account_name text,
+  add column if not exists payout_bank_name text,
+  add column if not exists payout_account_number text,
+  add column if not exists payout_payment_method text,   -- Bank Transfer | PromptPay | PayPal | Other
+  add column if not exists payout_note text;
+
+-- 6. Affiliate monthly payout records (mirrors artist_payouts)
+create table if not exists affiliate_payouts (
+  id uuid primary key default gen_random_uuid(),
+  affiliate_user_id uuid references profiles(id),
+  month int not null,
+  year int not null,
+  calculated_commission numeric default 0,
+  paid_amount numeric default 0,
+  status text default 'pending',            -- pending | paid
+  payout_proof_url text,
+  payout_note text,
+  paid_at timestamptz,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+create index if not exists idx_affiliate_payouts_user on affiliate_payouts (affiliate_user_id);
+
+-- 7. Grants — the API talks to these tables with the service role. Without explicit
 --    grants new tables raise "permission denied for table ...". (Safe to re-run.)
 grant all privileges on affiliate_requests to anon, authenticated, service_role;
 grant all privileges on affiliate_codes    to anon, authenticated, service_role;
+grant all privileges on affiliate_payouts  to anon, authenticated, service_role;

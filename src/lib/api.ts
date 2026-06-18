@@ -102,6 +102,13 @@ export const api = {
   deleteAffiliateCode: (id: string) => fetch(`/api/users?action=affiliate-code&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
   markAffiliatePaid: (orderId: string, data: any) => fetch(`/api/users?action=affiliate-mark-paid&id=${orderId}`, { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   validateAffiliateCode: (code: string) => fetch(`/api/orders?action=affiliate-validate&code=${encodeURIComponent(code)}`, { headers: h() }).then(r => r.json()),
+  // Payout account details (shared by artist & affiliate; updates own profile)
+  updatePayoutAccount: (data: any) => fetch('/api/users?action=payout-account', { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  getPayoutAccount: (userId: string) => fetch(`/api/users?action=payout-account&user_id=${userId}`, { headers: h() }).then(r => r.json()),
+  // Affiliate payouts (monthly records)
+  getAffiliatePayouts: (affiliateId?: string) => fetch(`/api/users?action=affiliate-payouts${affiliateId ? `&affiliate_id=${affiliateId}` : ''}`, { headers: h() }).then(r => r.json()),
+  saveAffiliatePayout: (data: any) => fetch('/api/users?action=affiliate-payout', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  deleteAffiliatePayout: (id: string) => fetch(`/api/users?action=affiliate-payout&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 
   // Analytics
   getAnalytics: () => fetch('/api/analytics', { headers: h() }).then(r => r.json()),

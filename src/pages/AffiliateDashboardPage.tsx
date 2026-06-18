@@ -6,6 +6,7 @@ import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
 
 const thb = (n: number) => `฿${Number(n || 0).toLocaleString('th-TH')}`;
+const MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const STATUS_LABEL: Record<string, { t: string; c: string; bg: string }> = {
   pending_payment:   { t: 'Pending Payment',   c: '#d97706', bg: '#fef3c7' },
@@ -27,11 +28,28 @@ export default function AffiliateDashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  // Payout account form
+  const [acct, setAcct] = useState({ payout_account_name:'', payout_bank_name:'', payout_account_number:'', payout_payment_method:'Bank Transfer', payout_note:'' });
+  const [acctMsg, setAcctMsg] = useState('');
+  const [acctSaving, setAcctSaving] = useState(false);
+
   useEffect(() => {
     if (!user) return;
     if (!user.affiliate_enabled) { navigate('/account'); return; }
-    api.getMyAffiliate().then(d => { setData(d && !d.error ? d : null); setLoading(false); }).catch(() => setLoading(false));
+    api.getMyAffiliate().then(d => {
+      setData(d && !d.error ? d : null);
+      if (d?.payoutAccount) setAcct(a => ({ ...a, ...Object.fromEntries(Object.entries(d.payoutAccount).map(([k,v]) => [k, v || (k==='payout_payment_method'?'Bank Transfer':'')])) }) as any);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, [user]);
+
+  const saveAcct = async () => {
+    setAcctSaving(true); setAcctMsg('');
+    const res = await api.updatePayoutAccount(acct);
+    setAcctSaving(false);
+    setAcctMsg(res?.error ? ('⚠️ ' + res.error) : '✓ Saved');
+    setTimeout(() => setAcctMsg(''), 3000);
+  };
 
   if (!user) return null;
   if (loading) return <div style={{ minHeight:'60vh', display:'flex', alignItems:'center', justifyContent:'center', fontSize:32 }}>⏳</div>;
@@ -121,6 +139,63 @@ export default function AffiliateDashboardPage() {
             })}</tbody>
           </table>
           {!orders.length && <div style={{ textAlign:'center', padding:36, color:'#94a3b8' }}>{tRaw('ยังไม่มีคำสั่งซื้อที่แนะนำ','No referred orders yet.')}</div>}
+        </div>
+
+        {/* Payout history */}
+        <h2 style={{ fontSize:18, fontWeight:800, color:'#1e293b', margin:'28px 0 12px' }}>{tRaw('ประวัติการจ่ายเงิน','Payout History')}</h2>
+        <div style={{ background:'white', borderRadius:16, overflow:'auto', boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', minWidth:640 }}>
+            <thead><tr style={{ background:'#f8fafc', borderBottom:'2px solid #f1f5f9' }}>
+              {['Month','Calculated','Paid','Status','Paid Date','Proof','Note'].map(hh => (
+                <th key={hh} style={{ textAlign:'left', padding:'11px 14px', fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', whiteSpace:'nowrap' }}>{hh}</th>
+              ))}
+            </tr></thead>
+            <tbody>{(data?.payouts||[]).map((py:any) => {
+              const paid = py.status === 'paid';
+              return (
+                <tr key={py.id} style={{ borderBottom:'1px solid #f8fafc' }}>
+                  <td style={{ padding:'10px 14px', fontSize:13, fontWeight:700, color:'#1e293b', whiteSpace:'nowrap' }}>{MONTHS[py.month]} {py.year}</td>
+                  <td style={{ padding:'10px 14px', fontSize:13 }}>{thb(py.calculated_commission)}</td>
+                  <td style={{ padding:'10px 14px', fontSize:13, fontWeight:800, color:'#059669' }}>{thb(py.paid_amount)}</td>
+                  <td style={{ padding:'10px 14px' }}><span style={{ background:paid?'#d1fae5':'#fef3c7', color:paid?'#059669':'#d97706', borderRadius:20, padding:'3px 10px', fontSize:11, fontWeight:700 }}>{paid?tRaw('จ่ายแล้ว','Paid'):tRaw('รอดำเนินการ','Pending')}</span></td>
+                  <td style={{ padding:'10px 14px', fontSize:12, color:'#64748b', whiteSpace:'nowrap' }}>{py.paid_at ? new Date(py.paid_at).toLocaleDateString() : '—'}</td>
+                  <td style={{ padding:'10px 14px', fontSize:12 }}>{py.payout_proof_url ? <a href={py.payout_proof_url} target="_blank" rel="noreferrer" style={{ color:p }}>{tRaw('ดู','View')}</a> : '—'}</td>
+                  <td style={{ padding:'10px 14px', fontSize:12, color:'#64748b', maxWidth:200 }}>{py.payout_note || '—'}</td>
+                </tr>
+              );
+            })}</tbody>
+          </table>
+          {!(data?.payouts||[]).length && <div style={{ textAlign:'center', padding:36, color:'#94a3b8' }}>{tRaw('ยังไม่มีประวัติการจ่ายเงิน','No payouts yet.')}</div>}
+        </div>
+
+        {/* Payout account details */}
+        <h2 style={{ fontSize:18, fontWeight:800, color:'#1e293b', margin:'28px 0 12px' }}>{tRaw('ข้อมูลบัญชีรับเงิน','Payout Account Details')}</h2>
+        <div style={{ background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>
+          <p style={{ fontSize:12, color:'#94a3b8', marginTop:0, marginBottom:16 }}>{tRaw('ทีมงานจะใช้ข้อมูลนี้ในการโอนค่าคอมมิชชันให้คุณ','The team uses these details to transfer your commission.')}</p>
+          {([
+            ['payout_account_name', tRaw('ชื่อบัญชี','Account Name')],
+            ['payout_account_number', tRaw('เลขบัญชี / PayPal','Account Number / PayPal')],
+            ['payout_bank_name', tRaw('ธนาคาร','Bank Name')],
+          ] as [string,string][]).map(([k,label]) => (
+            <div key={k} style={{ marginBottom:14 }}>
+              <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#374151', marginBottom:6 }}>{label}</label>
+              <input value={(acct as any)[k]} onChange={e=>setAcct(a=>({...a,[k]:e.target.value}))} style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:`1.5px solid ${p}30`, fontSize:14, outline:'none', fontFamily:theme.fontFamily, boxSizing:'border-box' }} />
+            </div>
+          ))}
+          <div style={{ marginBottom:14 }}>
+            <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#374151', marginBottom:6 }}>{tRaw('วิธีรับเงิน','Payment Method')}</label>
+            <select value={acct.payout_payment_method} onChange={e=>setAcct(a=>({...a,payout_payment_method:e.target.value}))} style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:`1.5px solid ${p}30`, fontSize:14, outline:'none', fontFamily:theme.fontFamily, background:'white', boxSizing:'border-box' }}>
+              {['Bank Transfer','PromptPay','PayPal','Other'].map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#374151', marginBottom:6 }}>{tRaw('หมายเหตุ','Note')}</label>
+            <textarea value={acct.payout_note} onChange={e=>setAcct(a=>({...a,payout_note:e.target.value}))} rows={2} style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:`1.5px solid ${p}30`, fontSize:14, outline:'none', fontFamily:theme.fontFamily, resize:'vertical', boxSizing:'border-box' }} />
+          </div>
+          {acctMsg && <span style={{ fontSize:13, fontWeight:700, color:acctMsg.startsWith('✓')?'#059669':'#dc2626', marginRight:12 }}>{acctMsg}</span>}
+          <button onClick={saveAcct} disabled={acctSaving} style={{ background:acctSaving?p+'88':p, color:'white', border:'none', cursor:acctSaving?'wait':'pointer', padding:'11px 24px', borderRadius:14, fontSize:14, fontWeight:800, fontFamily:theme.fontFamily }}>
+            {acctSaving ? tRaw('กำลังบันทึก...','Saving...') : tRaw('บันทึกข้อมูลบัญชี','Save Account Details')}
+          </button>
         </div>
       </div>
     </div>

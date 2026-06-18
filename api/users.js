@@ -154,16 +154,18 @@ module.exports = async function handler(req, res) {
     const admin = await requireAuth(req, res, ['admin']);
     if (!admin) return;
     const { data: profiles } = await supabase.from('profiles')
-      .select('id,name,email,role,affiliate_enabled')
+      .select('id,name,email,role,affiliate_enabled,payout_account_name,payout_bank_name,payout_account_number,payout_payment_method,payout_note')
       .eq('affiliate_enabled', true).order('name');
     const { data: codes } = await supabase.from('affiliate_codes').select('*').order('created_at', { ascending: false });
-    const { data: orders } = await supabase.from('orders').select('id,status,items,affiliate_user_id,affiliate_code,affiliate_discount_thb,affiliate_commission_thb,affiliate_paid_at,created_at').not('affiliate_user_id', 'is', null);
+    const { data: orders } = await supabase.from('orders').select('id,status,items,total_thb,affiliate_user_id,affiliate_code,affiliate_discount_thb,affiliate_commission_thb,affiliate_paid_at,created_at').not('affiliate_user_id', 'is', null);
+    const { data: payouts } = await supabase.from('affiliate_payouts').select('*').order('year', { ascending: false }).order('month', { ascending: false });
     const result = (profiles || []).map(pf => {
       const myOrders = (orders || []).filter(o => o.affiliate_user_id === pf.id);
       return {
         ...pf,
         codes: (codes || []).filter(c => c.user_id === pf.id),
         orders: myOrders,
+        payouts: (payouts || []).filter(py => py.affiliate_user_id === pf.id),
         summary: summarizeAffiliate(myOrders),
       };
     });
@@ -179,7 +181,15 @@ module.exports = async function handler(req, res) {
     const { data: orders } = await supabase.from('orders')
       .select('id,status,items,total_thb,affiliate_code,affiliate_discount_thb,affiliate_commission_thb,affiliate_paid_at,created_at')
       .eq('affiliate_user_id', user.id).order('created_at', { ascending: false });
-    return json(res, 200, { codes: codes || [], orders: orders || [], summary: summarizeAffiliate(orders || []) });
+    const { data: payouts } = await supabase.from('affiliate_payouts').select('*').eq('affiliate_user_id', user.id).order('year', { ascending: false }).order('month', { ascending: false });
+    const payoutAccount = {
+      payout_account_name: user.payout_account_name || '',
+      payout_bank_name: user.payout_bank_name || '',
+      payout_account_number: user.payout_account_number || '',
+      payout_payment_method: user.payout_payment_method || '',
+      payout_note: user.payout_note || '',
+    };
+    return json(res, 200, { codes: codes || [], orders: orders || [], payouts: payouts || [], payoutAccount, summary: summarizeAffiliate(orders || []) });
   }
 
   // POST ?action=affiliate-code — admin creates an extra code for an affiliate
@@ -252,6 +262,81 @@ module.exports = async function handler(req, res) {
     const { data, error } = await supabase.from('orders').update(updates).eq('id', id).select('id,affiliate_paid_at,affiliate_payout_proof_url,affiliate_payout_note').single();
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, data);
+  }
+
+  // PUT ?action=payout-account — the caller edits their OWN payout account details
+  //   (shared by artists & affiliates; both stored on profiles).
+  if (req.method === 'PUT' && action === 'payout-account') {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+    const b = req.body || {};
+    const fields = ['payout_account_name', 'payout_bank_name', 'payout_account_number', 'payout_payment_method', 'payout_note'];
+    const updates = { updated_at: new Date().toISOString() };
+    fields.forEach(f => { if (b[f] !== undefined) updates[f] = b[f]; });
+    const { data, error } = await supabase.from('profiles').update(updates).eq('id', user.id)
+      .select('id,payout_account_name,payout_bank_name,payout_account_number,payout_payment_method,payout_note').single();
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, data);
+  }
+
+  // GET ?action=payout-account&user_id=X — admin reads a user's payout account details
+  if (req.method === 'GET' && action === 'payout-account') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const uid = req.query.user_id;
+    if (!uid) return json(res, 400, { error: 'user_id required' });
+    const { data, error } = await supabase.from('profiles')
+      .select('id,name,email,payout_account_name,payout_bank_name,payout_account_number,payout_payment_method,payout_note').eq('id', uid).single();
+    if (error) return json(res, 404, { error: 'Not found' });
+    return json(res, 200, data);
+  }
+
+  // GET ?action=affiliate-payouts — payout records (admin: all/by affiliate_id; affiliate: own)
+  if (req.method === 'GET' && action === 'affiliate-payouts') {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+    let q = supabase.from('affiliate_payouts').select('*').order('year', { ascending: false }).order('month', { ascending: false });
+    if (user.role === 'admin') {
+      const affiliateId = req.query.affiliate_id;
+      if (affiliateId) q = q.eq('affiliate_user_id', affiliateId);
+    } else {
+      q = q.eq('affiliate_user_id', user.id);
+    }
+    const { data, error } = await q;
+    if (error) return json(res, 500, { error: error.message });
+    return json(res, 200, data || []);
+  }
+
+  // POST ?action=affiliate-payout — admin creates/updates a payout record
+  if (req.method === 'POST' && action === 'affiliate-payout') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const b = req.body || {};
+    const FIELDS = ['calculated_commission', 'paid_amount', 'status', 'payout_proof_url', 'payout_note', 'paid_at'];
+    if (b.id) {
+      const updates = { updated_at: new Date().toISOString() };
+      FIELDS.forEach(k => { if (b[k] !== undefined) updates[k] = b[k]; });
+      const { data, error } = await supabase.from('affiliate_payouts').update(updates).eq('id', b.id).select().single();
+      if (error) return json(res, 400, { error: error.message });
+      return json(res, 200, data);
+    }
+    if (!b.affiliate_user_id || !b.month || !b.year) return json(res, 400, { error: 'affiliate_user_id, month, year required' });
+    const row = { affiliate_user_id: b.affiliate_user_id, month: parseInt(b.month), year: parseInt(b.year), status: b.status || 'pending' };
+    FIELDS.filter(k => k !== 'status').forEach(k => { if (b[k] !== undefined) row[k] = b[k]; });
+    const { data, error } = await supabase.from('affiliate_payouts').insert(row).select().single();
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 201, data);
+  }
+
+  // DELETE ?action=affiliate-payout&id=<payoutId> — admin deletes a (test) record
+  if (req.method === 'DELETE' && action === 'affiliate-payout') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { id } = req.query;
+    if (!id) return json(res, 400, { error: 'id required' });
+    const { error } = await supabase.from('affiliate_payouts').delete().eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
   }
 
   // ─────────────────────────── End Affiliate ───────────────────────────

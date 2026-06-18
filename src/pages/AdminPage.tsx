@@ -1815,6 +1815,12 @@ function AffiliateRequestsTab() {
     if (res?.error) { setMsg('⚠️ ' + res.error); return; }
     setMsg('✓ Request deleted.'); load(); setTimeout(()=>setMsg(''), 4000);
   };
+  const revoke = async (userId: string) => {
+    if (!confirm('Revoke affiliate access? Codes are disabled but all payout, commission and order history is kept.')) return;
+    const res = await api.revokeAffiliate(userId);
+    if (res?.error) { setMsg('⚠️ ' + res.error); return; }
+    setMsg('✓ Affiliate access revoked.'); load(); setTimeout(()=>setMsg(''), 4000);
+  };
 
   const STATUS: Record<string,{c:string,bg:string,t:string}> = {
     pending:{c:'#92400e',bg:'#fef3c7',t:'Pending'}, approved:{c:'#065f46',bg:'#d1fae5',t:'Approved'}, rejected:{c:'#991b1b',bg:'#fee2e2',t:'Rejected'},
@@ -1843,6 +1849,9 @@ function AffiliateRequestsTab() {
                     <button onClick={()=>startApprove(r.id)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #6ee7b7',background:'#d1fae5',cursor:'pointer',fontSize:12,fontWeight:700,color:'#065f46'}}>Approve</button>
                     <button onClick={()=>reject(r.id)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:12,fontWeight:700,color:'#ef4444'}}>Reject</button>
                   </>)}
+                  {r.status==='approved'&&(
+                    <button onClick={()=>revoke(r.user_id)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fcd34d',background:'#fffbeb',cursor:'pointer',fontSize:12,fontWeight:700,color:'#b45309'}}>Revoke</button>
+                  )}
                   <button onClick={()=>del(r.id, r.username||r.email||'this user')} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:12,fontWeight:700,color:'#dc2626'}}>Delete</button>
                 </div>
               </td>
@@ -1972,6 +1981,22 @@ function AffiliatesTab() {
             {(!a.codes||a.codes.length===0)&&<div style={{fontSize:12,color:'#9ca3af'}}>No codes.</div>}
           </div>
 
+          {/* Payout account details */}
+          <div style={{background:'#f8fafc',borderRadius:12,padding:'12px 14px',marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:800,color:'#374151',marginBottom:6}}>💳 Payout Account</div>
+            {a.payout_account_name||a.payout_account_number||a.payout_payment_method ? (
+              <div style={{fontSize:12,color:'#475569',lineHeight:1.7}}>
+                <div><b>Name:</b> {a.payout_account_name||'—'}</div>
+                <div><b>Method:</b> {a.payout_payment_method||'—'}{a.payout_bank_name?` · ${a.payout_bank_name}`:''}</div>
+                <div><b>Account / PayPal:</b> {a.payout_account_number||'—'}</div>
+                {a.payout_note&&<div><b>Note:</b> {a.payout_note}</div>}
+              </div>
+            ) : <div style={{fontSize:12,color:'#9ca3af'}}>No payout account details provided yet.</div>}
+          </div>
+
+          {/* Monthly payout management */}
+          <AffiliatePayoutSection a={a} onChange={load} />
+
           {/* Orders / payouts */}
           <button onClick={()=>setExpanded(expanded===a.id?null:a.id)} style={{padding:'6px 12px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:700,color:'#6b7280'}}>
             {expanded===a.id?'Hide':'View'} referred orders ({(a.orders||[]).length})
@@ -2027,6 +2052,114 @@ function AffiliateCodeRow({codeRow,onSave,onDelete}:{codeRow:any,onSave:(c:any,u
       <button onClick={()=>onSave(codeRow,{active:!codeRow.active})} style={{padding:'5px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:codeRow.active?'#d1fae5':'#f3f4f6',cursor:'pointer',fontSize:11,fontWeight:700,color:codeRow.active?'#065f46':'#6b7280'}}>{codeRow.active?'Active':'Inactive'}</button>
       {dirty&&<button onClick={()=>onSave(codeRow,{code:code.toUpperCase().trim(),discount_amount:Number(discount),affiliate_commission:Number(commission)})} style={{padding:'5px 12px',borderRadius:8,border:'none',background:P,color:'white',cursor:'pointer',fontSize:11,fontWeight:700}}>Save</button>}
       <button onClick={()=>onDelete(codeRow.id)} style={{padding:'5px 10px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:11,fontWeight:700,color:'#dc2626'}}>Delete</button>
+    </div>
+  );
+}
+
+// ── Affiliate monthly payout (admin) ─────────────────────────────────────────
+function AffiliatePayoutSection({a, onChange}:{a:any, onChange:()=>void}) {
+  const MON = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth()+1);
+  const [year, setYear] = useState(now.getFullYear());
+  const [paid, setPaid] = useState('');
+  const [note, setNote] = useState('');
+  const [proof, setProof] = useState('');
+  const [status, setStatus] = useState('pending');
+  const [msg, setMsg] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const years = Array.from({length:3},(_,i)=>now.getFullYear()-i);
+  const thb=(n:number)=>`฿${Number(n||0).toLocaleString('th-TH')}`;
+
+  // Calculated commission = delivered + physical orders referred in this month/year
+  const calculated = (a.orders||[]).filter((o:any)=>{
+    if (o.status!=='delivered') return false;
+    if (!((o.items||[]).some((i:any)=>(i.optionType||i.type)==='physical'))) return false;
+    const d = new Date(o.created_at||0);
+    return d.getMonth()+1===month && d.getFullYear()===year;
+  }).reduce((s:number,o:any)=>s+Number(o.affiliate_commission_thb||0),0);
+
+  const existing = (a.payouts||[]).find((py:any)=>py.month===month && py.year===year);
+
+  useEffect(()=>{
+    if (existing) { setPaid(String(existing.paid_amount??'')); setNote(existing.payout_note||''); setProof(existing.payout_proof_url||''); setStatus(existing.status||'pending'); }
+    else { setPaid(String(calculated)); setNote(''); setProof(''); setStatus('pending'); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[month,year,a.id]);
+
+  const uploadProof = async (f:File) => {
+    setUploading(true);
+    const res = await api.uploadFile(f,'payouts');
+    setUploading(false);
+    if (res?.error) { setMsg('⚠️ '+res.error); return; }
+    setProof(res.publicUrl||res.url||'');
+  };
+
+  const save = async () => {
+    setMsg('');
+    const body:any = {
+      affiliate_user_id: a.id, month, year,
+      calculated_commission: calculated,
+      paid_amount: Number(paid)||0,
+      status, payout_note: note||null, payout_proof_url: proof||null,
+      paid_at: status==='paid' ? (existing?.paid_at || new Date().toISOString()) : null,
+    };
+    if (existing) body.id = existing.id;
+    const res = await api.saveAffiliatePayout(body);
+    if (res?.error) { setMsg('⚠️ '+res.error); return; }
+    setMsg('✓ Saved.'); onChange(); setTimeout(()=>setMsg(''),3000);
+  };
+  const del = async (id:string) => {
+    if (!confirm('Delete this payout record?')) return;
+    const res = await api.deleteAffiliatePayout(id);
+    if (res?.error) { setMsg('⚠️ '+res.error); return; }
+    setMsg('✓ Deleted.'); onChange();
+  };
+
+  return (
+    <div style={{background:'#fafafa',borderRadius:12,padding:14,marginBottom:12}}>
+      <div style={{fontSize:12,fontWeight:800,color:'#374151',marginBottom:10}}>💸 Monthly Payout</div>
+      <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginBottom:10}}>
+        <select value={month} onChange={e=>setMonth(Number(e.target.value))} style={{padding:'7px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit'}}>{MON.slice(1).map((m,i)=><option key={i+1} value={i+1}>{m}</option>)}</select>
+        <select value={year} onChange={e=>setYear(Number(e.target.value))} style={{padding:'7px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit'}}>{years.map(y=><option key={y} value={y}>{y}</option>)}</select>
+        <span style={{fontSize:13,color:'#374151'}}>Calculated: <b>{thb(calculated)}</b></span>
+      </div>
+      <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginBottom:10}}>
+        <span style={{fontSize:12,color:'#6b7280'}}>Paid ฿</span>
+        <input value={paid} onChange={e=>setPaid(e.target.value)} type="number" style={{padding:'7px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,width:100,fontFamily:'inherit'}} />
+        <select value={status} onChange={e=>setStatus(e.target.value)} style={{padding:'7px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit'}}>
+          <option value="pending">Pending</option><option value="paid">Paid</option>
+        </select>
+        <label style={{padding:'7px 12px',borderRadius:8,border:`1px solid ${P}`,background:'white',cursor:'pointer',fontSize:12,fontWeight:700,color:P}}>
+          {uploading?'Uploading…':(proof?'Replace proof':'Upload proof')}
+          <input type="file" accept="image/*,.pdf" style={{display:'none'}} disabled={uploading} onChange={e=>{const f=e.target.files?.[0];if(f)uploadProof(f);e.target.value='';}} />
+        </label>
+        {proof&&<a href={proof} target="_blank" rel="noreferrer" style={{fontSize:12,color:P,fontWeight:700}}>view</a>}
+      </div>
+      <input value={note} onChange={e=>setNote(e.target.value)} placeholder="Payout note (optional)" style={{width:'100%',padding:'8px 12px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',marginBottom:10,boxSizing:'border-box'}} />
+      <div style={{display:'flex',gap:8,alignItems:'center'}}>
+        <button onClick={save} style={{padding:'8px 18px',borderRadius:10,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:700}}>{existing?'Update Payout':'Save Payout'}</button>
+        {msg&&<span style={{fontSize:12,fontWeight:700,color:msg.startsWith('✓')?'#059669':'#dc2626'}}>{msg}</span>}
+      </div>
+
+      {(a.payouts||[]).length>0&&(
+        <div style={{marginTop:12,overflow:'auto'}}>
+          <table style={{width:'100%',borderCollapse:'collapse',minWidth:560}}>
+            <thead><tr style={{borderBottom:'1px solid #e5e7eb'}}>{['MONTH','CALC','PAID','STATUS','PAID DATE','PROOF',''].map((h,i)=><th key={i} style={{textAlign:'left',padding:'6px 10px',fontSize:10,color:'#9ca3af',fontWeight:700}}>{h}</th>)}</tr></thead>
+            <tbody>{(a.payouts||[]).map((py:any)=>(
+              <tr key={py.id} style={{borderBottom:'1px solid #f3f4f6'}}>
+                <td style={{padding:'6px 10px',fontSize:12,fontWeight:700}}>{MON[py.month]} {py.year}</td>
+                <td style={{padding:'6px 10px',fontSize:12}}>{thb(py.calculated_commission)}</td>
+                <td style={{padding:'6px 10px',fontSize:12,fontWeight:800,color:'#059669'}}>{thb(py.paid_amount)}</td>
+                <td style={{padding:'6px 10px',fontSize:11}}><Badge color={py.status==='paid'?'#065f46':'#92400e'} bg={py.status==='paid'?'#d1fae5':'#fef3c7'} text={py.status==='paid'?'Paid':'Pending'}/></td>
+                <td style={{padding:'6px 10px',fontSize:11,color:'#9ca3af'}}>{py.paid_at?new Date(py.paid_at).toLocaleDateString():'—'}</td>
+                <td style={{padding:'6px 10px'}}>{py.payout_proof_url?<a href={py.payout_proof_url} target="_blank" rel="noreferrer" style={{color:P,fontSize:11,fontWeight:700}}>View</a>:<span style={{color:'#9ca3af',fontSize:11}}>—</span>}</td>
+                <td style={{padding:'6px 10px'}}><button onClick={()=>del(py.id)} style={{padding:'3px 8px',borderRadius:6,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:10,fontWeight:700,color:'#dc2626'}}>Del</button></td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
@@ -3899,6 +4032,7 @@ function ArtistPayoutsTab() {
   const [saving, setSaving] = useState(false);
   const [delConfirm, setDelConfirm] = useState<string|null>(null);
   const [msg, setMsg] = useState('');
+  const [payAcct, setPayAcct] = useState<any>(null);
 
   // Form fields — editable by admin
   const [editId, setEditId] = useState<string|null>(null);
@@ -3920,7 +4054,8 @@ function ArtistPayoutsTab() {
 
   // When artist changes: load their orders + products for calculation
   useEffect(() => {
-    if (!selArtist) { setOrders([]); setProducts([]); setPayouts([]); return; }
+    if (!selArtist) { setOrders([]); setProducts([]); setPayouts([]); setPayAcct(null); return; }
+    api.getPayoutAccount(selArtist).then((d:any) => setPayAcct(d && !d.error ? d : null)).catch(() => setPayAcct(null));
     setCalcLoading(true);
     Promise.all([
       (api as any).getArtistOrdersForAdmin(selArtist),
@@ -4064,6 +4199,21 @@ function ArtistPayoutsTab() {
       </div>
 
       {selArtist && calcLoading && <div style={{ textAlign:'center', padding:32, color:'#9ca3af' }}>⏳ Loading orders…</div>}
+
+      {/* Payout account details (for transferring money) */}
+      {selArtist && (
+        <div style={{ ...card, padding:16, marginBottom:20, background:'#f8fafc' }}>
+          <div style={{ fontSize:13, fontWeight:800, color:'#374151', marginBottom:6 }}>💳 Payout Account</div>
+          {payAcct && (payAcct.payout_account_name || payAcct.payout_account_number || payAcct.payout_payment_method) ? (
+            <div style={{ fontSize:13, color:'#475569', lineHeight:1.7 }}>
+              <div><b>Name:</b> {payAcct.payout_account_name||'—'}</div>
+              <div><b>Method:</b> {payAcct.payout_payment_method||'—'}{payAcct.payout_bank_name?` · ${payAcct.payout_bank_name}`:''}</div>
+              <div><b>Account / PayPal:</b> {payAcct.payout_account_number||'—'}</div>
+              {payAcct.payout_note&&<div><b>Note:</b> {payAcct.payout_note}</div>}
+            </div>
+          ) : <div style={{ fontSize:13, color:'#9ca3af' }}>This artist hasn't added payout account details yet.</div>}
+        </div>
+      )}
 
       {/* Auto-calculated breakdown */}
       {selArtist && !calcLoading && breakdown && (

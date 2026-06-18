@@ -386,6 +386,7 @@ function ArtistSales({ p }: any) {
 // ── Earnings ──────────────────────────────────────────────────────────────────
 
 function ArtistEarnings({ user, p }: any) {
+  const { navigate } = useRouter();
   const { orders, productMap, loading } = useArtistData();
   const now = new Date();
   const [selMonth, setSelMonth] = useState(now.getMonth() + 1);
@@ -447,6 +448,24 @@ function ArtistEarnings({ user, p }: any) {
             <div style={{ fontSize:11, color:'#9ca3af', marginTop:4 }}>{s.note}</div>
           </div>
         ))}
+      </div>
+
+      {/* Payout account details (read-only summary) */}
+      <div style={{ background:'white', borderRadius:16, padding:18, boxShadow:'0 2px 10px rgba(0,0,0,0.05)', marginBottom:20 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+          <h3 style={{ fontSize:15, fontWeight:800, color:'#1e293b', margin:0 }}>💳 Payout Account</h3>
+          <a onClick={()=>navigate('/artist-dashboard/profile')} style={{ fontSize:12, color:p, cursor:'pointer', fontWeight:700 }}>Edit in Profile →</a>
+        </div>
+        {(user.payout_account_name || user.payout_account_number || user.payout_payment_method) ? (
+          <div style={{ fontSize:13, color:'#475569', lineHeight:1.8 }}>
+            <div><b>Name:</b> {user.payout_account_name || '—'}</div>
+            <div><b>Method:</b> {user.payout_payment_method || '—'}{user.payout_bank_name ? ` · ${user.payout_bank_name}` : ''}</div>
+            <div><b>Account / PayPal:</b> {user.payout_account_number || '—'}</div>
+            {user.payout_note && <div><b>Note:</b> {user.payout_note}</div>}
+          </div>
+        ) : (
+          <div style={{ fontSize:13, color:'#94a3b8' }}>No payout account details yet. Add them in My Profile so we can pay you.</div>
+        )}
       </div>
 
       {/* Payout status for selected month */}
@@ -582,6 +601,27 @@ function ArtistProfile({ user, p, theme, refreshUser }: any) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
+  // Payout account details (stored on the user's own profile, shared with affiliate)
+  const [pay, setPay] = useState({ payout_account_name:'', payout_bank_name:'', payout_account_number:'', payout_payment_method:'Bank Transfer', payout_note:'' });
+  const [paySaving, setPaySaving] = useState(false);
+  const [payMsg, setPayMsg] = useState('');
+  useEffect(() => {
+    setPay({
+      payout_account_name: user.payout_account_name || '',
+      payout_bank_name: user.payout_bank_name || '',
+      payout_account_number: user.payout_account_number || '',
+      payout_payment_method: user.payout_payment_method || 'Bank Transfer',
+      payout_note: user.payout_note || '',
+    });
+  }, [user.id]);
+  const savePayout = async () => {
+    setPaySaving(true); setPayMsg('');
+    const res = await api.updatePayoutAccount(pay);
+    if (res?.error) { setPayMsg('⚠️ ' + res.error); setPaySaving(false); return; }
+    await refreshUser();
+    setPaySaving(false); setPayMsg('✓ Saved'); setTimeout(() => setPayMsg(''), 3000);
+  };
+
   useEffect(() => {
     const id = user.artistId || user.id;
     api.getArtist(id).then((a: any) => {
@@ -642,6 +682,29 @@ function ArtistProfile({ user, p, theme, refreshUser }: any) {
         {fld('Contact Email', contactEmail, setContactEmail, 'you@email.com', 'email')}
         {msg && <div style={{ marginBottom:14, fontSize:13, fontWeight:600, color:msg.startsWith('✓')?'#059669':'#dc2626' }}>{msg}</div>}
         <button onClick={save} disabled={saving} style={{ background:saving?p+'88':p, color:'white', border:'none', cursor:'pointer', padding:'11px 24px', borderRadius:12, fontSize:14, fontWeight:800, fontFamily:theme.fontFamily }}>{saving?'Saving...':'Save Profile'}</button>
+      </div>
+
+      {/* Payout account details */}
+      <div style={{ background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 10px rgba(0,0,0,0.05)', maxWidth:580, marginTop:20 }}>
+        <h3 style={{ fontSize:18, fontWeight:800, color:'#1e293b', marginBottom:6 }}>💳 Payout Account</h3>
+        <p style={{ fontSize:12, color:'#94a3b8', marginTop:0, marginBottom:16 }}>Used by Fluffy Pub to transfer your earnings.</p>
+        {fld('Account Name', pay.payout_account_name, v=>setPay(s=>({...s,payout_account_name:v})), 'Your name')}
+        {fld('Account Number / PayPal', pay.payout_account_number, v=>setPay(s=>({...s,payout_account_number:v})), '')}
+        {fld('Bank Name', pay.payout_bank_name, v=>setPay(s=>({...s,payout_bank_name:v})), 'e.g. SCB')}
+        <div style={{ marginBottom:14 }}>
+          <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#374151', marginBottom:6 }}>Payment Method</label>
+          <select value={pay.payout_payment_method} onChange={e=>setPay(s=>({...s,payout_payment_method:e.target.value}))}
+            style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:`1.5px solid ${p}30`, fontSize:14, outline:'none', fontFamily:theme.fontFamily, background:'white', boxSizing:'border-box' as const }}>
+            {['Bank Transfer','PromptPay','PayPal','Other'].map(m=><option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div style={{ marginBottom:16 }}>
+          <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#374151', marginBottom:6 }}>Note</label>
+          <textarea value={pay.payout_note} onChange={e=>setPay(s=>({...s,payout_note:e.target.value}))} rows={2}
+            style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:`1.5px solid ${p}30`, fontSize:14, outline:'none', fontFamily:theme.fontFamily, resize:'vertical', boxSizing:'border-box' as const }} />
+        </div>
+        {payMsg && <span style={{ fontSize:13, fontWeight:700, color:payMsg.startsWith('✓')?'#059669':'#dc2626', marginRight:12 }}>{payMsg}</span>}
+        <button onClick={savePayout} disabled={paySaving} style={{ background:paySaving?p+'88':p, color:'white', border:'none', cursor:'pointer', padding:'11px 24px', borderRadius:12, fontSize:14, fontWeight:800, fontFamily:theme.fontFamily }}>{paySaving?'Saving...':'Save Payout Account'}</button>
       </div>
     </div>
   );

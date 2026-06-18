@@ -31,7 +31,7 @@ async function getUser(req) {
     const email = payload.email || '';
     let { data: profile, error: fetchErr } = await supabase
       .from('profiles')
-      .select('id, email, name, role, bio, artist_slug, artist_id, affiliate_enabled, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
+      .select('id, email, name, role, bio, artist_slug, artist_id, affiliate_enabled, payout_account_name, payout_bank_name, payout_account_number, payout_payment_method, payout_note, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
       .eq('id', userId)
       .single();
 
@@ -67,14 +67,14 @@ async function getUser(req) {
         name: payload.user_metadata?.name || email.split('@')[0] || '',
         role: 'customer',
       })
-      .select('id, email, name, role, bio, artist_slug, artist_id, affiliate_enabled, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
+      .select('id, email, name, role, bio, artist_slug, artist_id, affiliate_enabled, payout_account_name, payout_bank_name, payout_account_number, payout_payment_method, payout_note, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
       .single();
 
     // If the insert raced/conflicted, re-read the existing row rather than assume customer.
     if (created) return created;
     const { data: reread } = await supabase
       .from('profiles')
-      .select('id, email, name, role, bio, artist_slug, artist_id, affiliate_enabled, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
+      .select('id, email, name, role, bio, artist_slug, artist_id, affiliate_enabled, payout_account_name, payout_bank_name, payout_account_number, payout_payment_method, payout_note, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
       .eq('id', userId)
       .single();
     return reread || { id: userId, email, name: email.split('@')[0], role: 'customer' };
