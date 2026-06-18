@@ -4193,7 +4193,7 @@ function ArtistPayoutsTab() {
             <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:5 }}>Artist *</label>
             <select value={selArtist} onChange={e=>setSelArtist(e.target.value)} style={{ width:'100%', padding:'9px 12px', borderRadius:10, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none' }}>
               <option value="">Select artist…</option>
-              {artists.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              {artists.map(a => <option key={a.id} value={a.id}>{a.username||a.name}</option>)}
             </select>
           </div>
           <div>

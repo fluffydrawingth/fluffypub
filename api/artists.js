@@ -187,7 +187,7 @@ module.exports = async function handler(req, res) {
       return json(res, 200, { ...data, products: products || [] });
     }
     const { data: artists } = await supabase.from('profiles')
-      .select('id,name,artist_slug,bio,cover_image_url,avatar_url,website,social_links,artist_status,created_at,artist_id')
+      .select('id,name,username,artist_slug,bio,cover_image_url,avatar_url,website,social_links,artist_status,created_at,artist_id')
       .eq('role', 'artist').order('name');
     // Only real artist profiles — exclude promoted user accounts linked to another artist.
     const realArtists = (artists || []).filter(a => !a.artist_id || a.artist_id === a.id);
