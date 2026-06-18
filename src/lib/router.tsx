@@ -20,10 +20,15 @@ function parse(hash: string): Route {
   // Supabase auth callbacks arrive as ?access_token=...&type=recovery (no leading slash)
   if (hash.includes('type=recovery')) return { path: '/reset-password' };
   if (hash.includes('type=signup') || hash.includes('type=email_change')) return { path: '/login' };
-  const p = hash.split('/').filter(Boolean);
+  // Separate the query string (e.g. /products?cat=Animals) from the path segments.
+  const qIdx = hash.indexOf('?');
+  const query = qIdx === -1 ? '' : hash.slice(qIdx + 1);
+  const pathOnly = qIdx === -1 ? hash : hash.slice(0, qIdx);
+  const q = new URLSearchParams(query);
+  const p = pathOnly.split('/').filter(Boolean);
   if (!p.length) return { path: '/' };
   if (p[0]==='products' && p[1]) return { path:'/products/:slug', params:{ slug:p[1] } };
-  if (p[0]==='products') return { path:'/products' };
+  if (p[0]==='products') return { path:'/products', params:{ category: q.get('cat') || '' } };
   if (p[0]==='digital-products') return { path:'/digital-products' };
   if (p[0]==='cart') return { path:'/cart' };
   if (p[0]==='checkout') return { path:'/checkout' };

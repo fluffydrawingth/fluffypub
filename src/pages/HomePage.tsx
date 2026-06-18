@@ -66,7 +66,10 @@ function HeroSection() {
     theme.statArtists    ? { value: theme.statArtists,    label: tl('Artists', 'ศิลปิน') }            : null,
     theme.statRating     ? { value: theme.statRating,     label: tl('Rating', 'คะแนน') }              : null,
   ].filter(Boolean) as { value: string; label: string }[];
-  const stats = namedStats.length > 0 ? namedStats : (theme.heroStats || []);
+  // Named stat fields are the single source of truth: each shows only if it has a value,
+  // and clearing a field hides it. No legacy heroStats fallback (that ignored "leave
+  // empty to hide" and kept showing old defaults).
+  const stats = namedStats;
 
   return (
     <section style={{
@@ -234,7 +237,7 @@ function CategoriesSection({ allProducts }: { allProducts: any[] }) {
           {catsWithProducts.map(cat => {
             const count = catCounts[cat.name] || 0;
             return (
-              <button key={cat.name} onClick={()=>navigate('/products')}
+              <button key={cat.name} onClick={()=>navigate(`/products?cat=${encodeURIComponent(cat.name)}`)}
                 className="hp-cat-card"
                 style={{ background:'white', border:`1.5px solid ${theme.primaryColor}20`, borderRadius:20, padding:'28px 16px', cursor:'pointer', textAlign:'center' as const, fontFamily:theme.fontFamily, width:'min(100%,160px)', flexShrink:0 }}
                 onMouseEnter={e=>{(e.currentTarget as any).style.transform='translateY(-4px)';(e.currentTarget as any).style.boxShadow=`0 8px 24px ${theme.primaryColor}25`;}}

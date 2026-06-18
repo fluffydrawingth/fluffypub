@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { useTheme } from '../lib/theme';
+import { useRouter } from '../lib/router';
 import ProductCard from '../components/ProductCard';
 import { useLang } from '../lib/lang';
 
 export default function ProductsPage() {
   const { theme } = useTheme();
+  const { route } = useRouter();
   const { tRaw } = useLang();
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<{ name: string; slug: string; icon: string; icon_type: string }[]>([]);
-  const [category, setCategory] = useState('All');
+  const [category, setCategory] = useState(route.params?.category || 'All');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('featured');
   const p = theme.primaryColor;
@@ -20,6 +22,11 @@ export default function ProductsPage() {
       if (Array.isArray(d)) setCategories(d);
     });
   }, []);
+
+  // Pre-select category when arriving from a homepage category link (/products?cat=…)
+  useEffect(() => {
+    if (route.params?.category) setCategory(route.params.category);
+  }, [route.params?.category]);
 
   // Shop page shows only physical products
   const physicalOnly = allProducts.filter(prod =>
