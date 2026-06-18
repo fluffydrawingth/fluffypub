@@ -30,18 +30,21 @@ import ArtistApplicationPage from './pages/ArtistApplicationPage';
 import { LangProvider } from './lib/lang';
 import { FavoritesProvider } from './lib/favorites';
 
+const MAX_VERIFY_TRIES = 3;
+
 function ProtectedRoute({ roles, children }: { roles: string[]; children: React.ReactNode }) {
   const { user, loading, refreshUser } = useAuth();
   const { navigate } = useRouter();
   const [verifying, setVerifying] = React.useState(false);
-  const triedRef = React.useRef(false);
+  const triesRef = React.useRef(0);
   React.useEffect(() => {
     if (loading || verifying) return;
-    if (user && roles.includes(user.role)) return; // access granted
-    // Role mismatch or no user — the cached role may be stale (e.g. just approved/revoked).
-    // Try one fresh profile fetch before deciding to redirect.
-    if (!triedRef.current) {
-      triedRef.current = true;
+    if (user && roles.includes(user.role)) { triesRef.current = 0; return; } // access granted
+    // Role mismatch or no user — the cached role may be stale (e.g. just approved).
+    // Re-fetch a few times before redirecting: a freshly-approved artist's profile
+    // can lag, and a transient /me failure should not bounce them to the homepage.
+    if (triesRef.current < MAX_VERIFY_TRIES) {
+      triesRef.current += 1;
       setVerifying(true);
       refreshUser().finally(() => setVerifying(false));
       return;

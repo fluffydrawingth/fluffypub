@@ -75,12 +75,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {}
 
-    // Fallback: decode JWT to get basic user info
+    // Fallback: the /me fetch failed (transient error / cold start). Do NOT downgrade
+    // the role — the JWT's user_metadata.role is the original signup value ('customer'),
+    // so trusting it here would silently demote an approved artist. Prefer the cached
+    // user (which may correctly be 'artist'/'admin'); only fall back to the JWT when
+    // there is no cache at all.
     const payload = decodeJwt(t);
     if (payload?.sub && payload?.email) {
-      const email = payload.email;
-      const role: UserRole = email === ADMIN_EMAIL ? 'admin' : 'customer';
-      const u: AuthUser = { id: payload.sub, email, name: payload.user_metadata?.name || email.split('@')[0], role };
+      let u: AuthUser | null = null;
+      try {
+        const cached = localStorage.getItem(USER_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed?.id === payload.sub) u = parsed;
+        }
+      } catch {}
+      if (!u) {
+        const email = payload.email;
+        const role: UserRole = email === ADMIN_EMAIL ? 'admin' : 'customer';
+        u = { id: payload.sub, email, name: payload.user_metadata?.name || email.split('@')[0], role };
+      }
+      if (u.email === ADMIN_EMAIL) u.role = 'admin';
       localStorage.setItem(USER_KEY, JSON.stringify(u));
       setUser(u);
     } else {

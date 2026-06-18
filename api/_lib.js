@@ -37,19 +37,35 @@ async function getUser(req) {
 
     if (profile) return profile;
 
-    // No profile row — create one now (first login or missing row)
+    // Only create a row when the profile is genuinely missing (PGRST116 = no rows).
+    // Any other error is transient — never fall through, because the create path below
+    // would clobber an existing artist/admin row's role back to 'customer'.
+    if (fetchErr && fetchErr.code && fetchErr.code !== 'PGRST116') {
+      console.error('getUser profile fetch error (not creating):', fetchErr.message);
+      return null;
+    }
+
+    // No profile row — create one now (first login or missing row).
+    // Use insert (not upsert) so we can never overwrite an existing row's role.
     const { data: created } = await supabase
       .from('profiles')
-      .upsert({
+      .insert({
         id: userId,
         email: email,
         name: payload.user_metadata?.name || email.split('@')[0] || '',
         role: 'customer',
-      }, { onConflict: 'id' })
+      })
       .select('id, email, name, role, bio, artist_slug, artist_id, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
       .single();
 
-    return created || { id: userId, email, name: email.split('@')[0], role: 'customer' };
+    // If the insert raced/conflicted, re-read the existing row rather than assume customer.
+    if (created) return created;
+    const { data: reread } = await supabase
+      .from('profiles')
+      .select('id, email, name, role, bio, artist_slug, artist_id, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
+      .eq('id', userId)
+      .single();
+    return reread || { id: userId, email, name: email.split('@')[0], role: 'customer' };
   } catch (e) {
     console.error('getUser error:', e.message);
     return null;
