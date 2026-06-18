@@ -26,6 +26,7 @@ import FreeDownloadsPage from './pages/FreeDownloadsPage';
 import FreeDownloadDetailPage from './pages/FreeDownloadDetailPage';
 import MaintenancePage from './pages/MaintenancePage';
 import LegalPage from './pages/LegalPage';
+import ArtistApplicationPage from './pages/ArtistApplicationPage';
 import { LangProvider } from './lib/lang';
 import { FavoritesProvider } from './lib/favorites';
 
@@ -96,6 +97,8 @@ function AppContent() {
       case '/privacy-policy':    return <LegalPage slug="privacy-policy" />;
       case '/terms-of-service':  return <LegalPage slug="terms-of-service" />;
       case '/artist-guidelines': return <LegalPage slug="artist-guidelines" />;
+      case '/artist-agreement':  return <LegalPage slug="artist-agreement" />;
+      case '/artist-application': return <ArtistApplicationPage />;
       case '/artists': return <ArtistsPage />;
       case '/login': return <LoginPage />;
       case '/account': return <ProtectedRoute roles={['customer','artist','admin']}><AccountPage /></ProtectedRoute>;
