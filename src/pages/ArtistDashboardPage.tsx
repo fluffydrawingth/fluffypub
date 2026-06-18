@@ -97,6 +97,12 @@ export default function ArtistDashboardPage() {
         {tab==='products'  && <ArtistProducts p={p} />}
         {tab==='sales'     && <ArtistSales p={p} />}
         {tab==='earnings'  && <ArtistEarnings user={user} p={p} />}
+
+        {/* Policies — full guidelines & agreement (royalty terms etc.) */}
+        <div style={{ padding:'4px 24px 32px', display:'flex', gap:18, flexWrap:'wrap' as const }}>
+          <a onClick={()=>navigate('/artist-guidelines')} style={{ fontSize:13, color:p, cursor:'pointer', fontWeight:700 }}>📋 Artist Guidelines</a>
+          <a onClick={()=>navigate('/artist-agreement')} style={{ fontSize:13, color:p, cursor:'pointer', fontWeight:700 }}>📜 Artist Agreement</a>
+        </div>
       </div>
     </div>
   );

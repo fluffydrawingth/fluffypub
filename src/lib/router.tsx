@@ -49,6 +49,7 @@ function parse(hash: string): Route {
   if (p[0]==='artist-agreement')  return { path:'/artist-agreement' };
   if (p[0]==='artist-application') return { path:'/artist-application' };
   if (p[0]==='affiliate-guidelines') return { path:'/affiliate-guidelines' };
+  if (p[0]==='affiliate-agreement') return { path:'/affiliate-agreement' };
   if (p[0]==='affiliate-application') return { path:'/affiliate-application' };
   if (p[0]==='affiliate-dashboard') return { path:'/affiliate-dashboard' };
   return { path:'/' };

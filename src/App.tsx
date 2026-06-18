@@ -105,6 +105,7 @@ function AppContent() {
       case '/artist-agreement':  return <LegalPage slug="artist-agreement" />;
       case '/artist-application': return <ProtectedRoute roles={['customer','artist','admin']}><ArtistApplicationPage /></ProtectedRoute>;
       case '/affiliate-guidelines': return <LegalPage slug="affiliate-guidelines" />;
+      case '/affiliate-agreement': return <LegalPage slug="affiliate-agreement" />;
       case '/affiliate-application': return <ProtectedRoute roles={['customer','artist','admin']}><AffiliateApplicationPage /></ProtectedRoute>;
       case '/affiliate-dashboard': return <ProtectedRoute roles={['customer','artist','admin']}><AffiliateDashboardPage /></ProtectedRoute>;
       case '/artists': return <ArtistsPage />;

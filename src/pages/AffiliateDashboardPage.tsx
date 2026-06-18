@@ -197,6 +197,12 @@ export default function AffiliateDashboardPage() {
             {acctSaving ? tRaw('กำลังบันทึก...','Saving...') : tRaw('บันทึกข้อมูลบัญชี','Save Account Details')}
           </button>
         </div>
+
+        {/* Policies — full guidelines & agreement (commission terms etc.) */}
+        <div style={{ display:'flex', gap:18, flexWrap:'wrap' as const, marginTop:24 }}>
+          <a onClick={()=>navigate('/affiliate-guidelines')} style={{ fontSize:13, color:p, cursor:'pointer', fontWeight:700 }}>📋 {tRaw('แนวทางแอฟฟิลิเอต','Affiliate Guidelines')}</a>
+          <a onClick={()=>navigate('/affiliate-agreement')} style={{ fontSize:13, color:p, cursor:'pointer', fontWeight:700 }}>📜 {tRaw('ข้อตกลงแอฟฟิลิเอต','Affiliate Agreement')}</a>
+        </div>
       </div>
     </div>
   );
