@@ -14,6 +14,7 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
   const [freeDownloads, setFreeDownloads] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'physical'|'digital'|'free'>('physical');
+  const [search, setSearch] = useState('');
   const p = theme.primaryColor;
 
   useEffect(() => {
@@ -71,6 +72,14 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
   const unclassified = allProducts.filter(pr => pr.type !== 'physical' && pr.type !== 'digital' && !pr.is_physical && !pr.is_digital);
   const physicalSection = [...showPhysical, ...unclassified];
   const totalCount = allProducts.length + freeDownloads.length;
+
+  // Search within this artist's items (title / category)
+  const term = search.trim().toLowerCase();
+  const matchP = (pr: any) => !term || `${pr.title||''} ${pr.title_th||''} ${pr.title_en||''} ${pr.category||''}`.toLowerCase().includes(term);
+  const matchF = (fd: any) => !term || `${fd.title_en||''} ${fd.title_th||''} ${fd.category||''}`.toLowerCase().includes(term);
+  const physicalShown = physicalSection.filter(matchP);
+  const digitalShown  = showDigital.filter(matchP);
+  const freeShown     = freeDownloads.filter(matchF);
 
   const fileIcon = (t: string) => t === 'pdf' ? '📄' : t === 'zip' ? '🗜️' : t === 'png' ? '🖼️' : '📁';
   const fileBg   = (t: string) => t === 'pdf' ? '#fee2e2' : t === 'png' ? '#f3e8ff' : '#dbeafe';
@@ -135,6 +144,16 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
 
           return (
             <>
+              {/* Search within this artist's items */}
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder={tRaw('ค้นหาผลงานของศิลปินนี้...', 'Search this artist’s items...')}
+                style={{ width:'100%', maxWidth:340, padding:'9px 14px', borderRadius:22, border:`1.5px solid ${p}30`, fontSize:13, outline:'none', fontFamily:theme.fontFamily, boxSizing:'border-box', marginBottom:16 }}
+                onFocus={e => e.target.style.borderColor = p}
+                onBlur={e => e.target.style.borderColor = p + '30'}
+              />
+
               {/* Tab bar — horizontally scrollable on mobile */}
               <div className="artist-tabs">
                 {tabs.map(tab => {
@@ -156,7 +175,7 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
               {/* Tab content */}
               {validTab === 'physical' && (
                 <div className="artist-grid">
-                  {physicalSection.map((pr:any) => (
+                  {physicalShown.map((pr:any) => (
                     <ProductCard key={pr.id} product={{ ...pr, artistName: artist.name }} />
                   ))}
                 </div>
@@ -164,7 +183,7 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
 
               {validTab === 'digital' && (
                 <div className="artist-grid">
-                  {showDigital.map((pr:any) => (
+                  {digitalShown.map((pr:any) => (
                     <ProductCard key={pr.id} product={{ ...pr, artistName: artist.name }} />
                   ))}
                 </div>
@@ -172,7 +191,7 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
 
               {validTab === 'free' && (
                 <div className="artist-grid">
-                  {freeDownloads.map((fd:any) => {
+                  {freeShown.map((fd:any) => {
                     const fdTitle = (lang === 'th' && fd.title_th) ? fd.title_th : fd.title_en;
                     const ft = fd.file_type || '';
                     return (
@@ -199,6 +218,10 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
                     );
                   })}
                 </div>
+              )}
+
+              {term && ((validTab==='physical'&&physicalShown.length===0)||(validTab==='digital'&&digitalShown.length===0)||(validTab==='free'&&freeShown.length===0)) && (
+                <div style={{ textAlign:'center', padding:'40px', color:'#9ca3af' }}>{tRaw('ไม่พบผลงานที่ค้นหา','No items match your search.')}</div>
               )}
             </>
           );

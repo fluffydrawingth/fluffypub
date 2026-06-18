@@ -2,15 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api';
 import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
-import { useLang } from '../lib/lang';
 
 export default function ArtistsPage() {
   const { theme } = useTheme();
   const { navigate } = useRouter();
-  const { tRaw } = useLang();
   const [artists, setArtists] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   const p = theme.primaryColor;
 
   useEffect(() => {
@@ -22,11 +19,6 @@ export default function ArtistsPage() {
 
   const goToArtist = (slug: string) => navigate(`/artists/${slug}`);
 
-  const term = search.trim().toLowerCase();
-  const filteredArtists = term
-    ? artists.filter(a => `${a.name||''} ${a.username||''} ${a.artist_slug||''} ${a.bio||''}`.toLowerCase().includes(term))
-    : artists;
-
   return (
     <div style={{ fontFamily: theme.fontFamily }}>
       <div style={{ background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, padding:'48px 24px 40px', textAlign:'center' }}>
@@ -35,31 +27,21 @@ export default function ArtistsPage() {
       </div>
 
       <div style={{ maxWidth:1200, margin:'0 auto', padding:'40px 24px' }}>
-        <div style={{ display:'flex', justifyContent:'center', marginBottom:28 }}>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder={tRaw('ค้นหาศิลปิน...', 'Search artists...')}
-            style={{ width:'100%', maxWidth:360, padding:'10px 16px', borderRadius:24, border:`1.5px solid ${p}30`, fontSize:14, outline:'none', fontFamily:theme.fontFamily, boxSizing:'border-box' }}
-            onFocus={e => e.target.style.borderColor = p}
-            onBlur={e => e.target.style.borderColor = p + '30'}
-          />
-        </div>
         {loading ? (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:24 }}>
             {[1,2,3].map(i=>(
               <div key={i} style={{ height:300, borderRadius:24, background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, animation:'pulse 1.5s infinite' }} />
             ))}
           </div>
-        ) : filteredArtists.length === 0 ? (
+        ) : artists.length === 0 ? (
           <div style={{ textAlign:'center', padding:'60px 24px', color:theme.textColor+'88' }}>
             <div style={{ fontSize:56, marginBottom:16 }}>🎨</div>
-            <h3 style={{ fontWeight:800, color:theme.textColor }}>{term ? tRaw('ไม่พบศิลปิน','No artists found') : tRaw('ยังไม่มีศิลปิน','No artists yet')}</h3>
-            <p>{term ? tRaw('ลองค้นหาด้วยคำอื่น','Try a different search.') : 'Artists will appear here after they are added in the admin panel.'}</p>
+            <h3 style={{ fontWeight:800, color:theme.textColor }}>No artists yet</h3>
+            <p>Artists will appear here after they are added in the admin panel.</p>
           </div>
         ) : (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:24 }}>
-            {filteredArtists.map(a => (
+            {artists.map(a => (
               <div
                 key={a.id}
                 onClick={() => goToArtist(a.artist_slug)}
