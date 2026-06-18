@@ -405,6 +405,8 @@ function ProductsTab() {
   const [priceUSD, setPriceUSD] = useState('');
   const [physicalRoyaltyTHB, setPhysicalRoyaltyTHB] = useState('');
   const [digitalRoyaltyPct, setDigitalRoyaltyPct] = useState('');
+  const [isNew, setIsNew] = useState(false);
+  const [isHot, setIsHot] = useState(false);
 
   const [descTh, setDescTh] = useState('');
 
@@ -449,6 +451,7 @@ function ProductsTab() {
     setArtistId(''); setIsDigital(true); setIsPhysical(false); setRichBlocks([]);
     setR2Key(''); setR2FileName(''); setR2FileSize(0); setR2FileType(''); setR2UploadMsg('');
     setPhysicalRoyaltyTHB(''); setDigitalRoyaltyPct('');
+    setIsNew(false); setIsHot(false);
     setEditingId(null);
   };
 
@@ -473,6 +476,7 @@ function ProductsTab() {
     setR2FileSize(pr.file_size||0); setR2FileType(pr.file_type||''); setR2UploadMsg('');
     setPhysicalRoyaltyTHB(pr.artist_physical_royalty_thb != null ? String(pr.artist_physical_royalty_thb) : '');
     setDigitalRoyaltyPct(pr.digital_artist_royalty_percent != null ? String(pr.digital_artist_royalty_percent) : '');
+    setIsNew(!!pr.is_new); setIsHot(!!pr.is_hot);
     setEditingId(pr.id);
     setShowForm(true);
   };
@@ -506,6 +510,8 @@ function ProductsTab() {
       description_th:descTh||null,
       artist_physical_royalty_thb: physicalRoyaltyTHB ? parseFloat(physicalRoyaltyTHB) : null,
       digital_artist_royalty_percent: digitalRoyaltyPct ? parseFloat(digitalRoyaltyPct) : null,
+      is_new: isNew,
+      is_hot: isHot,
     };
     if (originalPrice) body.original_price = parseFloat(originalPrice);
     const result = editingId ? await api.updateProduct(editingId, body) : await api.createProduct(body);
@@ -640,6 +646,20 @@ function ProductsTab() {
                 <option value="published">✅ Published</option>
                 <option value="draft">📝 Draft</option>
               </select>
+            </div>
+            <div>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Badges</label>
+              <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+                <label style={{display:'flex',gap:7,alignItems:'center',cursor:'pointer',background:isNew?'#f3e8ff':'#f9fafb',border:`2px solid ${isNew?'#c084fc':'#e5e7eb'}`,borderRadius:12,padding:'9px 16px',fontSize:13,fontWeight:700,color:isNew?'#7c3aed':'#374151'}}>
+                  <input type="checkbox" checked={isNew} onChange={e=>setIsNew(e.target.checked)} style={{width:15,height:15,accentColor:'#c084fc'}} />
+                  ✨ New
+                </label>
+                <label style={{display:'flex',gap:7,alignItems:'center',cursor:'pointer',background:isHot?'#fee2e2':'#f9fafb',border:`2px solid ${isHot?'#ef4444':'#e5e7eb'}`,borderRadius:12,padding:'9px 16px',fontSize:13,fontWeight:700,color:isHot?'#dc2626':'#374151'}}>
+                  <input type="checkbox" checked={isHot} onChange={e=>setIsHot(e.target.checked)} style={{width:15,height:15,accentColor:'#ef4444'}} />
+                  🔥 Hot
+                </label>
+              </div>
+              <div style={{fontSize:11,color:'#9ca3af',marginTop:6}}>New auto-shows for 30 days after creation. Tick to force it on; tick Hot to feature.</div>
             </div>
             {inp('Emoji Icon', image, setImage, '🎨')}
             {inp('Pages', pages, setPages, '30', 'number')}

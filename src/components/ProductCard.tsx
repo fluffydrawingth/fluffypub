@@ -18,6 +18,12 @@ export default function ProductCard({ product }: { product: any }) {
   const p = theme.primaryColor;
 
   const title = (lang === 'th' && product.title_th) ? product.title_th : product.title;
+
+  // New badge: admin can force it on, otherwise auto-shows for 30 days after creation.
+  const createdMs = product.created_at ? new Date(product.created_at).getTime() : 0;
+  const withinNewWindow = createdMs > 0 && (Date.now() - createdMs) < 30 * 24 * 60 * 60 * 1000;
+  const showNew = (product.is_new ?? product.isNew) === true || withinNewWindow;
+  const showHot = (product.is_hot ?? product.isHot) === true;
   const artist = product.artistName || product.artist_name || product.artist || '';
   const priceTHB = Number(product.price_thb) || 0;
   const priceUSD = Number(product.price_usd) || null;
@@ -84,7 +90,10 @@ export default function ProductCard({ product }: { product: any }) {
               ? <img src={product.cover_image_url} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
               : <span>{product.image}</span>}
           </div>
-          {product.is_new && <span style={{ position: 'absolute', top: 8, right: 8, background: theme.secondaryColor || '#c084fc', color: 'white', borderRadius: 12, padding: '3px 8px', fontSize: 10, fontWeight: 700, zIndex: 1 }}>✨ New</span>}
+          <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', zIndex: 1 }}>
+            {showHot && <span style={{ background: '#ef4444', color: 'white', borderRadius: 12, padding: '3px 8px', fontSize: 10, fontWeight: 700 }}>🔥 Hot</span>}
+            {showNew && <span style={{ background: theme.secondaryColor || '#c084fc', color: 'white', borderRadius: 12, padding: '3px 8px', fontSize: 10, fontWeight: 700 }}>✨ New</span>}
+          </div>
           {(product.is_digital === true || product.type === 'digital' || product.type === 'both') && (
             <span style={{ position: 'absolute', bottom: 8, left: 8, background: '#3b82f6', color: 'white', borderRadius: 12, padding: '3px 8px', fontSize: 10, fontWeight: 700, zIndex: 1 }}>💾 Digital</span>
           )}
