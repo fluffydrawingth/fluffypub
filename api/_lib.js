@@ -27,27 +27,21 @@ async function getUser(req) {
     // Check expiry
     if (payload.exp && Date.now() / 1000 > payload.exp) return null;
     
-    // Get profile from DB — upsert creates row if missing (guarantees per-user row)
+    // Get profile from DB. Use select('*') so a not-yet-migrated column can NEVER
+    // break auth — every existing column is returned (affiliate_enabled, payout_*,
+    // role, artist_id, …) and missing ones are simply absent. This avoids the class
+    // of bug where adding a column to a curated select logs users out / drops flags.
     const email = payload.email || '';
-    let { data: profile, error: fetchErr } = await supabase
+    const { data: profile, error: fetchErr } = await supabase
       .from('profiles')
-      .select('id, email, name, role, bio, artist_slug, artist_id, affiliate_enabled, payout_account_name, payout_bank_name, payout_account_number, payout_payment_method, payout_note, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
+      .select('*')
       .eq('id', userId)
       .single();
 
-    // Resilience: if affiliate_enabled column doesn't exist yet (migration not run),
-    // retry with the legacy column set so auth never breaks site-wide on deploy.
-    if (fetchErr && fetchErr.code === '42703') {
-      const legacy = await supabase
-        .from('profiles')
-        .select('id, email, name, role, bio, artist_slug, artist_id, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
-        .eq('id', userId)
-        .single();
-      profile = legacy.data; fetchErr = legacy.error;
-      if (profile) profile.affiliate_enabled = false;
+    if (profile) {
+      if (profile.affiliate_enabled === undefined) profile.affiliate_enabled = false;
+      return profile;
     }
-
-    if (profile) return profile;
 
     // Only create a row when the profile is genuinely missing (PGRST116 = no rows).
     // Any other error is transient — never fall through, because the create path below
@@ -67,14 +61,14 @@ async function getUser(req) {
         name: payload.user_metadata?.name || email.split('@')[0] || '',
         role: 'customer',
       })
-      .select('id, email, name, role, bio, artist_slug, artist_id, affiliate_enabled, payout_account_name, payout_bank_name, payout_account_number, payout_payment_method, payout_note, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
+      .select('*')
       .single();
 
     // If the insert raced/conflicted, re-read the existing row rather than assume customer.
     if (created) return created;
     const { data: reread } = await supabase
       .from('profiles')
-      .select('id, email, name, role, bio, artist_slug, artist_id, affiliate_enabled, payout_account_name, payout_bank_name, payout_account_number, payout_payment_method, payout_note, favorites, first_name, last_name, phone, delivery_email, shipping_address, province, postal_code, preferred_lang')
+      .select('*')
       .eq('id', userId)
       .single();
     return reread || { id: userId, email, name: email.split('@')[0], role: 'customer' };
