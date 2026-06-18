@@ -46,11 +46,16 @@ module.exports = async function handler(req, res) {
     const { data: reqRow } = await supabase.from('artist_requests').select('*').eq('id', id).single();
     if (!reqRow) return json(res, 404, { error: 'Request not found' });
     const linkArtistId = (req.body && req.body.artist_id) || reqRow.user_id; // self-link if none chosen
-    // Promote the requesting user; never create a duplicate artist profile.
-    const { error: pErr } = await supabase.from('profiles').update({ role: 'artist', artist_id: linkArtistId, updated_at: new Date().toISOString() }).eq('id', reqRow.user_id);
+    // Promote the requesting user on the SAME profile row they log in with (id = user_id).
+    const { data: updatedProfile, error: pErr } = await supabase.from('profiles')
+      .update({ role: 'artist', artist_id: linkArtistId, updated_at: new Date().toISOString() })
+      .eq('id', reqRow.user_id)
+      .select('id,email,role,artist_id,affiliate_enabled')
+      .single();
     if (pErr) return json(res, 400, { error: pErr.message });
     await supabase.from('artist_requests').update({ status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: admin.id }).eq('id', id);
-    return json(res, 200, { success: true });
+    console.log('[artist approve] profile:', JSON.stringify(updatedProfile));
+    return json(res, 200, { success: true, profile: updatedProfile });
   }
 
   // POST /api/artists?action=reject&id=<requestId> — admin rejects

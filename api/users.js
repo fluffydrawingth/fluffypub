@@ -87,19 +87,24 @@ module.exports = async function handler(req, res) {
     if (!code || !/^[A-Z0-9]{1,10}$/.test(code)) return json(res, 400, { error: 'Code must be uppercase letters/numbers, max 10 chars.' });
     const { data: dup } = await supabase.from('affiliate_codes').select('id').eq('code', code).limit(1);
     if (dup && dup.length) return json(res, 409, { error: 'That code is already taken.' });
-    // Grant affiliate permission WITHOUT changing the existing role
-    const { error: pErr } = await supabase.from('profiles').update({ affiliate_enabled: true, updated_at: new Date().toISOString() }).eq('id', reqRow.user_id);
+    // Grant affiliate permission on the SAME profile row the user logs in with.
+    const { data: updatedProfile, error: pErr } = await supabase.from('profiles')
+      .update({ affiliate_enabled: true, updated_at: new Date().toISOString() })
+      .eq('id', reqRow.user_id)
+      .select('id,email,role,artist_id,affiliate_enabled')
+      .single();
     if (pErr) return json(res, 400, { error: pErr.message });
-    // Create the affiliate code
-    const { error: cErr } = await supabase.from('affiliate_codes').insert({
+    // Create the affiliate code linked to this user/profile
+    const { data: newCode, error: cErr } = await supabase.from('affiliate_codes').insert({
       user_id: reqRow.user_id, code,
       discount_amount: b.discount_amount != null ? Number(b.discount_amount) : 10,
       affiliate_commission: b.affiliate_commission != null ? Number(b.affiliate_commission) : 20,
       active: true,
-    });
+    }).select('id,code,user_id,active').single();
     if (cErr) return json(res, 400, { error: cErr.message });
     await supabase.from('affiliate_requests').update({ status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: admin.id }).eq('id', id);
-    return json(res, 200, { success: true });
+    console.log('[affiliate approve] profile:', JSON.stringify(updatedProfile), 'code:', JSON.stringify(newCode));
+    return json(res, 200, { success: true, profile: updatedProfile, code: newCode });
   }
 
   // POST ?action=affiliate-reject&id=<requestId>

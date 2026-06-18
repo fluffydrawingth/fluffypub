@@ -17,6 +17,11 @@ export default function AccountPage() {
   const { t, tRaw, lang } = useLang();
   const p = theme.primaryColor;
 
+  // Always pull the live profile (role, artist_id, affiliate_enabled) when the Account
+  // page opens, so the Artist/Affiliate cards reflect real permissions — not a stale
+  // user object or request status. This keeps Profile, Navbar and route guards in sync.
+  React.useEffect(() => { refreshUser(); }, []);
+
   if (!user) {
     React.useEffect(() => { navigate('/login'); }, []);
     return null;

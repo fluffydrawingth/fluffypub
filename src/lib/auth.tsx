@@ -74,6 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const u = await r.json();
         if (u.artist_id !== undefined && u.artistId === undefined) u.artistId = u.artist_id;
         if (u.email === ADMIN_EMAIL) u.role = 'admin';
+        // Temporary access debug — confirm the live permission source of truth.
+        console.debug('[auth/me]', { id: u.id, email: u.email, role: u.role, artist_id: u.artistId ?? u.artist_id ?? null, affiliate_enabled: !!u.affiliate_enabled });
         localStorage.setItem(USER_KEY, JSON.stringify(u));
         setUser(u);
         setLoading(false);
