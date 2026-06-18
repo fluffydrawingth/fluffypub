@@ -1,7 +1,7 @@
 // /api/products, /api/products?id=xxx
 const { supabase, requireAuth, getUser, json } = require('./_lib');
 
-const PRODUCT_SELECT = 'id,title,slug,price,original_price,artist_id,artist_name,artist_slug,category,categories,description,description_th,description_en,rich_description,image,cover_image_url,type,is_physical,is_digital,pages,rating,reviews,tags,search_keywords,featured,bestseller,is_new,active,status,shipping_required,shipping_note,digital_download_url,download_instruction,physical_stock,variants,title_th,title_en,price_thb,price_usd,r2_key,r2_file_name,file_size,file_type,created_at';
+const PRODUCT_SELECT = 'id,title,slug,price,original_price,artist_id,artist_name,artist_slug,category,categories,description,description_th,description_en,rich_description,image,cover_image_url,type,is_physical,is_digital,pages,rating,reviews,tags,search_keywords,featured,bestseller,is_new,active,status,shipping_required,shipping_note,digital_download_url,download_instruction,physical_stock,variants,title_th,title_en,price_thb,price_usd,r2_key,r2_file_name,file_size,file_type,created_at,artist_physical_royalty_thb,digital_platform_fee_thb,digital_platform_fee_usd';
 
 module.exports = async function handler(req, res) {
   const id = req.query.id;
@@ -71,7 +71,7 @@ module.exports = async function handler(req, res) {
     if (!product) return json(res, 404, { error: 'Not found' });
     if (user.role === 'artist' && product.artist_id !== user.id) return json(res, 403, { error: 'Forbidden' });
     const allowed = ['title','price','original_price','category','categories','description','description_th','description_en','rich_description','image','cover_image_url','type','is_physical','is_digital','pages','tags','search_keywords','active','status','physical_stock','shipping_required','shipping_note','variants','title_th','title_en','price_thb','price_usd'];
-    if (user.role === 'admin') allowed.push('featured','bestseller','is_new','digital_download_url','download_instruction','artist_id','artist_name','r2_key','r2_file_name','file_size','file_type');
+    if (user.role === 'admin') allowed.push('featured','bestseller','is_new','digital_download_url','download_instruction','artist_id','artist_name','r2_key','r2_file_name','file_size','file_type','artist_physical_royalty_thb','digital_platform_fee_thb','digital_platform_fee_usd');
     const updates = { updated_at: new Date().toISOString() };
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
     // Recalculate type string from boolean fields

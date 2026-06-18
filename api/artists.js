@@ -78,6 +78,53 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { success: true });
   }
 
+  // GET /api/artists?action=payouts — list payout records (admin: all/by artist_id; artist: own)
+  if (req.method === 'GET' && action === 'payouts') {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+    const isAdmin = user.role === 'admin';
+    let q = supabase.from('artist_payouts').select('*').order('year', { ascending: false }).order('month', { ascending: false });
+    if (isAdmin) {
+      const artistId = req.query.artist_id;
+      if (artistId) q = q.eq('artist_id', artistId);
+    } else {
+      const effectiveId = user.artist_id || user.id;
+      q = q.eq('artist_id', effectiveId);
+    }
+    const { data, error } = await q;
+    if (error) return json(res, 500, { error: error.message });
+    return json(res, 200, data || []);
+  }
+
+  // POST /api/artists?action=payout — create or update a payout record (admin only)
+  if (req.method === 'POST' && action === 'payout') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { id, artist_id, month, year, currency, calculated_earning, paid_amount, status, payout_proof_url, payout_note, paid_at } = req.body || {};
+    if (id) {
+      const updates = { updated_at: new Date().toISOString() };
+      ['calculated_earning','paid_amount','status','payout_proof_url','payout_note','paid_at'].forEach(k => {
+        if (req.body[k] !== undefined) updates[k] = req.body[k];
+      });
+      const { data, error } = await supabase.from('artist_payouts').update(updates).eq('id', id).select().single();
+      if (error) return json(res, 400, { error: error.message });
+      return json(res, 200, data);
+    }
+    if (!artist_id || !month || !year) return json(res, 400, { error: 'artist_id, month, year required' });
+    const { data, error } = await supabase.from('artist_payouts').insert({
+      artist_id, month: parseInt(month), year: parseInt(year),
+      currency: currency || 'THB',
+      calculated_earning: calculated_earning || 0,
+      paid_amount: paid_amount || 0,
+      status: status || 'pending',
+      payout_proof_url: payout_proof_url || null,
+      payout_note: payout_note || null,
+      paid_at: paid_at || null,
+    }).select().single();
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 201, data);
+  }
+
   // PUT /api/artists?action=me — an artist edits their own (effective) artist profile
   if (req.method === 'PUT' && action === 'me') {
     const user = await requireAuth(req, res, ['artist']);

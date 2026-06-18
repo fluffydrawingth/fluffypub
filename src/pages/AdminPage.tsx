@@ -12,7 +12,7 @@ import ImageCropEditor from '../components/ImageCropEditor';
 import HtmlEditor from '../components/HtmlEditor';
 
 const ADMIN_EMAIL = 'fluffydrawing.th@gmail.com';
-type Tab = 'dashboard'|'products'|'orders'|'artists'|'artist-requests'|'categories'|'pages'|'free-downloads'|'legal'|'theme'|'lang';
+type Tab = 'dashboard'|'products'|'orders'|'artists'|'artist-requests'|'payouts'|'categories'|'pages'|'free-downloads'|'legal'|'theme'|'lang';
 
 function NavItem({icon,label,active,onClick}:any) {
   return (
@@ -38,7 +38,7 @@ export default function AdminPage() {
   if (!user || user.role !== 'admin' || user.email !== ADMIN_EMAIL) return null;
 
   const TAB_LABELS: Record<Tab, string> = {
-    dashboard:'Dashboard', products:'Products', orders:'Orders', artists:'Artists', 'artist-requests':'Artist Requests',
+    dashboard:'Dashboard', products:'Products', orders:'Orders', artists:'Artists', 'artist-requests':'Artist Requests', payouts:'Artist Payouts',
     categories:'Categories', pages:'Pages', 'free-downloads':'Free Downloads', legal:'Legal Pages', theme:'Theme & CMS', lang:'Language CMS',
   };
 
@@ -61,6 +61,7 @@ export default function AdminPage() {
         <NavItem icon="📦" label="Orders"       active={tab==='orders'}     onClick={()=>selectTab('orders')} />
         <NavItem icon="🎨" label="Artists"      active={tab==='artists'}    onClick={()=>selectTab('artists')} />
         <NavItem icon="🙋" label="Artist Requests" active={tab==='artist-requests'} onClick={()=>selectTab('artist-requests')} />
+        <NavItem icon="💸" label="Artist Payouts"  active={tab==='payouts'}          onClick={()=>selectTab('payouts')} />
         <NavItem icon="🏷️" label="Categories"   active={tab==='categories'} onClick={()=>selectTab('categories')} />
         <NavItem icon="📄" label="Pages"          active={tab==='pages'}           onClick={()=>selectTab('pages')} />
         <NavItem icon="⬇️" label="Free Downloads" active={tab==='free-downloads'}  onClick={()=>selectTab('free-downloads')} />
@@ -108,6 +109,7 @@ export default function AdminPage() {
         {tab==='orders'     && <OrdersTab />}
         {tab==='artists'    && <ArtistsTab />}
         {tab==='artist-requests' && <ArtistRequestsTab />}
+        {tab==='payouts'         && <ArtistPayoutsTab />}
         {tab==='categories' && <CategoriesTab />}
         {tab==='pages'           && <PagesCMSTab />}
         {tab==='free-downloads'  && <FreeDownloadsTab />}
@@ -396,6 +398,9 @@ function ProductsTab() {
   const [titleEn, setTitleEn] = useState('');
   const [priceTHB, setPriceTHB] = useState('');
   const [priceUSD, setPriceUSD] = useState('');
+  const [physicalRoyaltyTHB, setPhysicalRoyaltyTHB] = useState('');
+  const [digitalFeeTHB, setDigitalFeeTHB] = useState('');
+  const [digitalFeeUSD, setDigitalFeeUSD] = useState('');
 
   const [descTh, setDescTh] = useState('');
 
@@ -439,6 +444,7 @@ function ProductsTab() {
     setDownloadInstruction(''); setPhysicalStock('0'); setShippingRequired(false); setShippingNote('');
     setArtistId(''); setIsDigital(true); setIsPhysical(false); setRichBlocks([]);
     setR2Key(''); setR2FileName(''); setR2FileSize(0); setR2FileType(''); setR2UploadMsg('');
+    setPhysicalRoyaltyTHB(''); setDigitalFeeTHB(''); setDigitalFeeUSD('');
     setEditingId(null);
   };
 
@@ -461,6 +467,9 @@ function ProductsTab() {
     setDescTh(pr.description_th||'');
     setR2Key(pr.r2_key||''); setR2FileName(pr.r2_file_name||'');
     setR2FileSize(pr.file_size||0); setR2FileType(pr.file_type||''); setR2UploadMsg('');
+    setPhysicalRoyaltyTHB(pr.artist_physical_royalty_thb != null ? String(pr.artist_physical_royalty_thb) : '');
+    setDigitalFeeTHB(pr.digital_platform_fee_thb != null ? String(pr.digital_platform_fee_thb) : '');
+    setDigitalFeeUSD(pr.digital_platform_fee_usd != null ? String(pr.digital_platform_fee_usd) : '');
     setEditingId(pr.id);
     setShowForm(true);
   };
@@ -491,7 +500,11 @@ function ProductsTab() {
       title_th:titleTh||null, title_en:titleEn||null,
       price_thb:priceTHB?parseFloat(priceTHB):null,
       price_usd:priceUSD?parseFloat(priceUSD):null,
-      description_th:descTh||null };
+      description_th:descTh||null,
+      artist_physical_royalty_thb: physicalRoyaltyTHB ? parseFloat(physicalRoyaltyTHB) : null,
+      digital_platform_fee_thb: digitalFeeTHB ? parseFloat(digitalFeeTHB) : null,
+      digital_platform_fee_usd: digitalFeeUSD ? parseFloat(digitalFeeUSD) : null,
+    };
     if (originalPrice) body.original_price = parseFloat(originalPrice);
     const result = editingId ? await api.updateProduct(editingId, body) : await api.createProduct(body);
     if (result.error){setMsg('⚠️ '+result.error);}
@@ -664,6 +677,11 @@ function ProductsTab() {
                 </div>
 
                 <div style={{marginBottom:8}}>{inp('Download Instructions', downloadInstruction, setDownloadInstruction, 'วิธีดาวน์โหลดไฟล์ / How to access download...', false)}</div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,margin:'12px 0 8px'}}>
+                  {inp('Platform Fee THB (default 20)', digitalFeeTHB, setDigitalFeeTHB, '20', 'number')}
+                  {inp('Platform Fee USD (default 0.50)', digitalFeeUSD, setDigitalFeeUSD, '0.50', 'number')}
+                </div>
+                <div style={{fontSize:11,color:'#1d4ed8',marginBottom:8}}>Artist earns: sale price − platform fee (per item)</div>
                 <div style={{fontSize:12,color:'#1d4ed8',background:'#dbeafe',borderRadius:8,padding:'8px 12px'}}>
                   💡 ไฟล์จะถูกเก็บใน Cloudflare R2 — ลิงค์ดาวน์โหลดจะถูกสร้างเมื่อลูกค้าชำระเงินแล้ว
                 </div>
@@ -683,6 +701,8 @@ function ProductsTab() {
                   <input type="checkbox" checked={shippingRequired} onChange={e=>setShippingRequired(e.target.checked)} style={{width:14,height:14,accentColor:'#10b981'}} />
                   ต้องจัดส่ง / Shipping Required
                 </label>
+                <div style={{marginTop:10}}>{inp('Artist Royalty per item THB (default 100)', physicalRoyaltyTHB, setPhysicalRoyaltyTHB, '100', 'number')}</div>
+                <div style={{fontSize:11,color:'#065f46'}}>Artist earns this fixed amount per physical item sold.</div>
               </div>
             )}
             <div style={{gridColumn:'1/-1'}}>
@@ -3550,6 +3570,219 @@ function FreeDownloadsTab() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ── Artist Payouts ─────────────────────────────────────────────────────────
+function ArtistPayoutsTab() {
+  const now = new Date();
+  const [artists, setArtists] = useState<any[]>([]);
+  const [selArtist, setSelArtist] = useState('');
+  const [selMonth, setSelMonth] = useState(now.getMonth() + 1);
+  const [selYear, setSelYear] = useState(now.getFullYear());
+  const [payouts, setPayouts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [editId, setEditId] = useState<string|null>(null);
+  const [calcEarning, setCalcEarning] = useState('');
+  const [paidAmount, setPaidAmount] = useState('');
+  const [currency, setCurrency] = useState('THB');
+  const [status, setStatus] = useState('pending');
+  const [note, setNote] = useState('');
+  const [proofUrl, setProofUrl] = useState('');
+  const [paidAt, setPaidAt] = useState('');
+  const [proofUploading, setProofUploading] = useState(false);
+
+  const months = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const years = Array.from({ length: 4 }, (_,i) => now.getFullYear() - i);
+
+  useEffect(() => { api.getArtists().then((a: any) => setArtists(Array.isArray(a) ? a : [])); }, []);
+
+  const loadPayouts = (artistId: string) => {
+    if (!artistId) { setPayouts([]); return; }
+    setLoading(true);
+    api.getArtistPayouts(artistId).then((d: any) => { setPayouts(Array.isArray(d) ? d : []); setLoading(false); }).catch(() => setLoading(false));
+  };
+
+  useEffect(() => { loadPayouts(selArtist); }, [selArtist]);
+
+  const thisPayout = payouts.find(p => p.month === selMonth && p.year === selYear);
+
+  const fillForm = (py: any) => {
+    setEditId(py.id);
+    setCalcEarning(String(py.calculated_earning || ''));
+    setPaidAmount(String(py.paid_amount || ''));
+    setCurrency(py.currency || 'THB');
+    setStatus(py.status || 'pending');
+    setNote(py.payout_note || '');
+    setProofUrl(py.payout_proof_url || '');
+    setPaidAt(py.paid_at ? py.paid_at.slice(0, 10) : '');
+  };
+
+  const clearForm = () => { setEditId(null); setCalcEarning(''); setPaidAmount(''); setCurrency('THB'); setStatus('pending'); setNote(''); setProofUrl(''); setPaidAt(''); };
+
+  useEffect(() => { if (thisPayout) fillForm(thisPayout); else clearForm(); }, [selMonth, selYear, payouts.length]);
+
+  const uploadProof = async (file: File) => {
+    setProofUploading(true);
+    const result = await api.uploadFile(file, 'payouts');
+    if (result.error) setMsg('⚠️ ' + result.error);
+    else { setProofUrl(result.publicUrl); setMsg('✓ Proof uploaded'); }
+    setProofUploading(false);
+    setTimeout(() => setMsg(''), 3000);
+  };
+
+  const save = async () => {
+    if (!selArtist) { setMsg('⚠️ Select an artist first'); return; }
+    setSaving(true); setMsg('');
+    const payload: any = {
+      artist_id: selArtist, month: selMonth, year: selYear,
+      currency, calculated_earning: parseFloat(calcEarning) || 0,
+      paid_amount: parseFloat(paidAmount) || 0,
+      status, payout_note: note || null,
+      payout_proof_url: proofUrl || null,
+      paid_at: (status === 'paid' && paidAt) ? new Date(paidAt).toISOString() : (status === 'paid' ? new Date().toISOString() : null),
+    };
+    if (editId) payload.id = editId;
+    const result = await api.saveArtistPayout(payload);
+    if (result.error) setMsg('⚠️ ' + result.error);
+    else { setMsg('✓ Saved!'); loadPayouts(selArtist); }
+    setSaving(false);
+    setTimeout(() => setMsg(''), 4000);
+  };
+
+  const artistName = artists.find(a => a.id === selArtist)?.name || '';
+
+  return (
+    <div style={{ padding:24 }}>
+      <h1 style={{ fontSize:22, fontWeight:900, color:'#111827', marginBottom:20 }}>💸 Artist Payouts</h1>
+
+      <div style={{ ...card, padding:20, marginBottom:20 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))', gap:12, marginBottom: selArtist ? 12 : 0 }}>
+          <div>
+            <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:5 }}>Artist *</label>
+            <select value={selArtist} onChange={e=>setSelArtist(e.target.value)} style={{ width:'100%', padding:'9px 12px', borderRadius:10, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none' }}>
+              <option value="">Select artist…</option>
+              {artists.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:5 }}>Month</label>
+            <select value={selMonth} onChange={e=>setSelMonth(Number(e.target.value))} style={{ width:'100%', padding:'9px 12px', borderRadius:10, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none' }}>
+              {months.slice(1).map((m,i) => <option key={i+1} value={i+1}>{m}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:5 }}>Year</label>
+            <select value={selYear} onChange={e=>setSelYear(Number(e.target.value))} style={{ width:'100%', padding:'9px 12px', borderRadius:10, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none' }}>
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:5 }}>Currency</label>
+            <select value={currency} onChange={e=>setCurrency(e.target.value)} style={{ width:'100%', padding:'9px 12px', borderRadius:10, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none' }}>
+              <option value="THB">THB (฿)</option>
+              <option value="USD">USD ($)</option>
+            </select>
+          </div>
+        </div>
+        {selArtist && <div style={{ fontSize:13, color:'#6b7280', fontWeight:600 }}>{thisPayout ? `Editing record for ${artistName} — ${months[selMonth]} ${selYear}` : `New payout for ${artistName} — ${months[selMonth]} ${selYear}`}</div>}
+      </div>
+
+      {selArtist && (
+        <div style={{ ...card, padding:20, marginBottom:20 }}>
+          <h3 style={{ fontSize:15, fontWeight:800, color:'#111827', marginBottom:16 }}>{thisPayout ? '✏️ Edit' : '+ New'} Payout — {months[selMonth]} {selYear}</h3>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14 }}>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:5 }}>Calculated Earning ({currency})</label>
+              <input type="number" value={calcEarning} onChange={e=>setCalcEarning(e.target.value)} placeholder="0"
+                style={{ width:'100%', padding:'9px 13px', borderRadius:10, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none', boxSizing:'border-box' as const }}
+                onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:5 }}>Paid Amount ({currency})</label>
+              <input type="number" value={paidAmount} onChange={e=>setPaidAmount(e.target.value)} placeholder="0"
+                style={{ width:'100%', padding:'9px 13px', borderRadius:10, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none', boxSizing:'border-box' as const }}
+                onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:5 }}>Status</label>
+              <select value={status} onChange={e=>setStatus(e.target.value)} style={{ width:'100%', padding:'9px 13px', borderRadius:10, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none' }}>
+                <option value="pending">⏳ Pending</option>
+                <option value="paid">✅ Paid</option>
+              </select>
+            </div>
+            {status === 'paid' && (
+              <div>
+                <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:5 }}>Paid Date</label>
+                <input type="date" value={paidAt} onChange={e=>setPaidAt(e.target.value)}
+                  style={{ width:'100%', padding:'9px 13px', borderRadius:10, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none', boxSizing:'border-box' as const }} />
+              </div>
+            )}
+          </div>
+          <div style={{ marginBottom:14 }}>
+            <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:5 }}>Note for artist</label>
+            <textarea value={note} onChange={e=>setNote(e.target.value)} rows={2} placeholder="e.g. Bank transfer ref #1234…"
+              style={{ width:'100%', padding:'9px 13px', borderRadius:10, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none', resize:'vertical' as const, boxSizing:'border-box' as const }} />
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:5 }}>Payout Proof (image / PDF)</label>
+            {proofUrl ? (
+              <div style={{ display:'flex', gap:10, alignItems:'center', background:'#f0fdf4', border:'1.5px solid #86efac', borderRadius:10, padding:'10px 14px' }}>
+                <a href={proofUrl} target="_blank" rel="noreferrer" style={{ flex:1, color:'#059669', fontWeight:700, fontSize:13 }}>📎 View proof</a>
+                <label style={{ cursor:'pointer' }}>
+                  <span style={{ fontSize:12, fontWeight:700, color:'#2563eb', background:'#dbeafe', borderRadius:8, padding:'4px 10px' }}>Replace</span>
+                  <input type="file" accept="image/*,.pdf" style={{ display:'none' }} onChange={e=>{ const f=e.target.files?.[0]; if(f)uploadProof(f); e.target.value=''; }} />
+                </label>
+              </div>
+            ) : (
+              <label style={{ cursor:proofUploading?'not-allowed':'pointer', display:'block' }}>
+                <div style={{ background:'#f9fafb', border:'2px dashed #d1d5db', borderRadius:10, padding:'12px', textAlign:'center' as const, fontSize:13, color:proofUploading?'#9ca3af':'#374151', fontWeight:600 }}>
+                  {proofUploading ? '⏳ Uploading…' : '📎 Upload Proof (image / PDF)'}
+                </div>
+                <input type="file" accept="image/*,.pdf" style={{ display:'none' }} disabled={proofUploading} onChange={e=>{ const f=e.target.files?.[0]; if(f)uploadProof(f); e.target.value=''; }} />
+              </label>
+            )}
+          </div>
+          {msg && <div style={{ marginBottom:12, padding:'9px 13px', borderRadius:10, background:msg.startsWith('✓')?'#d1fae5':'#fee2e2', color:msg.startsWith('✓')?'#065f46':'#dc2626', fontSize:13, fontWeight:600 }}>{msg}</div>}
+          <button onClick={save} disabled={saving} style={{ background:saving?P+'88':P, color:'white', border:'none', cursor:'pointer', padding:'10px 24px', borderRadius:12, fontSize:14, fontWeight:700, fontFamily:'inherit' }}>
+            {saving ? 'Saving…' : (thisPayout ? 'Update Payout' : 'Create Payout')}
+          </button>
+        </div>
+      )}
+
+      {selArtist && (
+        <div style={{ ...card, overflow:'hidden' }}>
+          <div style={{ padding:'14px 20px', borderBottom:'1px solid #f3f4f6', fontWeight:800, fontSize:14, color:'#111827' }}>Payout History{artistName && ` — ${artistName}`}</div>
+          {loading ? <div style={{ textAlign:'center', padding:32, color:'#9ca3af' }}>Loading…</div>
+            : !payouts.length ? <div style={{ textAlign:'center', padding:32, color:'#9ca3af' }}>No payout records yet.</div>
+            : (
+            <div style={{ overflowX:'auto' as const }}>
+              <table style={{ width:'100%', borderCollapse:'collapse', minWidth:520 }}>
+                <thead><tr style={{ background:'#f9fafb', borderBottom:'2px solid #f3f4f6' }}>
+                  {['Period','Currency','Calculated','Paid','Status','Proof',''].map(h=><th key={h} style={{ textAlign:'left', padding:'10px 14px', fontSize:11, color:'#9ca3af', fontWeight:700 }}>{h}</th>)}
+                </tr></thead>
+                <tbody>{payouts.map(py=>(
+                  <tr key={py.id} style={{ borderBottom:'1px solid #f9fafb' }}>
+                    <td style={{ padding:'10px 14px', fontWeight:700, color:'#111827', fontSize:13 }}>{months[py.month]} {py.year}</td>
+                    <td style={{ padding:'10px 14px', fontSize:12, color:'#6b7280' }}>{py.currency}</td>
+                    <td style={{ padding:'10px 14px', fontWeight:700 }}>{py.currency==='USD'?`$${Number(py.calculated_earning).toFixed(2)}`:`฿${Number(py.calculated_earning).toLocaleString('th-TH')}`}</td>
+                    <td style={{ padding:'10px 14px', fontWeight:700 }}>{py.currency==='USD'?`$${Number(py.paid_amount).toFixed(2)}`:`฿${Number(py.paid_amount).toLocaleString('th-TH')}`}</td>
+                    <td style={{ padding:'10px 14px' }}><span style={{ background:py.status==='paid'?'#d1fae5':'#fef3c7', color:py.status==='paid'?'#059669':'#d97706', borderRadius:20, padding:'3px 10px', fontSize:11, fontWeight:700 }}>{py.status==='paid'?'✅ Paid':'⏳ Pending'}</span></td>
+                    <td style={{ padding:'10px 14px' }}>{py.payout_proof_url ? <a href={py.payout_proof_url} target="_blank" rel="noreferrer" style={{ color:P, fontWeight:700, fontSize:12 }}>View</a> : <span style={{ color:'#9ca3af', fontSize:12 }}>—</span>}</td>
+                    <td style={{ padding:'10px 14px' }}>
+                      <button onClick={()=>{ setSelMonth(py.month); setSelYear(py.year); fillForm(py); }}
+                        style={{ padding:'5px 12px', borderRadius:8, border:'1px solid #e5e7eb', background:'white', cursor:'pointer', fontSize:12, fontWeight:600, color:'#374151' }}>Edit</button>
+                    </td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

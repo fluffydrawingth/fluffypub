@@ -75,6 +75,8 @@ export const api = {
   rejectArtistRequest: (id: string) => fetch(`/api/artists?action=reject&id=${id}`, { method: 'POST', headers: h() }).then(r => r.json()),
   revokeArtist: (userId: string) => fetch(`/api/artists?action=revoke&id=${userId}`, { method: 'POST', headers: h() }).then(r => r.json()),
   updateArtistMe: (data: any) => fetch('/api/artists?action=me', { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  getArtistPayouts: (artistId?: string) => fetch(`/api/artists?action=payouts${artistId ? `&artist_id=${artistId}` : ''}`, { headers: h() }).then(r => r.json()),
+  saveArtistPayout: (data: any) => fetch('/api/artists?action=payout', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   getMyProducts: () => fetch('/api/products?mine=1', { headers: h() }).then(r => r.json()).then((d: any) => Array.isArray(d) ? d.map(normalize) : d),
   updateArtist: (id: string, data: any) => fetch(`/api/artists?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   deleteArtist: (id: string) => fetch(`/api/artists?id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
