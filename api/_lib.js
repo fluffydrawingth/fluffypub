@@ -79,6 +79,10 @@ async function getUser(req) {
 }
 
 function json(res, status, data) {
+  // API responses must never be cached. Caching /me (and other endpoints) is what made
+  // newly-approved artists/affiliates keep seeing stale role/affiliate_enabled until a
+  // hard refresh — the route guard then redirected them away. no-store fixes that at root.
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
   res.status(status).json(data);
 }
 

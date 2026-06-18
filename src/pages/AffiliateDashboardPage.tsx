@@ -35,7 +35,9 @@ export default function AffiliateDashboardPage() {
 
   useEffect(() => {
     if (!user) return;
-    if (!user.affiliate_enabled) { navigate('/account'); return; }
+    // Access is enforced by ProtectedRoute (requireAffiliate). Don't re-check
+    // affiliate_enabled here off possibly-stale context — that caused valid
+    // affiliates to bounce to /account before the fresh profile loaded.
     api.getMyAffiliate().then(d => {
       setData(d && !d.error ? d : null);
       if (d?.payoutAccount) setAcct(a => ({ ...a, ...Object.fromEntries(Object.entries(d.payoutAccount).map(([k,v]) => [k, v || (k==='payout_payment_method'?'Bank Transfer':'')])) }) as any);

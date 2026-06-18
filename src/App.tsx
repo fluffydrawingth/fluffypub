@@ -34,27 +34,38 @@ import { FavoritesProvider } from './lib/favorites';
 
 const MAX_VERIFY_TRIES = 3;
 
-function ProtectedRoute({ roles, children }: { roles: string[]; children: React.ReactNode }) {
+// Single source of truth for whether a user may enter a guarded route.
+// `requireAffiliate` gates on the affiliate_enabled permission flag instead of role,
+// so artist + affiliate (and customer + affiliate) combinations all work.
+function isAllowed(user: any, roles: string[], requireAffiliate?: boolean): boolean {
+  if (!user) return false;
+  if (requireAffiliate) return !!user.affiliate_enabled;
+  return roles.includes(user.role);
+}
+
+function ProtectedRoute({ roles = [], requireAffiliate, children }: { roles?: string[]; requireAffiliate?: boolean; children: React.ReactNode }) {
   const { user, loading, refreshUser } = useAuth();
   const { navigate } = useRouter();
   const [verifying, setVerifying] = React.useState(false);
   const triesRef = React.useRef(0);
   React.useEffect(() => {
+    // Never redirect while auth/user data is still loading.
     if (loading || verifying) return;
-    if (user && roles.includes(user.role)) { triesRef.current = 0; return; } // access granted
-    // Role mismatch or no user — the cached role may be stale (e.g. just approved).
-    // Re-fetch a few times before redirecting: a freshly-approved artist's profile
-    // can lag, and a transient /me failure should not bounce them to the homepage.
+    if (isAllowed(user, roles, requireAffiliate)) { triesRef.current = 0; return; } // access granted
+    // Not allowed yet — the cached profile may be stale (e.g. just approved). Re-fetch a
+    // few times before redirecting; a transient /me failure must not bounce the user.
     if (triesRef.current < MAX_VERIFY_TRIES) {
       triesRef.current += 1;
       setVerifying(true);
       refreshUser().finally(() => setVerifying(false));
       return;
     }
-    if (!user) navigate('/login'); else navigate('/');
+    // Only redirect once loading is complete AND we've confirmed access is not allowed.
+    if (!user) navigate('/login'); else navigate('/account');
   }, [user, loading, verifying]);
+  // Show a loading state (not a redirect) while resolving.
   if (loading || verifying) return <div style={{minHeight:'60vh',display:'flex',alignItems:'center',justifyContent:'center',fontSize:32}}>⏳</div>;
-  if (!user || !roles.includes(user.role)) return <div style={{minHeight:'60vh',display:'flex',alignItems:'center',justifyContent:'center',fontSize:32}}>⏳</div>;
+  if (!isAllowed(user, roles, requireAffiliate)) return <div style={{minHeight:'60vh',display:'flex',alignItems:'center',justifyContent:'center',fontSize:32}}>⏳</div>;
   return <>{children}</>;
 }
 
@@ -107,7 +118,7 @@ function AppContent() {
       case '/affiliate-guidelines': return <LegalPage slug="affiliate-guidelines" />;
       case '/affiliate-agreement': return <LegalPage slug="affiliate-agreement" />;
       case '/affiliate-application': return <ProtectedRoute roles={['customer','artist','admin']}><AffiliateApplicationPage /></ProtectedRoute>;
-      case '/affiliate-dashboard': return <ProtectedRoute roles={['customer','artist','admin']}><AffiliateDashboardPage /></ProtectedRoute>;
+      case '/affiliate-dashboard': return <ProtectedRoute requireAffiliate><AffiliateDashboardPage /></ProtectedRoute>;
       case '/artists': return <ArtistsPage />;
       case '/login': return <LoginPage />;
       case '/account': return <ProtectedRoute roles={['customer','artist','admin']}><AccountPage /></ProtectedRoute>;

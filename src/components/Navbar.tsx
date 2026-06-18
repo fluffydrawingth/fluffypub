@@ -33,7 +33,10 @@ export default function Navbar() {
   const handleLogout = async () => { await logout(); navigate('/'); };
   const ADMIN_EMAIL = 'fluffydrawing.th@gmail.com';
   const isAdmin = user?.role === 'admin' && user?.email === ADMIN_EMAIL;
-  const dashPath = isAdmin ? '/admin' : user?.role === 'artist' ? '/artist-dashboard' : '/account';
+  // Same permission logic the route guards use, so the dropdown and the dashboards agree.
+  const isArtist = user?.role === 'artist' && !!(user?.artistId || (user as any)?.artist_id);
+  const isAffiliate = !!(user as any)?.affiliate_enabled;
+  const dashPath = isAdmin ? '/admin' : isArtist ? '/artist-dashboard' : '/account';
 
   // Use theme label overrides if set, otherwise fall back to lang translations
   const lb = theme.labels || {};
@@ -100,8 +103,13 @@ export default function Navbar() {
                 <div style={{ position:'absolute', right:0, top:'calc(100% + 8px)', background:'white', borderRadius:16, boxShadow:'0 8px 32px rgba(0,0,0,0.12)', border:`1.5px solid ${p}15`, minWidth:180, zIndex:200, overflow:'hidden' }}>
                   <div style={{ padding:'10px 16px', borderBottom:`1px solid ${p}10`, fontSize:11, color:'#888' }}>{user.email}</div>
                   <button onClick={()=>{navigate(dashPath);setMenuOpen(false);}} style={{ width:'100%', padding:'10px 16px', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
-                    {isAdmin ? '⚙️ Admin Panel' : user.role==='artist' ? '🎨 Artist Dashboard' : `👤 ${t('profile')}`}
+                    {isAdmin ? '⚙️ Admin Panel' : isArtist ? '🎨 Artist Dashboard' : `👤 ${t('profile')}`}
                   </button>
+                  {isAffiliate && (
+                    <button onClick={()=>{navigate('/affiliate-dashboard');setMenuOpen(false);}} style={{ width:'100%', padding:'10px 16px', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
+                      🤝 Affiliate Dashboard
+                    </button>
+                  )}
                   <button onClick={()=>{navigate('/account/orders');setMenuOpen(false);}} style={{ width:'100%', padding:'10px 16px', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
                     📦 {t('orders')}
                   </button>
@@ -153,8 +161,13 @@ export default function Navbar() {
             {user ? (
               <>
                 <button onClick={()=>handleNav(dashPath)} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'11px 14px', borderRadius:12, fontSize:14, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
-                  {isAdmin ? '⚙️ Admin Panel' : user.role==='artist' ? '🎨 Artist Dashboard' : `👤 ${t('profile')}`}
+                  {isAdmin ? '⚙️ Admin Panel' : isArtist ? '🎨 Artist Dashboard' : `👤 ${t('profile')}`}
                 </button>
+                {isAffiliate && (
+                  <button onClick={()=>handleNav('/affiliate-dashboard')} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'11px 14px', borderRadius:12, fontSize:14, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
+                    🤝 Affiliate Dashboard
+                  </button>
+                )}
                 <button onClick={()=>handleNav('/account/orders')} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'11px 14px', borderRadius:12, fontSize:14, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
                   📦 {t('orders')}
                 </button>

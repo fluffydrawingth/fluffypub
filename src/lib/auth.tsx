@@ -64,7 +64,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Always fetch fresh from API (never return stale localStorage cache)
     // This ensures profile saves persist immediately
     try {
-      const r = await fetch('/api/auth?action=me', { headers: { Authorization: `Bearer ${t}` } });
+      // cache:'no-store' + a cache-busting param guarantee a fresh profile every time,
+      // so a just-approved artist/affiliate is never served a stale cached /me response.
+      const r = await fetch(`/api/auth?action=me&_=${Date.now()}`, {
+        headers: { Authorization: `Bearer ${t}` },
+        cache: 'no-store',
+      });
       if (r.ok) {
         const u = await r.json();
         if (u.artist_id !== undefined && u.artistId === undefined) u.artistId = u.artist_id;
