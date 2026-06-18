@@ -399,8 +399,7 @@ function ProductsTab() {
   const [priceTHB, setPriceTHB] = useState('');
   const [priceUSD, setPriceUSD] = useState('');
   const [physicalRoyaltyTHB, setPhysicalRoyaltyTHB] = useState('');
-  const [digitalFeeTHB, setDigitalFeeTHB] = useState('');
-  const [digitalFeeUSD, setDigitalFeeUSD] = useState('');
+  const [digitalRoyaltyPct, setDigitalRoyaltyPct] = useState('');
 
   const [descTh, setDescTh] = useState('');
 
@@ -444,7 +443,7 @@ function ProductsTab() {
     setDownloadInstruction(''); setPhysicalStock('0'); setShippingRequired(false); setShippingNote('');
     setArtistId(''); setIsDigital(true); setIsPhysical(false); setRichBlocks([]);
     setR2Key(''); setR2FileName(''); setR2FileSize(0); setR2FileType(''); setR2UploadMsg('');
-    setPhysicalRoyaltyTHB(''); setDigitalFeeTHB(''); setDigitalFeeUSD('');
+    setPhysicalRoyaltyTHB(''); setDigitalRoyaltyPct('');
     setEditingId(null);
   };
 
@@ -468,8 +467,7 @@ function ProductsTab() {
     setR2Key(pr.r2_key||''); setR2FileName(pr.r2_file_name||'');
     setR2FileSize(pr.file_size||0); setR2FileType(pr.file_type||''); setR2UploadMsg('');
     setPhysicalRoyaltyTHB(pr.artist_physical_royalty_thb != null ? String(pr.artist_physical_royalty_thb) : '');
-    setDigitalFeeTHB(pr.digital_platform_fee_thb != null ? String(pr.digital_platform_fee_thb) : '');
-    setDigitalFeeUSD(pr.digital_platform_fee_usd != null ? String(pr.digital_platform_fee_usd) : '');
+    setDigitalRoyaltyPct(pr.digital_artist_royalty_percent != null ? String(pr.digital_artist_royalty_percent) : '');
     setEditingId(pr.id);
     setShowForm(true);
   };
@@ -502,8 +500,7 @@ function ProductsTab() {
       price_usd:priceUSD?parseFloat(priceUSD):null,
       description_th:descTh||null,
       artist_physical_royalty_thb: physicalRoyaltyTHB ? parseFloat(physicalRoyaltyTHB) : null,
-      digital_platform_fee_thb: digitalFeeTHB ? parseFloat(digitalFeeTHB) : null,
-      digital_platform_fee_usd: digitalFeeUSD ? parseFloat(digitalFeeUSD) : null,
+      digital_artist_royalty_percent: digitalRoyaltyPct ? parseFloat(digitalRoyaltyPct) : null,
     };
     if (originalPrice) body.original_price = parseFloat(originalPrice);
     const result = editingId ? await api.updateProduct(editingId, body) : await api.createProduct(body);
@@ -677,11 +674,10 @@ function ProductsTab() {
                 </div>
 
                 <div style={{marginBottom:8}}>{inp('Download Instructions', downloadInstruction, setDownloadInstruction, 'วิธีดาวน์โหลดไฟล์ / How to access download...', false)}</div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,margin:'12px 0 8px'}}>
-                  {inp('Platform Fee THB (default 20)', digitalFeeTHB, setDigitalFeeTHB, '20', 'number')}
-                  {inp('Platform Fee USD (default 0.50)', digitalFeeUSD, setDigitalFeeUSD, '0.50', 'number')}
+                <div style={{margin:'12px 0 8px'}}>
+                  {inp('Artist Royalty % (default 80)', digitalRoyaltyPct, setDigitalRoyaltyPct, '80', 'number')}
                 </div>
-                <div style={{fontSize:11,color:'#1d4ed8',marginBottom:8}}>Artist earns: sale price − platform fee (per item)</div>
+                <div style={{fontSize:11,color:'#1d4ed8',marginBottom:8}}>Artist earns: sale price × royalty % — e.g. 80% means artist gets 80%, platform keeps 20%</div>
                 <div style={{fontSize:12,color:'#1d4ed8',background:'#dbeafe',borderRadius:8,padding:'8px 12px'}}>
                   💡 ไฟล์จะถูกเก็บใน Cloudflare R2 — ลิงค์ดาวน์โหลดจะถูกสร้างเมื่อลูกค้าชำระเงินแล้ว
                 </div>

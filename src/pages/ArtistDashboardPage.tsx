@@ -14,8 +14,7 @@ const PAID_STATUSES = new Set(['paid','packing','shipped','delivered']);
 
 // Default royalty/fee values (used when product has no override)
 const DEFAULT_PHYSICAL_ROYALTY_THB = 100;
-const DEFAULT_DIGITAL_FEE_THB = 20;
-const DEFAULT_DIGITAL_FEE_USD = 0.50;
+const DEFAULT_DIGITAL_ROYALTY_PERCENT = 80; // artist gets 80% of sale price by default
 
 export default function ArtistDashboardPage() {
   const { theme } = useTheme();
@@ -105,6 +104,12 @@ export default function ArtistDashboardPage() {
 
 // ── Earnings calculation helpers ──────────────────────────────────────────────
 
+function digitalRoyaltyPercent(product: any) {
+  // Use product-specific override if set, else default 80%
+  const pct = product?.digital_artist_royalty_percent;
+  return (pct != null && pct >= 0 && pct <= 100) ? pct : DEFAULT_DIGITAL_ROYALTY_PERCENT;
+}
+
 function calcEarningsForOrders(orders: any[], productMap: Map<string, any>) {
   let earningTHB = 0, earningUSD = 0;
   for (const o of orders) {
@@ -115,14 +120,13 @@ function calcEarningsForOrders(orders: any[], productMap: Map<string, any>) {
       const qty = i.qty || 1;
       const isDigital = (i.optionType || i.type) === 'digital';
       if (isDigital) {
+        const pct = digitalRoyaltyPercent(product) / 100;
         if (isUSD) {
           const unitUSD = i.unitPriceUSD ?? i.price_usd ?? 0;
-          const feeUSD = product?.digital_platform_fee_usd ?? DEFAULT_DIGITAL_FEE_USD;
-          earningUSD += Math.max(0, unitUSD - feeUSD) * qty;
+          earningUSD += unitUSD * pct * qty;
         } else {
           const unitTHB = i.unitPriceTHB ?? i.price_thb ?? 0;
-          const feeTHB = product?.digital_platform_fee_thb ?? DEFAULT_DIGITAL_FEE_THB;
-          earningTHB += Math.max(0, unitTHB - feeTHB) * qty;
+          earningTHB += unitTHB * pct * qty;
         }
       } else {
         const royalty = product?.artist_physical_royalty_thb ?? DEFAULT_PHYSICAL_ROYALTY_THB;
@@ -333,14 +337,13 @@ function ArtistSales({ p }: any) {
               let earningDisplay = <span style={{ color:'#94a3b8', fontSize:12 }}>—</span>;
               if (paid) {
                 if (isDigital) {
+                  const pct = digitalRoyaltyPercent(product) / 100;
                   if (isUSD) {
                     const unitUSD = item.unitPriceUSD ?? item.price_usd ?? 0;
-                    const feeUSD = product?.digital_platform_fee_usd ?? DEFAULT_DIGITAL_FEE_USD;
-                    earningDisplay = <span style={{ color:'#0070ba', fontWeight:800 }}>${(Math.max(0, unitUSD - feeUSD) * qty).toFixed(2)}</span>;
+                    earningDisplay = <span style={{ color:'#0070ba', fontWeight:800 }}>${(unitUSD * pct * qty).toFixed(2)}</span>;
                   } else {
                     const unitTHB = item.unitPriceTHB ?? item.price_thb ?? 0;
-                    const feeTHB = product?.digital_platform_fee_thb ?? DEFAULT_DIGITAL_FEE_THB;
-                    earningDisplay = <span style={{ color:'#059669', fontWeight:800 }}>{thb(Math.max(0, unitTHB - feeTHB) * qty)}</span>;
+                    earningDisplay = <span style={{ color:'#059669', fontWeight:800 }}>{thb(unitTHB * pct * qty)}</span>;
                   }
                 } else {
                   const royalty = product?.artist_physical_royalty_thb ?? DEFAULT_PHYSICAL_ROYALTY_THB;

@@ -5,7 +5,8 @@
 alter table products
   add column if not exists artist_physical_royalty_thb numeric,
   add column if not exists digital_platform_fee_thb numeric,
-  add column if not exists digital_platform_fee_usd numeric;
+  add column if not exists digital_platform_fee_usd numeric,
+  add column if not exists digital_artist_royalty_percent numeric;
 
 -- Create artist_payouts table for tracking payout records per artist per month
 create table if not exists artist_payouts (
