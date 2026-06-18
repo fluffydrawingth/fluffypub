@@ -98,7 +98,7 @@ function AppContent() {
       case '/terms-of-service':  return <LegalPage slug="terms-of-service" />;
       case '/artist-guidelines': return <LegalPage slug="artist-guidelines" />;
       case '/artist-agreement':  return <LegalPage slug="artist-agreement" />;
-      case '/artist-application': return <ArtistApplicationPage />;
+      case '/artist-application': return <ProtectedRoute roles={['customer','artist','admin']}><ArtistApplicationPage /></ProtectedRoute>;
       case '/artists': return <ArtistsPage />;
       case '/login': return <LoginPage />;
       case '/account': return <ProtectedRoute roles={['customer','artist','admin']}><AccountPage /></ProtectedRoute>;

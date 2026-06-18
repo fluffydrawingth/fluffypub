@@ -30,7 +30,7 @@ export default function ArtistApplicationPage() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (!user) { navigate('/login'); return; }
+    if (!user) return;
     if (user.role === 'artist') { navigate('/artist-dashboard'); return; }
     api.myArtistRequest().then(r => {
       const req = r && !r.error ? r : null;
@@ -38,9 +38,10 @@ export default function ArtistApplicationPage() {
       setLoaded(true);
       if (req?.status === 'approved') refreshUser();
     }).catch(() => setLoaded(true));
-  }, []);
+  }, [user]);
 
-  if (!user || !loaded) return null;
+  if (!user) return null;
+  if (!loaded) return <div style={{ minHeight:'60vh', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:theme.fontFamily, color:'#94a3b8', fontSize:14 }}>Loading…</div>;
 
   const status = existing?.status;
 
