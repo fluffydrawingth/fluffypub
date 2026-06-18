@@ -28,6 +28,7 @@ export default function AffiliateApplicationPage() {
   const { tRaw } = useLang();
   const p = theme.primaryColor;
 
+  const [name, setName] = useState('');
   const [link, setLink] = useState('');
   const [platform, setPlatform] = useState('tiktok');
   const [message, setMessage] = useState('');
@@ -41,6 +42,7 @@ export default function AffiliateApplicationPage() {
   useEffect(() => {
     if (!user) return;
     if (user.affiliate_enabled) { navigate('/affiliate-dashboard'); return; }
+    setName(user.name || '');
     api.myAffiliateRequest().then(r => {
       setExisting(r && !r.error ? r : null);
       setLoaded(true);
@@ -55,7 +57,7 @@ export default function AffiliateApplicationPage() {
   const submit = async () => {
     if (!agreed || !link.trim()) return;
     setBusy(true); setErr('');
-    const res = await api.requestAffiliate({ social_media_link: link.trim(), platform, message: message.trim() || undefined });
+    const res = await api.requestAffiliate({ username: name.trim() || undefined, social_media_link: link.trim(), platform, message: message.trim() || undefined });
     if (res?.error) { setErr(res.error); setBusy(false); return; }
     setDone(true); setBusy(false);
   };
@@ -123,7 +125,7 @@ export default function AffiliateApplicationPage() {
         {/* Form */}
         <div style={{ background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 10px rgba(0,0,0,0.05)', marginBottom:20 }}>
           <label style={{ display:'block', fontSize:14, fontWeight:700, color:'#374151', marginBottom:6 }}>{tRaw('ชื่อ', 'Name')}</label>
-          <input value={user.name} disabled style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:'1.5px solid #e5e7eb', fontSize:14, marginBottom:16, background:'#f8fafc', color:'#64748b', fontFamily:theme.fontFamily, boxSizing:'border-box' }} />
+          <input value={name} onChange={e => setName(e.target.value)} placeholder={tRaw('ชื่อของคุณ', 'Your name')} style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:`1.5px solid ${p}30`, fontSize:14, marginBottom:16, outline:'none', fontFamily:theme.fontFamily, boxSizing:'border-box' }} />
 
           <label style={{ display:'block', fontSize:14, fontWeight:700, color:'#374151', marginBottom:6 }}>
             {tRaw('ลิงก์โซเชียลมีเดีย', 'Social Media Link')} <span style={{ color:'#ef4444' }}>*</span>

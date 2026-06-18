@@ -85,7 +85,7 @@ export const api = {
   deleteArtist: (id: string) => fetch(`/api/artists?id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 
   // Affiliate program
-  requestAffiliate: (data: { social_media_link: string; platform: string; message?: string }) =>
+  requestAffiliate: (data: { username?: string; social_media_link: string; platform: string; message?: string }) =>
     fetch('/api/users?action=affiliate-request', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   myAffiliateRequest: () => fetch('/api/users?action=affiliate-my-request', { headers: h() }).then(r => r.json()),
   getAffiliateRequests: () => fetch('/api/users?action=affiliate-requests', { headers: h() }).then(r => r.json()),

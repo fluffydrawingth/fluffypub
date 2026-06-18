@@ -46,3 +46,8 @@ alter table orders
   add column if not exists affiliate_payout_proof_url text,
   add column if not exists affiliate_payout_note text;
 create index if not exists idx_orders_affiliate_user on orders (affiliate_user_id);
+
+-- 5. Grants — the API talks to these tables with the service role. Without explicit
+--    grants new tables raise "permission denied for table ...". (Safe to re-run.)
+grant all privileges on affiliate_requests to anon, authenticated, service_role;
+grant all privileges on affiliate_codes    to anon, authenticated, service_role;

@@ -44,13 +44,13 @@ module.exports = async function handler(req, res) {
     const user = await requireAuth(req, res);
     if (!user) return;
     if (user.affiliate_enabled) return json(res, 400, { error: 'You already have affiliate access.' });
-    const { social_media_link, platform, message } = req.body || {};
+    const { username, social_media_link, platform, message } = req.body || {};
     if (!social_media_link) return json(res, 400, { error: 'Social media link is required.' });
     const plat = PLATFORMS.includes((platform || '').toLowerCase()) ? platform.toLowerCase() : 'other';
     const { data: existing } = await supabase.from('affiliate_requests').select('id').eq('user_id', user.id).eq('status', 'pending').limit(1);
     if (existing && existing.length) return json(res, 409, { error: 'You already have a pending request.' });
     const { data, error } = await supabase.from('affiliate_requests').insert({
-      user_id: user.id, username: user.name || '', email: user.email || '',
+      user_id: user.id, username: (username || user.name || '').trim(), email: user.email || '',
       social_media_link, platform: plat, message: message || '', status: 'pending',
     }).select().single();
     if (error) return json(res, 400, { error: error.message });
