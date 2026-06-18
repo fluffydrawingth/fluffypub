@@ -250,7 +250,7 @@ function ArtistProducts({ p }: any) {
 // ── Sales ─────────────────────────────────────────────────────────────────────
 
 function ArtistSales({ p }: any) {
-  const { orders, loading, grossTHB, grossUSD, physicalSold, digitalSold, totalEarningTHB, totalEarningUSD } = useArtistData();
+  const { orders, productMap, loading, grossTHB, grossUSD, physicalSold, digitalSold, totalEarningTHB, totalEarningUSD } = useArtistData();
   const [filterMonth, setFilterMonth] = useState(0);
   const [filterYear, setFilterYear] = useState(0);
   const now = new Date();
@@ -304,24 +304,74 @@ function ArtistSales({ p }: any) {
         </select>
       </div>
 
-      {/* Order table */}
+      {/* Order table — expanded per item */}
       <div style={{ background:'white', borderRadius:16, overflow:'auto', boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>
-        <table style={{ width:'100%', borderCollapse:'collapse', minWidth:480 }}>
+        <table style={{ width:'100%', borderCollapse:'collapse', minWidth:640 }}>
           <thead><tr style={{ background:'#f8fafc', borderBottom:'2px solid #f1f5f9' }}>
-            {['Order','Items','Amount','Date','Status'].map(h=><th key={h} style={{ textAlign:'left', padding:'11px 14px', fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase' as const }}>{h}</th>)}
+            {['Order / Product','Type','Qty','Sale Price','Your Earning','Date','Status'].map(h=><th key={h} style={{ textAlign:'left', padding:'11px 14px', fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase' as const, whiteSpace:'nowrap' as const }}>{h}</th>)}
           </tr></thead>
           <tbody>{filteredOrders.map(o=>{
-            const amt = (o.items||[]).reduce((s:number,i:any)=>s+((i.unitPriceTHB||i.price_thb||(i.price?Math.round(i.price*35):0))*(i.qty||1)),0);
+            const isUSD = o.currency === 'USD';
             const paid = PAID_STATUSES.has(o.payment_status||o.paymentStatus);
-            return (
-              <tr key={o.id} style={{ borderBottom:'1px solid #f8fafc' }}>
-                <td style={{ padding:'11px 14px', fontWeight:700, color:p, fontSize:12 }}>#{o.id.slice(-8).toUpperCase()}</td>
-                <td style={{ padding:'11px 14px', fontSize:11, color:'#64748b' }}>{(o.items||[]).map((i:any)=>i.title).join(', ')}</td>
-                <td style={{ padding:'11px 14px', fontWeight:800, color:'#1e293b' }}>{thb(amt)}</td>
-                <td style={{ padding:'11px 14px', fontSize:12, color:'#94a3b8' }}>{new Date(o.created_at||o.createdAt).toLocaleDateString()}</td>
-                <td style={{ padding:'11px 14px' }}><span style={{ background:paid?'#d1fae5':'#fef3c7', color:paid?'#059669':'#d97706', borderRadius:20, padding:'3px 10px', fontSize:11, fontWeight:700 }}>{paid?'Paid':'Pending'}</span></td>
-              </tr>
-            );
+            const items = o.items || [];
+            return items.map((item:any, idx:number) => {
+              const qty = item.qty || 1;
+              const isDigital = (item.optionType || item.type) === 'digital';
+              const product = productMap.get(item.productId || item.product_id || '');
+
+              // Sale price in order's actual currency
+              let saleDisplay = '';
+              if (isUSD) {
+                const unitUSD = item.unitPriceUSD ?? item.price_usd ?? 0;
+                saleDisplay = `$${(unitUSD * qty).toFixed(2)}`;
+              } else {
+                const unitTHB = item.unitPriceTHB ?? item.price_thb ?? (item.price ? Math.round(item.price * 35) : 0);
+                saleDisplay = thb(unitTHB * qty);
+              }
+
+              // Artist earning per item (only for paid orders)
+              let earningDisplay = <span style={{ color:'#94a3b8', fontSize:12 }}>—</span>;
+              if (paid) {
+                if (isDigital) {
+                  if (isUSD) {
+                    const unitUSD = item.unitPriceUSD ?? item.price_usd ?? 0;
+                    const feeUSD = product?.digital_platform_fee_usd ?? DEFAULT_DIGITAL_FEE_USD;
+                    earningDisplay = <span style={{ color:'#0070ba', fontWeight:800 }}>${(Math.max(0, unitUSD - feeUSD) * qty).toFixed(2)}</span>;
+                  } else {
+                    const unitTHB = item.unitPriceTHB ?? item.price_thb ?? 0;
+                    const feeTHB = product?.digital_platform_fee_thb ?? DEFAULT_DIGITAL_FEE_THB;
+                    earningDisplay = <span style={{ color:'#059669', fontWeight:800 }}>{thb(Math.max(0, unitTHB - feeTHB) * qty)}</span>;
+                  }
+                } else {
+                  const royalty = product?.artist_physical_royalty_thb ?? DEFAULT_PHYSICAL_ROYALTY_THB;
+                  earningDisplay = <span style={{ color:'#059669', fontWeight:800 }}>{thb(royalty * qty)}</span>;
+                }
+              }
+
+              const isFirst = idx === 0;
+              return (
+                <tr key={`${o.id}-${idx}`} style={{ borderBottom: idx === items.length - 1 ? '2px solid #f1f5f9' : '1px solid #f8fafc', background: isFirst ? 'white' : '#fafcff' }}>
+                  <td style={{ padding:'10px 14px', fontSize:12, verticalAlign:'top' as const }}>
+                    {isFirst && <div style={{ fontWeight:700, color:p, marginBottom:2, fontSize:11 }}>#{o.id.slice(-8).toUpperCase()}</div>}
+                    <div style={{ fontWeight:600, color:'#1e293b' }}>{item.title || '—'}</div>
+                  </td>
+                  <td style={{ padding:'10px 14px', verticalAlign:'top' as const }}>
+                    <span style={{ background: isDigital ? '#dbeafe' : '#fef9c3', color: isDigital ? '#1d4ed8' : '#92400e', borderRadius:20, padding:'2px 9px', fontSize:10, fontWeight:700 }}>
+                      {isDigital ? '⬇️ Digital' : '📦 Physical'}
+                    </span>
+                  </td>
+                  <td style={{ padding:'10px 14px', fontWeight:700, color:'#374151', fontSize:13, verticalAlign:'top' as const }}>{qty}</td>
+                  <td style={{ padding:'10px 14px', fontWeight:800, color: isUSD ? '#0070ba' : '#1e293b', fontSize:13, verticalAlign:'top' as const }}>{saleDisplay}</td>
+                  <td style={{ padding:'10px 14px', verticalAlign:'top' as const }}>{earningDisplay}</td>
+                  <td style={{ padding:'10px 14px', fontSize:11, color:'#94a3b8', whiteSpace:'nowrap' as const, verticalAlign:'top' as const }}>
+                    {isFirst ? new Date(o.created_at||o.createdAt).toLocaleDateString() : ''}
+                  </td>
+                  <td style={{ padding:'10px 14px', verticalAlign:'top' as const }}>
+                    {isFirst && <span style={{ background:paid?'#d1fae5':'#fef3c7', color:paid?'#059669':'#d97706', borderRadius:20, padding:'3px 10px', fontSize:11, fontWeight:700, whiteSpace:'nowrap' as const }}>{paid?'Paid':'Pending'}</span>}
+                  </td>
+                </tr>
+              );
+            });
           })}</tbody>
         </table>
         {!filteredOrders.length && <div style={{ textAlign:'center', padding:36, color:'#94a3b8' }}>No sales yet.</div>}
