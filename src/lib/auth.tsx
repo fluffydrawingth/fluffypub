@@ -125,6 +125,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(USER_KEY, JSON.stringify(d.user));
         setToken(d.token);
         setUser(d.user);
+        // Pull the complete, authoritative profile (role, artistId, affiliate_enabled)
+        // so permissions are correct even if the login response is missing a field.
+        await refreshUser();
         return { success: true };
       }
       return { success: false, error: d.error || 'Login failed' };
