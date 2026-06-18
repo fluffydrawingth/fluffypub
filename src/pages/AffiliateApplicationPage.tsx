@@ -4,8 +4,11 @@ import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
 import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
+import { useGuidelines } from '../lib/useGuidelines';
 
-const GUIDELINES = [
+// Bilingual fallback bullets — used only until the admin edits the
+// "affiliate-guidelines" Legal Page (Admin → Legal Pages).
+const DEFAULT_GUIDELINES = [
   { th: 'แชร์ Fluffy Pub อย่างเป็นธรรมชาติ', en: 'Share Fluffy Pub organically' },
   { th: 'ห้ามสแปมหรือโปรโมตที่ทำให้เข้าใจผิด', en: 'No spam or misleading promotions' },
   { th: 'ค่าคอมมิชชันจะได้รับหลังจากจัดส่งสำเร็จเท่านั้น', en: 'Commissions are earned only after successful delivery' },
@@ -27,6 +30,7 @@ export default function AffiliateApplicationPage() {
   const { user } = useAuth();
   const { tRaw } = useLang();
   const p = theme.primaryColor;
+  const { bullets: guidelines } = useGuidelines('affiliate-guidelines', DEFAULT_GUIDELINES.map(g => tRaw(g.th, g.en)));
 
   const [name, setName] = useState('');
   const [link, setLink] = useState('');
@@ -108,17 +112,17 @@ export default function AffiliateApplicationPage() {
             {tRaw('แนวทางสำหรับแอฟฟิลิเอต', 'Affiliate Guidelines')}
           </h2>
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            {GUIDELINES.map((g, i) => (
+            {guidelines.map((g, i) => (
               <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
                 <span style={{ color:'#22c55e', fontWeight:800, fontSize:16, flexShrink:0, marginTop:1 }}>✓</span>
-                <span style={{ fontSize:14, color:'#374151', lineHeight:1.5 }}>{tRaw(g.th, g.en)}</span>
+                <span style={{ fontSize:14, color:'#374151', lineHeight:1.5 }}>{g}</span>
               </div>
             ))}
           </div>
           <div style={{ marginTop:16, paddingTop:14, borderTop:'1px solid #f1f5f9' }}>
-            <a onClick={() => navigate('/affiliate-guidelines')} style={{ fontSize:12, color:p, cursor:'pointer', textDecoration:'underline' }}>
-              {tRaw('ดูแนวทางฉบับเต็ม', 'View Full Affiliate Guidelines')}
-            </a>
+            <span style={{ fontSize:12, color:'#94a3b8' }}>
+              {tRaw('รายละเอียดเพิ่มเติมจะแสดงหลังจากได้รับการอนุมัติ', 'More details will be available after approval.')}
+            </span>
           </div>
         </div>
 

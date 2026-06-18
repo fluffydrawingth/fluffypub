@@ -4,9 +4,12 @@ import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
 import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
+import { useGuidelines } from '../lib/useGuidelines';
 
-const GUIDELINES = [
-  { th: 'ผลงานต้องเป็นต้นฉบับของคุณเองเท่านั้น', en: 'Original artwork only — no copied or traced work' },
+// Bilingual fallback bullets — used only until the admin edits the
+// "artist-guidelines" Legal Page (Admin → Legal Pages).
+const DEFAULT_GUIDELINES = [
+  { th: 'ผลงานต้องเป็นต้นฉบับของคุณเองเท่านั้น', en: 'Original artwork only' },
   { th: 'สินค้าต้องผ่านการอนุมัติจากแอดมินก่อนเผยแพร่', en: 'Products require admin approval before publishing' },
   { th: 'รายได้อาจแตกต่างกันตามผลิตภัณฑ์หรือข้อตกลงความร่วมมือ', en: 'Revenue sharing may vary by product or collaboration' },
   { th: 'การจ่ายเงินในปัจจุบันดำเนินการด้วยตนเองโดย Fluffy Pub', en: 'Payouts are currently handled manually by Fluffy Pub' },
@@ -20,6 +23,7 @@ export default function ArtistApplicationPage() {
   const { user, refreshUser } = useAuth();
   const { tRaw } = useLang();
   const p = theme.primaryColor;
+  const { bullets: guidelines } = useGuidelines('artist-guidelines', DEFAULT_GUIDELINES.map(g => tRaw(g.th, g.en)));
 
   const [agreed, setAgreed] = useState(false);
   const [message, setMessage] = useState('');
@@ -129,20 +133,17 @@ export default function ArtistApplicationPage() {
             {tRaw('แนวทางปฏิบัติสำหรับศิลปิน', 'Artist Guidelines')}
           </h2>
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-            {GUIDELINES.map((g, i) => (
+            {guidelines.map((g, i) => (
               <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
                 <span style={{ color:'#22c55e', fontWeight:800, fontSize:16, flexShrink:0, marginTop:1 }}>✓</span>
-                <span style={{ fontSize:14, color:'#374151', lineHeight:1.5 }}>{tRaw(g.th, g.en)}</span>
+                <span style={{ fontSize:14, color:'#374151', lineHeight:1.5 }}>{g}</span>
               </div>
             ))}
           </div>
           <div style={{ marginTop:16, paddingTop:14, borderTop:'1px solid #f1f5f9' }}>
-            <a onClick={() => navigate('/artist-guidelines')} style={{ fontSize:12, color:p, cursor:'pointer', textDecoration:'underline', marginRight:16 }}>
-              {tRaw('ดูแนวทางฉบับเต็ม', 'View Full Artist Guidelines')}
-            </a>
-            <a onClick={() => navigate('/artist-agreement')} style={{ fontSize:12, color:p, cursor:'pointer', textDecoration:'underline' }}>
-              {tRaw('ดูข้อตกลงศิลปิน', 'View Artist Agreement')}
-            </a>
+            <span style={{ fontSize:12, color:'#94a3b8' }}>
+              {tRaw('รายละเอียดเพิ่มเติมจะแสดงหลังจากได้รับการอนุมัติ', 'More details will be available after approval.')}
+            </span>
           </div>
         </div>
 
