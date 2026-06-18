@@ -222,16 +222,19 @@ function ArtistProducts({ p }: any) {
           <thead><tr style={{ background:'#f8fafc', borderBottom:'2px solid #f1f5f9' }}>
             {['','Title','Category','Price','Status'].map(h=><th key={h} style={{ textAlign:'left', padding:'11px 14px', fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase' as const }}>{h}</th>)}
           </tr></thead>
-          <tbody>{products.map(pr => {
+          <tbody>{products.filter((pr, idx, arr) => arr.findIndex(x => x.id === pr.id) === idx).map(pr => {
             const si = statusInfo(pr.status);
             const priceTHB = pr.price_thb || (pr.price ? Math.round(pr.price * 35) : 0);
+            const priceUSD = pr.price_usd;
             const cat = (pr.categories && pr.categories[0]) || pr.category || '—';
             return (
               <tr key={pr.id} style={{ borderBottom:'1px solid #f8fafc' }}>
                 <td style={{ padding:'10px 14px', fontSize:22 }}>{pr.cover_image_url ? <img src={pr.cover_image_url} style={{ width:34, height:34, borderRadius:8, objectFit:'cover' }} /> : (pr.image || '🎨')}</td>
                 <td style={{ padding:'10px 14px', fontWeight:700, color:'#1e293b', fontSize:13 }}>{pr.title}</td>
                 <td style={{ padding:'10px 14px' }}><span style={{ background:p+'15', color:p, borderRadius:10, padding:'2px 9px', fontSize:11, fontWeight:700 }}>{cat}</span></td>
-                <td style={{ padding:'10px 14px', fontWeight:800, color:'#1e293b' }}>{thb(priceTHB)}</td>
+                <td style={{ padding:'10px 14px', fontWeight:800, color:'#1e293b', fontSize:13 }}>
+                  {thb(priceTHB)}{priceUSD ? <span style={{ color:'#0070ba', fontWeight:700, fontSize:11, marginLeft:6 }}>${priceUSD}</span> : null}
+                </td>
                 <td style={{ padding:'10px 14px' }}><span style={{ background:si.bg, color:si.c, borderRadius:10, padding:'2px 9px', fontSize:11, fontWeight:700 }}>{si.t}</span></td>
               </tr>
             );
