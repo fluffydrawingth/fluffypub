@@ -279,15 +279,23 @@ module.exports = async function handler(req, res) {
     return json(res, 200, data);
   }
 
-  // GET ?action=payout-account&user_id=X — admin reads a user's payout account details
+  // GET ?action=payout-account&user_id=X — admin reads a user's payout account details.
+  // Payout details live on the person's OWN profile. For artists, the admin may pass an
+  // artist *profile* id that's linked to a promoted user — so if the passed row has no
+  // payout details, resolve the promoted user (profiles.artist_id = X) and use theirs.
   if (req.method === 'GET' && action === 'payout-account') {
     const admin = await requireAuth(req, res, ['admin']);
     if (!admin) return;
     const uid = req.query.user_id;
     if (!uid) return json(res, 400, { error: 'user_id required' });
-    const { data, error } = await supabase.from('profiles')
-      .select('id,name,email,payout_account_name,payout_bank_name,payout_account_number,payout_payment_method,payout_note').eq('id', uid).single();
+    const COLS = 'id,name,email,payout_account_name,payout_bank_name,payout_account_number,payout_payment_method,payout_note';
+    const hasDetails = (r) => r && (r.payout_account_name || r.payout_account_number || r.payout_bank_name || r.payout_payment_method);
+    const { data, error } = await supabase.from('profiles').select(COLS).eq('id', uid).single();
     if (error) return json(res, 404, { error: 'Not found' });
+    if (hasDetails(data)) return json(res, 200, data);
+    // Look for a promoted user linked to this artist profile (excluding self).
+    const { data: linked } = await supabase.from('profiles').select(COLS).eq('artist_id', uid).neq('id', uid).limit(1);
+    if (linked && linked.length && hasDetails(linked[0])) return json(res, 200, linked[0]);
     return json(res, 200, data);
   }
 
