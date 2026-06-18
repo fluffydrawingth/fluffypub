@@ -585,11 +585,10 @@ module.exports = async function handler(req, res) {
       if (!hasPhysical) return json(res, 400, { error: 'Affiliate codes apply to physical products only.' });
       if (physicalSubtotalTHB < 200) return json(res, 400, { error: 'Affiliate code requires at least ฿200 of physical products.' });
       if (authUser && authUser.id === codeRow.user_id) return json(res, 400, { error: 'You cannot use your own affiliate code.' });
-      // One use per customer (by account if logged in, else by email)
-      let usedQuery = supabase.from('orders').select('id').eq('affiliate_code', code).neq('status', 'cancelled');
-      usedQuery = authUser ? usedQuery.eq('user_id', authUser.id) : usedQuery.eq('customer_email', customerEmail);
-      const { data: prior } = await usedQuery.limit(1);
-      if (prior && prior.length) return json(res, 400, { error: 'You have already used this affiliate code.' });
+      // Codes are REUSABLE: any account/email may use a code on as many orders as they
+      // like, with no lifetime limit — as long as the code is still active. The only
+      // off-switch is the admin deactivating/deleting the code (the .eq('active', true)
+      // check above). One affiliate code per order is still enforced (single field).
       const discount = Math.min(Number(codeRow.discount_amount || 0), physicalSubtotalTHB);
       affiliate = { code, user_id: codeRow.user_id, discount_thb: discount, commission_thb: Number(codeRow.affiliate_commission || 0) };
     }
