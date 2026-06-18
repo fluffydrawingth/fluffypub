@@ -24,13 +24,10 @@ export default function ArtistDashboardPage() {
   const [tab, setTab] = useState<Tab>((route.params?.tab as Tab) || 'overview');
   const p = theme.primaryColor;
 
-  useEffect(() => { if (!user) navigate('/login'); }, [user]);
-  useEffect(() => { refreshUser(); }, []);
-
-  if (!user || user.role !== 'artist') {
-    if (user && user.role !== 'artist') return <div style={{textAlign:'center',padding:'80px 24px',fontFamily:theme.fontFamily}}><div style={{fontSize:64}}>🚫</div><h2>Artist access required</h2></div>;
-    return null;
-  }
+  // ProtectedRoute already verifies the role — no need to refreshUser() here.
+  // Doing so causes a double-fetch race that briefly makes user=null → blank page.
+  if (!user) return null;
+  if (user.role !== 'artist') return null;
 
   const tabs: [Tab, string, string][] = [
     ['overview','📊','Overview'],
