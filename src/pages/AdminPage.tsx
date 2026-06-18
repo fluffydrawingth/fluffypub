@@ -2083,11 +2083,12 @@ function AffiliatePayoutSection({a, onChange}:{a:any, onChange:()=>void}) {
   const years = Array.from({length:3},(_,i)=>now.getFullYear()-i);
   const thb=(n:number)=>`฿${Number(n||0).toLocaleString('th-TH')}`;
 
-  // Calculated commission = delivered + physical orders referred in this month/year
+  // Calculated commission = delivered + physical orders, bucketed by DELIVERY month
+  // (delivered_at; falls back to created_at for older orders without a stamp).
   const calculated = (a.orders||[]).filter((o:any)=>{
     if (o.status!=='delivered') return false;
     if (!((o.items||[]).some((i:any)=>(i.optionType||i.type)==='physical'))) return false;
-    const d = new Date(o.created_at||0);
+    const d = new Date(o.delivered_at||o.created_at||0);
     return d.getMonth()+1===month && d.getFullYear()===year;
   }).reduce((s:number,o:any)=>s+Number(o.affiliate_commission_thb||0),0);
 

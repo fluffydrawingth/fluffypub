@@ -162,7 +162,7 @@ module.exports = async function handler(req, res) {
       .select('id,name,email,role,affiliate_enabled,payout_account_name,payout_bank_name,payout_account_number,payout_payment_method,payout_note')
       .eq('affiliate_enabled', true).order('name');
     const { data: codes } = await supabase.from('affiliate_codes').select('*').order('created_at', { ascending: false });
-    const { data: orders } = await supabase.from('orders').select('id,status,items,total_thb,affiliate_user_id,affiliate_code,affiliate_discount_thb,affiliate_commission_thb,affiliate_paid_at,created_at').not('affiliate_user_id', 'is', null);
+    const { data: orders } = await supabase.from('orders').select('id,status,items,total_thb,affiliate_user_id,affiliate_code,affiliate_discount_thb,affiliate_commission_thb,affiliate_paid_at,created_at,delivered_at').not('affiliate_user_id', 'is', null);
     const { data: payouts } = await supabase.from('affiliate_payouts').select('*').order('year', { ascending: false }).order('month', { ascending: false });
     const result = (profiles || []).map(pf => {
       const myOrders = (orders || []).filter(o => o.affiliate_user_id === pf.id);
@@ -184,7 +184,7 @@ module.exports = async function handler(req, res) {
     if (!user.affiliate_enabled) return json(res, 403, { error: 'No affiliate access' });
     const { data: codes } = await supabase.from('affiliate_codes').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
     const { data: orders } = await supabase.from('orders')
-      .select('id,status,items,total_thb,affiliate_code,affiliate_discount_thb,affiliate_commission_thb,affiliate_paid_at,created_at')
+      .select('id,status,items,total_thb,affiliate_code,affiliate_discount_thb,affiliate_commission_thb,affiliate_paid_at,created_at,delivered_at')
       .eq('affiliate_user_id', user.id).order('created_at', { ascending: false });
     const { data: payouts } = await supabase.from('affiliate_payouts').select('*').eq('affiliate_user_id', user.id).order('year', { ascending: false }).order('month', { ascending: false });
     const payoutAccount = {

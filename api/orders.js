@@ -767,6 +767,11 @@ module.exports = async function handler(req, res) {
     if (status) updates.status = status;
     if (tracking_number !== undefined) updates.tracking_number = tracking_number;
     if (shipping_provider !== undefined) updates.shipping_provider = shipping_provider;
+    // Stamp the delivery time the first time an order becomes 'delivered', so affiliate
+    // commission can be bucketed by delivery month. (Does not affect totals/calc.)
+    if (status === 'delivered' && before?.status !== 'delivered' && !before?.delivered_at) {
+      updates.delivered_at = new Date().toISOString();
+    }
 
     const { data, error } = await supabase.from('orders').update(updates).eq('id', id).select().single();
     if (error) return json(res, 404, { error: 'Order not found' });
