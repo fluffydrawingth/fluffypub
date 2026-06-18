@@ -525,6 +525,7 @@ function FavoritesTab({p,theme,navigate}:any) {
 
 function ProfileTab({user,p,theme,refreshUser}:any) {
   const { tRaw } = useLang();
+  const [username, setUsername]         = useState('');
   const [firstName, setFirstName]       = useState('');
   const [lastName, setLastName]         = useState('');
   const [deliveryEmail, setDeliveryEmail] = useState('');
@@ -572,6 +573,7 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
         if (!co) co = sa.country || 'Thailand';
       }
 
+      setUsername(profile.username || '');
       setFirstName(fn);
       setLastName(ln);
       setDeliveryEmail(em);
@@ -591,6 +593,7 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
       const fullName = `${firstName} ${lastName}`.trim();
       const payload = {
         name: fullName || user?.name || '',
+        username: username.trim(),
         first_name: firstName,
         last_name: lastName,
         delivery_email: deliveryEmail,
@@ -640,6 +643,9 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
    <>
     <div style={{background:'white',borderRadius:20,padding:28,boxShadow:'0 2px 10px rgba(0,0,0,0.05)'}}>
       <h3 style={{fontSize:18,fontWeight:800,color:'#1e293b',marginBottom:24}}>Edit Profile</h3>
+
+      {inp(tRaw('ชื่อผู้ใช้ (ชื่อที่แสดง)','Username (display name)'), username, setUsername)}
+      <div style={{fontSize:11,color:'#94a3b8',marginTop:-10,marginBottom:14}}>{tRaw('ชื่อที่แสดงต่อสาธารณะ ไม่ใช่ชื่อจริงหรือที่อยู่','A public display name — not your real name or address.')}</div>
 
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:4}}>
         <div>{inp('First Name', firstName, setFirstName)}</div>

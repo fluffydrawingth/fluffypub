@@ -364,7 +364,7 @@ module.exports = async function handler(req, res) {
       const user = await requireAuth(req, res);
       if (!user) return;
       const body = req.body || {};
-      const fields = ['name','bio','first_name','last_name','phone','delivery_email','shipping_address','province','postal_code','preferred_lang'];
+      const fields = ['name','username','bio','first_name','last_name','phone','delivery_email','shipping_address','province','postal_code','preferred_lang'];
       const updates = { updated_at: new Date().toISOString() };
       fields.forEach(f => { if (body[f] !== undefined) updates[f] = body[f]; });
       console.log('[users PUT] user:', user.id, 'updating:', JSON.stringify(updates));
