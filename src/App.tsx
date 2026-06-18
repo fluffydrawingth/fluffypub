@@ -49,7 +49,7 @@ function ProtectedRoute({ roles, children }: { roles: string[]; children: React.
     if (!user) navigate('/login'); else navigate('/');
   }, [user, loading, verifying]);
   if (loading || verifying) return <div style={{minHeight:'60vh',display:'flex',alignItems:'center',justifyContent:'center',fontSize:32}}>⏳</div>;
-  if (!user || !roles.includes(user.role)) return null;
+  if (!user || !roles.includes(user.role)) return <div style={{minHeight:'60vh',display:'flex',alignItems:'center',justifyContent:'center',fontSize:32}}>⏳</div>;
   return <>{children}</>;
 }
 
