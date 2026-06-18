@@ -12,6 +12,7 @@ export default function FreeDownloadsPage() {
 
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [dlLoading, setDlLoading] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -38,6 +39,10 @@ export default function FreeDownloadsPage() {
   };
 
   const title = (i: any) => (lang === 'th' && i.title_th) ? i.title_th : i.title_en;
+  const term = search.trim().toLowerCase();
+  const filtered = term
+    ? items.filter(i => `${i.title_en||''} ${i.title_th||''} ${i.category||''} ${i.keywords||''}`.toLowerCase().includes(term))
+    : items;
   const fileIcon = (t: string) => t === 'pdf' ? '📄' : t === 'zip' ? '🗜️' : t === 'png' ? '🖼️' : '📁';
   const fileBg   = (t: string) => t === 'pdf' ? '#fee2e2' : t === 'png' ? '#f3e8ff' : '#dbeafe';
   const fileColor= (t: string) => t === 'pdf' ? '#dc2626' : t === 'png' ? '#7c3aed' : '#1d4ed8';
@@ -52,24 +57,32 @@ export default function FreeDownloadsPage() {
           <h1 style={{ fontSize: 28, fontWeight: 900, color: theme.textColor, margin: '0 0 6px' }}>
             ⬇️ {tRaw('ดาวน์โหลดฟรี', 'Free Downloads')}
           </h1>
-          <p style={{ color: theme.textColor + '88', margin: 0 }}>
+          <p style={{ color: theme.textColor + '88', margin: '0 0 16px' }}>
             {tRaw('ดาวน์โหลดไฟล์ฟรี ไม่ต้องสมัครสมาชิก', 'Free files — no sign-up required')}
           </p>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={tRaw('ค้นหาไฟล์ฟรี...', 'Search free downloads...')}
+            style={{ width:'100%', maxWidth:360, padding:'10px 16px', borderRadius:24, border:`1.5px solid ${p}30`, fontSize:14, outline:'none', fontFamily:theme.fontFamily, boxSizing:'border-box' }}
+            onFocus={e => e.target.style.borderColor = p}
+            onBlur={e => e.target.style.borderColor = p + '30'}
+          />
         </div>
 
         {loading && (
           <div style={{ textAlign: 'center', padding: 60, color: '#9ca3af', fontSize: 32 }}>⏳</div>
         )}
 
-        {!loading && items.length === 0 && (
+        {!loading && filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: '60px 24px', color: theme.textColor + '66' }}>
             <div style={{ fontSize: 56, marginBottom: 14 }}>📭</div>
-            <h3 style={{ fontWeight: 800, color: theme.textColor }}>{tRaw('ยังไม่มีไฟล์', 'No files yet')}</h3>
+            <h3 style={{ fontWeight: 800, color: theme.textColor }}>{term ? tRaw('ไม่พบไฟล์', 'No files found') : tRaw('ยังไม่มีไฟล์', 'No files yet')}</h3>
           </div>
         )}
 
         <div className="fd-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 20 }}>
-          {items.map(item => (
+          {filtered.map(item => (
             <div key={item.id}
               style={{ background: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: `1.5px solid ${p}15`, cursor: 'pointer', fontFamily: theme.fontFamily }}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${p}20`; }}
