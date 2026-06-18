@@ -674,15 +674,24 @@ function AffiliateCard({p,theme,user}:any) {
   const { navigate } = useRouter();
   const { tRaw } = useLang();
   const [request, setRequest] = useState<any>(null);
+  const [isAffiliate, setIsAffiliate] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    if (user?.affiliate_enabled) { setLoaded(true); return; }
-    api.myAffiliateRequest().then(r => { setRequest(r && !r.error ? r : null); setLoaded(true); }).catch(() => setLoaded(true));
-  }, [user?.affiliate_enabled]);
+    // Server-authoritative check: getMyAffiliate returns data only when the profile's
+    // affiliate_enabled is true (verified server-side). This avoids depending on the
+    // client user object carrying affiliate_enabled, which is the fragile part.
+    api.getMyAffiliate()
+      .then(d => {
+        if (d && !d.error) { setIsAffiliate(true); setLoaded(true); return; }
+        return api.myAffiliateRequest().then(r => { setRequest(r && !r.error ? r : null); setLoaded(true); });
+      })
+      .catch(() => setLoaded(true));
+  }, [user?.id, user?.affiliate_enabled]);
 
   if (!loaded) return null;
   const status = request?.status;
+  const showDashboard = isAffiliate || !!user?.affiliate_enabled;
 
   return (
     <div style={{background:'white',borderRadius:20,padding:28,boxShadow:'0 2px 10px rgba(0,0,0,0.05)',marginTop:20}}>
@@ -691,7 +700,7 @@ function AffiliateCard({p,theme,user}:any) {
         {tRaw('แชร์ Fluffy Pub และรับค่าคอมมิชชันจากการแนะนำสินค้าจริง','Share Fluffy Pub and earn commission for referring physical product sales.')}
       </p>
 
-      {user?.affiliate_enabled ? (
+      {showDashboard ? (
         <button onClick={()=>navigate('/affiliate-dashboard')} style={{background:p,color:'white',border:'none',cursor:'pointer',padding:'11px 24px',borderRadius:14,fontSize:14,fontWeight:800,fontFamily:theme.fontFamily}}>
           {tRaw('เปิดแดชบอร์ดแอฟฟิลิเอต →','Affiliate Dashboard →')}
         </button>

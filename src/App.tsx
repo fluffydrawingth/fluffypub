@@ -119,7 +119,7 @@ function AppContent() {
       case '/affiliate-agreement': return <LegalPage slug="affiliate-agreement" />;
       case '/legal-page': return <LegalPage slug={route.params?.slug || ''} />;
       case '/affiliate-application': return <ProtectedRoute roles={['customer','artist','admin']}><AffiliateApplicationPage /></ProtectedRoute>;
-      case '/affiliate-dashboard': return <ProtectedRoute requireAffiliate><AffiliateDashboardPage /></ProtectedRoute>;
+      case '/affiliate-dashboard': return <ProtectedRoute roles={['customer','artist','admin']}><AffiliateDashboardPage /></ProtectedRoute>;
       case '/artists': return <ArtistsPage />;
       case '/login': return <LoginPage />;
       case '/account': return <ProtectedRoute roles={['customer','artist','admin']}><AccountPage /></ProtectedRoute>;
