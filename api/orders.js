@@ -645,10 +645,18 @@ module.exports = async function handler(req, res) {
 
   // POST upload slip
   if (req.method === 'POST' && action === 'slip' && id) {
-    const { slip_url } = req.body || {};
+    const { slip_url, access_token } = req.body || {};
     if (!slip_url) return json(res, 400, { error: 'slip_url required' });
     const { data: order } = await supabase.from('orders').select('*').eq('id', id).single();
     if (!order) return json(res, 404, { error: 'Order not found' });
+    // SECURITY: only the order's owner may attach a slip — a logged-in user who owns it
+    // (or admin), or a guest who proves possession of the order's secret access_token.
+    // Prevents anyone from posting slips to arbitrary order IDs.
+    const slipUser = await getUser(req);
+    const ownsOrder =
+      (slipUser && (slipUser.id === order.user_id || slipUser.role === 'admin')) ||
+      (!!access_token && access_token === order.access_token);
+    if (!ownsOrder) return json(res, 403, { error: 'Forbidden' });
     const { data, error } = await supabase.from('orders').update({
       slip_url,
       slip_uploaded_at: new Date().toISOString(),

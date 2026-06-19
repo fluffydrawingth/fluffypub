@@ -94,7 +94,7 @@ export default function GuestOrderPage({ token }: { token: string }) {
       const res = await fetch(`/api/orders?action=slip&id=${order.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slip_url: result.publicUrl }),
+        body: JSON.stringify({ slip_url: result.publicUrl, access_token: token }),
       });
       // Safe parse — Vercel may return non-JSON on timeout even if the save succeeded
       let data: any = null;

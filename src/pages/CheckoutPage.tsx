@@ -201,7 +201,7 @@ export default function CheckoutPage() {
       const res = await fetch(`/api/orders?action=slip&id=${order.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
-        body: JSON.stringify({ slip_url: up.publicUrl }),
+        body: JSON.stringify({ slip_url: up.publicUrl, access_token: order.access_token }),
       });
       let data: any = null;
       try { data = await res.json(); } catch {}
