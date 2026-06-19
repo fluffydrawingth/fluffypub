@@ -342,6 +342,24 @@ export default function CheckoutPage() {
                   : <div style={{ background: '#fef3c7', borderRadius: 12, padding: 16, fontSize: 13, color: '#92400e' }}>{tRaw('ไม่พบ PROMPTPAY_ID', 'Set PROMPTPAY_ID in Vercel env')}</div>
               }
               <div style={{ marginTop: 10, fontSize: 18, fontWeight: 900, color: theme.textColor }}>฿{Number(payAmt).toLocaleString('th-TH')}</div>
+
+              {/* Bank Transfer (optional backup) — only extra info under the QR, same flow */}
+              {(theme as any).bankTransfer?.enabled && (
+                <div style={{ marginTop: 14, background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 12, padding: '12px 14px', textAlign: 'left' as const }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: theme.textColor, marginBottom: 6 }}>
+                    🏦 {tRaw('สแกน QR ไม่ได้? โอนผ่านธนาคาร (ทางเลือก)', "Can't scan the QR? Bank Transfer (optional)")}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.7 }}>
+                    {(theme as any).bankTransfer?.bank_name && <div><b>{tRaw('ธนาคาร','Bank')}:</b> {(theme as any).bankTransfer.bank_name}</div>}
+                    {(theme as any).bankTransfer?.account_name && <div><b>{tRaw('ชื่อบัญชี','Account Name')}:</b> {(theme as any).bankTransfer.account_name}</div>}
+                    {(theme as any).bankTransfer?.account_number && <div><b>{tRaw('เลขบัญชี','Account Number')}:</b> {(theme as any).bankTransfer.account_number}</div>}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
+                    {tRaw('กรุณาอัปโหลดสลิปหลังโอนเงิน', 'Please upload your payment slip after payment.')}
+                  </div>
+                </div>
+              )}
+
               {/* Slip upload */}
               <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid #f3f4f6' }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: theme.textColor, marginBottom: 8 }}>{tRaw('อัปโหลดสลิป', 'Upload Slip')}</div>

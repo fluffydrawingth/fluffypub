@@ -3215,6 +3215,29 @@ function ThemeTab() {
             🇹🇭 Thai site uses <strong>PromptPay</strong> · 🌍 English site uses <strong>PayPal</strong> (payment link)
           </p>
 
+          {/* Bank Transfer (backup, shown under the PromptPay QR at checkout) */}
+          <div style={{background:draft.bankTransfer?.enabled?'#f0fdf4':'white',border:`1.5px solid ${draft.bankTransfer?.enabled?'#86efac':'#f3f4f6'}`,borderRadius:14,padding:'18px 20px',marginBottom:20,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+              <span style={{fontSize:18}}>🏦</span>
+              <span style={{fontSize:15,fontWeight:800,color:'#111827'}}>Bank Transfer (backup)</span>
+              {draft.bankTransfer?.enabled&&<span style={{fontSize:11,fontWeight:800,background:'#16a34a',color:'white',borderRadius:6,padding:'2px 8px',letterSpacing:0.5}}>ON</span>}
+            </div>
+            <p style={{fontSize:12,color:'#6b7280',margin:'0 0 12px'}}>When enabled, the Thai PromptPay checkout shows these bank details as a small "Can't scan the QR?" card under the QR. Same flow — customers still upload a slip for admin approval.</p>
+            <label style={{display:'flex',alignItems:'center',gap:12,cursor:'pointer',background:draft.bankTransfer?.enabled?'#dcfce7':'#f9fafb',border:`1.5px solid ${draft.bankTransfer?.enabled?'#86efac':'#e5e7eb'}`,borderRadius:10,padding:'12px 16px',width:'fit-content',marginBottom:draft.bankTransfer?.enabled?14:0}}>
+              <input type="checkbox" checked={!!draft.bankTransfer?.enabled} onChange={e=>setDraft((d:any)=>({...d,bankTransfer:{...d.bankTransfer,enabled:e.target.checked}}))} style={{width:18,height:18,accentColor:'#16a34a'}} />
+              <span style={{fontSize:14,fontWeight:800,color:draft.bankTransfer?.enabled?'#16a34a':'#374151'}}>
+                {draft.bankTransfer?.enabled?'✅ Bank Transfer Enabled':'⚪ Bank Transfer Disabled'}
+              </span>
+            </label>
+            {draft.bankTransfer?.enabled&&(
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <TF label="Bank Name" val={draft.bankTransfer?.bank_name||''} set={v=>setDraft((d:any)=>({...d,bankTransfer:{...d.bankTransfer,bank_name:v}}))} ph="e.g. SCB / Kasikorn" />
+                <TF label="Account Name" val={draft.bankTransfer?.account_name||''} set={v=>setDraft((d:any)=>({...d,bankTransfer:{...d.bankTransfer,account_name:v}}))} ph="Account holder name" />
+                <div style={{gridColumn:'1/-1'}}><TF label="Account Number" val={draft.bankTransfer?.account_number||''} set={v=>setDraft((d:any)=>({...d,bankTransfer:{...d.bankTransfer,account_number:v}}))} ph="xxx-x-xxxxx-x" /></div>
+              </div>
+            )}
+          </div>
+
           {/* PayPal toggle */}
           <div style={{background:draft.paypal?.enabled?'#f0fdf4':'white',border:`1.5px solid ${draft.paypal?.enabled?'#86efac':'#f3f4f6'}`,borderRadius:14,padding:'18px 20px',marginBottom:20,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
             <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>

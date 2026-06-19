@@ -35,6 +35,7 @@ export interface ThemeConfig {
   showNewsletter: boolean;
   maintenance_mode: boolean;
   paypal?: { enabled: boolean; username: string; email: string; usd_rate: number; instructions: string };
+  bankTransfer?: { enabled?: boolean; bank_name?: string; account_name?: string; account_number?: string };
   labels: {
     featured_eyebrow: string; featured_eyebrow_th?: string;
     featured_title: string; featured_title_th?: string;
