@@ -31,9 +31,13 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method === 'POST' && action === 'register') {
-    const { name, email, password, role = 'customer' } = req.body || {};
+    const { name, email, password } = req.body || {};
     if (!name || !email || !password) return json(res, 400, { error: 'Name, email and password required.' });
-    if (!['customer', 'artist'].includes(role)) return json(res, 400, { error: 'Invalid role.' });
+    // SECURITY: always register as 'customer'. Never trust a client-supplied role —
+    // the handle_new_user() trigger copies user_metadata.role into profiles.role, so
+    // accepting it here would let anyone self-register as an artist (or bypass approval).
+    // Artist promotion happens ONLY via the admin approval endpoint.
+    const role = 'customer';
     const redirectUrl = `${process.env.SITE_URL || 'https://fluffypub.com'}/api/auth?action=confirm`;
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name, role }, emailRedirectTo: redirectUrl } });
     if (error) {

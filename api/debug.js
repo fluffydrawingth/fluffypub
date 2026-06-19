@@ -2,6 +2,12 @@
 const { supabase, requireAuth, getUser, json } = require('./_lib');
 
 module.exports = async function handler(req, res) {
+  // SECURITY: admin-only diagnostic endpoint. The generic POST upsert below can write
+  // arbitrary profile columns (including `role`), so the WHOLE handler must be admin-gated
+  // — otherwise any logged-in user could escalate themselves to admin.
+  const _admin = await requireAuth(req, res, ['admin']);
+  if (!_admin) return;
+
   // POST /api/debug?action=test-email  — admin: send a test email
   if (req.method === 'POST' && req.query.action === 'test-email') {
     const user = await getUser(req);
