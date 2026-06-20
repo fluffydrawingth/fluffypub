@@ -76,7 +76,7 @@ export default function AffiliateDashboardPage() {
           ← {tRaw('กลับ', 'Back')}
         </button>
 
-        <h1 style={{ fontSize:24, fontWeight:900, color:'#1e293b', marginBottom:6 }}>🤝 {tRaw('แดชบอร์ดแอฟฟิลิเอต','Affiliate Dashboard')}</h1>
+        <h1 style={{ fontSize:24, fontWeight:900, color:'#1e293b', marginBottom:6 }}>🤝 {tRaw('แดชบอร์ด Fluffy Creator','Fluffy Creator Dashboard')}</h1>
         <p style={{ fontSize:13, color:'#94a3b8', marginBottom:24 }}>{tRaw('คอมมิชชันจะนับเมื่อคำสั่งซื้อจัดส่งสำเร็จเท่านั้น','Commission counts only once an order is delivered.')}</p>
 
         {/* My code(s) */}
@@ -114,7 +114,7 @@ export default function AffiliateDashboardPage() {
         </div>
 
         {/* History */}
-        <h2 style={{ fontSize:18, fontWeight:800, color:'#1e293b', marginBottom:12 }}>{tRaw('ประวัติแอฟฟิลิเอต','Affiliate History')}</h2>
+        <h2 style={{ fontSize:18, fontWeight:800, color:'#1e293b', marginBottom:12 }}>{tRaw('ประวัติ Fluffy Creator','Fluffy Creator History')}</h2>
         <div style={{ background:'white', borderRadius:16, overflow:'auto', boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>
           <table style={{ width:'100%', borderCollapse:'collapse', minWidth:720 }}>
             <thead><tr style={{ background:'#f8fafc', borderBottom:'2px solid #f1f5f9' }}>
@@ -203,8 +203,8 @@ export default function AffiliateDashboardPage() {
 
         {/* Policies — full guidelines & agreement (commission terms etc.) */}
         <div style={{ display:'flex', gap:18, flexWrap:'wrap' as const, marginTop:24 }}>
-          <a onClick={()=>navigate('/affiliate-guidelines')} style={{ fontSize:13, color:p, cursor:'pointer', fontWeight:700 }}>📋 {tRaw('แนวทางแอฟฟิลิเอต','Affiliate Guidelines')}</a>
-          <a onClick={()=>navigate('/affiliate-agreement')} style={{ fontSize:13, color:p, cursor:'pointer', fontWeight:700 }}>📜 {tRaw('ข้อตกลงแอฟฟิลิเอต','Affiliate Agreement')}</a>
+          <a onClick={()=>navigate('/affiliate-guidelines')} style={{ fontSize:13, color:p, cursor:'pointer', fontWeight:700 }}>📋 {tRaw('แนวทาง Fluffy Creator','Fluffy Creator Guidelines')}</a>
+          <a onClick={()=>navigate('/affiliate-agreement')} style={{ fontSize:13, color:p, cursor:'pointer', fontWeight:700 }}>📜 {tRaw('ข้อตกลง Fluffy Creator','Fluffy Creator Agreement')}</a>
         </div>
       </div>
     </div>

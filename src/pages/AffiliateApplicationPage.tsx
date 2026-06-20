@@ -12,8 +12,8 @@ const DEFAULT_GUIDELINES = [
   { th: 'แชร์ Fluffy Pub อย่างเป็นธรรมชาติ', en: 'Share Fluffy Pub organically' },
   { th: 'ห้ามสแปมหรือโปรโมตที่ทำให้เข้าใจผิด', en: 'No spam or misleading promotions' },
   { th: 'ค่าคอมมิชชันจะได้รับหลังจากจัดส่งสำเร็จเท่านั้น', en: 'Commissions are earned only after successful delivery' },
-  { th: 'โค้ดแอฟฟิลิเอตใช้ได้กับสินค้าจริง (Physical) เท่านั้น', en: 'Affiliate codes apply to Physical Products only' },
-  { th: 'Fluffy Pub อาจยกเลิกสิทธิ์แอฟฟิลิเอตได้หากจำเป็น', en: 'Fluffy Pub may revoke affiliate access if necessary' },
+  { th: 'โค้ด Fluffy Creator ใช้ได้กับสินค้าจริง (Physical) เท่านั้น', en: 'Fluffy Creator codes apply to Physical Products only' },
+  { th: 'Fluffy Pub อาจยกเลิกสิทธิ์ Fluffy Creator ได้หากจำเป็น', en: 'Fluffy Pub may revoke Fluffy Creator access if necessary' },
 ];
 
 const PLATFORMS: { value: string; label: string }[] = [
@@ -74,7 +74,7 @@ export default function AffiliateApplicationPage() {
           {tRaw('คำขออยู่ระหว่างการตรวจสอบ', 'Application Under Review')}
         </h2>
         <p style={{ fontSize:14, color:'#64748b', lineHeight:1.7 }}>
-          {tRaw('ทีมงาน Fluffy Pub กำลังตรวจสอบคำขอแอฟฟิลิเอตของคุณ', 'The Fluffy Pub team is reviewing your affiliate application.')}
+          {tRaw('ทีมงาน Fluffy Pub กำลังตรวจสอบคำขอ Fluffy Creator ของคุณ', 'The Fluffy Pub team is reviewing your Fluffy Creator application.')}
         </p>
         <button onClick={() => navigate('/account')} style={{ marginTop:24, background:p, color:'white', border:'none', cursor:'pointer', padding:'11px 28px', borderRadius:14, fontSize:14, fontWeight:800, fontFamily:theme.fontFamily }}>
           {tRaw('กลับไปยังโปรไฟล์', 'Back to Profile')}
@@ -93,7 +93,7 @@ export default function AffiliateApplicationPage() {
         <div style={{ marginBottom:32 }}>
           <div style={{ fontSize:40, marginBottom:12 }}>🤝</div>
           <h1 style={{ fontSize:26, fontWeight:900, color:'#1e293b', margin:'0 0 12px' }}>
-            {tRaw('สมัครเป็นแอฟฟิลิเอต', 'Become an Affiliate')}
+            {tRaw('สมัครเป็น Fluffy Creator', 'Become a Fluffy Creator')}
           </h1>
           <p style={{ fontSize:15, color:'#64748b', lineHeight:1.7, margin:0 }}>
             {tRaw('แชร์ Fluffy Pub และรับค่าคอมมิชชันจากการแนะนำสินค้าจริง', 'Share Fluffy Pub and earn commission for referring physical product sales.')}
@@ -109,7 +109,7 @@ export default function AffiliateApplicationPage() {
         {/* Guidelines */}
         <div style={{ background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 10px rgba(0,0,0,0.05)', marginBottom:20 }}>
           <h2 style={{ fontSize:16, fontWeight:800, color:'#1e293b', margin:'0 0 16px' }}>
-            {tRaw('แนวทางสำหรับแอฟฟิลิเอต', 'Affiliate Guidelines')}
+            {tRaw('แนวทางสำหรับ Fluffy Creator', 'Fluffy Creator Guidelines')}
           </h2>
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {guidelines.map((g, i) => (
@@ -152,7 +152,7 @@ export default function AffiliateApplicationPage() {
           <label style={{ display:'flex', alignItems:'flex-start', gap:12, cursor:'pointer' }}>
             <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} style={{ width:18, height:18, marginTop:2, accentColor:p, cursor:'pointer', flexShrink:0 }} />
             <span style={{ fontSize:14, color:'#374151', lineHeight:1.6 }}>
-              {tRaw('ฉันได้อ่านและยอมรับแนวทางสำหรับแอฟฟิลิเอตแล้ว', 'I have read and agree to the Affiliate Guidelines.')}
+              {tRaw('ฉันได้อ่านและยอมรับแนวทางสำหรับ Fluffy Creator แล้ว', 'I have read and agree to the Fluffy Creator Guidelines.')}
             </span>
           </label>
         </div>

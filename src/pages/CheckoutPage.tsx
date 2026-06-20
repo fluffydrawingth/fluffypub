@@ -461,7 +461,7 @@ export default function CheckoutPage() {
             {affEligible && (
               <div style={{ marginTop: 14, borderTop: `1px solid ${p}15`, paddingTop: 14 }}>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: theme.textColor, marginBottom: 8 }}>
-                  🤝 {tRaw('โค้ดแอฟฟิลิเอต', 'Affiliate Code')} <span style={{ color: '#9ca3af', fontWeight: 500 }}>({tRaw('ไม่บังคับ', 'optional')})</span>
+                  🤝 {tRaw('โค้ด Fluffy Creator', 'Fluffy Creator Code')} <span style={{ color: '#9ca3af', fontWeight: 500 }}>({tRaw('ไม่บังคับ', 'optional')})</span>
                 </label>
                 {affApplied ? (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#d1fae5', border: '1.5px solid #6ee7b7', borderRadius: 12, padding: '10px 14px' }}>
@@ -528,7 +528,7 @@ export default function CheckoutPage() {
             )}
             {affiliateDiscount > 0 && !isUSD && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#059669', fontWeight: 700, marginBottom: 4 }}>
-                <span>{tRaw('ส่วนลดแอฟฟิลิเอต', 'Affiliate discount')} ({affApplied?.code})</span>
+                <span>{tRaw('ส่วนลด Fluffy Creator', 'Fluffy Creator discount')} ({affApplied?.code})</span>
                 <span>−฿{affiliateDiscount.toLocaleString('th-TH')}</span>
               </div>
             )}

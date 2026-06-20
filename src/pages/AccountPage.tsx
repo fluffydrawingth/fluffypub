@@ -701,14 +701,14 @@ function AffiliateCard({p,theme,user}:any) {
 
   return (
     <div style={{background:'white',borderRadius:20,padding:28,boxShadow:'0 2px 10px rgba(0,0,0,0.05)',marginTop:20}}>
-      <h3 style={{fontSize:18,fontWeight:800,color:'#1e293b',marginBottom:8}}>🤝 {tRaw('โปรแกรมแอฟฟิลิเอต','Affiliate Program')}</h3>
+      <h3 style={{fontSize:18,fontWeight:800,color:'#1e293b',marginBottom:8}}>🤝 {tRaw('โปรแกรม Fluffy Creator','Fluffy Creator Program')}</h3>
       <p style={{fontSize:13,color:'#64748b',marginBottom:18,lineHeight:1.6}}>
         {tRaw('แชร์ Fluffy Pub และรับค่าคอมมิชชันจากการแนะนำสินค้าจริง','Share Fluffy Pub and earn commission for referring physical product sales.')}
       </p>
 
       {showDashboard ? (
         <button onClick={()=>navigate('/affiliate-dashboard')} style={{background:p,color:'white',border:'none',cursor:'pointer',padding:'11px 24px',borderRadius:14,fontSize:14,fontWeight:800,fontFamily:theme.fontFamily}}>
-          {tRaw('เปิดแดชบอร์ดแอฟฟิลิเอต →','Affiliate Dashboard →')}
+          {tRaw('เปิดแดชบอร์ด Fluffy Creator →','Fluffy Creator Dashboard →')}
         </button>
       ) : status === 'pending' ? (
         <div style={{background:'#fef3c7',border:'1.5px solid #fde68a',borderRadius:12,padding:'12px 16px',fontSize:13,color:'#92400e',fontWeight:700}}>
@@ -718,7 +718,7 @@ function AffiliateCard({p,theme,user}:any) {
         <button onClick={()=>navigate('/affiliate-application')} style={{background:p,color:'white',border:'none',cursor:'pointer',padding:'11px 24px',borderRadius:14,fontSize:14,fontWeight:800,fontFamily:theme.fontFamily}}>
           {status === 'rejected'
             ? tRaw('สมัครใหม่อีกครั้ง','Apply Again')
-            : tRaw('สมัครเป็นแอฟฟิลิเอต →','Apply to Become an Affiliate →')}
+            : tRaw('สมัครเป็น Fluffy Creator →','Apply to Become a Fluffy Creator →')}
         </button>
       )}
     </div>

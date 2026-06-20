@@ -107,7 +107,7 @@ export default function Navbar() {
                   </button>
                   {isAffiliate && (
                     <button onClick={()=>{navigate('/affiliate-dashboard');setMenuOpen(false);}} style={{ width:'100%', padding:'10px 16px', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
-                      🤝 Affiliate Dashboard
+                      🤝 Fluffy Creator Dashboard
                     </button>
                   )}
                   <button onClick={()=>{navigate('/account/orders');setMenuOpen(false);}} style={{ width:'100%', padding:'10px 16px', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
@@ -165,7 +165,7 @@ export default function Navbar() {
                 </button>
                 {isAffiliate && (
                   <button onClick={()=>handleNav('/affiliate-dashboard')} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'11px 14px', borderRadius:12, fontSize:14, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
-                    🤝 Affiliate Dashboard
+                    🤝 Fluffy Creator Dashboard
                   </button>
                 )}
                 <button onClick={()=>handleNav('/account/orders')} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'11px 14px', borderRadius:12, fontSize:14, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>

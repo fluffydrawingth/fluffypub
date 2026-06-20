@@ -39,7 +39,7 @@ export default function AdminPage() {
 
   const TAB_LABELS: Record<Tab, string> = {
     dashboard:'Dashboard', products:'Products', orders:'Orders', artists:'Artists', 'artist-requests':'Artist Requests', payouts:'Artist Payouts',
-    'affiliate-requests':'Affiliate Requests', affiliates:'Affiliates',
+    'affiliate-requests':'Fluffy Creator Requests', affiliates:'Fluffy Creators',
     categories:'Categories', pages:'Pages', 'free-downloads':'Free Downloads', legal:'Legal Pages', theme:'Theme & CMS', lang:'Language CMS',
   };
 
@@ -63,8 +63,8 @@ export default function AdminPage() {
         <NavItem icon="🎨" label="Artists"      active={tab==='artists'}    onClick={()=>selectTab('artists')} />
         <NavItem icon="🙋" label="Artist Requests" active={tab==='artist-requests'} onClick={()=>selectTab('artist-requests')} />
         <NavItem icon="💸" label="Artist Payouts"  active={tab==='payouts'}          onClick={()=>selectTab('payouts')} />
-        <NavItem icon="🤝" label="Affiliate Requests" active={tab==='affiliate-requests'} onClick={()=>selectTab('affiliate-requests')} />
-        <NavItem icon="💵" label="Affiliates"      active={tab==='affiliates'}       onClick={()=>selectTab('affiliates')} />
+        <NavItem icon="🤝" label="Fluffy Creator Requests" active={tab==='affiliate-requests'} onClick={()=>selectTab('affiliate-requests')} />
+        <NavItem icon="💵" label="Fluffy Creators"      active={tab==='affiliates'}       onClick={()=>selectTab('affiliates')} />
         <NavItem icon="🏷️" label="Categories"   active={tab==='categories'} onClick={()=>selectTab('categories')} />
         <NavItem icon="📄" label="Pages"          active={tab==='pages'}           onClick={()=>selectTab('pages')} />
         <NavItem icon="⬇️" label="Free Downloads" active={tab==='free-downloads'}  onClick={()=>selectTab('free-downloads')} />
@@ -1824,7 +1824,7 @@ function AffiliateRequestsTab() {
     setTimeout(()=>setMsg(''), 4000);
   };
   const reject = async (id: string) => {
-    if (!confirm('Reject this affiliate request?')) return;
+    if (!confirm('Reject this Fluffy Creator request?')) return;
     const res = await api.rejectAffiliate(id);
     if (res?.error) { setMsg('⚠️ ' + res.error); return; }
     setMsg('✓ Rejected.'); load(); setTimeout(()=>setMsg(''), 4000);
@@ -1836,10 +1836,10 @@ function AffiliateRequestsTab() {
     setMsg('✓ Request deleted.'); load(); setTimeout(()=>setMsg(''), 4000);
   };
   const revoke = async (userId: string) => {
-    if (!confirm('Revoke affiliate access? Codes are disabled but all payout, commission and order history is kept.')) return;
+    if (!confirm('Revoke Fluffy Creator access? Codes are disabled but all payout, commission and order history is kept.')) return;
     const res = await api.revokeAffiliate(userId);
     if (res?.error) { setMsg('⚠️ ' + res.error); return; }
-    setMsg('✓ Affiliate access revoked.'); load(); setTimeout(()=>setMsg(''), 4000);
+    setMsg('✓ Fluffy Creator access revoked.'); load(); setTimeout(()=>setMsg(''), 4000);
   };
 
   const STATUS: Record<string,{c:string,bg:string,t:string}> = {
@@ -1848,8 +1848,8 @@ function AffiliateRequestsTab() {
 
   return (
     <div style={{padding:32}}>
-      <h1 style={{fontSize:28,fontWeight:900,color:'#111827',margin:'0 0 8px'}}>Affiliate Requests</h1>
-      <p style={{fontSize:13,color:'#6b7280',margin:'0 0 24px'}}>Approving grants affiliate access (keeps existing role) and creates the affiliate's code.</p>
+      <h1 style={{fontSize:28,fontWeight:900,color:'#111827',margin:'0 0 8px'}}>Fluffy Creator Requests</h1>
+      <p style={{fontSize:13,color:'#6b7280',margin:'0 0 24px'}}>Approving grants Fluffy Creator access (keeps existing role) and creates their code.</p>
       {msg&&<div style={{marginBottom:16,padding:'10px 16px',borderRadius:12,background:msg.startsWith('✓')?'#d1fae5':'#fee2e2',color:msg.startsWith('✓')?'#065f46':'#991b1b',fontSize:13,fontWeight:600}}>{msg}</div>}
       <div style={{...card,overflow:'hidden'}}>
         <table style={{width:'100%',borderCollapse:'collapse'}}>
@@ -1895,7 +1895,7 @@ function AffiliateRequestsTab() {
             </React.Fragment>
           ))}</tbody>
         </table>
-        {!loading&&requests.length===0&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>No affiliate requests yet.</div>}
+        {!loading&&requests.length===0&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>No Fluffy Creator requests yet.</div>}
         {loading&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>Loading...</div>}
       </div>
     </div>
@@ -1956,8 +1956,8 @@ function AffiliatesTab() {
 
   return (
     <div style={{padding:32}}>
-      <h1 style={{fontSize:28,fontWeight:900,color:'#111827',margin:'0 0 8px'}}>Affiliates</h1>
-      <p style={{fontSize:13,color:'#6b7280',margin:'0 0 24px'}}>Manage affiliate access, codes, earnings, and commission payouts. Commission counts only on delivered orders.</p>
+      <h1 style={{fontSize:28,fontWeight:900,color:'#111827',margin:'0 0 8px'}}>Fluffy Creators</h1>
+      <p style={{fontSize:13,color:'#6b7280',margin:'0 0 24px'}}>Manage Fluffy Creator access, codes, earnings, and commission payouts. Commission counts only on delivered orders.</p>
       {msg&&<div style={{marginBottom:16,padding:'10px 16px',borderRadius:12,background:msg.startsWith('✓')?'#d1fae5':'#fee2e2',color:msg.startsWith('✓')?'#065f46':'#991b1b',fontSize:13,fontWeight:600}}>{msg}</div>}
 
       {loading&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>Loading...</div>}
@@ -1966,9 +1966,9 @@ function AffiliatesTab() {
       {/* Affiliate selector (same pattern as Artist Payouts) */}
       {!loading&&affiliates.length>0&&(
         <div style={{...card,padding:16,marginBottom:16}}>
-          <label style={{display:'block',fontSize:12,fontWeight:800,color:'#374151',marginBottom:6}}>Select affiliate</label>
+          <label style={{display:'block',fontSize:12,fontWeight:800,color:'#374151',marginBottom:6}}>Select Fluffy Creator</label>
           <select value={selId} onChange={e=>{setSelId(e.target.value);setExpanded(null);}} style={{width:'100%',maxWidth:360,padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',background:'white'}}>
-            <option value="">— Select an affiliate —</option>
+            <option value="">— Select a Fluffy Creator —</option>
             {affiliates.map((a:any)=><option key={a.id} value={a.id}>{(a.username||a.name||a.email)}{a.affiliate_enabled?'':' (disabled)'}</option>)}
           </select>
         </div>
