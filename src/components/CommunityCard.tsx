@@ -66,7 +66,7 @@ export default function CommunityCard({ post }: { post: any }) {
               <span style={{ fontSize: 11, fontWeight: 700, color: p, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>📚 {post.product.title}</span>
             </button>
           ) : post.external_book_title ? (
-            <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>📖 {post.external_book_title}</span>
+            <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>📖 {post.external_book_title}{post.external_book_author ? ` by ${post.external_book_author}` : ''}</span>
           ) : <span />}
         </div>
 

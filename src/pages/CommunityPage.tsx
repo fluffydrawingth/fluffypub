@@ -7,10 +7,18 @@ import { api } from '../lib/api';
 import { makeImageVariants } from '../lib/imageThumb';
 import CommunityCard from '../components/CommunityCard';
 
-const PAGE = 16;
-const GRID = `.cm-grid{column-count:4;column-gap:16px}@media(max-width:1200px){.cm-grid{column-count:3}}@media(max-width:820px){.cm-grid{column-count:2;column-gap:12px}}@media(max-width:480px){.cm-grid{column-count:1}}.cm-grid>div{margin-bottom:16px}`;
+const PAGE = 20;
+const GRID = [
+  `.cm-grid{column-count:4;column-gap:16px}`,
+  `@media(min-width:1600px){.cm-grid{column-count:5}}`,
+  `@media(min-width:1400px) and (max-width:1599px){.cm-grid{column-count:4}}`,
+  `@media(min-width:1000px) and (max-width:1399px){.cm-grid{column-count:3}}`,
+  `@media(min-width:768px) and (max-width:999px){.cm-grid{column-count:2;column-gap:12px}}`,
+  `@media(max-width:767px){.cm-grid{column-count:1}}`,
+  `.cm-grid>div{margin-bottom:16px}`,
+].join('');
 
-type Filter = { kind: 'all' | 'palette' | 'marker' | 'month' | 'product'; value?: string; label?: string };
+type Filter = { kind: 'all' | 'palette' | 'marker' | 'medium' | 'month' | 'product'; value?: string; label?: string };
 
 function initialFilter(): Filter {
   const hash = window.location.hash || '';
@@ -33,7 +41,7 @@ export default function CommunityPage() {
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [cozy, setCozy] = useState<any[]>([]);
   const [curation, setCuration] = useState<{ featured_books: any[]; featured_creators: any[] }>({ featured_books: [], featured_creators: [] });
-  const [facets, setFacets] = useState<{ palettes: any[]; markers: any[]; books: any[] }>({ palettes: [], markers: [], books: [] });
+  const [facets, setFacets] = useState<{ palettes: any[]; markers: any[]; mediums: any[]; books: any[] }>({ palettes: [], markers: [], mediums: [], books: [] });
   const [posts, setPosts] = useState<any[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -42,7 +50,7 @@ export default function CommunityPage() {
   useEffect(() => {
     api.getCommunityCozyPicks().then((d: any) => setCozy(d?.posts || [])).catch(() => {});
     api.getCommunityCuration().then((d: any) => setCuration({ featured_books: d?.featured_books || [], featured_creators: d?.featured_creators || [] })).catch(() => {});
-    api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [], books: d?.books || [] })).catch(() => {});
+    api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [], mediums: d?.mediums || [], books: d?.books || [] })).catch(() => {});
   }, []);
 
   const loadPage = useCallback((pg: number, f: Filter) => {
@@ -50,6 +58,7 @@ export default function CommunityPage() {
     const opts: any = { page: pg, limit: PAGE };
     if (f.kind === 'palette') opts.palette = f.value;
     if (f.kind === 'marker') opts.marker = f.value;
+    if (f.kind === 'medium') opts.medium = f.value;
     if (f.kind === 'month') opts.month = f.value;
     if (f.kind === 'product') opts.product_id = f.value;
     api.getCommunityPosts(opts).then((d: any) => {
@@ -88,11 +97,37 @@ export default function CommunityPage() {
 
         {showForm && user && <UploadForm theme={theme} p={p} tRaw={tRaw} onPosted={onPosted} />}
 
-        {/* 1. New Creations */}
+        {/* 1. 🌷 Cozy Picks — horizontal carousel at top */}
+        {isAll && cozy.length > 0 && (
+          <div style={{ marginBottom: 28 }}>
+            <SectionHead theme={theme} title={`🌷 ${tRaw('คัดสรรโดยทีม', "Editor's Picks")}`} />
+            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
+              {cozy.map(post => (
+                <div key={'c' + post.id} style={{ minWidth: 160, maxWidth: 200, flexShrink: 0 }}>
+                  <CommunityCard post={post} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 2. 🔎 Explore — filter chips */}
+        {isAll && (facets.books.length || facets.markers.length || facets.mediums.length || facets.palettes.length) ? (
+          <div style={{ background: 'white', borderRadius: 16, padding: '14px 16px', marginBottom: 24, boxShadow: '0 1px 6px rgba(0,0,0,0.05)', border: `1px solid ${p}10` }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: theme.textColor, marginBottom: 10 }}>🔎 {tRaw('สำรวจตาม', 'Explore by')}</div>
+            {facets.books.length > 0 && <ChipRow theme={theme} p={p} title={`📚 ${tRaw('หนังสือ Fluffy Pub', 'Fluffy Pub Books')}`} items={facets.books.map(b => ({ key: b.id, label: b.title, count: b.count }))} onPick={(it) => choose({ kind: 'product', value: it.key, label: it.label })} />}
+            {facets.markers.length > 0 && <ChipRow theme={theme} p={p} title={`🖍️ ${tRaw('ปากกา / ชุดสี', 'Markers')}`} items={facets.markers.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'marker', value: it.key })} />}
+            {facets.mediums.length > 0 && <ChipRow theme={theme} p={p} title={`🎨 ${tRaw('เทคนิค', 'Mediums')}`} items={facets.mediums.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'medium', value: it.key })} />}
+            {facets.palettes.length > 0 && <ChipRow theme={theme} p={p} title={`🌷 ${tRaw('พาเลตต์', 'Palettes')}`} items={facets.palettes.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'palette', value: it.key })} />}
+          </div>
+        ) : null}
+
+        {/* 3. 🆕 New Creations */}
         <SectionHead theme={theme} title={
           isAll ? `🆕 ${tRaw('ผลงานใหม่ล่าสุด', 'New Creations')}`
             : filter.kind === 'palette' ? `🌷 ${filter.value}`
             : filter.kind === 'marker' ? `🖍️ ${filter.value}`
+            : filter.kind === 'medium' ? `🎨 ${filter.value}`
             : filter.kind === 'product' ? `📚 ${filter.label || tRaw('จากเล่มนี้', 'This book')}`
             : `📅 ${filter.value}`
         } onClear={!isAll ? () => setFilter({ kind: 'all' }) : undefined} clearLabel={tRaw('ล้าง', 'Clear')} />
@@ -101,52 +136,17 @@ export default function CommunityPage() {
           <Empty theme={theme} tRaw={tRaw} isAll={isAll} />
         ) : (
           <>
-            <div className="cm-grid">{posts.map(post => <CommunityCard key={post.id} post={post} />)}</div>
+            <div className="cm-grid">{posts.map(post => <div key={post.id}><CommunityCard post={post} /></div>)}</div>
             {loading && <div style={{ textAlign: 'center', padding: 24, color: '#9ca3af', fontSize: 26 }}>⏳</div>}
             {hasMore && !loading && (
               <div style={{ textAlign: 'center', marginTop: 20 }}>
-                <button onClick={() => { const np = page + 1; setPage(np); loadPage(np, filter); }} style={{ background: 'transparent', border: `2px solid ${p}`, color: p, cursor: 'pointer', padding: '10px 28px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily }}>{tRaw('ดูเพิ่มเติม', 'View more')}</button>
+                <button onClick={() => { const np = page + 1; setPage(np); loadPage(np, filter); }} style={{ background: 'transparent', border: `2px solid ${p}`, color: p, cursor: 'pointer', padding: '10px 28px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily }}>{tRaw('ดูเพิ่มเติม', 'Load more')}</button>
               </div>
             )}
           </>
         )}
 
-        {/* 2. Cozy Picks (admin-pinned, manual) */}
-        {isAll && cozy.length > 0 && (
-          <div style={{ marginTop: 36 }}>
-            <SectionHead theme={theme} title={`🌷 ${tRaw('คัดสรรโดยทีม', 'Cozy Picks')}`} />
-            <div className="cm-grid">{cozy.map(post => <CommunityCard key={'c' + post.id} post={post} />)}</div>
-          </div>
-        )}
-
-        {/* 3. Featured Books (curated by admin) */}
-        {isAll && curation.featured_books.length > 0 && (
-          <div style={{ marginTop: 36 }}>
-            <SectionHead theme={theme} title={`📚 ${tRaw('หนังสือแนะนำ', 'Featured Books')}`} />
-            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
-              {curation.featured_books.map((bk: any) => (
-                <button key={bk.id} onClick={() => navigate(`/products/${bk.slug}`)}
-                  style={{ background: 'white', border: `1.5px solid ${p}15`, borderRadius: 14, padding: '10px', cursor: 'pointer', minWidth: 120, maxWidth: 140, textAlign: 'center', fontFamily: theme.fontFamily, flexShrink: 0 }}>
-                  <div style={{ width: 100, height: 130, borderRadius: 8, overflow: 'hidden', background: '#f3f4f6', margin: '0 auto 8px' }}>
-                    <img src={bk.cover_image_url || bk.image} alt={bk.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#1e293b', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>{bk.title}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 4. Discover by Book / Palette / Marker (chip rows) */}
-        {isAll && (facets.books.length || facets.palettes.length || facets.markers.length) ? (
-          <div style={{ marginTop: 36 }}>
-            {facets.books.length > 0 && <ChipRow theme={theme} p={p} title={`📚 ${tRaw('ตามหนังสือ', 'By Book')}`} items={facets.books.map(b => ({ key: b.id, label: b.title, count: b.count }))} onPick={(it) => choose({ kind: 'product', value: it.key, label: it.label })} />}
-            {facets.palettes.length > 0 && <ChipRow theme={theme} p={p} title={`🎨 ${tRaw('ตามพาเลตต์', 'By Palette')}`} items={facets.palettes.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'palette', value: it.key })} />}
-            {facets.markers.length > 0 && <ChipRow theme={theme} p={p} title={`🖍️ ${tRaw('ตามชุดปากกา', 'By Marker')}`} items={facets.markers.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'marker', value: it.key })} />}
-          </div>
-        ) : null}
-
-        {/* 5. Featured Creators (admin-curated) */}
+        {/* 4. Featured Creators (admin-curated) */}
         {isAll && curation.featured_creators.length > 0 && (
           <div style={{ marginTop: 36 }}>
             <SectionHead theme={theme} title={`🌷 ${tRaw('ครีเอเตอร์แนะนำ', 'Featured Creators')}`} />
@@ -206,21 +206,25 @@ function Empty({ theme, tRaw, isAll }: any) {
 // ── Crop Modal ────────────────────────────────────────────────────────────────
 const CROP_SZ = 320;
 
-function CropModal({ file, theme, p, tRaw, onCrop, onCancel }: {
+function CropModal({ file, theme, p, tRaw, onCrop, onSkip, onCancel }: {
   file: File; theme: any; p: string; tRaw: any;
-  onCrop: (f: File) => void; onCancel: () => void;
+  onCrop: (f: File) => void; onSkip: () => void; onCancel: () => void;
 }) {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
-  const [box, setBox] = useState({ x: 20, y: 20, size: CROP_SZ - 40 });
-  const dragging = useRef<{ mode: 'move' | 'resize'; mx: number; my: number; bx: number; by: number; bs: number } | null>(null);
+  // box is in canvas display coords; width and height are independent (free aspect ratio)
+  const [box, setBox] = useState({ x: 20, y: 20, w: CROP_SZ - 40, h: CROP_SZ - 40 });
+  const dragging = useRef<{ mode: 'move' | 'resize'; mx: number; my: number; bx: number; by: number; bw: number; bh: number } | null>(null);
 
   useEffect(() => {
     const url = URL.createObjectURL(file);
     const image = new Image();
     image.onload = () => {
       setImg(image);
-      const s = CROP_SZ * 0.82;
-      setBox({ x: (CROP_SZ - s) / 2, y: (CROP_SZ - s) / 2, size: s });
+      // Default crop: full image with natural aspect ratio
+      const aspect = image.naturalWidth / image.naturalHeight;
+      let w = CROP_SZ * 0.9, h = w / aspect;
+      if (h > CROP_SZ * 0.9) { h = CROP_SZ * 0.9; w = h * aspect; }
+      setBox({ x: (CROP_SZ - w) / 2, y: (CROP_SZ - h) / 2, w, h });
     };
     image.src = url;
     return () => URL.revokeObjectURL(url);
@@ -231,7 +235,7 @@ function CropModal({ file, theme, p, tRaw, onCrop, onCancel }: {
   const onDown = (e: React.PointerEvent, mode: 'move' | 'resize') => {
     e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    dragging.current = { mode, mx: e.clientX, my: e.clientY, bx: box.x, by: box.y, bs: box.size };
+    dragging.current = { mode, mx: e.clientX, my: e.clientY, bx: box.x, by: box.y, bw: box.w, bh: box.h };
   };
 
   const onMove = (e: React.PointerEvent) => {
@@ -239,10 +243,11 @@ function CropModal({ file, theme, p, tRaw, onCrop, onCancel }: {
     if (!d) return;
     const dx = e.clientX - d.mx, dy = e.clientY - d.my;
     if (d.mode === 'move') {
-      setBox(b => ({ ...b, x: clamp(d.bx + dx, 0, CROP_SZ - b.size), y: clamp(d.by + dy, 0, CROP_SZ - b.size) }));
+      setBox(b => ({ ...b, x: clamp(d.bx + dx, 0, CROP_SZ - b.w), y: clamp(d.by + dy, 0, CROP_SZ - b.h) }));
     } else {
-      const ns = clamp(d.bs + Math.max(dx, dy), 40, CROP_SZ - Math.max(d.bx, d.by));
-      setBox(b => ({ ...b, size: ns }));
+      const nw = clamp(d.bw + dx, 40, CROP_SZ - d.bx);
+      const nh = clamp(d.bh + dy, 40, CROP_SZ - d.by);
+      setBox(b => ({ ...b, w: nw, h: nh }));
     }
   };
 
@@ -252,33 +257,34 @@ function CropModal({ file, theme, p, tRaw, onCrop, onCancel }: {
     const rw = img.naturalWidth * scale, rh = img.naturalHeight * scale;
     const ox = (CROP_SZ - rw) / 2, oy = (CROP_SZ - rh) / 2;
     const sx = (box.x - ox) / scale, sy = (box.y - oy) / scale;
-    const sw = box.size / scale;
+    const sw = box.w / scale, sh = box.h / scale;
     const off = document.createElement('canvas');
-    off.width = Math.round(sw); off.height = Math.round(sw);
-    off.getContext('2d')!.drawImage(img, sx, sy, sw, sw, 0, 0, off.width, off.height);
+    off.width = Math.round(sw); off.height = Math.round(sh);
+    off.getContext('2d')!.drawImage(img, sx, sy, sw, sh, 0, 0, off.width, off.height);
     off.toBlob(blob => { if (blob) onCrop(new File([blob], file.name, { type: 'image/jpeg' })); }, 'image/jpeg', 0.92);
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 2000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 2000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: 16 }}>
       <div style={{ color: 'white', fontWeight: 800, fontSize: 15, fontFamily: theme.fontFamily }}>✂️ {tRaw('ปรับตัดรูป', 'Crop artwork')}</div>
-      <div style={{ position: 'relative', width: CROP_SZ, height: CROP_SZ, background: '#111', overflow: 'hidden', borderRadius: 12, userSelect: 'none' }}
+      <div style={{ position: 'relative', width: CROP_SZ, height: CROP_SZ, background: '#111', overflow: 'hidden', borderRadius: 12, userSelect: 'none', flexShrink: 0 }}
         onPointerMove={onMove} onPointerUp={() => { dragging.current = null; }}>
-        {img && <img src={img.src} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+        {img && <img src={img.src} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />}
         <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-          <defs><mask id="cm-hole"><rect width={CROP_SZ} height={CROP_SZ} fill="white" /><rect x={box.x} y={box.y} width={box.size} height={box.size} fill="black" /></mask></defs>
+          <defs><mask id="cm-hole"><rect width={CROP_SZ} height={CROP_SZ} fill="white" /><rect x={box.x} y={box.y} width={box.w} height={box.h} fill="black" /></mask></defs>
           <rect width={CROP_SZ} height={CROP_SZ} fill="rgba(0,0,0,0.55)" mask="url(#cm-hole)" />
-          <rect x={box.x} y={box.y} width={box.size} height={box.size} fill="none" stroke="white" strokeWidth={2} strokeDasharray="6 3" />
-          {([[box.x,box.y],[box.x+box.size-14,box.y],[box.x,box.y+box.size-14],[box.x+box.size-14,box.y+box.size-14]] as [number,number][]).map(([cx,cy],i) => (
+          <rect x={box.x} y={box.y} width={box.w} height={box.h} fill="none" stroke="white" strokeWidth={2} strokeDasharray="6 3" />
+          {([[box.x,box.y],[box.x+box.w-14,box.y],[box.x,box.y+box.h-14],[box.x+box.w-14,box.y+box.h-14]] as [number,number][]).map(([cx,cy],i) => (
             <rect key={i} x={cx} y={cy} width={14} height={14} fill="none" stroke="white" strokeWidth={3} />
           ))}
         </svg>
-        <div onPointerDown={e => onDown(e, 'move')} style={{ position: 'absolute', left: box.x + 2, top: box.y + 2, width: box.size - 20, height: box.size - 20, cursor: 'move' }} />
-        <div onPointerDown={e => onDown(e, 'resize')} style={{ position: 'absolute', left: box.x + box.size - 18, top: box.y + box.size - 18, width: 18, height: 18, background: p, borderRadius: 4, cursor: 'se-resize', opacity: 0.9 }} />
+        <div onPointerDown={e => onDown(e, 'move')} style={{ position: 'absolute', left: box.x + 2, top: box.y + 2, width: box.w - 20, height: box.h - 20, cursor: 'move' }} />
+        <div onPointerDown={e => onDown(e, 'resize')} style={{ position: 'absolute', left: box.x + box.w - 18, top: box.y + box.h - 18, width: 18, height: 18, background: p, borderRadius: 4, cursor: 'se-resize', opacity: 0.9 }} />
       </div>
-      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: theme.fontFamily }}>{tRaw('ลากเพื่อย้าย · ลากมุมขวาล่างเพื่อปรับขนาด', 'Drag to move · drag corner to resize')}</div>
-      <div style={{ display: 'flex', gap: 10 }}>
+      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: theme.fontFamily }}>{tRaw('ลากเพื่อย้าย · ลากมุมขวาล่างเพื่อปรับขนาด (อิสระ)', 'Drag to move · drag corner to resize freely')}</div>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
         <button onClick={onCancel} style={{ padding: '10px 22px', borderRadius: 22, border: '2px solid rgba(255,255,255,0.5)', background: 'transparent', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: theme.fontFamily }}>{tRaw('ยกเลิก', 'Cancel')}</button>
+        <button onClick={onSkip} style={{ padding: '10px 22px', borderRadius: 22, border: '2px solid rgba(255,255,255,0.5)', background: 'transparent', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: theme.fontFamily }}>🖼️ {tRaw('ใช้รูปต้นฉบับ', 'Use original')}</button>
         <button onClick={confirm} style={{ padding: '10px 24px', borderRadius: 22, border: 'none', background: p, color: 'white', cursor: 'pointer', fontWeight: 800, fontFamily: theme.fontFamily }}>✂️ {tRaw('ตัดรูป', 'Crop & use')}</button>
       </div>
     </div>
@@ -287,8 +293,9 @@ function CropModal({ file, theme, p, tRaw, onCrop, onCancel }: {
 
 // ── Upload form ───────────────────────────────────────────────────────────────
 function UploadForm({ theme, p, tRaw, onPosted }: any) {
-  const [cropFile, setCropFile] = useState<File | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [origFile, setOrigFile] = useState<File | null>(null);   // raw file from picker
+  const [file, setFile] = useState<File | null>(null);           // file to upload (cropped or orig)
+  const [showCrop, setShowCrop] = useState(false);
   const [preview, setPreview] = useState('');
   const [bookMode, setBookMode] = useState<'product' | 'external'>('product');
   const [prodQuery, setProdQuery] = useState('');
@@ -311,7 +318,8 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
     setProdResults(allProducts.filter(pr => (pr.title || '').toLowerCase().includes(q)).slice(0, 6));
   }, [prodQuery, allProducts]);
 
-  const pickFile = (f: File) => { setFile(f); setPreview(URL.createObjectURL(f)); };
+  const applyFile = (f: File) => { setFile(f); setPreview(URL.createObjectURL(f)); setShowCrop(false); };
+  const onPickRaw = (f: File) => { setOrigFile(f); setShowCrop(true); };
   const fld = { width: '100%', padding: '10px 13px', borderRadius: 10, border: `1.5px solid ${p}30`, fontSize: 14, outline: 'none', fontFamily: theme.fontFamily, boxSizing: 'border-box' as const };
 
   const submit = async () => {
@@ -336,7 +344,14 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
 
   return (
     <>
-    {cropFile && <CropModal file={cropFile} theme={theme} p={p} tRaw={tRaw} onCrop={f => { pickFile(f); setCropFile(null); }} onCancel={() => setCropFile(null)} />}
+    {showCrop && origFile && (
+      <CropModal
+        file={origFile} theme={theme} p={p} tRaw={tRaw}
+        onCrop={f => applyFile(f)}
+        onSkip={() => applyFile(origFile)}
+        onCancel={() => { if (!file) { setOrigFile(null); } setShowCrop(false); }}
+      />
+    )}
     <div style={{ background: 'white', borderRadius: 18, padding: 20, boxShadow: '0 2px 14px rgba(0,0,0,0.06)', margin: '0 0 24px', border: `1.5px solid ${p}15` }}>
       <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1e293b', margin: '0 0 16px' }}>🎨 {tRaw('แบ่งปันผลงานของคุณ', 'Share your artwork')}</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 18 }} className="cm-form">
@@ -344,12 +359,19 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
         {/* Left: artwork upload */}
         <div>
           <label style={{ display: 'block', cursor: 'pointer' }}>
-            <div style={{ aspectRatio: '4/5', borderRadius: 14, border: `2px dashed ${p}40`, background: preview ? '#000' : p + '08', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-              {preview ? <img src={preview} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ color: p, fontWeight: 700, fontSize: 13, textAlign: 'center', padding: 16 }}>🖼️ {tRaw('แตะเพื่ออัปโหลดรูปผลงาน', 'Tap to upload artwork')}</span>}
+            <div style={{ aspectRatio: '4/5', borderRadius: 14, border: `2px dashed ${p}40`, background: preview ? '#f8fafc' : p + '08', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              {preview
+                ? <img src={preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <span style={{ color: p, fontWeight: 700, fontSize: 13, textAlign: 'center', padding: 16 }}>🖼️ {tRaw('แตะเพื่ออัปโหลดรูปผลงาน', 'Tap to upload artwork')}</span>}
             </div>
-            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) setCropFile(f); e.target.value = ''; }} />
+            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onPickRaw(f); e.target.value = ''; }} />
           </label>
-          {preview && <button onClick={() => { setFile(null); setPreview(''); }} style={{ marginTop: 6, width: '100%', background: 'none', border: `1px solid #e5e7eb`, borderRadius: 8, padding: '5px', fontSize: 12, color: '#94a3b8', cursor: 'pointer', fontFamily: theme.fontFamily }}>✕ {tRaw('เลือกรูปใหม่', 'Change image')}</button>}
+          {preview && (
+            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+              <button onClick={() => setShowCrop(true)} style={{ flex: 1, background: 'none', border: `1px solid ${p}40`, borderRadius: 8, padding: '5px', fontSize: 12, color: p, cursor: 'pointer', fontWeight: 700, fontFamily: theme.fontFamily }}>✂️ {tRaw('แก้ไขการตัด', 'Edit crop')}</button>
+              <button onClick={() => { setFile(null); setOrigFile(null); setPreview(''); }} style={{ flex: 1, background: 'none', border: `1px solid #e5e7eb`, borderRadius: 8, padding: '5px', fontSize: 12, color: '#94a3b8', cursor: 'pointer', fontFamily: theme.fontFamily }}>✕ {tRaw('เปลี่ยนรูป', 'Change')}</button>
+            </div>
+          )}
         </div>
         {/* Right: metadata */}
         <div>

@@ -63,6 +63,26 @@ async function decorate(posts, viewerId, guestId) {
   });
 }
 
+// Submit each tag value as a pending community_tag if not already in the library.
+// Silently skips errors (table may not exist yet) and ignores already-existing tags.
+async function autoSubmitTags(mediums = [], markers = [], palettes = []) {
+  const pairs = [
+    ...mediums.map(n => ({ type: 'medium', name: n })),
+    ...markers.map(n => ({ type: 'marker', name: n })),
+    ...palettes.map(n => ({ type: 'palette', name: n })),
+  ];
+  for (const { type, name } of pairs) {
+    const normalized = String(name).trim().toLowerCase();
+    const display = String(name).trim();
+    try {
+      const { data: existing } = await supabase.from('community_tags').select('id').eq('type', type).eq('normalized', normalized).single();
+      if (!existing) {
+        await supabase.from('community_tags').insert({ type, name: display, normalized, status: 'pending' });
+      }
+    } catch (_) { /* table may not exist yet — ignore */ }
+  }
+}
+
 module.exports = async function handler(req, res) {
   const { action } = req.query;
 
@@ -132,11 +152,11 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { success: true });
   }
 
-  // GET list — paginated, newest first; optional product/user/palette/marker filters
+  // GET list — paginated, newest first; optional product/user/palette/marker/medium filters
   if (req.method === 'GET' && (action === 'list' || !action)) {
     const viewer = await getUser(req);
     const page = Math.max(0, parseInt(req.query.page) || 0);
-    const limit = Math.min(PAGE_LIMIT_MAX, Math.max(1, parseInt(req.query.limit) || 12));
+    const limit = Math.min(PAGE_LIMIT_MAX, Math.max(1, parseInt(req.query.limit) || 20));
     const from = page * limit;
     let q = supabase.from('community_posts').select('*', { count: 'exact' })
       .eq('status', 'published').order('created_at', { ascending: false });
@@ -144,6 +164,7 @@ module.exports = async function handler(req, res) {
     if (req.query.user_id) q = q.eq('user_id', req.query.user_id);
     if (req.query.palette) q = q.contains('palettes', [req.query.palette]);
     if (req.query.marker) q = q.contains('markers', [req.query.marker]);
+    if (req.query.medium) q = q.contains('mediums', [req.query.medium]);
     if (/^\d{4}-\d{2}$/.test(req.query.month || '')) {
       const [y, m] = req.query.month.split('-').map(Number);
       const start = new Date(Date.UTC(y, m - 1, 1)).toISOString();
@@ -222,13 +243,19 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { creators });
   }
 
-  // GET facets — popular palettes, marker sets & books for filter chips
+  // GET facets — popular palettes, marker sets, mediums & books for filter chips
   if (req.method === 'GET' && action === 'facets') {
-    const { data } = await supabase.from('community_posts').select('palettes,markers,product_id').eq('status', 'published').order('created_at', { ascending: false }).range(0, 499);
-    const countTags = (key) => {
-      const t = {};
-      (data || []).forEach(p => (p[key] || []).forEach(x => { const v = String(x).trim(); if (v) t[v] = (t[v] || 0) + 1; }));
-      return Object.keys(t).sort((a, b) => t[b] - t[a]).slice(0, 12).map(name => ({ name, count: t[name] }));
+    const { data } = await supabase.from('community_posts').select('palettes,markers,mediums,product_id').eq('status', 'published').order('created_at', { ascending: false }).range(0, 999);
+    // Case-insensitive dedup: group by lowercase key, keep most-used display name
+    const countTags = (key, limit = 16) => {
+      const t = {}; // lowercase -> { count, display }
+      (data || []).forEach(p => (p[key] || []).forEach(x => {
+        const v = String(x).trim(); if (!v) return;
+        const k = v.toLowerCase();
+        if (!t[k]) t[k] = { count: 0, display: v };
+        t[k].count++;
+      }));
+      return Object.values(t).sort((a, b) => b.count - a.count).slice(0, limit).map(({ display, count }) => ({ name: display, count }));
     };
     // Books: count by product_id, resolve titles
     const bc = {};
@@ -239,7 +266,7 @@ module.exports = async function handler(req, res) {
       const { data: prods } = await supabase.from('products').select('id,title,slug').in('id', bookIds);
       books = bookIds.map(id => { const pr = (prods || []).find(x => x.id === id); return pr ? { id, title: pr.title, slug: pr.slug, count: bc[id] } : null; }).filter(Boolean);
     }
-    return json(res, 200, { palettes: countTags('palettes'), markers: countTags('markers'), books });
+    return json(res, 200, { palettes: countTags('palettes'), markers: countTags('markers'), mediums: countTags('mediums'), books });
   }
 
   // GET cozy-picks — admin-pinned featured posts (manual, no expiry, max 6)
@@ -303,6 +330,8 @@ module.exports = async function handler(req, res) {
     };
     const { data, error } = await supabase.from('community_posts').insert(row).select().single();
     if (error) return json(res, 400, { error: error.message });
+    // Fire-and-forget: submit custom tags to the Tag Library as pending
+    autoSubmitTags(row.mediums, row.markers, row.palettes).catch(() => {});
     const [post] = await decorate([data], user.id);
     return json(res, 201, post);
   }
@@ -341,6 +370,7 @@ module.exports = async function handler(req, res) {
     if (asArr(b.palettes) !== undefined) updates.palettes = asArr(b.palettes);
     const { data, error } = await supabase.from('community_posts').update(updates).eq('id', id).select().single();
     if (error) return json(res, 400, { error: error.message });
+    autoSubmitTags(updates.mediums || [], updates.markers || [], updates.palettes || []).catch(() => {});
     const [post] = await decorate([data], user.id);
     return json(res, 200, post);
   }

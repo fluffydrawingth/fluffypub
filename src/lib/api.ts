@@ -113,12 +113,13 @@ export const api = {
   deleteAffiliatePayout: (id: string) => fetch(`/api/users?action=affiliate-payout&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 
   // Community — "Share Your Colorful World"
-  getCommunityPosts: (opts: { page?: number; limit?: number; product_id?: string; user_id?: string; palette?: string; marker?: string; month?: string } = {}) => {
-    const q = new URLSearchParams({ action: 'list', page: String(opts.page ?? 0), limit: String(opts.limit ?? 12) });
+  getCommunityPosts: (opts: { page?: number; limit?: number; product_id?: string; user_id?: string; palette?: string; marker?: string; medium?: string; month?: string } = {}) => {
+    const q = new URLSearchParams({ action: 'list', page: String(opts.page ?? 0), limit: String(opts.limit ?? 20) });
     if (opts.product_id) q.set('product_id', opts.product_id);
     if (opts.user_id) q.set('user_id', opts.user_id);
     if (opts.palette) q.set('palette', opts.palette);
     if (opts.marker) q.set('marker', opts.marker);
+    if (opts.medium) q.set('medium', opts.medium);
     if (opts.month) q.set('month', opts.month);
     q.set('guest_id', getGuestId());
     return fetch(`/api/community?${q.toString()}`, { headers: h() }).then(r => r.json());
