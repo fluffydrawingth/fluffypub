@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { captureRefFromHash } from './ref';
 
 export type Route = { path: string; params?: Record<string, string> };
 interface RouterCtx { route: Route; navigate: (path: string) => void; }
@@ -8,7 +9,8 @@ const RouterContext = createContext<RouterCtx>({ route: { path: '/' }, navigate:
 export function RouterProvider({ children }: { children: React.ReactNode }) {
   const [route, setRoute] = useState<Route>(() => parse(window.location.hash.slice(1) || '/'));
   useEffect(() => {
-    const h = () => { setRoute(parse(window.location.hash.slice(1) || '/')); window.scrollTo(0,0); };
+    captureRefFromHash(); // initial load may carry a creator ?ref=
+    const h = () => { captureRefFromHash(); setRoute(parse(window.location.hash.slice(1) || '/')); window.scrollTo(0,0); };
     window.addEventListener('hashchange', h);
     return () => window.removeEventListener('hashchange', h);
   }, []);

@@ -5,6 +5,7 @@ import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
 import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
+import { getActiveRef, clearRef } from '../lib/ref';
 
 export default function CheckoutPage() {
   const { theme } = useTheme();
@@ -165,12 +166,16 @@ export default function CheckoutPage() {
         payment_method: paymentMethod,
         currency,
         affiliateCode: affEligible && affApplied ? affApplied.code : undefined,
+        // Fluffy Creator referral (last-click). Ignored server-side if an affiliate code
+        // was applied, if there are no physical items, or if the buyer is the creator.
+        refCreatorId: getActiveRef() || undefined,
       });
       if (result?.error) { setError(result.error); setBusy(false); return; }
       setFrozenTotalTHB(totalTHB);
       setFrozenTotalUSD(totalUSD);
       setFrozenUsePayPal(currency === 'USD' && !!paypal?.enabled && !!paypal?.username && isDigitalOnly);
       clear();
+      clearRef(); // referral consumed on this order
       setOrder(result);
       setStep('payment');
       if (user) {

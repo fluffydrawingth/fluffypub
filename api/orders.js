@@ -528,7 +528,7 @@ module.exports = async function handler(req, res) {
 
   // POST create order
   if (req.method === 'POST' && !action) {
-    const { items, customerName, customerEmail, customerPhone, shippingAddress, promoCode, affiliateCode, total_thb, total_usd, shipping_thb: shippingFromCart, subtotal_thb, subtotal_usd, payment_method, currency: reqCurrency } = req.body || {};
+    const { items, customerName, customerEmail, customerPhone, shippingAddress, promoCode, affiliateCode, refCreatorId, total_thb, total_usd, shipping_thb: shippingFromCart, subtotal_thb, subtotal_usd, payment_method, currency: reqCurrency } = req.body || {};
     if (!items?.length || !customerName || !customerEmail) return json(res, 400, { error: 'items, name, email required' });
 
     // Validate products exist and get image/artist data only (do NOT override prices or types)
@@ -591,6 +591,20 @@ module.exports = async function handler(req, res) {
       // check above). One affiliate code per order is still enforced (single field).
       const discount = Math.min(Number(codeRow.discount_amount || 0), physicalSubtotalTHB);
       affiliate = { code, user_id: codeRow.user_id, discount_thb: discount, commission_thb: Number(codeRow.affiliate_commission || 0) };
+    }
+
+    // ── Fluffy Creator referral (?ref=<creatorId>) — commission only, NO discount ──
+    // Applies only when NO affiliate code was used, the order has physical items, it's a
+    // THB order, the buyer isn't the creator, and the creator is an enabled Fluffy Creator.
+    // Commission attributes to the creator via the same affiliate_user_id field, so it
+    // flows into the existing commission/payout system automatically.
+    if (!affiliate && refCreatorId && hasPhysical && reqCurrency !== 'USD' && (!authUser || authUser.id !== refCreatorId)) {
+      const { data: creator } = await supabase.from('profiles').select('id,affiliate_enabled').eq('id', refCreatorId).single();
+      if (creator && creator.affiliate_enabled) {
+        const { data: codes } = await supabase.from('affiliate_codes').select('affiliate_commission').eq('user_id', refCreatorId).eq('active', true).limit(1);
+        const commission = (codes && codes.length) ? Number(codes[0].affiliate_commission || 0) : 20;
+        affiliate = { code: null, user_id: refCreatorId, discount_thb: 0, commission_thb: commission };
+      }
     }
 
     // Affiliate discount reduces the THB grand total (server is authoritative).

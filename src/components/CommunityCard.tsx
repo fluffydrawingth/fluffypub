@@ -60,7 +60,7 @@ export default function CommunityCard({ post }: { post: any }) {
       <div style={{ padding: '12px 14px 14px' }}>
         {/* Book used */}
         {post.product ? (
-          <button onClick={() => navigate(`/products/${post.product.slug}`)}
+          <button onClick={() => navigate(`/products/${post.product.slug}${creator?.id ? `?ref=${creator.id}` : ''}`)}
             style={{ background: p + '12', color: p, border: 'none', cursor: 'pointer', borderRadius: 10, padding: '4px 10px', fontSize: 11, fontWeight: 800, fontFamily: theme.fontFamily, marginBottom: 8, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             📚 {post.product.title}
           </button>
