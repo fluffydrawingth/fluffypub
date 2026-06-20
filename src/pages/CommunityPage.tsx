@@ -404,6 +404,12 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
 
 // Tag block backed by the Tag Library — shows approved tags as chips.
 // Typing a custom name and pressing + submits it as a pending tag suggestion.
+const DEFAULT_TAGS: Record<string, string[]> = {
+  medium: ['Alcohol Marker', 'Acrylic', 'Colored Pencil', 'Watercolor', 'Gel Pen', 'Crayon', 'Digital', 'Other'],
+  marker: ['Ohuhu Pastel 48', 'Ohuhu Midtone 48', 'Ohuhu Kaala B Series', 'Copic Sketch', 'Prismacolor'],
+  palette: [],
+};
+
 function LibraryTagBlock({ type, label, values, setValues, addPh, theme, p, fld, tRaw }: any) {
   const [approved, setApproved] = useState<string[]>([]);
   const [custom, setCustom] = useState('');
@@ -425,7 +431,11 @@ function LibraryTagBlock({ type, label, values, setValues, addPh, theme, p, fld,
     setCustom('');
   };
 
-  const allOptions = [...approved, ...values.filter((v: string) => !approved.includes(v))];
+  // Merge: defaults first, then any extra approved tags from DB, then custom selections not in either
+  const defaults = DEFAULT_TAGS[type] || [];
+  const dbExtra = approved.filter(a => !defaults.includes(a));
+  const knownOptions = [...defaults, ...dbExtra];
+  const allOptions = [...knownOptions, ...values.filter((v: string) => !knownOptions.includes(v))];
 
   return (
     <div style={{ marginBottom: 12 }}>
