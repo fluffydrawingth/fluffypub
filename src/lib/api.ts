@@ -136,6 +136,14 @@ export const api = {
   getCommunityCreators: (limit = 12) => fetch(`/api/community?action=creators&limit=${limit}`).then(r => r.json()),
   getCommunityFacets: () => fetch('/api/community?action=facets').then(r => r.json()),
   getCommunityArchive: () => fetch('/api/community?action=archive').then(r => r.json()),
+  getCommunityCozyPicks: () => fetch(`/api/community?action=cozy-picks&guest_id=${getGuestId()}`, { headers: h() }).then(r => r.json()),
+  updateCommunityPost: (id: string, data: any) => fetch(`/api/community?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  // Admin — Community Dashboard
+  getCommunityStats: () => fetch('/api/community?action=admin-stats', { headers: h() }).then(r => r.json()),
+  getCommunityAdminList: (status = '', page = 0) => fetch(`/api/community?action=admin-list&status=${status}&page=${page}`, { headers: h() }).then(r => r.json()),
+  setCommunityStatus: (id: string, status: string) => fetch(`/api/community?action=admin-status&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify({ status }) }).then(r => r.json()),
+  featureCommunityPost: (id: string, on: boolean) => fetch(`/api/community?action=admin-feature&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify({ on }) }).then(r => r.json()),
+  mergeCommunityTags: (field: string, from: string[], to: string) => fetch('/api/community?action=admin-merge-tags', { method: 'POST', headers: h(), body: JSON.stringify({ field, from, to }) }).then(r => r.json()),
 
   // Analytics
   getAnalytics: () => fetch('/api/analytics', { headers: h() }).then(r => r.json()),

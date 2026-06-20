@@ -36,6 +36,7 @@ export interface ThemeConfig {
   maintenance_mode: boolean;
   paypal?: { enabled: boolean; username: string; email: string; usd_rate: number; instructions: string };
   bankTransfer?: { enabled?: boolean; bank_name?: string; account_name?: string; account_number?: string };
+  community?: { palette?: string; book?: string; marker?: string; creator?: string }; // Weekly Planner
   labels: {
     featured_eyebrow: string; featured_eyebrow_th?: string;
     featured_title: string; featured_title_th?: string;

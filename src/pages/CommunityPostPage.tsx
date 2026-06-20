@@ -29,6 +29,16 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
   const [commentBody, setCommentBody] = useState('');
   const [commenting, setCommenting] = useState(false);
 
+  // Owner edit
+  const [editing, setEditing] = useState(false);
+  const [eCaption, setECaption] = useState('');
+  const [eMediums, setEMediums] = useState('');
+  const [eMarkers, setEMarkers] = useState('');
+  const [ePalettes, setEPalettes] = useState('');
+  const [eExtTitle, setEExtTitle] = useState('');
+  const [eExtAuthor, setEExtAuthor] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
   useEffect(() => {
     setLoading(true);
     api.getCommunityPost(postId).then((d: any) => {
@@ -58,6 +68,25 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
     if (res && !res.error) { setMine(res.myReactions || []); }
   };
 
+  const startEdit = () => {
+    setECaption(post.caption || '');
+    setEMediums((post.mediums || []).join(', '));
+    setEMarkers((post.markers || []).join(', '));
+    setEPalettes((post.palettes || []).join(', '));
+    setEExtTitle(post.external_book_title || '');
+    setEExtAuthor(post.external_book_author || '');
+    setEditing(true);
+  };
+  const csv = (s: string) => s.split(',').map(x => x.trim()).filter(Boolean);
+  const saveEdit = async () => {
+    setSavingEdit(true);
+    const body: any = { caption: eCaption, mediums: csv(eMediums), markers: csv(eMarkers), palettes: csv(ePalettes) };
+    if (!post.product) { body.external_book_title = eExtTitle.trim() || null; body.external_book_author = eExtAuthor.trim() || null; }
+    const res = await api.updateCommunityPost(postId, body);
+    setSavingEdit(false);
+    if (res && !res.error) { setPost(res); setEditing(false); }
+  };
+
   const submitComment = async () => {
     if (!user) { navigate('/login'); return; }
     const b = commentBody.trim();
@@ -79,6 +108,8 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
 
   const c = post.creator;
   const badge = c?.badge === 'artist' ? '🎨' : c?.badge === 'creator' ? '🌷' : '';
+  const isOwner = !!(user && c && user.id === c.id);
+  const efld = { width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${p}30`, fontSize: 14, outline: 'none', fontFamily: theme.fontFamily, boxSizing: 'border-box' as const };
   const created = post.created_at ? new Date(post.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '';
   const chips = (items: string[], emoji: string, bg: string, color: string) => (items || []).map((m: string) => (
     <span key={m} style={{ background: bg, color, borderRadius: 20, padding: '4px 11px', fontSize: 12, fontWeight: 700 }}>{emoji} {m}</span>
@@ -112,33 +143,62 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
                   <button onClick={() => navigate(`/creator/${c.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 15, fontWeight: 800, color: '#1e293b' }}>{badge} {c.name}</button>
                   {created && <div style={{ fontSize: 12, color: '#94a3b8' }}>{created}</div>}
                 </div>
+                {isOwner && !editing && (
+                  <button onClick={startEdit} style={{ padding: '8px 14px', borderRadius: 20, border: `1.5px solid ${p}40`, background: 'white', color: p, cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>✏️ {tRaw('แก้ไข', 'Edit')}</button>
+                )}
                 <button onClick={toggleSave} style={{ padding: '8px 16px', borderRadius: 20, border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', color: saved ? p : '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>
                   {saved ? `🔖 ${tRaw('บันทึกแล้ว', 'Saved')}` : `🔖 ${tRaw('บันทึก', 'Save')}`}
                 </button>
               </div>
             )}
 
-            {/* Caption */}
-            {post.caption && <p style={{ fontSize: 15, color: '#334155', lineHeight: 1.7, margin: '0 0 18px' }}>{post.caption}</p>}
-
-            {/* Book used */}
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', marginBottom: 6 }}>📚 {tRaw('หนังสือที่ใช้', 'Book used')}</div>
-              {post.product ? (
-                <button onClick={() => navigate(`/products/${post.product.slug}${c?.id ? `?ref=${c.id}` : ''}`)} style={{ background: p + '12', color: p, border: 'none', cursor: 'pointer', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>📚 {post.product.title} →</button>
-              ) : post.external_book_title ? (
-                <div style={{ fontSize: 14, color: '#475569' }}>📖 {post.external_book_title}{post.external_book_author ? ` · ${post.external_book_author}` : ''}</div>
-              ) : <div style={{ fontSize: 13, color: '#cbd5e1' }}>—</div>}
-            </div>
-
-            {/* Coloring details */}
-            {(post.mediums?.length || post.markers?.length || post.palettes?.length) ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
-                {chips(post.mediums, '🎨', '#f3e8ff', '#7c3aed')}
-                {chips(post.markers, '🖍️', '#dbeafe', '#1d4ed8')}
-                {chips(post.palettes, '🌷', '#fce7f3', '#be185d')}
+            {editing ? (
+              /* Owner edit panel — artwork image is NOT editable */
+              <div style={{ background: 'white', borderRadius: 14, padding: 16, marginBottom: 18, border: `1.5px solid ${p}20` }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 6 }}>✏️ {tRaw('คำบรรยาย', 'Caption')}</div>
+                <textarea value={eCaption} maxLength={300} onChange={e => setECaption(e.target.value)} rows={2} style={{ ...efld, resize: 'vertical', marginBottom: 10 }} />
+                {!post.product && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+                    <input value={eExtTitle} onChange={e => setEExtTitle(e.target.value)} placeholder={tRaw('ชื่อหนังสือ', 'Book title')} style={efld} />
+                    <input value={eExtAuthor} onChange={e => setEExtAuthor(e.target.value)} placeholder={tRaw('ศิลปิน/สำนักพิมพ์', 'Artist / Publisher')} style={efld} />
+                  </div>
+                )}
+                <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>🎨 {tRaw('สื่อ (คั่นด้วยจุลภาค)', 'Mediums (comma-separated)')}</div>
+                <input value={eMediums} onChange={e => setEMediums(e.target.value)} style={{ ...efld, marginBottom: 8 }} />
+                <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>🖍️ {tRaw('ปากกา (คั่นด้วยจุลภาค)', 'Markers (comma-separated)')}</div>
+                <input value={eMarkers} onChange={e => setEMarkers(e.target.value)} style={{ ...efld, marginBottom: 8 }} />
+                <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>🌷 {tRaw('พาเลตต์ (คั่นด้วยจุลภาค)', 'Palettes (comma-separated)')}</div>
+                <input value={ePalettes} onChange={e => setEPalettes(e.target.value)} style={{ ...efld, marginBottom: 12 }} />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={saveEdit} disabled={savingEdit} style={{ padding: '9px 20px', borderRadius: 12, border: 'none', background: savingEdit ? p + '88' : p, color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>{savingEdit ? tRaw('กำลังบันทึก...', 'Saving...') : tRaw('บันทึก', 'Save')}</button>
+                  <button onClick={() => setEditing(false)} style={{ padding: '9px 20px', borderRadius: 12, border: '1.5px solid #e5e7eb', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: theme.fontFamily }}>{tRaw('ยกเลิก', 'Cancel')}</button>
+                </div>
               </div>
-            ) : null}
+            ) : (
+              <>
+                {/* Caption */}
+                {post.caption && <p style={{ fontSize: 15, color: '#334155', lineHeight: 1.7, margin: '0 0 18px' }}>{post.caption}</p>}
+
+                {/* Book used */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', marginBottom: 6 }}>📚 {tRaw('หนังสือที่ใช้', 'Book used')}</div>
+                  {post.product ? (
+                    <button onClick={() => navigate(`/products/${post.product.slug}${c?.id ? `?ref=${c.id}` : ''}`)} style={{ background: p + '12', color: p, border: 'none', cursor: 'pointer', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>📚 {post.product.title} →</button>
+                  ) : post.external_book_title ? (
+                    <div style={{ fontSize: 14, color: '#475569' }}>📖 {post.external_book_title}{post.external_book_author ? ` · ${post.external_book_author}` : ''}</div>
+                  ) : <div style={{ fontSize: 13, color: '#cbd5e1' }}>—</div>}
+                </div>
+
+                {/* Coloring details */}
+                {(post.mediums?.length || post.markers?.length || post.palettes?.length) ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+                    {chips(post.mediums, '🎨', '#f3e8ff', '#7c3aed')}
+                    {chips(post.markers, '🖍️', '#dbeafe', '#1d4ed8')}
+                    {chips(post.palettes, '🌷', '#fce7f3', '#be185d')}
+                  </div>
+                ) : null}
+              </>
+            )}
 
             {/* Reactions */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 14, borderTop: '1px solid #eef2f7' }}>

@@ -222,15 +222,35 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { creators });
   }
 
-  // GET facets — popular palettes & marker sets for filter chips (scan recent capped set)
+  // GET facets — popular palettes, marker sets & books for filter chips
   if (req.method === 'GET' && action === 'facets') {
-    const { data } = await supabase.from('community_posts').select('palettes,markers').eq('status', 'published').order('created_at', { ascending: false }).range(0, 499);
+    const { data } = await supabase.from('community_posts').select('palettes,markers,product_id').eq('status', 'published').order('created_at', { ascending: false }).range(0, 499);
     const countTags = (key) => {
       const t = {};
       (data || []).forEach(p => (p[key] || []).forEach(x => { const v = String(x).trim(); if (v) t[v] = (t[v] || 0) + 1; }));
       return Object.keys(t).sort((a, b) => t[b] - t[a]).slice(0, 12).map(name => ({ name, count: t[name] }));
     };
-    return json(res, 200, { palettes: countTags('palettes'), markers: countTags('markers') });
+    // Books: count by product_id, resolve titles
+    const bc = {};
+    (data || []).forEach(p => { if (p.product_id) bc[p.product_id] = (bc[p.product_id] || 0) + 1; });
+    const bookIds = Object.keys(bc).sort((a, b) => bc[b] - bc[a]).slice(0, 12);
+    let books = [];
+    if (bookIds.length) {
+      const { data: prods } = await supabase.from('products').select('id,title,slug').in('id', bookIds);
+      books = bookIds.map(id => { const pr = (prods || []).find(x => x.id === id); return pr ? { id, title: pr.title, slug: pr.slug, count: bc[id] } : null; }).filter(Boolean);
+    }
+    return json(res, 200, { palettes: countTags('palettes'), markers: countTags('markers'), books });
+  }
+
+  // GET cozy-picks — admin-curated featured posts active in the last 7 days (max 6)
+  if (req.method === 'GET' && action === 'cozy-picks') {
+    const viewer = await getUser(req);
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data } = await supabase.from('community_posts').select('*')
+      .eq('status', 'published').eq('featured', true).gte('featured_at', since)
+      .order('featured_at', { ascending: false }).range(0, 5);
+    const posts = await decorate(data || [], viewer?.id, req.query.guest_id);
+    return json(res, 200, { posts });
   }
 
   // GET archive — months with post counts (cheap: created_at only)
@@ -296,6 +316,125 @@ module.exports = async function handler(req, res) {
     const { error } = await supabase.from('community_posts').delete().eq('id', id);
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, { success: true });
+  }
+
+  // PUT — edit a post (owner or admin). Artwork image is NOT editable here.
+  if (req.method === 'PUT') {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+    const { id } = req.query;
+    if (!id) return json(res, 400, { error: 'id required' });
+    const { data: existing } = await supabase.from('community_posts').select('user_id').eq('id', id).single();
+    if (!existing) return json(res, 404, { error: 'Not found' });
+    if (existing.user_id !== user.id && user.role !== 'admin') return json(res, 403, { error: 'Forbidden' });
+    const b = req.body || {};
+    const asArr = (v) => Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.trim()).map(x => x.trim()).slice(0, 20) : undefined;
+    const updates = { updated_at: new Date().toISOString() };
+    if (b.caption !== undefined) updates.caption = String(b.caption).slice(0, CAPTION_MAX);
+    if (b.product_id !== undefined) { updates.product_id = b.product_id || null; if (b.product_id) { updates.external_book_title = null; updates.external_book_author = null; } }
+    if (b.external_book_title !== undefined && !b.product_id) updates.external_book_title = b.external_book_title || null;
+    if (b.external_book_author !== undefined && !b.product_id) updates.external_book_author = b.external_book_author || null;
+    if (asArr(b.mediums) !== undefined) updates.mediums = asArr(b.mediums);
+    if (asArr(b.markers) !== undefined) updates.markers = asArr(b.markers);
+    if (asArr(b.palettes) !== undefined) updates.palettes = asArr(b.palettes);
+    const { data, error } = await supabase.from('community_posts').update(updates).eq('id', id).select().single();
+    if (error) return json(res, 400, { error: error.message });
+    const [post] = await decorate([data], user.id);
+    return json(res, 200, post);
+  }
+
+  // ─────────────────── Admin: Community Dashboard ───────────────────
+
+  // GET ?action=admin-stats — overview cards
+  if (req.method === 'GET' && action === 'admin-stats') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
+    const [{ count: creations }, { data: creatorsRows }, { count: today }, { count: comments }, { count: cozy }] = await Promise.all([
+      supabase.from('community_posts').select('id', { count: 'exact', head: true }).eq('status', 'published'),
+      supabase.from('community_posts').select('user_id').eq('status', 'published'),
+      supabase.from('community_posts').select('id', { count: 'exact', head: true }).eq('status', 'published').gte('created_at', startToday.toISOString()),
+      supabase.from('community_comments').select('id', { count: 'exact', head: true }).eq('status', 'published'),
+      supabase.from('community_posts').select('id', { count: 'exact', head: true }).eq('featured', true).gte('featured_at', since7),
+    ]);
+    const creators = new Set((creatorsRows || []).map(r => r.user_id).filter(Boolean)).size;
+    return json(res, 200, { creations: creations || 0, creators, today: today || 0, comments: comments || 0, reports: 0, cozyPicks: cozy || 0, cozyMax: 6 });
+  }
+
+  // GET ?action=admin-list&status=&page= — all posts (any status) for moderation
+  if (req.method === 'GET' && action === 'admin-list') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const page = Math.max(0, parseInt(req.query.page) || 0);
+    const limit = 24;
+    const from = page * limit;
+    let q = supabase.from('community_posts').select('*', { count: 'exact' }).order('created_at', { ascending: false });
+    if (req.query.status) q = q.eq('status', req.query.status);
+    q = q.range(from, from + limit - 1);
+    const { data, count } = await q;
+    const posts = await decorate(data || [], admin.id);
+    return json(res, 200, { posts, total: count || 0, page, hasMore: from + (data?.length || 0) < (count || 0) });
+  }
+
+  // POST ?action=admin-status&id= {status} — publish / hide / delete (soft)
+  if (req.method === 'POST' && action === 'admin-status') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { id } = req.query;
+    const status = (req.body && req.body.status) || '';
+    if (!id || !['published', 'hidden', 'deleted'].includes(status)) return json(res, 400, { error: 'id and valid status required' });
+    const upd = { status, updated_at: new Date().toISOString() };
+    if (status !== 'published') upd.featured = false; // hidden/deleted can't stay in Cozy Picks
+    const { error } = await supabase.from('community_posts').update(upd).eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
+  }
+
+  // POST ?action=admin-feature&id= {on} — add/remove from This Week's Cozy Picks
+  if (req.method === 'POST' && action === 'admin-feature') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { id } = req.query;
+    if (!id) return json(res, 400, { error: 'id required' });
+    const on = !(req.body && req.body.on === false);
+    if (!on) {
+      await supabase.from('community_posts').update({ featured: false, updated_at: new Date().toISOString() }).eq('id', id);
+      return json(res, 200, { success: true });
+    }
+    const { data: post } = await supabase.from('community_posts').select('id,user_id,status').eq('id', id).single();
+    if (!post) return json(res, 404, { error: 'Not found' });
+    if (post.status !== 'published') return json(res, 400, { error: 'Only published posts can be featured.' });
+    const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: current } = await supabase.from('community_posts').select('id,user_id').eq('featured', true).gte('featured_at', since7);
+    const cur = current || [];
+    if (cur.length >= 6) return json(res, 400, { error: 'Cozy Picks is full (max 6). Remove one first.' });
+    if (cur.some(c => c.user_id === post.user_id)) return json(res, 400, { error: 'This creator already has a pick this week (max 1 per creator).' });
+    await supabase.from('community_posts').update({ featured: true, featured_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', id);
+    return json(res, 200, { success: true });
+  }
+
+  // POST ?action=admin-merge-tags {field, from:[...], to} — clean up duplicate tags
+  if (req.method === 'POST' && action === 'admin-merge-tags') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { field, from, to } = req.body || {};
+    if (!['mediums', 'markers', 'palettes'].includes(field) || !Array.isArray(from) || !from.length) return json(res, 400, { error: 'field, from[], to required' });
+    const fromSet = new Set(from.map(s => String(s)));
+    // Find posts that contain any of the source tags, then rewrite their array.
+    const { data: rows } = await supabase.from('community_posts').select('id,' + field).overlaps(field, from);
+    let changed = 0;
+    for (const row of (rows || [])) {
+      const arr = row[field] || [];
+      const next = [];
+      let hit = false;
+      for (const v of arr) {
+        if (fromSet.has(String(v))) { hit = true; if (to && !next.includes(to)) next.push(to); }
+        else if (!next.includes(v)) next.push(v);
+      }
+      if (hit) { await supabase.from('community_posts').update({ [field]: next }).eq('id', row.id); changed++; }
+    }
+    return json(res, 200, { success: true, changed });
   }
 
   return json(res, 405, { error: 'Method not allowed' });

@@ -10,12 +10,12 @@ import CommunityCard from '../components/CommunityCard';
 const MEDIUMS = ['Alcohol Marker', 'Colored Pencil', 'Watercolor', 'Gel Pen', 'Crayon', 'Other'];
 const PALETTE_EXAMPLES = ['🍓 Strawberry Milk', '☕ Cozy Cafe', '🌷 Spring Garden', '🌙 Moonlight'];
 const MARKER_EXAMPLES = ['Ohuhu Pastel 48', 'Ohuhu Midtone 48', 'Copic Sketch', 'Prismacolor'];
-const PAGE = 12;
-const GRID = `.cm-grid{column-count:4;column-gap:16px}@media(max-width:1100px){.cm-grid{column-count:3}}@media(max-width:760px){.cm-grid{column-count:2;column-gap:10px}}@media(max-width:420px){.cm-grid{column-count:1}}.cm-grid>div{margin-bottom:16px}`;
+const PAGE = 16;
+// Masonry tuned for ~280–320px columns: 4 / 3 / 2 / 1.
+const GRID = `.cm-grid{column-count:4;column-gap:16px}@media(max-width:1200px){.cm-grid{column-count:3}}@media(max-width:820px){.cm-grid{column-count:2;column-gap:12px}}@media(max-width:480px){.cm-grid{column-count:1}}.cm-grid>div{margin-bottom:16px}`;
 
-type Filter = { kind: 'all' | 'palette' | 'marker' | 'month' | 'product'; value?: string };
+type Filter = { kind: 'all' | 'palette' | 'marker' | 'month' | 'product'; value?: string; label?: string };
 
-// Read a ?book=<productId> deep-link (from a product page "View all creations" button).
 function initialFilter(): Filter {
   const hash = window.location.hash || '';
   const qi = hash.indexOf('?');
@@ -32,27 +32,24 @@ export default function CommunityPage() {
   const { user } = useAuth();
   const { tRaw } = useLang();
   const p = theme.primaryColor;
+  const planner = (theme as any).community || {};
 
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState<Filter>(initialFilter);
 
-  // Side data (loaded once)
-  const [trending, setTrending] = useState<any[]>([]);
+  const [cozy, setCozy] = useState<any[]>([]);
   const [creators, setCreators] = useState<any[]>([]);
-  const [facets, setFacets] = useState<{ palettes: any[]; markers: any[] }>({ palettes: [], markers: [] });
-  const [archive, setArchive] = useState<any[]>([]);
+  const [facets, setFacets] = useState<{ palettes: any[]; markers: any[]; books: any[] }>({ palettes: [], markers: [], books: [] });
 
-  // Main grid
   const [posts, setPosts] = useState<any[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.getCommunityTrending(8).then((d: any) => setTrending(d?.posts || [])).catch(() => {});
+    api.getCommunityCozyPicks().then((d: any) => setCozy(d?.posts || [])).catch(() => {});
     api.getCommunityCreators(12).then((d: any) => setCreators(d?.creators || [])).catch(() => {});
-    api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [] })).catch(() => {});
-    api.getCommunityArchive().then((d: any) => setArchive(d?.months || [])).catch(() => {});
+    api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [], books: d?.books || [] })).catch(() => {});
   }, []);
 
   const loadPage = useCallback((pg: number, f: Filter) => {
@@ -74,45 +71,87 @@ export default function CommunityPage() {
 
   const onPosted = (post: any) => { setShowForm(false); setPosts(prev => [post, ...prev]); };
   const isAll = filter.kind === 'all';
-  const monthLabel = (m: string) => { const [y, mm] = m.split('-'); return new Date(Number(y), Number(mm) - 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }); };
+  const choose = (f: Filter) => { setFilter(f); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   return (
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
       <style>{GRID}</style>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 16px 60px' }}>
 
-      {/* Header */}
-      <div style={{ background: `linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, padding: '40px 24px 32px', textAlign: 'center' }}>
-        <h1 style={{ fontSize: 'clamp(26px,4vw,40px)', fontWeight: 900, color: theme.textColor, margin: '0 0 10px' }}>
-          {tRaw('แบ่งปันโลกสีสันของคุณ', 'Share Your Colorful World')} 🌈
-        </h1>
-        <p style={{ color: theme.textColor + '99', fontSize: 15, margin: '0 0 20px', maxWidth: 540, marginInline: 'auto' }}>
-          {tRaw('อวดผลงานระบายสีของคุณ ค้นหาแรงบันดาลใจ และเชื่อมต่อกับเพื่อนนักระบายสี', 'Show off your finished pages, find inspiration, and connect with fellow colorists.')}
-        </p>
-        {user ? (
-          <button onClick={() => setShowForm(s => !s)} style={{ background: p, color: 'white', border: 'none', cursor: 'pointer', padding: '12px 28px', borderRadius: 28, fontSize: 15, fontWeight: 800, boxShadow: `0 8px 24px ${p}44`, fontFamily: theme.fontFamily }}>
-            {showForm ? tRaw('ปิด', 'Close') : `🎨 ${tRaw('แบ่งปันผลงานของคุณ', 'Share your artwork')}`}
-          </button>
-        ) : (
-          <button onClick={() => navigate('/login')} style={{ background: p, color: 'white', border: 'none', cursor: 'pointer', padding: '12px 28px', borderRadius: 28, fontSize: 15, fontWeight: 800, fontFamily: theme.fontFamily }}>
-            {tRaw('เข้าสู่ระบบเพื่อแบ่งปัน', 'Log in to share')}
-          </button>
+        {/* Compact header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 6 }}>
+          <div>
+            <h1 style={{ fontSize: 'clamp(20px,3vw,28px)', fontWeight: 900, color: theme.textColor, margin: 0 }}>{tRaw('แบ่งปันโลกสีสันของคุณ', 'Share Your Colorful World')} 🌈</h1>
+            <p style={{ color: theme.textColor + '88', fontSize: 13, margin: '2px 0 0' }}>{tRaw('แรงบันดาลใจการระบายสีจากชุมชน', 'Coloring inspiration from the community')}</p>
+          </div>
+          {user ? (
+            <button onClick={() => setShowForm(s => !s)} style={{ background: p, color: 'white', border: 'none', cursor: 'pointer', padding: '9px 18px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily, flexShrink: 0 }}>
+              {showForm ? tRaw('ปิด', 'Close') : `🎨 ${tRaw('แบ่งปันผลงาน', 'Share artwork')}`}
+            </button>
+          ) : (
+            <button onClick={() => navigate('/login')} style={{ background: 'none', border: `1.5px solid ${p}40`, color: p, cursor: 'pointer', padding: '8px 16px', borderRadius: 22, fontSize: 13, fontWeight: 700, fontFamily: theme.fontFamily, flexShrink: 0 }}>
+              {tRaw('เข้าสู่ระบบเพื่อแบ่งปัน', 'Log in to share')}
+            </button>
+          )}
+        </div>
+
+        {/* Weekly Planner banner */}
+        {(planner.palette || planner.book || planner.marker) && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, background: 'white', borderRadius: 14, padding: '10px 14px', boxShadow: '0 1px 8px rgba(0,0,0,0.05)', border: `1.5px solid ${p}12`, margin: '12px 0 18px' }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', alignSelf: 'center' }}>{tRaw('สัปดาห์นี้', 'This week')}:</span>
+            {planner.palette && <span style={{ fontSize: 12.5, fontWeight: 700, color: '#be185d', background: '#fce7f3', borderRadius: 14, padding: '4px 11px' }}>🌷 {planner.palette}</span>}
+            {planner.book && <span style={{ fontSize: 12.5, fontWeight: 700, color: p, background: p + '12', borderRadius: 14, padding: '4px 11px' }}>📚 {planner.book}</span>}
+            {planner.marker && <span style={{ fontSize: 12.5, fontWeight: 700, color: '#1d4ed8', background: '#dbeafe', borderRadius: 14, padding: '4px 11px' }}>🖍️ {planner.marker}</span>}
+          </div>
         )}
-      </div>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px 60px' }}>
         {showForm && user && <UploadForm theme={theme} p={p} tRaw={tRaw} onPosted={onPosted} />}
 
-        {/* ✨ Trending this week (only on the unfiltered view) */}
-        {isAll && trending.length > 0 && (
-          <Section title={`✨ ${tRaw('มาแรงสัปดาห์นี้', 'Trending this week')}`}>
-            <div className="cm-grid">{trending.slice(0, 8).map(post => <CommunityCard key={'t' + post.id} post={post} />)}</div>
-          </Section>
+        {/* 1. New Creations (main masonry) */}
+        <SectionHead theme={theme} title={
+          isAll ? `🆕 ${tRaw('ผลงานใหม่ล่าสุด', 'New Creations')}`
+            : filter.kind === 'palette' ? `🌷 ${filter.value}`
+            : filter.kind === 'marker' ? `🖍️ ${filter.value}`
+            : filter.kind === 'product' ? `📚 ${filter.label || tRaw('จากเล่มนี้', 'This book')}`
+            : `📅 ${filter.value}`
+        } onClear={!isAll ? () => setFilter({ kind: 'all' }) : undefined} clearLabel={tRaw('ล้าง', 'Clear')} />
+
+        {!loading && posts.length === 0 ? (
+          <Empty theme={theme} tRaw={tRaw} isAll={isAll} />
+        ) : (
+          <>
+            <div className="cm-grid">{posts.map(post => <CommunityCard key={post.id} post={post} />)}</div>
+            {loading && <div style={{ textAlign: 'center', padding: 24, color: '#9ca3af', fontSize: 26 }}>⏳</div>}
+            {hasMore && !loading && (
+              <div style={{ textAlign: 'center', marginTop: 20 }}>
+                <button onClick={() => { const np = page + 1; setPage(np); loadPage(np, filter); }} style={{ background: 'transparent', border: `2px solid ${p}`, color: p, cursor: 'pointer', padding: '10px 28px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily }}>{tRaw('ดูเพิ่มเติม', 'View more')}</button>
+              </div>
+            )}
+          </>
         )}
 
-        {/* 👤 Creators */}
+        {/* 2. This Week's Cozy Picks (admin-curated) */}
+        {isAll && cozy.length > 0 && (
+          <div style={{ marginTop: 34 }}>
+            <SectionHead theme={theme} title={`🌷 ${tRaw('คัดสรรอบอุ่นประจำสัปดาห์', "This Week's Cozy Picks")}`} />
+            <div className="cm-grid">{cozy.map(post => <CommunityCard key={'c' + post.id} post={post} />)}</div>
+          </div>
+        )}
+
+        {/* 3–5. Discover by Book / Palette / Marker (chip rows) */}
+        {isAll && (facets.books.length || facets.palettes.length || facets.markers.length) ? (
+          <div style={{ marginTop: 34 }}>
+            {facets.books.length > 0 && <ChipRow theme={theme} p={p} title={`📚 ${tRaw('ตามหนังสือ', 'By Book')}`} items={facets.books.map(b => ({ key: b.id, label: b.title, count: b.count }))} onPick={(it) => choose({ kind: 'product', value: it.key, label: it.label })} />}
+            {facets.palettes.length > 0 && <ChipRow theme={theme} p={p} title={`🎨 ${tRaw('ตามพาเลตต์', 'By Palette')}`} items={facets.palettes.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'palette', value: it.key })} />}
+            {facets.markers.length > 0 && <ChipRow theme={theme} p={p} title={`🖍️ ${tRaw('ตามชุดปากกา', 'By Marker')}`} items={facets.markers.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'marker', value: it.key })} />}
+          </div>
+        ) : null}
+
+        {/* 6. Featured Creators (bottom) */}
         {isAll && creators.length > 0 && (
-          <Section title={`👤 ${tRaw('ครีเอเตอร์', 'Creators')}`}>
-            <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 6 }}>
+          <div style={{ marginTop: 34 }}>
+            <SectionHead theme={theme} title={`👤 ${tRaw('ครีเอเตอร์แนะนำ', 'Featured Creators')}`} />
+            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6 }}>
               {creators.map(c => (
                 <button key={c.id} onClick={() => navigate(`/creator/${c.id}`)} style={{ background: 'white', border: `1.5px solid ${p}15`, borderRadius: 16, padding: '14px 12px', cursor: 'pointer', minWidth: 96, textAlign: 'center', fontFamily: theme.fontFamily, flexShrink: 0 }}>
                   <div style={{ width: 52, height: 52, borderRadius: '50%', overflow: 'hidden', background: p + '20', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
@@ -123,79 +162,42 @@ export default function CommunityPage() {
                 </button>
               ))}
             </div>
-          </Section>
-        )}
-
-        {/* Filter chips: palettes / markers / months */}
-        {(facets.palettes.length > 0 || facets.markers.length > 0 || archive.length > 0) && (
-          <div style={{ marginBottom: 18 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              <Chip active={isAll} p={p} theme={theme} onClick={() => setFilter({ kind: 'all' })}>🆕 {tRaw('ทั้งหมด', 'All')}</Chip>
-              {facets.palettes.slice(0, 8).map(t => (
-                <Chip key={'pal' + t.name} active={filter.kind === 'palette' && filter.value === t.name} p={p} theme={theme} onClick={() => setFilter({ kind: 'palette', value: t.name })}>🌷 {t.name}</Chip>
-              ))}
-              {facets.markers.slice(0, 6).map(t => (
-                <Chip key={'mk' + t.name} active={filter.kind === 'marker' && filter.value === t.name} p={p} theme={theme} onClick={() => setFilter({ kind: 'marker', value: t.name })}>🖍️ {t.name}</Chip>
-              ))}
-            </div>
-            {archive.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                {archive.slice(0, 12).map(m => (
-                  <Chip key={m.month} active={filter.kind === 'month' && filter.value === m.month} p={p} theme={theme} onClick={() => setFilter({ kind: 'month', value: m.month })}>📅 {monthLabel(m.month)} ({m.count})</Chip>
-                ))}
-              </div>
-            )}
           </div>
-        )}
-
-        {/* Main grid */}
-        <h2 style={{ fontSize: 20, fontWeight: 900, color: theme.textColor, margin: '8px 0 16px' }}>
-          {filter.kind === 'all' ? `🆕 ${tRaw('ผลงานใหม่ล่าสุด', 'New Creations')}`
-            : filter.kind === 'palette' ? `🌷 ${filter.value}`
-            : filter.kind === 'marker' ? `🖍️ ${filter.value}`
-            : filter.kind === 'product' ? `🌈 ${tRaw('ระบายจากเล่มนี้', 'Colored from this book')}`
-            : `📅 ${monthLabel(filter.value!)}`}
-          {!isAll && <button onClick={() => setFilter({ kind: 'all' })} style={{ marginLeft: 12, fontSize: 12, fontWeight: 700, color: p, background: 'none', border: 'none', cursor: 'pointer' }}>✕ {tRaw('ล้างตัวกรอง', 'Clear')}</button>}
-        </h2>
-
-        {!loading && posts.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 24px', color: theme.textColor + '88' }}>
-            <div style={{ fontSize: 56, marginBottom: 14 }}>🎨</div>
-            <h3 style={{ fontWeight: 800, color: theme.textColor }}>{tRaw('ยังไม่มีผลงาน', 'No creations yet')}</h3>
-            <p>{isAll ? tRaw('เป็นคนแรกที่แบ่งปันผลงานระบายสีของคุณ!', 'Be the first to share your colored page!') : tRaw('ลองเลือกตัวกรองอื่น', 'Try another filter.')}</p>
-          </div>
-        ) : (
-          <>
-            <div className="cm-grid">{posts.map(post => <CommunityCard key={post.id} post={post} />)}</div>
-            {loading && <div style={{ textAlign: 'center', padding: 30, color: '#9ca3af', fontSize: 28 }}>⏳</div>}
-            {hasMore && !loading && (
-              <div style={{ textAlign: 'center', marginTop: 24 }}>
-                <button onClick={() => { const np = page + 1; setPage(np); loadPage(np, filter); }}
-                  style={{ background: 'transparent', border: `2px solid ${p}`, color: p, cursor: 'pointer', padding: '11px 30px', borderRadius: 24, fontSize: 14, fontWeight: 800, fontFamily: theme.fontFamily }}>
-                  {tRaw('ดูเพิ่มเติม', 'View more')}
-                </button>
-              </div>
-            )}
-          </>
         )}
       </div>
     </div>
   );
 }
 
-function Section({ title, children }: any) {
-  const { theme } = useTheme();
+function SectionHead({ theme, title, onClear, clearLabel }: any) {
   return (
-    <div style={{ marginBottom: 28 }}>
-      <h2 style={{ fontSize: 20, fontWeight: 900, color: theme.textColor, margin: '0 0 14px' }}>{title}</h2>
-      {children}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 14px' }}>
+      <h2 style={{ fontSize: 18, fontWeight: 900, color: theme.textColor, margin: 0 }}>{title}</h2>
+      {onClear && <button onClick={onClear} style={{ fontSize: 12, fontWeight: 700, color: theme.primaryColor, background: 'none', border: 'none', cursor: 'pointer' }}>✕ {clearLabel}</button>}
     </div>
   );
 }
 
-function Chip({ active, p, theme, onClick, children }: any) {
+function ChipRow({ theme, p, title, items, onPick }: any) {
   return (
-    <button onClick={onClick} style={{ padding: '6px 12px', borderRadius: 18, border: `1.5px solid ${active ? p : p + '30'}`, background: active ? p : 'white', color: active ? 'white' : theme.textColor, cursor: 'pointer', fontSize: 12.5, fontWeight: active ? 800 : 600, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>{children}</button>
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: theme.textColor, marginBottom: 8 }}>{title}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {items.map((it: any) => (
+          <button key={it.key} onClick={() => onPick(it)} style={{ padding: '6px 12px', borderRadius: 18, border: `1.5px solid ${p}30`, background: 'white', color: theme.textColor, cursor: 'pointer', fontSize: 12.5, fontWeight: 600, fontFamily: theme.fontFamily, whiteSpace: 'nowrap', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.label} <span style={{ color: '#9ca3af' }}>({it.count})</span></button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Empty({ theme, tRaw, isAll }: any) {
+  return (
+    <div style={{ textAlign: 'center', padding: '50px 24px', color: theme.textColor + '88' }}>
+      <div style={{ fontSize: 52, marginBottom: 12 }}>🎨</div>
+      <h3 style={{ fontWeight: 800, color: theme.textColor }}>{tRaw('ยังไม่มีผลงาน', 'No creations yet')}</h3>
+      <p>{isAll ? tRaw('เป็นคนแรกที่แบ่งปันผลงานระบายสีของคุณ!', 'Be the first to share your colored page!') : tRaw('ลองเลือกตัวกรองอื่น', 'Try another filter.')}</p>
+    </div>
   );
 }
 
@@ -249,7 +251,7 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
   };
 
   return (
-    <div style={{ background: 'white', borderRadius: 18, padding: 20, boxShadow: '0 2px 14px rgba(0,0,0,0.06)', marginBottom: 28, border: `1.5px solid ${p}15` }}>
+    <div style={{ background: 'white', borderRadius: 18, padding: 20, boxShadow: '0 2px 14px rgba(0,0,0,0.06)', margin: '14px 0 24px', border: `1.5px solid ${p}15` }}>
       <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1e293b', margin: '0 0 16px' }}>🎨 {tRaw('แบ่งปันผลงานของคุณ', 'Share your artwork')}</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 18 }} className="cm-form">
         <style>{`@media(max-width:640px){.cm-form{grid-template-columns:1fr!important}}`}</style>
