@@ -28,8 +28,8 @@ export default function CommunityCard({ post }: { post: any }) {
   const [mine, setMine] = useState<string[]>(post.myReactions || []);
   const [busy, setBusy] = useState('');
 
-  const react = async (type: string) => {
-    if (!user) { navigate('/login'); return; }
+  const react = async (e: React.MouseEvent, type: string) => {
+    e.stopPropagation(); // don't open the detail page when reacting
     if (busy) return;
     setBusy(type);
     // optimistic toggle
@@ -45,8 +45,13 @@ export default function CommunityCard({ post }: { post: any }) {
     <span key={txt} style={{ background: bg, color, borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>{txt}</span>
   );
 
+  const open = () => navigate(`/community/${post.id}`);
+
   return (
-    <div style={{ background: 'white', borderRadius: 18, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: `1.5px solid ${p}12`, breakInside: 'avoid' as const }}>
+    <div onClick={open}
+      style={{ background: 'white', borderRadius: 18, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: `1.5px solid ${p}12`, breakInside: 'avoid' as const, cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 10px 28px ${p}22`; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; }}>
       {/* Artwork */}
       <div style={{ position: 'relative', width: '100%', background: `linear-gradient(135deg,${p}10,${p}05)` }}>
         <img
@@ -60,7 +65,7 @@ export default function CommunityCard({ post }: { post: any }) {
       <div style={{ padding: '12px 14px 14px' }}>
         {/* Book used */}
         {post.product ? (
-          <button onClick={() => navigate(`/products/${post.product.slug}${creator?.id ? `?ref=${creator.id}` : ''}`)}
+          <button onClick={(e) => { e.stopPropagation(); navigate(`/products/${post.product.slug}${creator?.id ? `?ref=${creator.id}` : ''}`); }}
             style={{ background: p + '12', color: p, border: 'none', cursor: 'pointer', borderRadius: 10, padding: '4px 10px', fontSize: 11, fontWeight: 800, fontFamily: theme.fontFamily, marginBottom: 8, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             📚 {post.product.title}
           </button>
@@ -84,7 +89,7 @@ export default function CommunityCard({ post }: { post: any }) {
 
         {/* Creator */}
         {creator && (
-          <button onClick={() => navigate(`/creator/${creator.id}`)}
+          <button onClick={(e) => { e.stopPropagation(); navigate(`/creator/${creator.id}`); }}
             style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily }}>
             <span style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', background: p + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
               {creator.avatar_url ? <img src={creator.avatar_url} alt={creator.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '👤'}
@@ -99,7 +104,7 @@ export default function CommunityCard({ post }: { post: any }) {
             const on = mine.includes(r.type);
             const n = counts[r.type] || 0;
             return (
-              <button key={r.type} onClick={() => react(r.type)} title={tRaw(r.th, r.en)}
+              <button key={r.type} onClick={(e) => react(e, r.type)} title={tRaw(r.th, r.en)}
                 style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '3px 7px', borderRadius: 14, border: `1.5px solid ${on ? p : '#eef2f7'}`, background: on ? p + '12' : 'white', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: on ? p : '#64748b', fontFamily: theme.fontFamily }}>
                 <span>{r.emoji}</span>{n > 0 && <span style={{ fontSize: 11 }}>{n}</span>}
               </button>

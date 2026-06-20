@@ -32,3 +32,19 @@ export function getActiveRef(): string | null {
 }
 
 export function clearRef() { try { localStorage.removeItem(KEY); } catch {} }
+
+// Stable anonymous browser id — lets logged-out visitors react once per post/type
+// (dedupe = light spam protection) without an account.
+const GUEST_KEY = 'fluffy_guest_id';
+export function getGuestId(): string {
+  try {
+    let id = localStorage.getItem(GUEST_KEY);
+    if (!id) {
+      id = (crypto?.randomUUID?.() || `g_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+      localStorage.setItem(GUEST_KEY, id);
+    }
+    return id;
+  } catch {
+    return `g_${Math.random().toString(36).slice(2)}`;
+  }
+}

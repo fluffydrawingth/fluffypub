@@ -14,10 +14,13 @@ const { supabase, requireAuth, getUser, json } = require('./_lib');
 
 const PAGE_LIMIT_MAX = 48;
 const CAPTION_MAX = 300;
+const COMMENT_MAX = 500;
 const REACTION_TYPES = ['love', 'inspiring', 'cozy', 'cute_palette', 'want_to_try'];
+const ALLOWED_TYPES = [...REACTION_TYPES, 'save']; // 'save' = bookmark (not shown in counts)
 
 // Attach creator + product info, and reaction counts (+ which the viewer reacted to).
-async function decorate(posts, viewerId) {
+// viewerId = logged-in profile id; guestId = anonymous browser id (for logged-out users).
+async function decorate(posts, viewerId, guestId) {
   if (!posts || !posts.length) return [];
   const userIds = [...new Set(posts.map(p => p.user_id).filter(Boolean))];
   const prodIds = [...new Set(posts.map(p => p.product_id).filter(Boolean))];
@@ -25,16 +28,19 @@ async function decorate(posts, viewerId) {
   const [{ data: users }, { data: prods }, { data: reactions }] = await Promise.all([
     userIds.length ? supabase.from('profiles').select('id,name,username,avatar_url,artist_slug,role,affiliate_enabled').in('id', userIds) : Promise.resolve({ data: [] }),
     prodIds.length ? supabase.from('products').select('id,title,slug,image,cover_image_url').in('id', prodIds) : Promise.resolve({ data: [] }),
-    postIds.length ? supabase.from('community_reactions').select('post_id,user_id,type').in('post_id', postIds) : Promise.resolve({ data: [] }),
+    postIds.length ? supabase.from('community_reactions').select('post_id,user_id,guest_id,type').in('post_id', postIds) : Promise.resolve({ data: [] }),
   ]);
   const uMap = Object.fromEntries((users || []).map(u => [u.id, u]));
   const pMap = Object.fromEntries((prods || []).map(p => [p.id, p]));
-  const rMap = {};   // postId -> { counts:{type:n}, mine:Set }
+  const rMap = {};   // postId -> { counts:{type:n}, total, mine:[] }
   (reactions || []).forEach(r => {
     const e = rMap[r.post_id] || (rMap[r.post_id] = { counts: {}, total: 0, mine: [] });
-    e.counts[r.type] = (e.counts[r.type] || 0) + 1;
-    e.total += 1;
-    if (viewerId && r.user_id === viewerId) e.mine.push(r.type);
+    if (r.type !== 'save') { // 'save' is a private bookmark — never in public counts
+      e.counts[r.type] = (e.counts[r.type] || 0) + 1;
+      e.total += 1;
+    }
+    const isMine = (viewerId && r.user_id === viewerId) || (guestId && r.guest_id === guestId);
+    if (isMine) e.mine.push(r.type);
   });
   return posts.map(post => {
     const u = uMap[post.user_id] || null;
@@ -60,23 +66,70 @@ async function decorate(posts, viewerId) {
 module.exports = async function handler(req, res) {
   const { action } = req.query;
 
-  // POST react — toggle a reaction (auth)
+  // POST react — toggle a Fluffy reaction. Logged-in OR guest (anonymous browser id).
+  // Guests are deduped per (post, guest_id, type) so they can't spam the same reaction.
+  // 'save' (bookmark) requires login.
   if (req.method === 'POST' && action === 'react') {
-    const user = await requireAuth(req, res);
-    if (!user) return;
-    const { post_id, type } = req.body || {};
-    if (!post_id || !REACTION_TYPES.includes(type)) return json(res, 400, { error: 'post_id and a valid type are required.' });
-    const { data: existing } = await supabase.from('community_reactions').select('id').eq('post_id', post_id).eq('user_id', user.id).eq('type', type).limit(1);
+    const user = await getUser(req);
+    const { post_id, type, guest_id } = req.body || {};
+    if (!post_id || !ALLOWED_TYPES.includes(type)) return json(res, 400, { error: 'post_id and a valid type are required.' });
+    if (type === 'save' && !user) return json(res, 401, { error: 'Please log in to save posts.' });
+    // Identity: member by user_id, otherwise guest by a client-supplied browser id.
+    const guestId = !user ? String(guest_id || '').slice(0, 64) : null;
+    if (!user && !guestId) return json(res, 400, { error: 'guest_id required for anonymous reactions.' });
+
+    let findQ = supabase.from('community_reactions').select('id').eq('post_id', post_id).eq('type', type);
+    findQ = user ? findQ.eq('user_id', user.id) : findQ.eq('guest_id', guestId);
+    const { data: existing } = await findQ.limit(1);
     if (existing && existing.length) {
       await supabase.from('community_reactions').delete().eq('id', existing[0].id);
     } else {
-      await supabase.from('community_reactions').insert({ post_id, user_id: user.id, type });
+      await supabase.from('community_reactions').insert({ post_id, type, user_id: user ? user.id : null, guest_id: guestId });
     }
-    const { data: all } = await supabase.from('community_reactions').select('type,user_id').eq('post_id', post_id);
-    const counts = {};
-    (all || []).forEach(r => { counts[r.type] = (counts[r.type] || 0) + 1; });
-    const mine = (all || []).filter(r => r.user_id === user.id).map(r => r.type);
-    return json(res, 200, { reactions: counts, myReactions: mine, reactionTotal: (all || []).length });
+    const { data: all } = await supabase.from('community_reactions').select('type,user_id,guest_id').eq('post_id', post_id);
+    const counts = {}; let total = 0;
+    (all || []).forEach(r => { if (r.type !== 'save') { counts[r.type] = (counts[r.type] || 0) + 1; total++; } });
+    const mine = (all || []).filter(r => user ? r.user_id === user.id : r.guest_id === guestId).map(r => r.type);
+    return json(res, 200, { reactions: counts, myReactions: mine, reactionTotal: total });
+  }
+
+  // GET comments — published comments for a post (newest first), with author info
+  if (req.method === 'GET' && action === 'comments') {
+    const postId = req.query.post_id;
+    if (!postId) return json(res, 400, { error: 'post_id required' });
+    const { data } = await supabase.from('community_comments').select('*').eq('post_id', postId).eq('status', 'published').order('created_at', { ascending: false });
+    const ids = [...new Set((data || []).map(c => c.user_id).filter(Boolean))];
+    const { data: users } = ids.length ? await supabase.from('profiles').select('id,name,username,avatar_url,role,affiliate_enabled').in('id', ids) : { data: [] };
+    const uMap = Object.fromEntries((users || []).map(u => [u.id, u]));
+    const comments = (data || []).map(c => {
+      const u = uMap[c.user_id];
+      return { id: c.id, body: c.body, created_at: c.created_at, author: u ? { id: u.id, name: u.username || u.name || 'Fluffy Creator', avatar_url: u.avatar_url || null, badge: u.role === 'artist' ? 'artist' : (u.affiliate_enabled ? 'creator' : null) } : null };
+    });
+    return json(res, 200, { comments });
+  }
+
+  // POST comment — add a comment (login required)
+  if (req.method === 'POST' && action === 'comment') {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+    const { post_id, body } = req.body || {};
+    if (!post_id || !String(body || '').trim()) return json(res, 400, { error: 'post_id and body required' });
+    const { data, error } = await supabase.from('community_comments').insert({ post_id, user_id: user.id, body: String(body).trim().slice(0, COMMENT_MAX) }).select().single();
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 201, { id: data.id, body: data.body, created_at: data.created_at, author: { id: user.id, name: user.username || user.name || 'Fluffy Creator', avatar_url: user.avatar_url || null, badge: user.role === 'artist' ? 'artist' : (user.affiliate_enabled ? 'creator' : null) } });
+  }
+
+  // DELETE comment — owner or admin
+  if (req.method === 'DELETE' && action === 'comment') {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+    const { id } = req.query;
+    if (!id) return json(res, 400, { error: 'id required' });
+    const { data: c } = await supabase.from('community_comments').select('user_id').eq('id', id).single();
+    if (!c) return json(res, 404, { error: 'Not found' });
+    if (c.user_id !== user.id && user.role !== 'admin') return json(res, 403, { error: 'Forbidden' });
+    await supabase.from('community_comments').delete().eq('id', id);
+    return json(res, 200, { success: true });
   }
 
   // GET list — paginated, newest first; optional product/user/palette/marker filters
@@ -100,7 +153,7 @@ module.exports = async function handler(req, res) {
     q = q.range(from, from + limit - 1);
     const { data, error, count } = await q;
     if (error) return json(res, 500, { error: error.message });
-    const out = await decorate(data || [], viewer?.id);
+    const out = await decorate(data || [], viewer?.id, req.query.guest_id);
     return json(res, 200, { posts: out, total: count || 0, page, limit, hasMore: from + (data?.length || 0) < (count || 0) });
   }
 
@@ -110,7 +163,7 @@ module.exports = async function handler(req, res) {
     if (!id) return json(res, 400, { error: 'id required' });
     const { data, error } = await supabase.from('community_posts').select('*').eq('id', id).single();
     if (error || !data) return json(res, 404, { error: 'Not found' });
-    const [post] = await decorate([data], viewer?.id);
+    const [post] = await decorate([data], viewer?.id, req.query.guest_id);
     return json(res, 200, post);
   }
 
@@ -124,7 +177,7 @@ module.exports = async function handler(req, res) {
       .eq('status', 'published').eq('product_id', productId)
       .order('created_at', { ascending: false }).range(0, limit - 1);
     if (error) return json(res, 500, { error: error.message });
-    const posts = await decorate(data || [], viewer?.id);
+    const posts = await decorate(data || [], viewer?.id, req.query.guest_id);
     return json(res, 200, { posts, total: count || 0 });
   }
 
@@ -148,7 +201,7 @@ module.exports = async function handler(req, res) {
       const { data: recent } = await supabase.from('community_posts').select('*').eq('status', 'published').order('created_at', { ascending: false }).range(0, limit - 1);
       (recent || []).forEach(p => { if (!have.has(p.id) && posts.length < limit) posts.push(p); });
     }
-    const out = await decorate(posts, viewer?.id);
+    const out = await decorate(posts, viewer?.id, req.query.guest_id);
     return json(res, 200, { posts: out });
   }
 
@@ -198,7 +251,7 @@ module.exports = async function handler(req, res) {
     if (!profile) return json(res, 404, { error: 'Creator not found' });
     const { data: posts } = await supabase.from('community_posts').select('*')
       .eq('status', 'published').eq('user_id', uid).order('created_at', { ascending: false });
-    const decorated = await decorate(posts || [], viewer?.id);
+    const decorated = await decorate(posts || [], viewer?.id, req.query.guest_id);
     const booksUsed = new Set((posts || []).map(p => p.product_id).filter(Boolean)).size;
     const palettes = new Set();
     (posts || []).forEach(p => (p.palettes || []).forEach(x => palettes.add(String(x).toLowerCase())));
