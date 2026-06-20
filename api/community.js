@@ -50,9 +50,9 @@ async function decorate(posts, viewerId, guestId) {
       ...post,
       creator: u ? {
         id: u.id,
-        name: u.username || u.name || 'Fluffy Creator',
+        name: u.username || u.name || 'Community Member',
         avatar_url: u.avatar_url || null,
-        badge: u.role === 'artist' ? 'artist' : (u.affiliate_enabled ? 'creator' : null),
+        affiliate_enabled: !!u.affiliate_enabled,
         artist_slug: u.role === 'artist' ? (u.artist_slug || null) : null,
       } : null,
       product: pr ? { id: pr.id, title: pr.title, slug: pr.slug, image: pr.image, cover_image_url: pr.cover_image_url } : null,
@@ -103,7 +103,7 @@ module.exports = async function handler(req, res) {
     const uMap = Object.fromEntries((users || []).map(u => [u.id, u]));
     const comments = (data || []).map(c => {
       const u = uMap[c.user_id];
-      return { id: c.id, body: c.body, created_at: c.created_at, author: u ? { id: u.id, name: u.username || u.name || 'Fluffy Creator', avatar_url: u.avatar_url || null, badge: u.role === 'artist' ? 'artist' : (u.affiliate_enabled ? 'creator' : null) } : null };
+      return { id: c.id, body: c.body, created_at: c.created_at, author: u ? { id: u.id, name: u.username || u.name || 'Community Member', avatar_url: u.avatar_url || null, affiliate_enabled: !!u.affiliate_enabled } : null };
     });
     return json(res, 200, { comments });
   }
@@ -116,7 +116,7 @@ module.exports = async function handler(req, res) {
     if (!post_id || !String(body || '').trim()) return json(res, 400, { error: 'post_id and body required' });
     const { data, error } = await supabase.from('community_comments').insert({ post_id, user_id: user.id, body: String(body).trim().slice(0, COMMENT_MAX) }).select().single();
     if (error) return json(res, 400, { error: error.message });
-    return json(res, 201, { id: data.id, body: data.body, created_at: data.created_at, author: { id: user.id, name: user.username || user.name || 'Fluffy Creator', avatar_url: user.avatar_url || null, badge: user.role === 'artist' ? 'artist' : (user.affiliate_enabled ? 'creator' : null) } });
+    return json(res, 201, { id: data.id, body: data.body, created_at: data.created_at, author: { id: user.id, name: user.username || user.name || 'Community Member', avatar_url: user.avatar_url || null, affiliate_enabled: !!user.affiliate_enabled } });
   }
 
   // DELETE comment — owner or admin
@@ -217,7 +217,7 @@ module.exports = async function handler(req, res) {
     const creators = topIds.map(id => {
       const u = (profiles || []).find(p => p.id === id);
       if (!u) return null;
-      return { id: u.id, name: u.username || u.name || 'Fluffy Creator', avatar_url: u.avatar_url || null, badge: u.role === 'artist' ? 'artist' : (u.affiliate_enabled ? 'creator' : null), posts: tally[id] };
+      return { id: u.id, name: u.username || u.name || 'Community Member', avatar_url: u.avatar_url || null, affiliate_enabled: !!u.affiliate_enabled, posts: tally[id] };
     }).filter(Boolean);
     return json(res, 200, { creators });
   }
@@ -278,7 +278,7 @@ module.exports = async function handler(req, res) {
     const creator = {
       id: profile.id, name: profile.username || profile.name || 'Fluffy Creator', avatar_url: profile.avatar_url || null,
       bio: profile.bio || '', joined: profile.created_at,
-      badge: profile.role === 'artist' ? 'artist' : (profile.affiliate_enabled ? 'creator' : null),
+      affiliate_enabled: !!profile.affiliate_enabled,
       artist_slug: profile.role === 'artist' ? (profile.artist_slug || null) : null,
       stats: { posts: (posts || []).length, booksUsed, palettes: palettes.size },
     };

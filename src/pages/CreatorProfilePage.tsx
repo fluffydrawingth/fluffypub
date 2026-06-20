@@ -30,7 +30,7 @@ export default function CreatorProfilePage({ userId }: { userId: string }) {
 
   const c = data.creator;
   const posts = data.posts || [];
-  const badge = c.badge === 'artist' ? '🎨' : c.badge === 'creator' ? '🌷' : '';
+  const badge = c.affiliate_enabled ? '🌷 Fluffy Creator' : '👤 Community Member';
   const joined = c.joined ? new Date(c.joined).toLocaleDateString(undefined, { year: 'numeric', month: 'short' }) : '';
   const stat = (label: string, value: any) => (
     <div style={{ textAlign: 'center' }}>

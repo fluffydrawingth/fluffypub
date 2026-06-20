@@ -183,7 +183,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
                 <div style={{ marginBottom: 14 }}>
                   <div style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', marginBottom: 6 }}>📚 {tRaw('หนังสือที่ใช้', 'Book used')}</div>
                   {post.product ? (
-                    <button onClick={() => navigate(`/products/${post.product.slug}${c?.id ? `?ref=${c.id}` : ''}`)} style={{ background: p + '12', color: p, border: 'none', cursor: 'pointer', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>📚 {post.product.title} →</button>
+                    <button onClick={() => navigate(`/products/${post.product.slug}${c?.affiliate_enabled ? `?ref=${c.id}` : ''}`)} style={{ background: p + '12', color: p, border: 'none', cursor: 'pointer', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>📚 {post.product.title} →</button>
                   ) : post.external_book_title ? (
                     <div style={{ fontSize: 14, color: '#475569' }}>📖 {post.external_book_title}{post.external_book_author ? ` · ${post.external_book_author}` : ''}</div>
                   ) : <div style={{ fontSize: 13, color: '#cbd5e1' }}>—</div>}

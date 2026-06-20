@@ -13,11 +13,14 @@ function orderHasPhysical(order) {
 }
 
 // Build the earnings summary for one affiliate from their referred orders.
-// Commission only counts when the order is delivered AND has physical items.
-function summarizeAffiliate(orders) {
+// Commission only counts when the order is delivered, has physical items,
+// AND was placed on or after the creator's affiliate_approved_at date.
+function summarizeAffiliate(orders, approvedAt) {
   let ordersReferred = 0, physicalRevenueTHB = 0, commissionEarned = 0, paidCommission = 0;
   for (const o of (orders || [])) {
     if (o.status === 'cancelled') continue;
+    // Never count orders placed before the creator was approved
+    if (approvedAt && o.created_at < approvedAt) continue;
     ordersReferred += 1;
     const delivered = o.status === PAID_DELIVERED && orderHasPhysical(o);
     if (!delivered) continue;
@@ -88,10 +91,11 @@ module.exports = async function handler(req, res) {
     const { data: dup } = await supabase.from('affiliate_codes').select('id').eq('code', code).limit(1);
     if (dup && dup.length) return json(res, 409, { error: 'That code is already taken.' });
     // Grant affiliate permission on the SAME profile row the user logs in with.
+    const approvedAt = new Date().toISOString();
     const { data: updatedProfile, error: pErr } = await supabase.from('profiles')
-      .update({ affiliate_enabled: true, updated_at: new Date().toISOString() })
+      .update({ affiliate_enabled: true, affiliate_approved_at: approvedAt, updated_at: approvedAt })
       .eq('id', reqRow.user_id)
-      .select('id,email,role,artist_id,affiliate_enabled')
+      .select('id,email,role,artist_id,affiliate_enabled,affiliate_approved_at')
       .single();
     if (pErr) return json(res, 400, { error: pErr.message });
     // Create the affiliate code linked to this user/profile
@@ -159,7 +163,7 @@ module.exports = async function handler(req, res) {
     const admin = await requireAuth(req, res, ['admin']);
     if (!admin) return;
     const { data: profiles } = await supabase.from('profiles')
-      .select('id,name,username,email,role,affiliate_enabled,payout_account_name,payout_bank_name,payout_account_number,payout_payment_method,payout_note')
+      .select('id,name,username,email,role,affiliate_enabled,affiliate_approved_at,payout_account_name,payout_bank_name,payout_account_number,payout_payment_method,payout_note')
       .eq('affiliate_enabled', true).order('name');
     const { data: codes } = await supabase.from('affiliate_codes').select('*').order('created_at', { ascending: false });
     const { data: orders } = await supabase.from('orders').select('id,status,items,total_thb,affiliate_user_id,affiliate_code,affiliate_discount_thb,affiliate_commission_thb,affiliate_paid_at,created_at,delivered_at').not('affiliate_user_id', 'is', null);
@@ -171,7 +175,7 @@ module.exports = async function handler(req, res) {
         codes: (codes || []).filter(c => c.user_id === pf.id),
         orders: myOrders,
         payouts: (payouts || []).filter(py => py.affiliate_user_id === pf.id),
-        summary: summarizeAffiliate(myOrders),
+        summary: summarizeAffiliate(myOrders, pf.affiliate_approved_at),
       };
     });
     return json(res, 200, result);
@@ -185,7 +189,7 @@ module.exports = async function handler(req, res) {
     const { data: codes } = await supabase.from('affiliate_codes').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
     const { data: orders } = await supabase.from('orders')
       .select('id,status,items,total_thb,affiliate_code,affiliate_discount_thb,affiliate_commission_thb,affiliate_paid_at,created_at,delivered_at')
-      .eq('affiliate_user_id', user.id).order('created_at', { ascending: false });
+      .eq('affiliate_user_id', user.id).gte('created_at', user.affiliate_approved_at || '1970-01-01').order('created_at', { ascending: false });
     const { data: payouts } = await supabase.from('affiliate_payouts').select('*').eq('affiliate_user_id', user.id).order('year', { ascending: false }).order('month', { ascending: false });
     const payoutAccount = {
       payout_account_name: user.payout_account_name || '',
