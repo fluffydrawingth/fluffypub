@@ -11,6 +11,20 @@ const MEDIUMS = ['Alcohol Marker', 'Colored Pencil', 'Watercolor', 'Gel Pen', 'C
 const PALETTE_EXAMPLES = ['🍓 Strawberry Milk', '☕ Cozy Cafe', '🌷 Spring Garden', '🌙 Moonlight'];
 const MARKER_EXAMPLES = ['Ohuhu Pastel 48', 'Ohuhu Midtone 48', 'Copic Sketch', 'Prismacolor'];
 const PAGE = 12;
+const GRID = `.cm-grid{column-count:4;column-gap:16px}@media(max-width:1100px){.cm-grid{column-count:3}}@media(max-width:760px){.cm-grid{column-count:2;column-gap:10px}}@media(max-width:420px){.cm-grid{column-count:1}}.cm-grid>div{margin-bottom:16px}`;
+
+type Filter = { kind: 'all' | 'palette' | 'marker' | 'month' | 'product'; value?: string };
+
+// Read a ?book=<productId> deep-link (from a product page "View all creations" button).
+function initialFilter(): Filter {
+  const hash = window.location.hash || '';
+  const qi = hash.indexOf('?');
+  if (qi >= 0) {
+    const book = new URLSearchParams(hash.slice(qi + 1)).get('book');
+    if (book) return { kind: 'product', value: book };
+  }
+  return { kind: 'all' };
+}
 
 export default function CommunityPage() {
   const { theme } = useTheme();
@@ -19,15 +33,36 @@ export default function CommunityPage() {
   const { tRaw } = useLang();
   const p = theme.primaryColor;
 
+  const [showForm, setShowForm] = useState(false);
+  const [filter, setFilter] = useState<Filter>(initialFilter);
+
+  // Side data (loaded once)
+  const [trending, setTrending] = useState<any[]>([]);
+  const [creators, setCreators] = useState<any[]>([]);
+  const [facets, setFacets] = useState<{ palettes: any[]; markers: any[] }>({ palettes: [], markers: [] });
+  const [archive, setArchive] = useState<any[]>([]);
+
+  // Main grid
   const [posts, setPosts] = useState<any[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
 
-  const loadPage = useCallback((pg: number) => {
+  useEffect(() => {
+    api.getCommunityTrending(8).then((d: any) => setTrending(d?.posts || [])).catch(() => {});
+    api.getCommunityCreators(12).then((d: any) => setCreators(d?.creators || [])).catch(() => {});
+    api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [] })).catch(() => {});
+    api.getCommunityArchive().then((d: any) => setArchive(d?.months || [])).catch(() => {});
+  }, []);
+
+  const loadPage = useCallback((pg: number, f: Filter) => {
     setLoading(true);
-    api.getCommunityPosts({ page: pg, limit: PAGE }).then((d: any) => {
+    const opts: any = { page: pg, limit: PAGE };
+    if (f.kind === 'palette') opts.palette = f.value;
+    if (f.kind === 'marker') opts.marker = f.value;
+    if (f.kind === 'month') opts.month = f.value;
+    if (f.kind === 'product') opts.product_id = f.value;
+    api.getCommunityPosts(opts).then((d: any) => {
       const list = d?.posts || [];
       setPosts(prev => pg === 0 ? list : [...prev, ...list]);
       setHasMore(!!d?.hasMore);
@@ -35,13 +70,15 @@ export default function CommunityPage() {
     }).catch(() => setLoading(false));
   }, []);
 
-  useEffect(() => { loadPage(0); }, [loadPage]);
+  useEffect(() => { setPage(0); loadPage(0, filter); }, [filter, loadPage]);
 
   const onPosted = (post: any) => { setShowForm(false); setPosts(prev => [post, ...prev]); };
+  const isAll = filter.kind === 'all';
+  const monthLabel = (m: string) => { const [y, mm] = m.split('-'); return new Date(Number(y), Number(mm) - 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }); };
 
   return (
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
-      <style>{`.cm-grid{column-count:4;column-gap:16px}@media(max-width:1100px){.cm-grid{column-count:3}}@media(max-width:760px){.cm-grid{column-count:2;column-gap:10px}}@media(max-width:420px){.cm-grid{column-count:1}}.cm-grid>div{margin-bottom:16px}`}</style>
+      <style>{GRID}</style>
 
       {/* Header */}
       <div style={{ background: `linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, padding: '40px 24px 32px', textAlign: 'center' }}>
@@ -65,24 +102,75 @@ export default function CommunityPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px 60px' }}>
         {showForm && user && <UploadForm theme={theme} p={p} tRaw={tRaw} onPosted={onPosted} />}
 
-        {/* New creations */}
-        <h2 style={{ fontSize: 20, fontWeight: 900, color: theme.textColor, margin: '8px 0 16px' }}>🆕 {tRaw('ผลงานใหม่ล่าสุด', 'New Creations')}</h2>
+        {/* ✨ Trending this week (only on the unfiltered view) */}
+        {isAll && trending.length > 0 && (
+          <Section title={`✨ ${tRaw('มาแรงสัปดาห์นี้', 'Trending this week')}`}>
+            <div className="cm-grid">{trending.slice(0, 8).map(post => <CommunityCard key={'t' + post.id} post={post} />)}</div>
+          </Section>
+        )}
+
+        {/* 👤 Creators */}
+        {isAll && creators.length > 0 && (
+          <Section title={`👤 ${tRaw('ครีเอเตอร์', 'Creators')}`}>
+            <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 6 }}>
+              {creators.map(c => (
+                <button key={c.id} onClick={() => navigate(`/creator/${c.id}`)} style={{ background: 'white', border: `1.5px solid ${p}15`, borderRadius: 16, padding: '14px 12px', cursor: 'pointer', minWidth: 96, textAlign: 'center', fontFamily: theme.fontFamily, flexShrink: 0 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: '50%', overflow: 'hidden', background: p + '20', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
+                    {c.avatar_url ? <img src={c.avatar_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '👤'}
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#1e293b', maxWidth: 88, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.badge === 'artist' ? '🎨' : c.badge === 'creator' ? '🌷' : ''} {c.name}</div>
+                  <div style={{ fontSize: 10, color: '#94a3b8' }}>{c.posts} {tRaw('โพสต์', 'posts')}</div>
+                </button>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* Filter chips: palettes / markers / months */}
+        {(facets.palettes.length > 0 || facets.markers.length > 0 || archive.length > 0) && (
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <Chip active={isAll} p={p} theme={theme} onClick={() => setFilter({ kind: 'all' })}>🆕 {tRaw('ทั้งหมด', 'All')}</Chip>
+              {facets.palettes.slice(0, 8).map(t => (
+                <Chip key={'pal' + t.name} active={filter.kind === 'palette' && filter.value === t.name} p={p} theme={theme} onClick={() => setFilter({ kind: 'palette', value: t.name })}>🌷 {t.name}</Chip>
+              ))}
+              {facets.markers.slice(0, 6).map(t => (
+                <Chip key={'mk' + t.name} active={filter.kind === 'marker' && filter.value === t.name} p={p} theme={theme} onClick={() => setFilter({ kind: 'marker', value: t.name })}>🖍️ {t.name}</Chip>
+              ))}
+            </div>
+            {archive.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                {archive.slice(0, 12).map(m => (
+                  <Chip key={m.month} active={filter.kind === 'month' && filter.value === m.month} p={p} theme={theme} onClick={() => setFilter({ kind: 'month', value: m.month })}>📅 {monthLabel(m.month)} ({m.count})</Chip>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Main grid */}
+        <h2 style={{ fontSize: 20, fontWeight: 900, color: theme.textColor, margin: '8px 0 16px' }}>
+          {filter.kind === 'all' ? `🆕 ${tRaw('ผลงานใหม่ล่าสุด', 'New Creations')}`
+            : filter.kind === 'palette' ? `🌷 ${filter.value}`
+            : filter.kind === 'marker' ? `🖍️ ${filter.value}`
+            : filter.kind === 'product' ? `🌈 ${tRaw('ระบายจากเล่มนี้', 'Colored from this book')}`
+            : `📅 ${monthLabel(filter.value!)}`}
+          {!isAll && <button onClick={() => setFilter({ kind: 'all' })} style={{ marginLeft: 12, fontSize: 12, fontWeight: 700, color: p, background: 'none', border: 'none', cursor: 'pointer' }}>✕ {tRaw('ล้างตัวกรอง', 'Clear')}</button>}
+        </h2>
 
         {!loading && posts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 24px', color: theme.textColor + '88' }}>
             <div style={{ fontSize: 56, marginBottom: 14 }}>🎨</div>
             <h3 style={{ fontWeight: 800, color: theme.textColor }}>{tRaw('ยังไม่มีผลงาน', 'No creations yet')}</h3>
-            <p>{tRaw('เป็นคนแรกที่แบ่งปันผลงานระบายสีของคุณ!', 'Be the first to share your colored page!')}</p>
+            <p>{isAll ? tRaw('เป็นคนแรกที่แบ่งปันผลงานระบายสีของคุณ!', 'Be the first to share your colored page!') : tRaw('ลองเลือกตัวกรองอื่น', 'Try another filter.')}</p>
           </div>
         ) : (
           <>
-            <div className="cm-grid">
-              {posts.map(post => <CommunityCard key={post.id} post={post} />)}
-            </div>
+            <div className="cm-grid">{posts.map(post => <CommunityCard key={post.id} post={post} />)}</div>
             {loading && <div style={{ textAlign: 'center', padding: 30, color: '#9ca3af', fontSize: 28 }}>⏳</div>}
             {hasMore && !loading && (
               <div style={{ textAlign: 'center', marginTop: 24 }}>
-                <button onClick={() => { const np = page + 1; setPage(np); loadPage(np); }}
+                <button onClick={() => { const np = page + 1; setPage(np); loadPage(np, filter); }}
                   style={{ background: 'transparent', border: `2px solid ${p}`, color: p, cursor: 'pointer', padding: '11px 30px', borderRadius: 24, fontSize: 14, fontWeight: 800, fontFamily: theme.fontFamily }}>
                   {tRaw('ดูเพิ่มเติม', 'View more')}
                 </button>
@@ -92,6 +180,22 @@ export default function CommunityPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function Section({ title, children }: any) {
+  const { theme } = useTheme();
+  return (
+    <div style={{ marginBottom: 28 }}>
+      <h2 style={{ fontSize: 20, fontWeight: 900, color: theme.textColor, margin: '0 0 14px' }}>{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+function Chip({ active, p, theme, onClick, children }: any) {
+  return (
+    <button onClick={onClick} style={{ padding: '6px 12px', borderRadius: 18, border: `1.5px solid ${active ? p : p + '30'}`, background: active ? p : 'white', color: active ? 'white' : theme.textColor, cursor: 'pointer', fontSize: 12.5, fontWeight: active ? 800 : 600, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>{children}</button>
   );
 }
 
@@ -122,7 +226,6 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
 
   const pickFile = (f: File) => { setFile(f); setPreview(URL.createObjectURL(f)); };
   const toggle = (arr: string[], set: any, v: string) => set(arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]);
-
   const fld = { width: '100%', padding: '10px 13px', borderRadius: 10, border: `1.5px solid ${p}30`, fontSize: 14, outline: 'none', fontFamily: theme.fontFamily, boxSizing: 'border-box' as const };
 
   const submit = async () => {
@@ -134,8 +237,7 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
       const [up, upT] = await Promise.all([api.uploadFile(full, 'community'), api.uploadFile(thumb, 'community')]);
       if (up?.error) { setErr(up.error); setBusy(false); return; }
       const res = await api.createCommunityPost({
-        artwork_url: up.publicUrl,
-        thumb_url: upT?.publicUrl || up.publicUrl,
+        artwork_url: up.publicUrl, thumb_url: upT?.publicUrl || up.publicUrl,
         product_id: bookMode === 'product' ? (selProduct?.id || null) : null,
         external_book_title: bookMode === 'external' ? extTitle.trim() || null : null,
         external_book_author: bookMode === 'external' ? extAuthor.trim() || null : null,
@@ -151,8 +253,6 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
       <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1e293b', margin: '0 0 16px' }}>🎨 {tRaw('แบ่งปันผลงานของคุณ', 'Share your artwork')}</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 18 }} className="cm-form">
         <style>{`@media(max-width:640px){.cm-form{grid-template-columns:1fr!important}}`}</style>
-
-        {/* Left: image */}
         <div>
           <label style={{ display: 'block', cursor: 'pointer' }}>
             <div style={{ aspectRatio: '1', borderRadius: 14, border: `2px dashed ${p}40`, background: preview ? '#000' : p + '08', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
@@ -161,10 +261,7 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
             <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) pickFile(f); }} />
           </label>
         </div>
-
-        {/* Right: details */}
         <div>
-          {/* Book used */}
           <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 6 }}>📚 {tRaw('หนังสือที่ใช้', 'Book used')}</div>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
             {(['product', 'external'] as const).map(m => (
@@ -196,14 +293,10 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
             </div>
           )}
 
-          {/* Mediums */}
           <TagBlock label={`🎨 ${tRaw('สื่อที่ใช้', 'Medium')}`} options={MEDIUMS} values={mediums} setValues={setMediums} toggle={toggle} addPh={tRaw('เพิ่มสื่อของคุณเอง', 'Add your own medium')} theme={theme} p={p} fld={fld} />
-          {/* Markers */}
           <TagBlock label={`🖍️ ${tRaw('ปากกา/ชุดที่ใช้', 'Marker / set used')}`} options={MARKER_EXAMPLES} values={markers} setValues={setMarkers} toggle={toggle} addPh={tRaw('เพิ่มชุดปากกา', 'Add a marker set')} theme={theme} p={p} fld={fld} />
-          {/* Palettes */}
           <TagBlock label={`🌷 ${tRaw('พาเลตต์ที่ใช้', 'Palette used')}`} options={PALETTE_EXAMPLES} values={palettes} setValues={setPalettes} toggle={toggle} addPh={tRaw('เพิ่มพาเลตต์', 'Add a palette')} theme={theme} p={p} fld={fld} />
 
-          {/* Caption */}
           <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', margin: '4px 0 6px' }}>✏️ {tRaw('คำบรรยาย', 'Caption')} <span style={{ color: '#9ca3af', fontWeight: 500 }}>({caption.length}/300)</span></div>
           <textarea value={caption} maxLength={300} onChange={e => setCaption(e.target.value)} rows={2} placeholder={tRaw('เล่าเกี่ยวกับผลงานชิ้นนี้...', 'Tell us about this piece...')} style={{ ...fld, resize: 'vertical' }} />
 
@@ -217,7 +310,6 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
   );
 }
 
-// Predefined chips (multi-select) + custom add input → tag list
 function TagBlock({ label, options, values, setValues, toggle, addPh, theme, p, fld }: any) {
   const [custom, setCustom] = useState('');
   const add = () => { const v = custom.trim(); if (v && !values.includes(v)) setValues([...values, v]); setCustom(''); };
@@ -229,7 +321,6 @@ function TagBlock({ label, options, values, setValues, toggle, addPh, theme, p, 
           const on = values.includes(o);
           return <button key={o} onClick={() => toggle(values, setValues, o)} style={{ padding: '5px 11px', borderRadius: 18, border: `1.5px solid ${on ? p : '#e5e7eb'}`, background: on ? p + '15' : 'white', color: on ? p : '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: theme.fontFamily }}>{o}</button>;
         })}
-        {/* custom values not in options */}
         {values.filter((v: string) => !options.includes(v)).map((v: string) => (
           <button key={v} onClick={() => toggle(values, setValues, v)} style={{ padding: '5px 11px', borderRadius: 18, border: `1.5px solid ${p}`, background: p + '15', color: p, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: theme.fontFamily }}>{v} ✕</button>
         ))}

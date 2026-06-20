@@ -1,16 +1,45 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
+import { useAuth } from '../lib/auth';
+import { api } from '../lib/api';
+
+// The five Fluffy reactions (no plain ❤️ "like").
+const REACTIONS: { type: string; emoji: string; th: string; en: string }[] = [
+  { type: 'love', emoji: '🩷', th: 'รักเลย', en: 'Love it' },
+  { type: 'inspiring', emoji: '🎨', th: 'สร้างแรงบันดาลใจ', en: 'Inspiring' },
+  { type: 'cozy', emoji: '🌷', th: 'อบอุ่น', en: 'Cozy' },
+  { type: 'cute_palette', emoji: '🍓', th: 'พาเลตต์น่ารัก', en: 'Cute palette' },
+  { type: 'want_to_try', emoji: '✨', th: 'อยากลองบ้าง', en: 'Want to try' },
+];
 
 // A single community post card (Pinterest-ish). Image is lazy-loaded for performance.
 export default function CommunityCard({ post }: { post: any }) {
   const { theme } = useTheme();
   const { navigate } = useRouter();
   const { tRaw } = useLang();
+  const { user } = useAuth();
   const p = theme.primaryColor;
   const creator = post.creator;
   const badge = creator?.badge === 'artist' ? '🎨' : creator?.badge === 'creator' ? '🌷' : '';
+
+  const [counts, setCounts] = useState<Record<string, number>>(post.reactions || {});
+  const [mine, setMine] = useState<string[]>(post.myReactions || []);
+  const [busy, setBusy] = useState('');
+
+  const react = async (type: string) => {
+    if (!user) { navigate('/login'); return; }
+    if (busy) return;
+    setBusy(type);
+    // optimistic toggle
+    const had = mine.includes(type);
+    setMine(prev => had ? prev.filter(t => t !== type) : [...prev, type]);
+    setCounts(prev => ({ ...prev, [type]: Math.max(0, (prev[type] || 0) + (had ? -1 : 1)) }));
+    const res = await api.reactCommunity(post.id, type);
+    if (res && !res.error) { setCounts(res.reactions || {}); setMine(res.myReactions || []); }
+    setBusy('');
+  };
 
   const chip = (txt: string, bg: string, color: string) => (
     <span key={txt} style={{ background: bg, color, borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>{txt}</span>
@@ -63,6 +92,20 @@ export default function CommunityCard({ post }: { post: any }) {
             <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>{badge} {creator.name}</span>
           </button>
         )}
+
+        {/* Fluffy reactions */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
+          {REACTIONS.map(r => {
+            const on = mine.includes(r.type);
+            const n = counts[r.type] || 0;
+            return (
+              <button key={r.type} onClick={() => react(r.type)} title={tRaw(r.th, r.en)}
+                style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '3px 7px', borderRadius: 14, border: `1.5px solid ${on ? p : '#eef2f7'}`, background: on ? p + '12' : 'white', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: on ? p : '#64748b', fontFamily: theme.fontFamily }}>
+                <span>{r.emoji}</span>{n > 0 && <span style={{ fontSize: 11 }}>{n}</span>}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

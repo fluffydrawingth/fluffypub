@@ -21,8 +21,19 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
   const [related, setRelated] = useState<any[]>([]);
   const [artistProducts, setArtistProducts] = useState<any[]>([]);
   const [artistProfile, setArtistProfile] = useState<any>(null);
+  const [communityPosts, setCommunityPosts] = useState<any[]>([]);
+  const [communityTotal, setCommunityTotal] = useState(0);
   const { isFav, toggle } = useFavorites();
   const { user } = useAuth();
+
+  // "Colored by Community" — finished pages other people shared of this book
+  useEffect(() => {
+    if (!product?.id) return;
+    api.getCommunityByProduct(product.id, 6).then((d: any) => {
+      setCommunityPosts(d?.posts || []);
+      setCommunityTotal(d?.total || 0);
+    }).catch(() => {});
+  }, [product?.id]);
 
   useEffect(() => {
     api.getProduct(slug).then(p => {
@@ -327,6 +338,26 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                 {artistProducts.map((x:any)=><ProductCard key={x.id} product={x}/>)}
               </div>
             )}
+          </div>
+        )}
+
+        {/* 🌈 Colored by Community */}
+        {communityPosts.length > 0 && (
+          <div style={{marginTop:36}}>
+            <h2 style={{fontSize:22,fontWeight:900,color:theme.textColor,marginBottom:18}}>🌈 {tRaw('ระบายโดยชุมชน','Colored by Community')}</h2>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(120px,1fr))',gap:12}}>
+              {communityPosts.map((post:any)=>(
+                <button key={post.id} onClick={()=>navigate(`/community?book=${product.id}`)}
+                  style={{padding:0,border:'none',borderRadius:14,overflow:'hidden',cursor:'pointer',aspectRatio:'1',background:theme.primaryColor+'10'}}>
+                  <img src={post.thumb_url||post.artwork_url} alt="community art" loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
+                </button>
+              ))}
+            </div>
+            <div style={{textAlign:'center',marginTop:18}}>
+              <button onClick={()=>navigate(`/community?book=${product.id}`)} style={{background:'transparent',border:`2px solid ${theme.primaryColor}`,color:theme.primaryColor,cursor:'pointer',padding:'10px 26px',borderRadius:24,fontSize:14,fontWeight:800,fontFamily:theme.fontFamily}}>
+                {tRaw(`ดูผลงานทั้งหมด ${communityTotal} ชิ้น`,`View all ${communityTotal} creation${communityTotal!==1?'s':''}`)}
+              </button>
+            </div>
           </div>
         )}
 

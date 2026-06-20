@@ -111,17 +111,25 @@ export const api = {
   deleteAffiliatePayout: (id: string) => fetch(`/api/users?action=affiliate-payout&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 
   // Community — "Share Your Colorful World"
-  getCommunityPosts: (opts: { page?: number; limit?: number; product_id?: string; user_id?: string } = {}) => {
+  getCommunityPosts: (opts: { page?: number; limit?: number; product_id?: string; user_id?: string; palette?: string; marker?: string; month?: string } = {}) => {
     const q = new URLSearchParams({ action: 'list', page: String(opts.page ?? 0), limit: String(opts.limit ?? 12) });
     if (opts.product_id) q.set('product_id', opts.product_id);
     if (opts.user_id) q.set('user_id', opts.user_id);
-    return fetch(`/api/community?${q.toString()}`).then(r => r.json());
+    if (opts.palette) q.set('palette', opts.palette);
+    if (opts.marker) q.set('marker', opts.marker);
+    if (opts.month) q.set('month', opts.month);
+    return fetch(`/api/community?${q.toString()}`, { headers: h() }).then(r => r.json());
   },
-  getCommunityPost: (id: string) => fetch(`/api/community?action=one&id=${id}`).then(r => r.json()),
-  getCommunityByProduct: (productId: string, limit = 6) => fetch(`/api/community?action=by-product&product_id=${productId}&limit=${limit}`).then(r => r.json()),
-  getCommunityCreator: (userId: string) => fetch(`/api/community?action=creator&user_id=${userId}`).then(r => r.json()),
+  getCommunityPost: (id: string) => fetch(`/api/community?action=one&id=${id}`, { headers: h() }).then(r => r.json()),
+  getCommunityByProduct: (productId: string, limit = 6) => fetch(`/api/community?action=by-product&product_id=${productId}&limit=${limit}`, { headers: h() }).then(r => r.json()),
+  getCommunityCreator: (userId: string) => fetch(`/api/community?action=creator&user_id=${userId}`, { headers: h() }).then(r => r.json()),
   createCommunityPost: (data: any) => fetch('/api/community', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   deleteCommunityPost: (id: string) => fetch(`/api/community?id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
+  reactCommunity: (postId: string, type: string) => fetch('/api/community?action=react', { method: 'POST', headers: h(), body: JSON.stringify({ post_id: postId, type }) }).then(r => r.json()),
+  getCommunityTrending: (limit = 8) => fetch(`/api/community?action=trending&limit=${limit}`, { headers: h() }).then(r => r.json()),
+  getCommunityCreators: (limit = 12) => fetch(`/api/community?action=creators&limit=${limit}`).then(r => r.json()),
+  getCommunityFacets: () => fetch('/api/community?action=facets').then(r => r.json()),
+  getCommunityArchive: () => fetch('/api/community?action=archive').then(r => r.json()),
 
   // Analytics
   getAnalytics: () => fetch('/api/analytics', { headers: h() }).then(r => r.json()),
