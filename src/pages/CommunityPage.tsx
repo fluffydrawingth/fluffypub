@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
@@ -78,18 +78,16 @@ export default function CommunityPage() {
       <style>{GRID}</style>
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 16px 60px' }}>
 
-        {/* Compact header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 6 }}>
-          <div>
-            <h1 style={{ fontSize: 'clamp(20px,3vw,28px)', fontWeight: 900, color: theme.textColor, margin: 0 }}>{tRaw('แบ่งปันโลกสีสันของคุณ', 'Share Your Colorful World')} 🌈</h1>
-            <p style={{ color: theme.textColor + '88', fontSize: 13, margin: '2px 0 0' }}>{tRaw('แรงบันดาลใจการระบายสีจากชุมชน', 'Coloring inspiration from the community')}</p>
-          </div>
+        {/* Header — centered */}
+        <div style={{ textAlign: 'center', marginBottom: 10 }}>
+          <h1 style={{ fontSize: 'clamp(20px,3vw,28px)', fontWeight: 900, color: theme.textColor, margin: '0 0 4px' }}>{tRaw('แบ่งปันโลกสีสันของคุณ', 'Share Your Colorful World')} 🌈</h1>
+          <p style={{ color: theme.textColor + '88', fontSize: 13, margin: '0 0 14px' }}>{tRaw('แรงบันดาลใจการระบายสีจากชุมชน', 'Coloring inspiration from the community')}</p>
           {user ? (
-            <button onClick={() => setShowForm(s => !s)} style={{ background: p, color: 'white', border: 'none', cursor: 'pointer', padding: '9px 18px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily, flexShrink: 0 }}>
+            <button onClick={() => setShowForm(s => !s)} style={{ background: p, color: 'white', border: 'none', cursor: 'pointer', padding: '9px 22px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily }}>
               {showForm ? tRaw('ปิด', 'Close') : `🎨 ${tRaw('แบ่งปันผลงาน', 'Share artwork')}`}
             </button>
           ) : (
-            <button onClick={() => navigate('/login')} style={{ background: 'none', border: `1.5px solid ${p}40`, color: p, cursor: 'pointer', padding: '8px 16px', borderRadius: 22, fontSize: 13, fontWeight: 700, fontFamily: theme.fontFamily, flexShrink: 0 }}>
+            <button onClick={() => navigate('/login')} style={{ background: 'none', border: `1.5px solid ${p}40`, color: p, cursor: 'pointer', padding: '8px 20px', borderRadius: 22, fontSize: 13, fontWeight: 700, fontFamily: theme.fontFamily }}>
               {tRaw('เข้าสู่ระบบเพื่อแบ่งปัน', 'Log in to share')}
             </button>
           )}
@@ -201,8 +199,96 @@ function Empty({ theme, tRaw, isAll }: any) {
   );
 }
 
+// ── Crop Modal ────────────────────────────────────────────────────────────────
+const CROP_SZ = 320; // display canvas size
+
+function CropModal({ file, theme, p, tRaw, onCrop, onCancel }: {
+  file: File; theme: any; p: string; tRaw: any;
+  onCrop: (f: File) => void; onCancel: () => void;
+}) {
+  const [img, setImg] = useState<HTMLImageElement | null>(null);
+  const [box, setBox] = useState({ x: 20, y: 20, size: CROP_SZ - 40 });
+  const dragging = useRef<{ mode: 'move' | 'resize'; mx: number; my: number; bx: number; by: number; bs: number } | null>(null);
+
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      setImg(image);
+      const s = CROP_SZ * 0.82;
+      setBox({ x: (CROP_SZ - s) / 2, y: (CROP_SZ - s) / 2, size: s });
+    };
+    image.src = url;
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+  const onDown = (e: React.PointerEvent, mode: 'move' | 'resize') => {
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    dragging.current = { mode, mx: e.clientX, my: e.clientY, bx: box.x, by: box.y, bs: box.size };
+  };
+
+  const onMove = (e: React.PointerEvent) => {
+    const d = dragging.current;
+    if (!d) return;
+    const dx = e.clientX - d.mx, dy = e.clientY - d.my;
+    if (d.mode === 'move') {
+      setBox(b => ({ ...b, x: clamp(d.bx + dx, 0, CROP_SZ - b.size), y: clamp(d.by + dy, 0, CROP_SZ - b.size) }));
+    } else {
+      const ns = clamp(d.bs + Math.max(dx, dy), 40, CROP_SZ - Math.max(d.bx, d.by));
+      setBox(b => ({ ...b, size: ns }));
+    }
+  };
+
+  const confirm = () => {
+    if (!img) return;
+    // Map display (cover-fitted) coords → image natural coords
+    const scale = Math.max(CROP_SZ / img.naturalWidth, CROP_SZ / img.naturalHeight);
+    const rw = img.naturalWidth * scale, rh = img.naturalHeight * scale;
+    const ox = (CROP_SZ - rw) / 2, oy = (CROP_SZ - rh) / 2;
+    const sx = (box.x - ox) / scale, sy = (box.y - oy) / scale;
+    const sw = box.size / scale;
+    const off = document.createElement('canvas');
+    off.width = Math.round(sw); off.height = Math.round(sw);
+    off.getContext('2d')!.drawImage(img, sx, sy, sw, sw, 0, 0, off.width, off.height);
+    off.toBlob(blob => { if (blob) onCrop(new File([blob], file.name, { type: 'image/jpeg' })); }, 'image/jpeg', 0.92);
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 2000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+      <div style={{ color: 'white', fontWeight: 800, fontSize: 15, fontFamily: theme.fontFamily }}>✂️ {tRaw('ปรับตัดรูป (สี่เหลี่ยมจัตุรัส)', 'Crop to square')}</div>
+      <div style={{ position: 'relative', width: CROP_SZ, height: CROP_SZ, background: '#111', overflow: 'hidden', borderRadius: 12, userSelect: 'none' }}
+        onPointerMove={onMove} onPointerUp={() => { dragging.current = null; }}>
+        {img && <img src={img.src} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+        {/* Dim overlay */}
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+          <defs><mask id="cm-hole"><rect width={CROP_SZ} height={CROP_SZ} fill="white" /><rect x={box.x} y={box.y} width={box.size} height={box.size} fill="black" /></mask></defs>
+          <rect width={CROP_SZ} height={CROP_SZ} fill="rgba(0,0,0,0.55)" mask="url(#cm-hole)" />
+          <rect x={box.x} y={box.y} width={box.size} height={box.size} fill="none" stroke="white" strokeWidth={2} strokeDasharray="6 3" />
+          {/* Corner guides */}
+          {([[box.x,box.y],[box.x+box.size-14,box.y],[box.x,box.y+box.size-14],[box.x+box.size-14,box.y+box.size-14]] as [number,number][]).map(([cx,cy],i) => (
+            <rect key={i} x={cx} y={cy} width={14} height={14} fill="none" stroke="white" strokeWidth={3} />
+          ))}
+        </svg>
+        {/* Move handle */}
+        <div onPointerDown={e => onDown(e, 'move')} style={{ position: 'absolute', left: box.x + 2, top: box.y + 2, width: box.size - 20, height: box.size - 20, cursor: 'move' }} />
+        {/* Resize handle */}
+        <div onPointerDown={e => onDown(e, 'resize')} style={{ position: 'absolute', left: box.x + box.size - 18, top: box.y + box.size - 18, width: 18, height: 18, background: p, borderRadius: 4, cursor: 'se-resize', opacity: 0.9 }} />
+      </div>
+      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: theme.fontFamily }}>{tRaw('ลากกรอบเพื่อย้าย · ลากมุมขวาล่างเพื่อปรับขนาด', 'Drag box to move · drag corner to resize')}</div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={onCancel} style={{ padding: '10px 22px', borderRadius: 22, border: '2px solid rgba(255,255,255,0.5)', background: 'transparent', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: theme.fontFamily }}>{tRaw('ยกเลิก', 'Cancel')}</button>
+        <button onClick={confirm} style={{ padding: '10px 24px', borderRadius: 22, border: 'none', background: p, color: 'white', cursor: 'pointer', fontWeight: 800, fontFamily: theme.fontFamily }}>✂️ {tRaw('ตัดรูป', 'Crop & use')}</button>
+      </div>
+    </div>
+  );
+}
+
 // ── Upload form ───────────────────────────────────────────────────────────────
 function UploadForm({ theme, p, tRaw, onPosted }: any) {
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState('');
   const [bookMode, setBookMode] = useState<'product' | 'external'>('product');
@@ -227,6 +313,7 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
   }, [prodQuery, allProducts]);
 
   const pickFile = (f: File) => { setFile(f); setPreview(URL.createObjectURL(f)); };
+  const onFileChosen = (f: File) => { setCropFile(f); };
   const toggle = (arr: string[], set: any, v: string) => set(arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]);
   const fld = { width: '100%', padding: '10px 13px', borderRadius: 10, border: `1.5px solid ${p}30`, fontSize: 14, outline: 'none', fontFamily: theme.fontFamily, boxSizing: 'border-box' as const };
 
@@ -251,6 +338,8 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
   };
 
   return (
+    <>
+    {cropFile && <CropModal file={cropFile} theme={theme} p={p} tRaw={tRaw} onCrop={f => { pickFile(f); setCropFile(null); }} onCancel={() => setCropFile(null)} />}
     <div style={{ background: 'white', borderRadius: 18, padding: 20, boxShadow: '0 2px 14px rgba(0,0,0,0.06)', margin: '14px 0 24px', border: `1.5px solid ${p}15` }}>
       <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1e293b', margin: '0 0 16px' }}>🎨 {tRaw('แบ่งปันผลงานของคุณ', 'Share your artwork')}</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 18 }} className="cm-form">
@@ -260,7 +349,7 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
             <div style={{ aspectRatio: '1', borderRadius: 14, border: `2px dashed ${p}40`, background: preview ? '#000' : p + '08', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
               {preview ? <img src={preview} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ color: p, fontWeight: 700, fontSize: 13, textAlign: 'center', padding: 16 }}>🖼️ {tRaw('แตะเพื่ออัปโหลดรูปผลงาน', 'Tap to upload artwork')}</span>}
             </div>
-            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) pickFile(f); }} />
+            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onFileChosen(f); e.target.value = ''; }} />
           </label>
         </div>
         <div>
@@ -309,6 +398,7 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
         </div>
       </div>
     </div>
+    </>
   );
 }
 

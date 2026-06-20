@@ -53,12 +53,12 @@ export default function CommunityCard({ post }: { post: any }) {
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 10px 28px ${p}22`; }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; }}>
       {/* Artwork */}
-      <div style={{ position: 'relative', width: '100%', background: `linear-gradient(135deg,${p}10,${p}05)` }}>
+      <div style={{ position: 'relative', width: '100%', paddingBottom: '100%', background: `linear-gradient(135deg,${p}10,${p}05)` }}>
         <img
           src={post.thumb_url || post.artwork_url}
           alt={post.caption || 'coloring'}
           loading="lazy"
-          style={{ width: '100%', display: 'block', objectFit: 'cover' }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
         />
       </div>
 
