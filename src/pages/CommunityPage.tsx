@@ -7,11 +7,7 @@ import { api } from '../lib/api';
 import { makeImageVariants } from '../lib/imageThumb';
 import CommunityCard from '../components/CommunityCard';
 
-const MEDIUMS = ['Alcohol Marker', 'Colored Pencil', 'Watercolor', 'Gel Pen', 'Crayon', 'Other'];
-const PALETTE_EXAMPLES = ['🍓 Strawberry Milk', '☕ Cozy Cafe', '🌷 Spring Garden', '🌙 Moonlight'];
-const MARKER_EXAMPLES = ['Ohuhu Pastel 48', 'Ohuhu Midtone 48', 'Copic Sketch', 'Prismacolor'];
 const PAGE = 16;
-// Masonry tuned for ~280–320px columns: 4 / 3 / 2 / 1.
 const GRID = `.cm-grid{column-count:4;column-gap:16px}@media(max-width:1200px){.cm-grid{column-count:3}}@media(max-width:820px){.cm-grid{column-count:2;column-gap:12px}}@media(max-width:480px){.cm-grid{column-count:1}}.cm-grid>div{margin-bottom:16px}`;
 
 type Filter = { kind: 'all' | 'palette' | 'marker' | 'month' | 'product'; value?: string; label?: string };
@@ -32,15 +28,12 @@ export default function CommunityPage() {
   const { user } = useAuth();
   const { tRaw } = useLang();
   const p = theme.primaryColor;
-  const planner = (theme as any).community || {};
 
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState<Filter>(initialFilter);
-
   const [cozy, setCozy] = useState<any[]>([]);
-  const [creators, setCreators] = useState<any[]>([]);
+  const [curation, setCuration] = useState<{ featured_books: any[]; featured_creators: any[] }>({ featured_books: [], featured_creators: [] });
   const [facets, setFacets] = useState<{ palettes: any[]; markers: any[]; books: any[] }>({ palettes: [], markers: [], books: [] });
-
   const [posts, setPosts] = useState<any[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -48,7 +41,7 @@ export default function CommunityPage() {
 
   useEffect(() => {
     api.getCommunityCozyPicks().then((d: any) => setCozy(d?.posts || [])).catch(() => {});
-    api.getCommunityCreators(12).then((d: any) => setCreators(d?.creators || [])).catch(() => {});
+    api.getCommunityCuration().then((d: any) => setCuration({ featured_books: d?.featured_books || [], featured_creators: d?.featured_creators || [] })).catch(() => {});
     api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [], books: d?.books || [] })).catch(() => {});
   }, []);
 
@@ -79,7 +72,7 @@ export default function CommunityPage() {
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '20px 16px 60px' }}>
 
         {/* Header — centered */}
-        <div style={{ textAlign: 'center', marginBottom: 10 }}>
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
           <h1 style={{ fontSize: 'clamp(20px,3vw,28px)', fontWeight: 900, color: theme.textColor, margin: '0 0 4px' }}>{tRaw('แบ่งปันโลกสีสันของคุณ', 'Share Your Colorful World')} 🌈</h1>
           <p style={{ color: theme.textColor + '88', fontSize: 13, margin: '0 0 14px' }}>{tRaw('แรงบันดาลใจการระบายสีจากชุมชน', 'Coloring inspiration from the community')}</p>
           {user ? (
@@ -93,19 +86,9 @@ export default function CommunityPage() {
           )}
         </div>
 
-        {/* Weekly Planner banner */}
-        {(planner.palette || planner.book || planner.marker) && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, background: 'white', borderRadius: 14, padding: '10px 14px', boxShadow: '0 1px 8px rgba(0,0,0,0.05)', border: `1.5px solid ${p}12`, margin: '12px 0 18px' }}>
-            <span style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', alignSelf: 'center' }}>{tRaw('สัปดาห์นี้', 'This week')}:</span>
-            {planner.palette && <span style={{ fontSize: 12.5, fontWeight: 700, color: '#be185d', background: '#fce7f3', borderRadius: 14, padding: '4px 11px' }}>🌷 {planner.palette}</span>}
-            {planner.book && <span style={{ fontSize: 12.5, fontWeight: 700, color: p, background: p + '12', borderRadius: 14, padding: '4px 11px' }}>📚 {planner.book}</span>}
-            {planner.marker && <span style={{ fontSize: 12.5, fontWeight: 700, color: '#1d4ed8', background: '#dbeafe', borderRadius: 14, padding: '4px 11px' }}>🖍️ {planner.marker}</span>}
-          </div>
-        )}
-
         {showForm && user && <UploadForm theme={theme} p={p} tRaw={tRaw} onPosted={onPosted} />}
 
-        {/* 1. New Creations (main masonry) */}
+        {/* 1. New Creations */}
         <SectionHead theme={theme} title={
           isAll ? `🆕 ${tRaw('ผลงานใหม่ล่าสุด', 'New Creations')}`
             : filter.kind === 'palette' ? `🌷 ${filter.value}`
@@ -128,40 +111,61 @@ export default function CommunityPage() {
           </>
         )}
 
-        {/* 2. This Week's Cozy Picks (admin-curated) */}
+        {/* 2. Cozy Picks (admin-pinned, manual) */}
         {isAll && cozy.length > 0 && (
-          <div style={{ marginTop: 34 }}>
-            <SectionHead theme={theme} title={`🌷 ${tRaw('คัดสรรอบอุ่นประจำสัปดาห์', "This Week's Cozy Picks")}`} />
+          <div style={{ marginTop: 36 }}>
+            <SectionHead theme={theme} title={`🌷 ${tRaw('คัดสรรโดยทีม', 'Cozy Picks')}`} />
             <div className="cm-grid">{cozy.map(post => <CommunityCard key={'c' + post.id} post={post} />)}</div>
           </div>
         )}
 
-        {/* 3–5. Discover by Book / Palette / Marker (chip rows) */}
+        {/* 3. Featured Books (curated by admin) */}
+        {isAll && curation.featured_books.length > 0 && (
+          <div style={{ marginTop: 36 }}>
+            <SectionHead theme={theme} title={`📚 ${tRaw('หนังสือแนะนำ', 'Featured Books')}`} />
+            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
+              {curation.featured_books.map((bk: any) => (
+                <button key={bk.id} onClick={() => navigate(`/products/${bk.slug}`)}
+                  style={{ background: 'white', border: `1.5px solid ${p}15`, borderRadius: 14, padding: '10px', cursor: 'pointer', minWidth: 120, maxWidth: 140, textAlign: 'center', fontFamily: theme.fontFamily, flexShrink: 0 }}>
+                  <div style={{ width: 100, height: 130, borderRadius: 8, overflow: 'hidden', background: '#f3f4f6', margin: '0 auto 8px' }}>
+                    <img src={bk.cover_image_url || bk.image} alt={bk.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: '#1e293b', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>{bk.title}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 4. Discover by Book / Palette / Marker (chip rows) */}
         {isAll && (facets.books.length || facets.palettes.length || facets.markers.length) ? (
-          <div style={{ marginTop: 34 }}>
+          <div style={{ marginTop: 36 }}>
             {facets.books.length > 0 && <ChipRow theme={theme} p={p} title={`📚 ${tRaw('ตามหนังสือ', 'By Book')}`} items={facets.books.map(b => ({ key: b.id, label: b.title, count: b.count }))} onPick={(it) => choose({ kind: 'product', value: it.key, label: it.label })} />}
             {facets.palettes.length > 0 && <ChipRow theme={theme} p={p} title={`🎨 ${tRaw('ตามพาเลตต์', 'By Palette')}`} items={facets.palettes.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'palette', value: it.key })} />}
             {facets.markers.length > 0 && <ChipRow theme={theme} p={p} title={`🖍️ ${tRaw('ตามชุดปากกา', 'By Marker')}`} items={facets.markers.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'marker', value: it.key })} />}
           </div>
         ) : null}
 
-        {/* 6. Featured Creators (bottom) */}
-        {isAll && creators.length > 0 && (
-          <div style={{ marginTop: 34 }}>
-            <SectionHead theme={theme} title={`👤 ${tRaw('ครีเอเตอร์แนะนำ', 'Featured Creators')}`} />
+        {/* 5. Featured Creators (admin-curated) */}
+        {isAll && curation.featured_creators.length > 0 && (
+          <div style={{ marginTop: 36 }}>
+            <SectionHead theme={theme} title={`🌷 ${tRaw('ครีเอเตอร์แนะนำ', 'Featured Creators')}`} />
             <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6 }}>
-              {creators.map(c => (
-                <button key={c.id} onClick={() => navigate(`/creator/${c.id}`)} style={{ background: 'white', border: `1.5px solid ${p}15`, borderRadius: 16, padding: '14px 12px', cursor: 'pointer', minWidth: 96, textAlign: 'center', fontFamily: theme.fontFamily, flexShrink: 0 }}>
-                  <div style={{ width: 52, height: 52, borderRadius: '50%', overflow: 'hidden', background: p + '20', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
-                    {c.avatar_url ? <img src={c.avatar_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '👤'}
+              {curation.featured_creators.map((c: any) => (
+                <button key={c.id} onClick={() => navigate(`/creator/${c.id}`)}
+                  style={{ background: 'white', border: `1.5px solid ${p}15`, borderRadius: 16, padding: '16px 14px', cursor: 'pointer', minWidth: 130, textAlign: 'center', fontFamily: theme.fontFamily, flexShrink: 0 }}>
+                  <div style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', background: p + '20', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>
+                    {c.avatar_url ? <img src={c.avatar_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (c.affiliate_enabled ? '🌷' : '👤')}
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#1e293b', maxWidth: 88, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.badge === 'artist' ? '🎨' : c.badge === 'creator' ? '🌷' : ''} {c.name}</div>
-                  <div style={{ fontSize: 10, color: '#94a3b8' }}>{c.posts} {tRaw('โพสต์', 'posts')}</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 800, color: '#1e293b', marginBottom: 2 }}>{c.affiliate_enabled ? '🌷' : '👤'} {c.name}</div>
+                  {c.community_country && <div style={{ fontSize: 10.5, color: '#94a3b8' }}>📍 {c.community_country}</div>}
+                  {c.community_favorite_medium && <div style={{ fontSize: 10.5, color: '#94a3b8' }}>🎨 {c.community_favorite_medium}</div>}
                 </button>
               ))}
             </div>
           </div>
         )}
+
       </div>
     </div>
   );
@@ -200,7 +204,7 @@ function Empty({ theme, tRaw, isAll }: any) {
 }
 
 // ── Crop Modal ────────────────────────────────────────────────────────────────
-const CROP_SZ = 320; // display canvas size
+const CROP_SZ = 320;
 
 function CropModal({ file, theme, p, tRaw, onCrop, onCancel }: {
   file: File; theme: any; p: string; tRaw: any;
@@ -244,7 +248,6 @@ function CropModal({ file, theme, p, tRaw, onCrop, onCancel }: {
 
   const confirm = () => {
     if (!img) return;
-    // Map display (cover-fitted) coords → image natural coords
     const scale = Math.max(CROP_SZ / img.naturalWidth, CROP_SZ / img.naturalHeight);
     const rw = img.naturalWidth * scale, rh = img.naturalHeight * scale;
     const ox = (CROP_SZ - rw) / 2, oy = (CROP_SZ - rh) / 2;
@@ -258,26 +261,22 @@ function CropModal({ file, theme, p, tRaw, onCrop, onCancel }: {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 2000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-      <div style={{ color: 'white', fontWeight: 800, fontSize: 15, fontFamily: theme.fontFamily }}>✂️ {tRaw('ปรับตัดรูป (สี่เหลี่ยมจัตุรัส)', 'Crop to square')}</div>
+      <div style={{ color: 'white', fontWeight: 800, fontSize: 15, fontFamily: theme.fontFamily }}>✂️ {tRaw('ปรับตัดรูป', 'Crop artwork')}</div>
       <div style={{ position: 'relative', width: CROP_SZ, height: CROP_SZ, background: '#111', overflow: 'hidden', borderRadius: 12, userSelect: 'none' }}
         onPointerMove={onMove} onPointerUp={() => { dragging.current = null; }}>
         {img && <img src={img.src} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
-        {/* Dim overlay */}
         <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
           <defs><mask id="cm-hole"><rect width={CROP_SZ} height={CROP_SZ} fill="white" /><rect x={box.x} y={box.y} width={box.size} height={box.size} fill="black" /></mask></defs>
           <rect width={CROP_SZ} height={CROP_SZ} fill="rgba(0,0,0,0.55)" mask="url(#cm-hole)" />
           <rect x={box.x} y={box.y} width={box.size} height={box.size} fill="none" stroke="white" strokeWidth={2} strokeDasharray="6 3" />
-          {/* Corner guides */}
           {([[box.x,box.y],[box.x+box.size-14,box.y],[box.x,box.y+box.size-14],[box.x+box.size-14,box.y+box.size-14]] as [number,number][]).map(([cx,cy],i) => (
             <rect key={i} x={cx} y={cy} width={14} height={14} fill="none" stroke="white" strokeWidth={3} />
           ))}
         </svg>
-        {/* Move handle */}
         <div onPointerDown={e => onDown(e, 'move')} style={{ position: 'absolute', left: box.x + 2, top: box.y + 2, width: box.size - 20, height: box.size - 20, cursor: 'move' }} />
-        {/* Resize handle */}
         <div onPointerDown={e => onDown(e, 'resize')} style={{ position: 'absolute', left: box.x + box.size - 18, top: box.y + box.size - 18, width: 18, height: 18, background: p, borderRadius: 4, cursor: 'se-resize', opacity: 0.9 }} />
       </div>
-      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: theme.fontFamily }}>{tRaw('ลากกรอบเพื่อย้าย · ลากมุมขวาล่างเพื่อปรับขนาด', 'Drag box to move · drag corner to resize')}</div>
+      <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontFamily: theme.fontFamily }}>{tRaw('ลากเพื่อย้าย · ลากมุมขวาล่างเพื่อปรับขนาด', 'Drag to move · drag corner to resize')}</div>
       <div style={{ display: 'flex', gap: 10 }}>
         <button onClick={onCancel} style={{ padding: '10px 22px', borderRadius: 22, border: '2px solid rgba(255,255,255,0.5)', background: 'transparent', color: 'white', cursor: 'pointer', fontWeight: 700, fontFamily: theme.fontFamily }}>{tRaw('ยกเลิก', 'Cancel')}</button>
         <button onClick={confirm} style={{ padding: '10px 24px', borderRadius: 22, border: 'none', background: p, color: 'white', cursor: 'pointer', fontWeight: 800, fontFamily: theme.fontFamily }}>✂️ {tRaw('ตัดรูป', 'Crop & use')}</button>
@@ -313,8 +312,6 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
   }, [prodQuery, allProducts]);
 
   const pickFile = (f: File) => { setFile(f); setPreview(URL.createObjectURL(f)); };
-  const onFileChosen = (f: File) => { setCropFile(f); };
-  const toggle = (arr: string[], set: any, v: string) => set(arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v]);
   const fld = { width: '100%', padding: '10px 13px', borderRadius: 10, border: `1.5px solid ${p}30`, fontSize: 14, outline: 'none', fontFamily: theme.fontFamily, boxSizing: 'border-box' as const };
 
   const submit = async () => {
@@ -340,18 +337,21 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
   return (
     <>
     {cropFile && <CropModal file={cropFile} theme={theme} p={p} tRaw={tRaw} onCrop={f => { pickFile(f); setCropFile(null); }} onCancel={() => setCropFile(null)} />}
-    <div style={{ background: 'white', borderRadius: 18, padding: 20, boxShadow: '0 2px 14px rgba(0,0,0,0.06)', margin: '14px 0 24px', border: `1.5px solid ${p}15` }}>
+    <div style={{ background: 'white', borderRadius: 18, padding: 20, boxShadow: '0 2px 14px rgba(0,0,0,0.06)', margin: '0 0 24px', border: `1.5px solid ${p}15` }}>
       <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1e293b', margin: '0 0 16px' }}>🎨 {tRaw('แบ่งปันผลงานของคุณ', 'Share your artwork')}</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 18 }} className="cm-form">
         <style>{`@media(max-width:640px){.cm-form{grid-template-columns:1fr!important}}`}</style>
+        {/* Left: artwork upload */}
         <div>
           <label style={{ display: 'block', cursor: 'pointer' }}>
-            <div style={{ aspectRatio: '1', borderRadius: 14, border: `2px dashed ${p}40`, background: preview ? '#000' : p + '08', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <div style={{ aspectRatio: '4/5', borderRadius: 14, border: `2px dashed ${p}40`, background: preview ? '#000' : p + '08', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
               {preview ? <img src={preview} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /> : <span style={{ color: p, fontWeight: 700, fontSize: 13, textAlign: 'center', padding: 16 }}>🖼️ {tRaw('แตะเพื่ออัปโหลดรูปผลงาน', 'Tap to upload artwork')}</span>}
             </div>
-            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onFileChosen(f); e.target.value = ''; }} />
+            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) setCropFile(f); e.target.value = ''; }} />
           </label>
+          {preview && <button onClick={() => { setFile(null); setPreview(''); }} style={{ marginTop: 6, width: '100%', background: 'none', border: `1px solid #e5e7eb`, borderRadius: 8, padding: '5px', fontSize: 12, color: '#94a3b8', cursor: 'pointer', fontFamily: theme.fontFamily }}>✕ {tRaw('เลือกรูปใหม่', 'Change image')}</button>}
         </div>
+        {/* Right: metadata */}
         <div>
           <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 6 }}>📚 {tRaw('หนังสือที่ใช้', 'Book used')}</div>
           <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
@@ -384,9 +384,9 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
             </div>
           )}
 
-          <TagBlock label={`🎨 ${tRaw('สื่อที่ใช้', 'Medium')}`} options={MEDIUMS} values={mediums} setValues={setMediums} toggle={toggle} addPh={tRaw('เพิ่มสื่อของคุณเอง', 'Add your own medium')} theme={theme} p={p} fld={fld} />
-          <TagBlock label={`🖍️ ${tRaw('ปากกา/ชุดที่ใช้', 'Marker / set used')}`} options={MARKER_EXAMPLES} values={markers} setValues={setMarkers} toggle={toggle} addPh={tRaw('เพิ่มชุดปากกา', 'Add a marker set')} theme={theme} p={p} fld={fld} />
-          <TagBlock label={`🌷 ${tRaw('พาเลตต์ที่ใช้', 'Palette used')}`} options={PALETTE_EXAMPLES} values={palettes} setValues={setPalettes} toggle={toggle} addPh={tRaw('เพิ่มพาเลตต์', 'Add a palette')} theme={theme} p={p} fld={fld} />
+          <LibraryTagBlock type="medium" label={`🎨 ${tRaw('สื่อที่ใช้', 'Medium')}`} values={mediums} setValues={setMediums} addPh={tRaw('เพิ่มสื่อของคุณเอง...', 'Suggest a medium...')} theme={theme} p={p} fld={fld} tRaw={tRaw} />
+          <LibraryTagBlock type="marker" label={`🖍️ ${tRaw('ปากกา/ชุดที่ใช้', 'Marker / set used')}`} values={markers} setValues={setMarkers} addPh={tRaw('เพิ่มชุดปากกา...', 'Suggest a marker set...')} theme={theme} p={p} fld={fld} tRaw={tRaw} />
+          <LibraryTagBlock type="palette" label={`🌷 ${tRaw('พาเลตต์ที่ใช้', 'Palette used')}`} values={palettes} setValues={setPalettes} addPh={tRaw('เพิ่มพาเลตต์...', 'Suggest a palette...')} theme={theme} p={p} fld={fld} tRaw={tRaw} />
 
           <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', margin: '4px 0 6px' }}>✏️ {tRaw('คำบรรยาย', 'Caption')} <span style={{ color: '#9ca3af', fontWeight: 500 }}>({caption.length}/300)</span></div>
           <textarea value={caption} maxLength={300} onChange={e => setCaption(e.target.value)} rows={2} placeholder={tRaw('เล่าเกี่ยวกับผลงานชิ้นนี้...', 'Tell us about this piece...')} style={{ ...fld, resize: 'vertical' }} />
@@ -402,25 +402,50 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
   );
 }
 
-function TagBlock({ label, options, values, setValues, toggle, addPh, theme, p, fld }: any) {
+// Tag block backed by the Tag Library — shows approved tags as chips.
+// Typing a custom name and pressing + submits it as a pending tag suggestion.
+function LibraryTagBlock({ type, label, values, setValues, addPh, theme, p, fld, tRaw }: any) {
+  const [approved, setApproved] = useState<string[]>([]);
   const [custom, setCustom] = useState('');
-  const add = () => { const v = custom.trim(); if (v && !values.includes(v)) setValues([...values, v]); setCustom(''); };
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    api.getCommunityTags(type).then((d: any) => setApproved((d?.tags || []).map((t: any) => t.name))).catch(() => {});
+  }, [type]);
+
+  const toggle = (v: string) => setValues((prev: string[]) => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
+
+  const submit = async () => {
+    const v = custom.trim();
+    if (!v) return;
+    if (!values.includes(v)) setValues((prev: string[]) => [...prev, v]);
+    setSubmitting(true);
+    await api.submitCommunityTag(type, v).catch(() => {});
+    setSubmitting(false);
+    setCustom('');
+  };
+
+  const allOptions = [...approved, ...values.filter((v: string) => !approved.includes(v))];
+
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 6 }}>{label}</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
-        {options.map((o: string) => {
+        {allOptions.map((o: string) => {
           const on = values.includes(o);
-          return <button key={o} onClick={() => toggle(values, setValues, o)} style={{ padding: '5px 11px', borderRadius: 18, border: `1.5px solid ${on ? p : '#e5e7eb'}`, background: on ? p + '15' : 'white', color: on ? p : '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: theme.fontFamily }}>{o}</button>;
+          const isPending = !approved.includes(o);
+          return (
+            <button key={o} onClick={() => toggle(o)} style={{ padding: '5px 11px', borderRadius: 18, border: `1.5px solid ${on ? p : '#e5e7eb'}`, background: on ? p + '15' : 'white', color: on ? p : '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: theme.fontFamily }}>
+              {o}{isPending && on ? ' ⏳' : on ? ' ✓' : ''}
+            </button>
+          );
         })}
-        {values.filter((v: string) => !options.includes(v)).map((v: string) => (
-          <button key={v} onClick={() => toggle(values, setValues, v)} style={{ padding: '5px 11px', borderRadius: 18, border: `1.5px solid ${p}`, background: p + '15', color: p, cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: theme.fontFamily }}>{v} ✕</button>
-        ))}
       </div>
       <div style={{ display: 'flex', gap: 6 }}>
-        <input value={custom} onChange={e => setCustom(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} placeholder={addPh} style={{ ...fld, flex: 1 }} />
-        <button onClick={add} style={{ padding: '0 16px', borderRadius: 10, border: 'none', background: p, color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: theme.fontFamily }}>+</button>
+        <input value={custom} onChange={e => setCustom(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }} placeholder={addPh} style={{ ...fld, flex: 1, fontSize: 13 }} />
+        <button onClick={submit} disabled={submitting} style={{ padding: '0 14px', borderRadius: 10, border: 'none', background: p, color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: theme.fontFamily }}>+</button>
       </div>
+      <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>{tRaw('ถ้าไม่พบรายการที่ต้องการ สามารถพิมพ์เพิ่มเองได้ (รอการอนุมัติจากแอดมิน)', 'Suggest new items — they will be reviewed before appearing for others')}</div>
     </div>
   );
 }

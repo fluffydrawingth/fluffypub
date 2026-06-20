@@ -30,7 +30,7 @@ export default function CreatorProfilePage({ userId }: { userId: string }) {
 
   const c = data.creator;
   const posts = data.posts || [];
-  const badge = c.affiliate_enabled ? '🌷 Fluffy Creator' : '👤 Community Member';
+  const badge = c.affiliate_enabled ? '🌷' : '👤';
   const joined = c.joined ? new Date(c.joined).toLocaleDateString(undefined, { year: 'numeric', month: 'short' }) : '';
   const stat = (label: string, value: any) => (
     <div style={{ textAlign: 'center' }}>
@@ -54,6 +54,11 @@ export default function CreatorProfilePage({ userId }: { userId: string }) {
             <h1 style={{ fontSize: 22, fontWeight: 900, color: '#1e293b', margin: '0 0 4px' }}>{badge} {c.name}</h1>
             {c.artist_slug && <button onClick={() => navigate(`/artists/${c.artist_slug}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 12, fontWeight: 700, padding: 0, marginBottom: 4 }}>{tRaw('ดูหน้าศิลปิน →', 'View artist page →')}</button>}
             {c.bio && <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, margin: '4px 0 0' }}>{c.bio}</p>}
+            {c.community_about && <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.55, margin: '6px 0 0' }}>{c.community_about}</p>}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
+              {c.community_country && <span style={{ fontSize: 12, color: '#64748b' }}>📍 {c.community_country}</span>}
+              {c.community_favorite_medium && <span style={{ fontSize: 12, color: '#64748b' }}>🎨 {c.community_favorite_medium}</span>}
+            </div>
             {joined && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>{tRaw('เข้าร่วมเมื่อ', 'Joined')} {joined}</div>}
           </div>
           <div style={{ display: 'flex', gap: 20 }}>

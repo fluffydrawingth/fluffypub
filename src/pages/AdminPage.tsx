@@ -2074,18 +2074,30 @@ function AffiliatesTab() {
 // ── 🌈 Community Dashboard (admin) ────────────────────────────────────────────
 function CommunityDashboardTab() {
   const [stats, setStats] = useState<any>(null);
+  const [communityTab, setCommunityTab] = useState<'posts'|'curation'|'tags'>('posts');
   const [statusTab, setStatusTab] = useState('published');
   const [posts, setPosts] = useState<any[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [msg, setMsg] = useState('');
-  // Weekly planner
-  const [planner, setPlanner] = useState<any>({ palette:'', book:'', marker:'', creator:'' });
+
+  // Community Curation
   const [themeCfg, setThemeCfg] = useState<any>(null);
-  // Tag merge
-  const [tagField, setTagField] = useState('markers');
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [featuredBookIds, setFeaturedBookIds] = useState<string[]>([]);
+  const [featuredCreatorIds, setFeaturedCreatorIds] = useState<string[]>([]);
+  const [bookSearch, setBookSearch] = useState('');
+  const [creatorSearch, setCreatorSearch] = useState('');
+
+  // Tag Library
+  const [tagLibType, setTagLibType] = useState('marker');
+  const [tagLibItems, setTagLibItems] = useState<any[]>([]);
+  const [tagLibLoading, setTagLibLoading] = useState(false);
+  const [newTagName, setNewTagName] = useState('');
   const [tagFrom, setTagFrom] = useState('');
   const [tagTo, setTagTo] = useState('');
+  const [tagMergeField, setTagMergeField] = useState('markers');
 
   const flash = (m:string) => { setMsg(m); setTimeout(()=>setMsg(''), 4000); };
   const loadStats = useCallback(()=>{ api.getCommunityStats().then((d:any)=>setStats(d&&!d.error?d:null)).catch(()=>{}); },[]);
@@ -2095,15 +2107,50 @@ function CommunityDashboardTab() {
       setHasMore(!!d?.hasMore);
     }).catch(()=>{});
   },[]);
+  const loadTagLib = useCallback((type:string) => {
+    setTagLibLoading(true);
+    api.getAdminTags(type).then((d:any)=>{ setTagLibItems(d?.tags||[]); setTagLibLoading(false); }).catch(()=>setTagLibLoading(false));
+  },[]);
+
   useEffect(()=>{ loadStats(); }, [loadStats]);
   useEffect(()=>{ setPage(0); loadPosts(statusTab, 0); }, [statusTab, loadPosts]);
-  useEffect(()=>{ api.getTheme().then((t:any)=>{ setThemeCfg(t||{}); setPlanner({ palette:t?.community?.palette||'', book:t?.community?.book||'', marker:t?.community?.marker||'', creator:t?.community?.creator||'' }); }).catch(()=>{}); }, []);
+  useEffect(()=>{ loadTagLib(tagLibType); }, [tagLibType, loadTagLib]);
+  useEffect(()=>{
+    api.getTheme().then((t:any)=>{
+      setThemeCfg(t||{});
+      setFeaturedBookIds(t?.community?.featured_books||[]);
+      setFeaturedCreatorIds(t?.community?.featured_creators||[]);
+    }).catch(()=>{});
+    api.getProducts().then((d:any)=>setAllProducts(Array.isArray(d)?d:[])).catch(()=>{});
+  },[]);
 
   const refresh = () => { loadStats(); setPage(0); loadPosts(statusTab, 0); };
   const doFeature = async (id:string, on:boolean) => { const r=await api.featureCommunityPost(id,on); if(r?.error)return flash('⚠️ '+r.error); flash(on?'✓ Added to Cozy Picks':'✓ Removed'); refresh(); };
   const doStatus = async (id:string, status:string, confirmMsg?:string) => { if(confirmMsg&&!confirm(confirmMsg))return; const r=await api.setCommunityStatus(id,status); if(r?.error)return flash('⚠️ '+r.error); flash('✓ Updated'); refresh(); };
-  const savePlanner = async () => { const cfg={...(themeCfg||{}), community: planner}; const r=await api.saveTheme(cfg); if(r?.error)return flash('⚠️ '+r.error); setThemeCfg(cfg); flash('✓ Weekly Planner saved'); };
-  const mergeTags = async () => { const from=tagFrom.split(',').map(s=>s.trim()).filter(Boolean); if(!from.length||!tagTo.trim())return flash('⚠️ Enter source tags and a target name'); const r=await api.mergeCommunityTags(tagField, from, tagTo.trim()); if(r?.error)return flash('⚠️ '+r.error); flash(`✓ Merged ${r.changed} post(s)`); setTagFrom(''); setTagTo(''); };
+
+  const saveCuration = async () => {
+    const cfg = { ...(themeCfg||{}), community: { featured_books: featuredBookIds.slice(0,4), featured_creators: featuredCreatorIds.slice(0,3) } };
+    const r = await api.saveTheme(cfg);
+    if (r?.error) return flash('⚠️ '+r.error);
+    setThemeCfg(cfg); flash('✓ Curation saved');
+  };
+
+  const approveTag = async (id:string, name?:string) => { const r=await api.approveTag(id,name); if(r?.error)return flash('⚠️ '+r.error); flash('✓ Approved'); loadTagLib(tagLibType); };
+  const deleteTag = async (id:string) => { if(!confirm('Delete this tag?'))return; await api.deleteTag(id); flash('✓ Deleted'); loadTagLib(tagLibType); };
+  const addApprovedTag = async () => {
+    if (!newTagName.trim()) return;
+    // Submit then immediately approve
+    const r1 = await api.submitCommunityTag(tagLibType.replace('s',''), newTagName.trim());
+    if (r1?.tag?.id) await api.approveTag(r1.tag.id, newTagName.trim());
+    setNewTagName(''); flash('✓ Tag added'); loadTagLib(tagLibType);
+  };
+  const mergeTags = async () => {
+    const from=tagFrom.split(',').map((s:string)=>s.trim()).filter(Boolean);
+    if(!from.length||!tagTo.trim())return flash('⚠️ Enter source tags and a target name');
+    const r=await api.mergeCommunityTags(tagMergeField, from, tagTo.trim());
+    if(r?.error)return flash('⚠️ '+r.error);
+    flash(`✓ Merged ${r.changed} post(s)`); setTagFrom(''); setTagTo(''); loadTagLib(tagLibType);
+  };
 
   const sc = (label:string, value:any, icon:string) => (
     <div key={label} style={{...card, padding:'14px 16px'}}>
@@ -2112,82 +2159,171 @@ function CommunityDashboardTab() {
     </div>
   );
 
+  const tabBtn = (key:typeof communityTab, lbl:string) => (
+    <button onClick={()=>setCommunityTab(key)} style={{padding:'8px 18px',borderRadius:20,border:'none',cursor:'pointer',fontSize:13,fontWeight:700,background:communityTab===key?P:P+'15',color:communityTab===key?'white':P,fontFamily:'inherit'}}>{lbl}</button>
+  );
+
+  const bookResults = bookSearch.trim() ? allProducts.filter(p=>p.title?.toLowerCase().includes(bookSearch.toLowerCase())).slice(0,6) : [];
+  const pinnedBooks = allProducts.filter(p=>featuredBookIds.includes(p.id));
+  const pinnedCreators: any[] = [];
+
   return (
     <div style={{padding:32}}>
       <h1 style={{fontSize:28,fontWeight:900,color:'#111827',margin:'0 0 6px'}}>🌈 Community Dashboard</h1>
-      <p style={{fontSize:13,color:'#6b7280',margin:'0 0 20px'}}>Curate a cozy, inspiring community in ~15 minutes a week. Keep it warm, not viral.</p>
+      <p style={{fontSize:13,color:'#6b7280',margin:'0 0 20px'}}>Cozy, inspiring — not viral. Keep it warm.</p>
       {msg&&<div style={{marginBottom:16,padding:'10px 16px',borderRadius:12,background:msg.startsWith('✓')?'#d1fae5':'#fee2e2',color:msg.startsWith('✓')?'#065f46':'#991b1b',fontSize:13,fontWeight:600}}>{msg}</div>}
 
-      {/* Overview cards */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))',gap:12,marginBottom:24}}>
+      {/* Overview */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:12,marginBottom:24}}>
         {sc('Total creations', stats?.creations ?? '…', '🖼️')}
         {sc('Creators', stats?.creators ?? '…', '👤')}
         {sc('New today', stats?.today ?? '…', '🆕')}
         {sc('Comments', stats?.comments ?? '…', '💬')}
-        {sc('Reports', stats?.reports ?? 0, '🚩')}
-        {sc('Cozy Picks', `${stats?.cozyPicks ?? 0} / ${stats?.cozyMax ?? 6}`, '🌷')}
+        {sc('Cozy Picks', `${stats?.cozyPicks ?? 0} / 6`, '🌷')}
       </div>
 
-      {/* Weekly Planner */}
-      <div style={{...card, padding:20, marginBottom:24}}>
-        <h2 style={{fontSize:16,fontWeight:800,color:'#111827',margin:'0 0 4px'}}>📅 Weekly Planner</h2>
-        <p style={{fontSize:12,color:'#6b7280',margin:'0 0 14px'}}>Featured picks shown across the Community page for the week.</p>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:12}}>
-          {([['palette','🌷 Featured palette','🍓 Strawberry Milk'],['book','📚 Featured book','High School Girl Vibes'],['marker','🖍️ Featured marker','Ohuhu Pastel 48'],['creator','👤 Featured creator','@creator']] as [string,string,string][]).map(([k,lbl,ph])=>(
-            <div key={k}>
-              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>{lbl}</label>
-              <input value={planner[k]} onChange={e=>setPlanner((pl:any)=>({...pl,[k]:e.target.value}))} placeholder={ph} style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'}} />
+      {/* Sub-tabs */}
+      <div style={{display:'flex',gap:8,marginBottom:20}}>
+        {tabBtn('posts','🖼️ Posts')}
+        {tabBtn('curation','🌷 Curation')}
+        {tabBtn('tags','🏷️ Tag Library')}
+      </div>
+
+      {/* ── Posts ── */}
+      {communityTab==='posts' && <>
+        <div style={{display:'flex',gap:8,marginBottom:14}}>
+          {[['published','Published'],['hidden','Hidden'],['deleted','Deleted']].map(([k,lbl])=>(
+            <button key={k} onClick={()=>setStatusTab(k)} style={{padding:'7px 16px',borderRadius:18,border:'none',cursor:'pointer',fontSize:13,fontWeight:700,background:statusTab===k?P:P+'15',color:statusTab===k?'white':P,fontFamily:'inherit'}}>{lbl}</button>
+          ))}
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:14}}>
+          {posts.map(post=>(
+            <div key={post.id} style={{...card,padding:0,overflow:'hidden'}}>
+              <div style={{position:'relative',width:'100%',paddingBottom:'125%',background:'#f3f4f6'}}>
+                <img src={post.thumb_url||post.artwork_url} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
+              </div>
+              <div style={{padding:'10px 12px'}}>
+                <div style={{fontSize:12,fontWeight:700,color:'#111827',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{post.creator?.name||'—'}</div>
+                <div style={{fontSize:11,color:'#9ca3af',marginBottom:8}}>{post.created_at?new Date(post.created_at).toLocaleDateString():''}{post.featured?' · 🌷':''}</div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
+                  <button onClick={()=>window.open(`/#/community/${post.id}`,'_blank')} style={btnS('#e5e7eb','#374151')}>👁️ View</button>
+                  {statusTab==='published'&&<button onClick={()=>doFeature(post.id,!post.featured)} style={btnS('#fbcfe8','#9d174d')}>{post.featured?'➖ Unpin':'🌷 Cozy Pick'}</button>}
+                  {statusTab==='published'&&<button onClick={()=>doStatus(post.id,'hidden')} style={btnS('#fef3c7','#92400e')}>🙈 Hide</button>}
+                  {statusTab==='hidden'&&<button onClick={()=>doStatus(post.id,'published')} style={btnS('#d1fae5','#065f46')}>♻️ Restore</button>}
+                  {statusTab!=='deleted'&&<button onClick={()=>doStatus(post.id,'deleted','Delete this post?')} style={btnS('#fee2e2','#dc2626')}>🗑️ Delete</button>}
+                  {statusTab==='deleted'&&<button onClick={()=>doStatus(post.id,'published')} style={btnS('#d1fae5','#065f46')}>♻️ Restore</button>}
+                </div>
+              </div>
             </div>
           ))}
         </div>
-        <button onClick={savePlanner} style={{marginTop:14,padding:'9px 20px',borderRadius:10,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:700}}>Save Planner</button>
-      </div>
+        {posts.length===0&&<div style={{textAlign:'center',padding:'40px',color:'#9ca3af',fontSize:14}}>No {statusTab} posts.</div>}
+        {hasMore&&<div style={{textAlign:'center',marginTop:18}}><button onClick={()=>{const np=page+1;setPage(np);loadPosts(statusTab,np);}} style={{padding:'9px 24px',borderRadius:20,border:`1.5px solid ${P}`,background:'white',color:P,cursor:'pointer',fontSize:13,fontWeight:700}}>Load more</button></div>}
+      </>}
 
-      {/* Tag merge */}
-      <div style={{...card, padding:20, marginBottom:24}}>
-        <h2 style={{fontSize:16,fontWeight:800,color:'#111827',margin:'0 0 4px'}}>🏷️ Manage Tags</h2>
-        <p style={{fontSize:12,color:'#6b7280',margin:'0 0 14px'}}>Merge duplicate tags to keep filters clean. e.g. <i>Ohuhu pastel, OHUHU Pastel</i> → <b>Ohuhu Pastel 48</b>.</p>
-        <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-end'}}>
-          <div><label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Type</label>
-            <select value={tagField} onChange={e=>setTagField(e.target.value)} style={{padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit'}}>
-              <option value="markers">Markers</option><option value="palettes">Palettes</option><option value="mediums">Mediums</option>
-            </select></div>
-          <div style={{flex:1,minWidth:200}}><label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Source tags (comma-separated)</label>
-            <input value={tagFrom} onChange={e=>setTagFrom(e.target.value)} placeholder="Ohuhu pastel, OHUHU Pastel" style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'}} /></div>
-          <div style={{flex:1,minWidth:160}}><label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:5}}>Rename to</label>
-            <input value={tagTo} onChange={e=>setTagTo(e.target.value)} placeholder="Ohuhu Pastel 48" style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'}} /></div>
-          <button onClick={mergeTags} style={{padding:'9px 20px',borderRadius:10,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:700}}>Merge / Rename</button>
+      {/* ── Curation ── */}
+      {communityTab==='curation' && <>
+        {/* Cozy Picks */}
+        <div style={{...card,padding:20,marginBottom:20}}>
+          <h2 style={{fontSize:15,fontWeight:800,color:'#111827',margin:'0 0 6px'}}>🌷 Cozy Picks <span style={{fontWeight:500,color:'#9ca3af',fontSize:13}}>({stats?.cozyPicks??0}/6 pinned)</span></h2>
+          <p style={{fontSize:12,color:'#6b7280',margin:'0 0 12px'}}>Pin posts from the Posts tab using the 🌷 button. Max 6. Unpin anytime.</p>
         </div>
-      </div>
 
-      {/* Manage posts */}
-      <h2 style={{fontSize:16,fontWeight:800,color:'#111827',margin:'0 0 10px'}}>🖼️ Manage Posts</h2>
-      <div style={{display:'flex',gap:8,marginBottom:14}}>
-        {[['published','Published'],['hidden','Hidden'],['deleted','Deleted']].map(([k,lbl])=>(
-          <button key={k} onClick={()=>setStatusTab(k)} style={{padding:'7px 16px',borderRadius:18,border:'none',cursor:'pointer',fontSize:13,fontWeight:700,background:statusTab===k?P:P+'15',color:statusTab===k?'white':P,fontFamily:'inherit'}}>{lbl}</button>
-        ))}
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:14}}>
-        {posts.map(post=>(
-          <div key={post.id} style={{...card,padding:0,overflow:'hidden'}}>
-            <img src={post.thumb_url||post.artwork_url} alt="" style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block',background:'#f3f4f6'}} />
-            <div style={{padding:'10px 12px'}}>
-              <div style={{fontSize:12,fontWeight:700,color:'#111827',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{post.creator?.name||'—'}</div>
-              <div style={{fontSize:11,color:'#9ca3af',marginBottom:8}}>{post.created_at?new Date(post.created_at).toLocaleDateString():''}{post.featured?' · 🌷 Cozy Pick':''}</div>
-              <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
-                <button onClick={()=>window.open(`/#/community/${post.id}`,'_blank')} style={btnS('#e5e7eb','#374151')}>👁️ View</button>
-                {statusTab==='published'&&<button onClick={()=>doFeature(post.id, !post.featured)} style={btnS('#fbcfe8','#9d174d')}>{post.featured?'➖ Unpick':'🌷 Feature'}</button>}
-                {statusTab==='published'&&<button onClick={()=>doStatus(post.id,'hidden')} style={btnS('#fef3c7','#92400e')}>🙈 Hide</button>}
-                {statusTab==='hidden'&&<button onClick={()=>doStatus(post.id,'published')} style={btnS('#d1fae5','#065f46')}>♻️ Restore</button>}
-                {statusTab!=='deleted'&&<button onClick={()=>doStatus(post.id,'deleted','Move this post to Deleted?')} style={btnS('#fee2e2','#dc2626')}>🗑️ Delete</button>}
-                {statusTab==='deleted'&&<button onClick={()=>doStatus(post.id,'published')} style={btnS('#d1fae5','#065f46')}>♻️ Restore</button>}
+        {/* Featured Books */}
+        <div style={{...card,padding:20,marginBottom:20}}>
+          <h2 style={{fontSize:15,fontWeight:800,color:'#111827',margin:'0 0 4px'}}>📚 Featured Books <span style={{fontWeight:500,color:'#9ca3af',fontSize:13}}>(max 4)</span></h2>
+          <p style={{fontSize:12,color:'#6b7280',margin:'0 0 12px'}}>Pinned books shown on the Community page.</p>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}>
+            {pinnedBooks.map((bk:any)=>(
+              <div key={bk.id} style={{display:'flex',alignItems:'center',gap:6,background:'#f8fafc',border:'1.5px solid #e5e7eb',borderRadius:10,padding:'6px 10px'}}>
+                <span style={{fontSize:12,fontWeight:700,color:'#1e293b',maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>📚 {bk.title}</span>
+                <button onClick={()=>setFeaturedBookIds(ids=>ids.filter(i=>i!==bk.id))} style={{background:'none',border:'none',color:'#dc2626',cursor:'pointer',fontSize:13,fontWeight:700}}>✕</button>
               </div>
+            ))}
+            {pinnedBooks.length===0&&<span style={{fontSize:12,color:'#94a3b8'}}>No books pinned yet.</span>}
+          </div>
+          {featuredBookIds.length < 4 && <>
+            <input value={bookSearch} onChange={e=>setBookSearch(e.target.value)} placeholder="Search to add a book..." style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'}} />
+            {bookResults.map((bk:any)=>(
+              <button key={bk.id} onClick={()=>{ if(!featuredBookIds.includes(bk.id))setFeaturedBookIds(ids=>[...ids,bk.id]); setBookSearch(''); }} style={{display:'block',width:'100%',textAlign:'left',background:'white',border:'1px solid #f1f5f9',cursor:'pointer',padding:'8px 12px',fontSize:13,fontFamily:'inherit',color:'#1e293b'}}>{bk.title}</button>
+            ))}
+          </>}
+        </div>
+
+        {/* Featured Creators */}
+        <div style={{...card,padding:20,marginBottom:20}}>
+          <h2 style={{fontSize:15,fontWeight:800,color:'#111827',margin:'0 0 4px'}}>👤 Featured Creators <span style={{fontWeight:500,color:'#9ca3af',fontSize:13}}>(max 3)</span></h2>
+          <p style={{fontSize:12,color:'#6b7280',margin:'0 0 12px'}}>Enter user IDs of creators to feature on the Community page.</p>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}>
+            {featuredCreatorIds.map((uid:string)=>(
+              <div key={uid} style={{display:'flex',alignItems:'center',gap:6,background:'#f8fafc',border:'1.5px solid #e5e7eb',borderRadius:10,padding:'6px 10px'}}>
+                <span style={{fontSize:12,fontWeight:700,color:'#1e293b',fontFamily:'monospace'}}>{uid.slice(0,8)}…</span>
+                <button onClick={()=>setFeaturedCreatorIds(ids=>ids.filter(i=>i!==uid))} style={{background:'none',border:'none',color:'#dc2626',cursor:'pointer',fontSize:13,fontWeight:700}}>✕</button>
+              </div>
+            ))}
+          </div>
+          {featuredCreatorIds.length < 3 && (
+            <div style={{display:'flex',gap:8}}>
+              <input id="creator-id-input" placeholder="Paste user ID..." style={{flex:1,padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'monospace',boxSizing:'border-box'}} />
+              <button onClick={()=>{ const el=document.getElementById('creator-id-input') as HTMLInputElement; const v=el.value.trim(); if(v&&!featuredCreatorIds.includes(v))setFeaturedCreatorIds(ids=>[...ids,v]); el.value=''; }} style={{padding:'9px 16px',borderRadius:10,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:700}}>Add</button>
+            </div>
+          )}
+        </div>
+
+        <button onClick={saveCuration} style={{padding:'11px 28px',borderRadius:12,border:'none',background:P,color:'white',cursor:'pointer',fontSize:14,fontWeight:800}}>💾 Save Curation</button>
+      </>}
+
+      {/* ── Tag Library ── */}
+      {communityTab==='tags' && <>
+        <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
+          {[['marker','🖍️ Markers'],['medium','🎨 Mediums'],['palette','🌷 Palettes']].map(([k,lbl])=>(
+            <button key={k} onClick={()=>setTagLibType(k)} style={{padding:'7px 16px',borderRadius:18,border:'none',cursor:'pointer',fontSize:13,fontWeight:700,background:tagLibType===k?P:P+'15',color:tagLibType===k?'white':P,fontFamily:'inherit'}}>{lbl}</button>
+          ))}
+        </div>
+
+        {/* Add new approved tag */}
+        <div style={{...card,padding:16,marginBottom:16}}>
+          <div style={{fontSize:13,fontWeight:800,color:'#374151',marginBottom:8}}>Add to library</div>
+          <div style={{display:'flex',gap:8}}>
+            <input value={newTagName} onChange={e=>setNewTagName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addApprovedTag();}}} placeholder="Ohuhu Pastel 48" style={{flex:1,padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'}} />
+            <button onClick={addApprovedTag} style={{padding:'9px 18px',borderRadius:10,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:700}}>+ Add</button>
+          </div>
+        </div>
+
+        {/* Tag list */}
+        {tagLibLoading ? <div style={{color:'#9ca3af',padding:16}}>Loading…</div> : (
+          <div style={{...card,padding:16,marginBottom:20}}>
+            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+              {tagLibItems.map((t:any)=>(
+                <div key={t.id} style={{display:'inline-flex',alignItems:'center',gap:4,padding:'5px 10px 5px 12px',borderRadius:20,border:`1.5px solid ${t.status==='approved'?P:'#e5e7eb'}`,background:t.status==='approved'?P+'10':'#f9fafb'}}>
+                  <span style={{fontSize:12,fontWeight:700,color:t.status==='approved'?P:'#64748b'}}>{t.name}</span>
+                  <span style={{fontSize:10,color:'#9ca3af'}}>{t.post_count>0?`(${t.post_count})`:''}</span>
+                  {t.status==='pending'&&<button onClick={()=>approveTag(t.id)} style={{background:'#d1fae5',border:'none',borderRadius:8,cursor:'pointer',fontSize:10,fontWeight:800,color:'#065f46',padding:'2px 6px'}}>✓</button>}
+                  <button onClick={()=>deleteTag(t.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#dc2626',fontSize:12,fontWeight:700,padding:'0 2px'}}>✕</button>
+                </div>
+              ))}
+              {tagLibItems.length===0&&<span style={{fontSize:13,color:'#9ca3af'}}>No tags yet. Add some above.</span>}
             </div>
           </div>
-        ))}
-      </div>
-      {posts.length===0&&<div style={{textAlign:'center',padding:'40px',color:'#9ca3af',fontSize:14}}>No {statusTab} posts.</div>}
-      {hasMore&&<div style={{textAlign:'center',marginTop:18}}><button onClick={()=>{const np=page+1;setPage(np);loadPosts(statusTab,np);}} style={{padding:'9px 24px',borderRadius:20,border:`1.5px solid ${P}`,background:'white',color:P,cursor:'pointer',fontSize:13,fontWeight:700}}>Load more</button></div>}
+        )}
+
+        {/* Merge / rename */}
+        <div style={{...card,padding:16}}>
+          <div style={{fontSize:13,fontWeight:800,color:'#374151',marginBottom:8}}>Merge duplicates across posts</div>
+          <p style={{fontSize:12,color:'#6b7280',margin:'0 0 10px'}}>Rewrites tag arrays on existing posts. e.g. <i>Ohuhu pastel, OHUHU Pastel</i> → <b>Ohuhu Pastel 48</b></p>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end'}}>
+            <div><label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Field</label>
+              <select value={tagMergeField} onChange={e=>setTagMergeField(e.target.value)} style={{padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit'}}>
+                <option value="markers">Markers</option><option value="palettes">Palettes</option><option value="mediums">Mediums</option>
+              </select></div>
+            <div style={{flex:1,minWidth:180}}><label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Source (comma-separated)</label>
+              <input value={tagFrom} onChange={e=>setTagFrom(e.target.value)} placeholder="Ohuhu pastel, OHUHU Pastel" style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'}} /></div>
+            <div style={{flex:1,minWidth:140}}><label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Rename to</label>
+              <input value={tagTo} onChange={e=>setTagTo(e.target.value)} placeholder="Ohuhu Pastel 48" style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'}} /></div>
+            <button onClick={mergeTags} style={{padding:'9px 18px',borderRadius:10,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:700}}>Merge</button>
+          </div>
+        </div>
+      </>}
     </div>
   );
 }

@@ -534,6 +534,9 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
   const [province, setProvince]         = useState('');
   const [postalCode, setPostalCode]     = useState('');
   const [country, setCountry]           = useState('Thailand');
+  const [communityAbout, setCommunityAbout] = useState('');
+  const [communityCountry, setCommunityCountry] = useState('');
+  const [communityMedium, setCommunityMedium] = useState('');
   const [saving, setSaving]             = useState(false);
   const [msg, setMsg]                   = useState('');
   const [loaded, setLoaded]             = useState(false);
@@ -574,6 +577,9 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
       }
 
       setUsername(profile.username || '');
+      setCommunityAbout(profile.community_about || '');
+      setCommunityCountry(profile.community_country || '');
+      setCommunityMedium(profile.community_favorite_medium || '');
       setFirstName(fn);
       setLastName(ln);
       setDeliveryEmail(em);
@@ -594,6 +600,9 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
       const payload = {
         name: fullName || user?.name || '',
         username: username.trim(),
+        community_about: communityAbout.slice(0, 80),
+        community_country: communityCountry.trim() || null,
+        community_favorite_medium: communityMedium.trim() || null,
         first_name: firstName,
         last_name: lastName,
         delivery_email: deliveryEmail,
@@ -646,6 +655,17 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
 
       {inp(tRaw('ชื่อผู้ใช้ (ชื่อที่แสดง)','Username (display name)'), username, setUsername)}
       <div style={{fontSize:11,color:'#94a3b8',marginTop:-10,marginBottom:14}}>{tRaw('ชื่อที่แสดงต่อสาธารณะ ไม่ใช่ชื่อจริงหรือที่อยู่','A public display name — not your real name or address.')}</div>
+
+      <h4 style={{fontSize:14,fontWeight:800,color:'#374151',margin:'6px 0 12px'}}>🌈 {tRaw('โปรไฟล์ชุมชน','Community Profile')}</h4>
+      <div style={{marginBottom:14}}>
+        <label style={{display:'block',fontSize:13,fontWeight:700,color:'#374151',marginBottom:5}}>{tRaw('เกี่ยวกับฉัน (สูงสุด 80 ตัวอักษร)','About me (max 80 chars)')}</label>
+        <input value={communityAbout} onChange={e=>setCommunityAbout(e.target.value.slice(0,80))} maxLength={80} placeholder={tRaw('แพทย์ฉุกเฉินที่ชอบระบายสีในเวลาว่าง','ER doctor who loves cozy coloring.')} style={{width:'100%',padding:'11px 14px',borderRadius:12,border:`1.5px solid ${p}30`,fontSize:14,outline:'none',fontFamily:theme.fontFamily,boxSizing:'border-box' as const}} onFocus={e=>e.target.style.borderColor=p} onBlur={e=>e.target.style.borderColor=p+'30'} />
+        <div style={{fontSize:11,color:'#94a3b8',marginTop:3}}>{communityAbout.length}/80</div>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:4}}>
+        <div>{inp(tRaw('ประเทศ (ไม่บังคับ)','Country (optional)'), communityCountry, setCommunityCountry)}</div>
+        <div>{inp(tRaw('สื่อที่ชอบ (ไม่บังคับ)','Favourite medium (optional)'), communityMedium, setCommunityMedium)}</div>
+      </div>
 
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:4}}>
         <div>{inp('First Name', firstName, setFirstName)}</div>

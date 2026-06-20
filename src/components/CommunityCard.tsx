@@ -5,23 +5,21 @@ import { useLang } from '../lib/lang';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
 
-// The five Fluffy reactions (no plain ❤️ "like").
 const REACTIONS: { type: string; emoji: string; th: string; en: string }[] = [
-  { type: 'love', emoji: '🩷', th: 'รักเลย', en: 'Love it' },
-  { type: 'inspiring', emoji: '🎨', th: 'สร้างแรงบันดาลใจ', en: 'Inspiring' },
-  { type: 'cozy', emoji: '🌷', th: 'อบอุ่น', en: 'Cozy' },
-  { type: 'cute_palette', emoji: '🍓', th: 'พาเลตต์น่ารัก', en: 'Cute palette' },
-  { type: 'want_to_try', emoji: '✨', th: 'อยากลองบ้าง', en: 'Want to try' },
+  { type: 'love',         emoji: '🩷', th: 'รักเลย',             en: 'Love it' },
+  { type: 'inspiring',   emoji: '🎨', th: 'สร้างแรงบันดาลใจ',  en: 'Inspiring' },
+  { type: 'cozy',        emoji: '🌷', th: 'อบอุ่น',             en: 'Cozy' },
+  { type: 'cute_palette',emoji: '🍓', th: 'พาเลตต์น่ารัก',     en: 'Cute palette' },
+  { type: 'want_to_try', emoji: '✨', th: 'อยากลองบ้าง',        en: 'Want to try' },
 ];
 
-// A single community post card (Pinterest-ish). Image is lazy-loaded for performance.
 export default function CommunityCard({ post }: { post: any }) {
   const { theme } = useTheme();
   const { navigate } = useRouter();
   const { tRaw } = useLang();
-  const { user } = useAuth();
   const p = theme.primaryColor;
   const creator = post.creator;
+  // 🌷 = Fluffy Creator, 👤 = Community Member
   const badge = creator?.affiliate_enabled ? '🌷' : '👤';
 
   const [counts, setCounts] = useState<Record<string, number>>(post.reactions || {});
@@ -29,10 +27,9 @@ export default function CommunityCard({ post }: { post: any }) {
   const [busy, setBusy] = useState('');
 
   const react = async (e: React.MouseEvent, type: string) => {
-    e.stopPropagation(); // don't open the detail page when reacting
+    e.stopPropagation();
     if (busy) return;
     setBusy(type);
-    // optimistic toggle
     const had = mine.includes(type);
     setMine(prev => had ? prev.filter(t => t !== type) : [...prev, type]);
     setCounts(prev => ({ ...prev, [type]: Math.max(0, (prev[type] || 0) + (had ? -1 : 1)) }));
@@ -41,19 +38,16 @@ export default function CommunityCard({ post }: { post: any }) {
     setBusy('');
   };
 
-  const chip = (txt: string, bg: string, color: string) => (
-    <span key={txt} style={{ background: bg, color, borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap' }}>{txt}</span>
-  );
-
   const open = () => navigate(`/community/${post.id}`);
 
   return (
     <div onClick={open}
-      style={{ background: 'white', borderRadius: 18, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: `1.5px solid ${p}12`, breakInside: 'avoid' as const, cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}
+      style={{ background: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: `1.5px solid ${p}12`, breakInside: 'avoid' as const, cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s', display: 'flex', flexDirection: 'column' }}
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 10px 28px ${p}22`; }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; }}>
-      {/* Artwork */}
-      <div style={{ position: 'relative', width: '100%', paddingBottom: '100%', background: `linear-gradient(135deg,${p}10,${p}05)` }}>
+
+      {/* Artwork — 4:5 ratio */}
+      <div style={{ position: 'relative', width: '100%', paddingBottom: '125%', background: `linear-gradient(135deg,${p}10,${p}05)`, flexShrink: 0 }}>
         <img
           src={post.thumb_url || post.artwork_url}
           alt={post.caption || 'coloring'}
@@ -62,51 +56,49 @@ export default function CommunityCard({ post }: { post: any }) {
         />
       </div>
 
-      <div style={{ padding: '12px 14px 14px' }}>
-        {/* Book used */}
-        {post.product ? (
-          <button onClick={(e) => { e.stopPropagation(); navigate(`/products/${post.product.slug}${creator?.affiliate_enabled ? `?ref=${creator.id}` : ''}`); }}
-            style={{ background: p + '12', color: p, border: 'none', cursor: 'pointer', borderRadius: 10, padding: '4px 10px', fontSize: 11, fontWeight: 800, fontFamily: theme.fontFamily, marginBottom: 8, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            📚 {post.product.title}
-          </button>
-        ) : post.external_book_title ? (
-          <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 8 }}>
-            📖 {post.external_book_title}{post.external_book_author ? ` · ${post.external_book_author}` : ''}
-          </div>
-        ) : null}
+      <div style={{ padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', flex: 1 }}>
 
-        {/* Tags */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: post.caption ? 8 : 0 }}>
-          {(post.mediums || []).slice(0, 3).map((m: string) => chip('🎨 ' + m, '#f3e8ff', '#7c3aed'))}
-          {(post.palettes || []).slice(0, 2).map((m: string) => chip('🌷 ' + m, '#fce7f3', '#be185d'))}
-          {(post.markers || []).slice(0, 2).map((m: string) => chip('🖍️ ' + m, '#dbeafe', '#1d4ed8'))}
+        {/* 📚 Book — 1 line */}
+        <div style={{ minHeight: 22, marginBottom: 4 }}>
+          {post.product ? (
+            <button onClick={(e) => { e.stopPropagation(); navigate(`/products/${post.product.slug}${creator?.affiliate_enabled ? `?ref=${creator.id}` : ''}`); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily, textAlign: 'left', width: '100%' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: p, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>📚 {post.product.title}</span>
+            </button>
+          ) : post.external_book_title ? (
+            <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>📖 {post.external_book_title}</span>
+          ) : <span />}
         </div>
 
-        {/* Caption */}
-        {post.caption && (
-          <p style={{ fontSize: 12.5, color: '#475569', lineHeight: 1.5, margin: '0 0 10px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any }}>{post.caption}</p>
-        )}
+        {/* 📝 Caption — 2 lines */}
+        <div style={{ minHeight: 36, marginBottom: 8 }}>
+          {post.caption ? (
+            <p style={{ fontSize: 12, color: '#475569', lineHeight: 1.5, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+              {post.caption}
+            </p>
+          ) : null}
+        </div>
 
-        {/* Creator */}
+        {/* 👤 Creator — 1 line */}
         {creator && (
           <button onClick={(e) => { e.stopPropagation(); navigate(`/creator/${creator.id}`); }}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily }}>
-            <span style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', background: p + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>
-              {creator.avatar_url ? <img src={creator.avatar_url} alt={creator.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '👤'}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily, marginBottom: 10, overflow: 'hidden' }}>
+            <span style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', background: p + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, flexShrink: 0 }}>
+              {creator.avatar_url ? <img src={creator.avatar_url} alt={creator.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : badge}
             </span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>{badge} {creator.name}</span>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{badge} {creator.name}</span>
           </button>
         )}
 
-        {/* Fluffy reactions */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
+        {/* 🩷 Reactions */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 'auto', paddingTop: 8, borderTop: '1px solid #f1f5f9' }}>
           {REACTIONS.map(r => {
             const on = mine.includes(r.type);
             const n = counts[r.type] || 0;
             return (
               <button key={r.type} onClick={(e) => react(e, r.type)} title={tRaw(r.th, r.en)}
-                style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '3px 7px', borderRadius: 14, border: `1.5px solid ${on ? p : '#eef2f7'}`, background: on ? p + '12' : 'white', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: on ? p : '#64748b', fontFamily: theme.fontFamily }}>
-                <span>{r.emoji}</span>{n > 0 && <span style={{ fontSize: 11 }}>{n}</span>}
+                style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '2px 6px', borderRadius: 12, border: `1.5px solid ${on ? p : '#eef2f7'}`, background: on ? p + '12' : 'white', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: on ? p : '#64748b', fontFamily: theme.fontFamily }}>
+                <span>{r.emoji}</span>{n > 0 && <span style={{ fontSize: 10 }}>{n}</span>}
               </button>
             );
           })}

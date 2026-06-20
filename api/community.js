@@ -242,12 +242,11 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { palettes: countTags('palettes'), markers: countTags('markers'), books });
   }
 
-  // GET cozy-picks — admin-curated featured posts active in the last 7 days (max 6)
+  // GET cozy-picks — admin-pinned featured posts (manual, no expiry, max 6)
   if (req.method === 'GET' && action === 'cozy-picks') {
     const viewer = await getUser(req);
-    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const { data } = await supabase.from('community_posts').select('*')
-      .eq('status', 'published').eq('featured', true).gte('featured_at', since)
+      .eq('status', 'published').eq('featured', true)
       .order('featured_at', { ascending: false }).range(0, 5);
     const posts = await decorate(data || [], viewer?.id, req.query.guest_id);
     return json(res, 200, { posts });
@@ -267,7 +266,7 @@ module.exports = async function handler(req, res) {
     const uid = req.query.user_id;
     if (!uid) return json(res, 400, { error: 'user_id required' });
     const { data: profile } = await supabase.from('profiles')
-      .select('id,name,username,avatar_url,bio,role,affiliate_enabled,artist_slug,created_at').eq('id', uid).single();
+      .select('id,name,username,avatar_url,bio,role,affiliate_enabled,artist_slug,created_at,community_about,community_country,community_favorite_medium').eq('id', uid).single();
     if (!profile) return json(res, 404, { error: 'Creator not found' });
     const { data: posts } = await supabase.from('community_posts').select('*')
       .eq('status', 'published').eq('user_id', uid).order('created_at', { ascending: false });
@@ -280,6 +279,9 @@ module.exports = async function handler(req, res) {
       bio: profile.bio || '', joined: profile.created_at,
       affiliate_enabled: !!profile.affiliate_enabled,
       artist_slug: profile.role === 'artist' ? (profile.artist_slug || null) : null,
+      community_about: profile.community_about || null,
+      community_country: profile.community_country || null,
+      community_favorite_medium: profile.community_favorite_medium || null,
       stats: { posts: (posts || []).length, booksUsed, palettes: palettes.size },
     };
     return json(res, 200, { creator, posts: decorated });
@@ -405,13 +407,95 @@ module.exports = async function handler(req, res) {
     const { data: post } = await supabase.from('community_posts').select('id,user_id,status').eq('id', id).single();
     if (!post) return json(res, 404, { error: 'Not found' });
     if (post.status !== 'published') return json(res, 400, { error: 'Only published posts can be featured.' });
-    const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const { data: current } = await supabase.from('community_posts').select('id,user_id').eq('featured', true).gte('featured_at', since7);
+    const { data: current } = await supabase.from('community_posts').select('id,user_id').eq('featured', true);
     const cur = current || [];
     if (cur.length >= 6) return json(res, 400, { error: 'Cozy Picks is full (max 6). Remove one first.' });
-    if (cur.some(c => c.user_id === post.user_id)) return json(res, 400, { error: 'This creator already has a pick this week (max 1 per creator).' });
     await supabase.from('community_posts').update({ featured: true, featured_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', id);
     return json(res, 200, { success: true });
+  }
+
+  // ─────────────────── Tag Library ───────────────────
+
+  // GET ?action=tags&type=medium|marker|palette — approved tags for upload form
+  if (req.method === 'GET' && action === 'tags') {
+    const type = req.query.type;
+    if (!['medium','marker','palette'].includes(type)) return json(res, 400, { error: 'type required' });
+    const { data } = await supabase.from('community_tags').select('id,name,post_count').eq('type', type).eq('status','approved').order('post_count', { ascending: false }).order('name');
+    return json(res, 200, { tags: data || [] });
+  }
+
+  // POST ?action=tag-submit — submit custom tag (creates pending if not in library)
+  if (req.method === 'POST' && action === 'tag-submit') {
+    const user = await requireAuth(req, res);
+    if (!user) return;
+    const { type, name } = req.body || {};
+    if (!['medium','marker','palette'].includes(type) || !String(name||'').trim()) return json(res, 400, { error: 'type and name required' });
+    const normalized = String(name).trim().toLowerCase();
+    const display = String(name).trim();
+    const { data: existing } = await supabase.from('community_tags').select('id,name,status').eq('type', type).eq('normalized', normalized).single();
+    if (existing) return json(res, 200, { tag: existing });
+    const { data, error } = await supabase.from('community_tags').insert({ type, name: display, normalized, status: 'pending' }).select('id,name,status').single();
+    if (error) return json(res, 200, { tag: { name: display, status: 'pending' } }); // ignore unique conflict
+    return json(res, 201, { tag: data });
+  }
+
+  // GET ?action=admin-tags — all tags for admin Tag Library
+  if (req.method === 'GET' && action === 'admin-tags') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const type = req.query.type || '';
+    let q = supabase.from('community_tags').select('*').order('status').order('post_count', { ascending: false }).order('name');
+    if (type) q = q.eq('type', type);
+    const { data } = await q;
+    return json(res, 200, { tags: data || [] });
+  }
+
+  // POST ?action=admin-tag-approve&id= {name?} — approve (and optionally rename)
+  if (req.method === 'POST' && action === 'admin-tag-approve') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { id } = req.query;
+    if (!id) return json(res, 400, { error: 'id required' });
+    const upd = { status: 'approved', reviewed_at: new Date().toISOString() };
+    const name = (req.body || {}).name;
+    if (name) { upd.name = String(name).trim(); upd.normalized = String(name).trim().toLowerCase(); }
+    const { error } = await supabase.from('community_tags').update(upd).eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
+  }
+
+  // DELETE ?action=admin-tag&id= — delete a tag
+  if (req.method === 'DELETE' && action === 'admin-tag') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { id } = req.query;
+    if (!id) return json(res, 400, { error: 'id required' });
+    const { error } = await supabase.from('community_tags').delete().eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
+  }
+
+  // ─────────────────── Community Curation ───────────────────
+
+  // GET ?action=curation — resolved Featured Books + Creators from theme config
+  if (req.method === 'GET' && action === 'curation') {
+    const { data: themeRow } = await supabase.from('theme').select('config').eq('id', 1).single();
+    const community = themeRow?.config?.community || {};
+    const bookIds = community.featured_books || [];
+    const creatorIds = community.featured_creators || [];
+    const [{ data: books }, { data: creators }] = await Promise.all([
+      bookIds.length ? supabase.from('products').select('id,title,slug,image,cover_image_url').in('id', bookIds) : Promise.resolve({ data: [] }),
+      creatorIds.length ? supabase.from('profiles').select('id,name,username,avatar_url,community_about,community_country,community_favorite_medium,affiliate_enabled').in('id', creatorIds) : Promise.resolve({ data: [] }),
+    ]);
+    const bMap = Object.fromEntries((books||[]).map(b=>[b.id,b]));
+    const cMap = Object.fromEntries((creators||[]).map(c=>[c.id,c]));
+    return json(res, 200, {
+      featured_books: bookIds.map(id=>bMap[id]).filter(Boolean),
+      featured_creators: creatorIds.map(id=>{
+        const c = cMap[id]; if (!c) return null;
+        return { id:c.id, name:c.username||c.name||'Community Member', avatar_url:c.avatar_url||null, affiliate_enabled:!!c.affiliate_enabled, community_about:c.community_about||null, community_country:c.community_country||null, community_favorite_medium:c.community_favorite_medium||null };
+      }).filter(Boolean),
+    });
   }
 
   // POST ?action=admin-merge-tags {field, from:[...], to} — clean up duplicate tags

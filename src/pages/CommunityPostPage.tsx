@@ -149,6 +149,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
                 <button onClick={toggleSave} style={{ padding: '8px 16px', borderRadius: 20, border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', color: saved ? p : '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>
                   {saved ? `🔖 ${tRaw('บันทึกแล้ว', 'Saved')}` : `🔖 ${tRaw('บันทึก', 'Save')}`}
                 </button>
+                <ShareButton post={post} p={p} theme={theme} tRaw={tRaw} />
               </div>
             )}
 
@@ -254,6 +255,58 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
         <div onClick={() => setLightbox(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, touchAction: 'pinch-zoom' as any }}>
           <button onClick={() => setLightbox(false)} aria-label="Close" style={{ position: 'fixed', top: 16, right: 16, width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', color: 'white', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 700 }}>✕</button>
           <img src={post.artwork_url} alt={post.caption || 'artwork'} onClick={e => e.stopPropagation()} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Share button ──────────────────────────────────────────────────────────────
+function ShareButton({ post, p, theme, tRaw }: any) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const postUrl = `${window.location.origin}${window.location.pathname}#/community/${post.id}`;
+  const title = post.caption || (post.product?.title ? `Coloring: ${post.product.title}` : 'Coloring inspiration');
+  const img = post.artwork_url;
+
+  const copyLink = async () => {
+    await navigator.clipboard.writeText(postUrl).catch(() => {});
+    setCopied(true); setTimeout(() => setCopied(false), 2000);
+    setOpen(false);
+  };
+
+  const nativeShare = () => {
+    if (navigator.share) {
+      navigator.share({ title, text: title, url: postUrl }).catch(() => {});
+    } else {
+      setOpen(o => !o);
+    }
+  };
+
+  const enc = encodeURIComponent;
+  const socials = [
+    { label: 'Facebook', url: `https://www.facebook.com/sharer/sharer.php?u=${enc(postUrl)}`, color: '#1877f2' },
+    { label: 'Pinterest', url: `https://pinterest.com/pin/create/button/?url=${enc(postUrl)}&media=${enc(img)}&description=${enc(title)}`, color: '#e60023' },
+    { label: 'X / Twitter', url: `https://twitter.com/intent/tweet?url=${enc(postUrl)}&text=${enc(title)}`, color: '#000' },
+  ];
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button onClick={nativeShare} style={{ padding: '8px 16px', borderRadius: 20, border: `1.5px solid #e5e7eb`, background: 'white', color: '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>
+        📤 {tRaw('แชร์', 'Share')}
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: '110%', right: 0, background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 14, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, minWidth: 180, overflow: 'hidden' }}>
+          {socials.map(s => (
+            <a key={s.label} href={s.url} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}
+              style={{ display: 'block', padding: '10px 16px', fontSize: 13, fontWeight: 700, color: s.color, textDecoration: 'none', borderBottom: '1px solid #f1f5f9' }}>
+              {s.label}
+            </a>
+          ))}
+          <button onClick={copyLink} style={{ display: 'block', width: '100%', padding: '10px 16px', fontSize: 13, fontWeight: 700, color: copied ? '#059669' : '#374151', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: theme.fontFamily }}>
+            {copied ? `✓ ${tRaw('คัดลอกแล้ว', 'Copied!')}` : `🔗 ${tRaw('คัดลอกลิงก์', 'Copy link')}`}
+          </button>
         </div>
       )}
     </div>
