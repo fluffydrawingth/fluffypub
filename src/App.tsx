@@ -29,6 +29,8 @@ import LegalPage from './pages/LegalPage';
 import ArtistApplicationPage from './pages/ArtistApplicationPage';
 import AffiliateApplicationPage from './pages/AffiliateApplicationPage';
 import AffiliateDashboardPage from './pages/AffiliateDashboardPage';
+import CommunityPage from './pages/CommunityPage';
+import CreatorProfilePage from './pages/CreatorProfilePage';
 import { LangProvider } from './lib/lang';
 import { FavoritesProvider } from './lib/favorites';
 
@@ -121,6 +123,8 @@ function AppContent() {
       case '/affiliate-application': return <ProtectedRoute roles={['customer','artist','admin']}><AffiliateApplicationPage /></ProtectedRoute>;
       case '/affiliate-dashboard': return <ProtectedRoute roles={['customer','artist','admin']}><AffiliateDashboardPage /></ProtectedRoute>;
       case '/artists': return <ArtistsPage />;
+      case '/community': return <CommunityPage />;
+      case '/creator/:id': return <CreatorProfilePage userId={route.params?.id || ''} />;
       case '/login': return <LoginPage />;
       case '/account': return <ProtectedRoute roles={['customer','artist','admin']}><AccountPage /></ProtectedRoute>;
       case '/artist-dashboard': return <ProtectedRoute roles={['artist']}><ArtistDashboardPage /></ProtectedRoute>;

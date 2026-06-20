@@ -62,10 +62,17 @@ async function handleSupabaseUpload(req, res) {
   if (!fileName || !fileType) return json(res, 400, { error: 'fileName and fileType required' });
 
   const user = await getUser(req);
-  if (folder !== 'slips' && !user)
-    return json(res, 401, { error: 'Not authenticated' });
-  if (folder !== 'slips' && !['admin', 'artist'].includes(user?.role))
-    return json(res, 403, { error: 'Forbidden' });
+  // Permission tiers by folder:
+  //  - 'slips'      : payment slips — no login required (guest checkout).
+  //  - 'community'  : any LOGGED-IN user (customer/artist/creator) — community artwork.
+  //  - everything else (products, artists, pages, …): admin/artist only.
+  if (folder === 'community') {
+    if (!user) return json(res, 401, { error: 'Please log in to share your artwork.' });
+    if (!String(fileType).startsWith('image/')) return json(res, 400, { error: 'Community uploads must be images.' });
+  } else if (folder !== 'slips') {
+    if (!user) return json(res, 401, { error: 'Not authenticated' });
+    if (!['admin', 'artist'].includes(user?.role)) return json(res, 403, { error: 'Forbidden' });
+  }
 
   const ext = (fileName.split('.').pop() || 'jpg').toLowerCase();
   const safeName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;

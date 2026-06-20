@@ -47,6 +47,7 @@ export default function Navbar() {
     [tl('nav_shop', 'nav_shop_th', t('shop')), '/products'],
     [t('digital_products'), '/digital-products'],
     [lang === 'th' ? '⬇️ ฟรี' : '⬇️ Free', '/free-downloads'],
+    [lang === 'th' ? '🌈 ชุมชน' : '🌈 Community', '/community'],
     [tl('nav_artists', 'nav_artists_th', t('artists')), '/artists'],
     [tl('nav_blog', 'nav_blog_th', t('blog')), '/pages'],
   ];

@@ -52,7 +52,7 @@ api/
   promptpay.js   PromptPay QR generation
   upload.js      signed upload URLs
   analytics.js   admin dashboard stats
-  debug.js       misc debug
+  community.js   "Share Your Colorful World" community posts + reactions
 
 src/
   lib/   auth.tsx, router.tsx, theme.tsx, cart.tsx, lang.tsx, favorites.tsx, api.ts,

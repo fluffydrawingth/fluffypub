@@ -35,6 +35,8 @@ function parse(hash: string): Route {
   if (p[0]==='checkout' && p[1]==='success') return { path:'/checkout/success', params:{ orderId:p[2]||'' } };
   if (p[0]==='artists' && p[1]) return { path:'/artists/:slug', params:{ slug:p[1] } };
   if (p[0]==='artists') return { path:'/artists' };
+  if (p[0]==='community') return { path:'/community' };
+  if (p[0]==='creator' && p[1]) return { path:'/creator/:id', params:{ id:p[1] } };
   if (p[0]==='login') return { path:'/login' };
   if (p[0]==='reset-password') return { path:'/reset-password' };
   if (p[0]==='account') return { path:'/account', params:{ tab:p[1]||'' } };

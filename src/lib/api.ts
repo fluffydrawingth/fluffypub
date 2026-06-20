@@ -110,6 +110,19 @@ export const api = {
   saveAffiliatePayout: (data: any) => fetch('/api/users?action=affiliate-payout', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   deleteAffiliatePayout: (id: string) => fetch(`/api/users?action=affiliate-payout&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 
+  // Community — "Share Your Colorful World"
+  getCommunityPosts: (opts: { page?: number; limit?: number; product_id?: string; user_id?: string } = {}) => {
+    const q = new URLSearchParams({ action: 'list', page: String(opts.page ?? 0), limit: String(opts.limit ?? 12) });
+    if (opts.product_id) q.set('product_id', opts.product_id);
+    if (opts.user_id) q.set('user_id', opts.user_id);
+    return fetch(`/api/community?${q.toString()}`).then(r => r.json());
+  },
+  getCommunityPost: (id: string) => fetch(`/api/community?action=one&id=${id}`).then(r => r.json()),
+  getCommunityByProduct: (productId: string, limit = 6) => fetch(`/api/community?action=by-product&product_id=${productId}&limit=${limit}`).then(r => r.json()),
+  getCommunityCreator: (userId: string) => fetch(`/api/community?action=creator&user_id=${userId}`).then(r => r.json()),
+  createCommunityPost: (data: any) => fetch('/api/community', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  deleteCommunityPost: (id: string) => fetch(`/api/community?id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
+
   // Analytics
   getAnalytics: () => fetch('/api/analytics', { headers: h() }).then(r => r.json()),
 
