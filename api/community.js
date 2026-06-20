@@ -24,14 +24,17 @@ async function decorate(posts, viewerId, guestId) {
   if (!posts || !posts.length) return [];
   const userIds = [...new Set(posts.map(p => p.user_id).filter(Boolean))];
   const prodIds = [...new Set(posts.map(p => p.product_id).filter(Boolean))];
+  const extBookIds = [...new Set(posts.map(p => p.external_book_id).filter(Boolean))];
   const postIds = posts.map(p => p.id);
-  const [{ data: users }, { data: prods }, { data: reactions }] = await Promise.all([
+  const [{ data: users }, { data: prods }, { data: reactions }, { data: extBooks }] = await Promise.all([
     userIds.length ? supabase.from('profiles').select('id,name,username,avatar_url,artist_slug,role,affiliate_enabled').in('id', userIds) : Promise.resolve({ data: [] }),
     prodIds.length ? supabase.from('products').select('id,title,slug,image,cover_image_url').in('id', prodIds) : Promise.resolve({ data: [] }),
     postIds.length ? supabase.from('community_reactions').select('post_id,user_id,guest_id,type').in('post_id', postIds) : Promise.resolve({ data: [] }),
+    extBookIds.length ? supabase.from('external_books').select('id,title,author,slug').in('id', extBookIds) : Promise.resolve({ data: [] }),
   ]);
   const uMap = Object.fromEntries((users || []).map(u => [u.id, u]));
   const pMap = Object.fromEntries((prods || []).map(p => [p.id, p]));
+  const ebMap = Object.fromEntries((extBooks || []).map(b => [b.id, b]));
   const rMap = {};   // postId -> { counts:{type:n}, total, mine:[] }
   (reactions || []).forEach(r => {
     const e = rMap[r.post_id] || (rMap[r.post_id] = { counts: {}, total: 0, mine: [] });
@@ -46,8 +49,12 @@ async function decorate(posts, viewerId, guestId) {
     const u = uMap[post.user_id] || null;
     const pr = post.product_id ? (pMap[post.product_id] || null) : null;
     const r = rMap[post.id] || { counts: {}, total: 0, mine: [] };
+    const eb = post.external_book_id ? (ebMap[post.external_book_id] || null) : null;
+    // Backward compat: ensure artwork_urls is always a populated array
+    const urls = Array.isArray(post.artwork_urls) && post.artwork_urls.length ? post.artwork_urls : (post.artwork_url ? [post.artwork_url] : []);
     return {
       ...post,
+      artwork_urls: urls,
       creator: u ? {
         id: u.id,
         name: u.username || u.name || 'Community Member',
@@ -56,11 +63,54 @@ async function decorate(posts, viewerId, guestId) {
         artist_slug: u.role === 'artist' ? (u.artist_slug || null) : null,
       } : null,
       product: pr ? { id: pr.id, title: pr.title, slug: pr.slug, image: pr.image, cover_image_url: pr.cover_image_url } : null,
+      external_book: eb ? { id: eb.id, title: eb.title, author: eb.author, slug: eb.slug } : null,
       reactions: r.counts,
       reactionTotal: r.total,
       myReactions: r.mine,
     };
   });
+}
+
+function slugify(s) {
+  return String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'book';
+}
+
+// Find an existing external book by normalized title+author, or create one.
+// normalized_title = "title|author" (both lowercased) for case-insensitive dedup.
+async function resolveExternalBook(title, author) {
+  const t = String(title || '').trim();
+  if (!t) return null;
+  const a = String(author || '').trim();
+  const normalized = (t + '|' + a).toLowerCase();
+  try {
+    const { data: existing } = await supabase.from('external_books').select('*').eq('normalized_title', normalized).single();
+    if (existing) return existing;
+    // Generate a unique slug
+    const base = slugify(t);
+    let slug = base, n = 1;
+    while (n < 50) {
+      const { data: clash } = await supabase.from('external_books').select('id').eq('slug', slug).single();
+      if (!clash) break;
+      slug = `${base}-${++n}`;
+    }
+    const { data, error } = await supabase.from('external_books').insert({ title: t, author: a || null, slug, normalized_title: normalized }).select('*').single();
+    if (error) { // race: refetch
+      const { data: again } = await supabase.from('external_books').select('*').eq('normalized_title', normalized).single();
+      return again || null;
+    }
+    return data;
+  } catch (_) { return null; }
+}
+
+// Recompute post_count + creator_count for an external book (published posts only).
+async function recountExternalBook(bookId) {
+  if (!bookId) return;
+  try {
+    const { data } = await supabase.from('community_posts').select('user_id').eq('status', 'published').eq('external_book_id', bookId);
+    const posts = data || [];
+    const creators = new Set(posts.map(p => p.user_id).filter(Boolean)).size;
+    await supabase.from('external_books').update({ post_count: posts.length, creator_count: creators }).eq('id', bookId);
+  } catch (_) { /* ignore */ }
 }
 
 // Submit each tag value as a pending community_tag if not already in the library.
@@ -161,6 +211,7 @@ module.exports = async function handler(req, res) {
     let q = supabase.from('community_posts').select('*', { count: 'exact' })
       .eq('status', 'published').order('created_at', { ascending: false });
     if (req.query.product_id) q = q.eq('product_id', req.query.product_id);
+    if (req.query.external_book_id) q = q.eq('external_book_id', req.query.external_book_id);
     if (req.query.user_id) q = q.eq('user_id', req.query.user_id);
     if (req.query.palette) q = q.contains('palettes', [req.query.palette]);
     if (req.query.marker) q = q.contains('markers', [req.query.marker]);
@@ -186,6 +237,29 @@ module.exports = async function handler(req, res) {
     if (error || !data) return json(res, 404, { error: 'Not found' });
     const [post] = await decorate([data], viewer?.id, req.query.guest_id);
     return json(res, 200, post);
+  }
+
+  // GET related — "You may also like": same book > same marker > same creator > recent
+  if (req.method === 'GET' && action === 'related') {
+    const viewer = await getUser(req);
+    const { id } = req.query;
+    if (!id) return json(res, 400, { error: 'id required' });
+    const { data: base } = await supabase.from('community_posts').select('id,user_id,product_id,external_book_id,markers').eq('id', id).single();
+    if (!base) return json(res, 200, { posts: [] });
+    const picked = new Map();
+    const add = (rows) => { for (const r of (rows || [])) { if (r.id !== id && !picked.has(r.id) && picked.size < 6) picked.set(r.id, r); } };
+    const q = () => supabase.from('community_posts').select('*').eq('status', 'published').neq('id', id).order('created_at', { ascending: false }).limit(8);
+    // 1. Same Fluffy Pub book / external book
+    if (base.product_id) { const { data } = await q().eq('product_id', base.product_id); add(data); }
+    if (picked.size < 6 && base.external_book_id) { const { data } = await q().eq('external_book_id', base.external_book_id); add(data); }
+    // 2. Same marker
+    if (picked.size < 6 && (base.markers || []).length) { const { data } = await q().overlaps('markers', base.markers); add(data); }
+    // 3. Same creator
+    if (picked.size < 6 && base.user_id) { const { data } = await q().eq('user_id', base.user_id); add(data); }
+    // 4. Recent fallback
+    if (picked.size < 6) { const { data } = await q(); add(data); }
+    const decorated = await decorate([...picked.values()].slice(0, 6), viewer?.id, req.query.guest_id);
+    return json(res, 200, { posts: decorated });
   }
 
   if (req.method === 'GET' && action === 'by-product') {
@@ -243,9 +317,32 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { creators });
   }
 
-  // GET facets — popular palettes, marker sets, mediums & books for filter chips
+  // GET external-books — autocomplete suggestions (q) or top books by usage
+  if (req.method === 'GET' && action === 'external-books') {
+    const qStr = String(req.query.q || '').trim();
+    let q = supabase.from('external_books').select('id,title,author,slug,post_count,creator_count');
+    if (qStr) q = q.ilike('title', `%${qStr}%`);
+    q = q.order('post_count', { ascending: false }).order('title').range(0, qStr ? 7 : 23);
+    const { data } = await q;
+    return json(res, 200, { books: data || [] });
+  }
+
+  // GET external-book — dedicated page: book info + its community posts
+  if (req.method === 'GET' && action === 'external-book') {
+    const viewer = await getUser(req);
+    const slug = req.query.slug;
+    if (!slug) return json(res, 400, { error: 'slug required' });
+    const { data: book } = await supabase.from('external_books').select('*').eq('slug', slug).single();
+    if (!book) return json(res, 404, { error: 'Book not found' });
+    const { data: posts } = await supabase.from('community_posts').select('*')
+      .eq('status', 'published').eq('external_book_id', book.id).order('created_at', { ascending: false }).range(0, 47);
+    const decorated = await decorate(posts || [], viewer?.id, req.query.guest_id);
+    return json(res, 200, { book, posts: decorated });
+  }
+
+  // GET facets — popular palettes, marker sets, mediums, Fluffy Pub books & external books
   if (req.method === 'GET' && action === 'facets') {
-    const { data } = await supabase.from('community_posts').select('palettes,markers,mediums,product_id').eq('status', 'published').order('created_at', { ascending: false }).range(0, 999);
+    const { data } = await supabase.from('community_posts').select('palettes,markers,mediums,product_id,external_book_id').eq('status', 'published').order('created_at', { ascending: false }).range(0, 999);
     // Case-insensitive dedup: group by lowercase key, keep most-used display name
     const countTags = (key, limit = 16) => {
       const t = {}; // lowercase -> { count, display }
@@ -257,7 +354,7 @@ module.exports = async function handler(req, res) {
       }));
       return Object.values(t).sort((a, b) => b.count - a.count).slice(0, limit).map(({ display, count }) => ({ name: display, count }));
     };
-    // Books: count by product_id, resolve titles
+    // Fluffy Pub books: count by product_id, resolve titles
     const bc = {};
     (data || []).forEach(p => { if (p.product_id) bc[p.product_id] = (bc[p.product_id] || 0) + 1; });
     const bookIds = Object.keys(bc).sort((a, b) => bc[b] - bc[a]).slice(0, 12);
@@ -266,7 +363,16 @@ module.exports = async function handler(req, res) {
       const { data: prods } = await supabase.from('products').select('id,title,slug').in('id', bookIds);
       books = bookIds.map(id => { const pr = (prods || []).find(x => x.id === id); return pr ? { id, title: pr.title, slug: pr.slug, count: bc[id] } : null; }).filter(Boolean);
     }
-    return json(res, 200, { palettes: countTags('palettes'), markers: countTags('markers'), mediums: countTags('mediums'), books });
+    // External (community) books — kept separate; discovery only
+    const ec = {};
+    (data || []).forEach(p => { if (p.external_book_id) ec[p.external_book_id] = (ec[p.external_book_id] || 0) + 1; });
+    const extIds = Object.keys(ec).sort((a, b) => ec[b] - ec[a]).slice(0, 12);
+    let externalBooks = [];
+    if (extIds.length) {
+      const { data: ebs } = await supabase.from('external_books').select('id,title,author,slug').in('id', extIds);
+      externalBooks = extIds.map(id => { const eb = (ebs || []).find(x => x.id === id); return eb ? { id, title: eb.title, author: eb.author, slug: eb.slug, count: ec[id] } : null; }).filter(Boolean);
+    }
+    return json(res, 200, { palettes: countTags('palettes'), markers: countTags('markers'), mediums: countTags('mediums'), books, externalBooks });
   }
 
   // GET cozy-picks — admin-pinned featured posts (manual, no expiry, max 6)
@@ -318,20 +424,33 @@ module.exports = async function handler(req, res) {
     const user = await requireAuth(req, res);
     if (!user) return;
     const b = req.body || {};
-    if (!b.artwork_url) return json(res, 400, { error: 'Artwork image is required.' });
     const asArr = (v) => Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.trim()).map(x => x.trim()).slice(0, 20) : [];
+    // Multiple images: artwork_urls array (max 10); cover = first image / explicit artwork_url
+    const imgs = Array.isArray(b.artwork_urls) ? b.artwork_urls.filter(u => typeof u === 'string' && u.trim()).slice(0, 10) : [];
+    const cover = b.artwork_url || imgs[0];
+    if (!cover) return json(res, 400, { error: 'Artwork image is required.' });
+    const artworkUrls = imgs.length ? imgs : [cover];
+    // External book library: dedup-resolve to a canonical external_books row
+    let externalBookId = null, extTitle = null, extAuthor = null;
+    if (!b.product_id && b.external_book_title) {
+      const bk = await resolveExternalBook(b.external_book_title, b.external_book_author);
+      if (bk) { externalBookId = bk.id; extTitle = bk.title; extAuthor = bk.author; }
+      else { extTitle = b.external_book_title; extAuthor = b.external_book_author || null; }
+    }
     const row = {
-      user_id: user.id, artwork_url: b.artwork_url, thumb_url: b.thumb_url || b.artwork_url,
+      user_id: user.id, artwork_url: cover, artwork_urls: artworkUrls, thumb_url: b.thumb_url || cover,
       product_id: b.product_id || null,
-      external_book_title: b.product_id ? null : (b.external_book_title || null),
-      external_book_author: b.product_id ? null : (b.external_book_author || null),
+      external_book_id: externalBookId,
+      external_book_title: b.product_id ? null : extTitle,
+      external_book_author: b.product_id ? null : extAuthor,
       mediums: asArr(b.mediums), markers: asArr(b.markers), palettes: asArr(b.palettes),
       caption: (b.caption || '').slice(0, CAPTION_MAX), status: 'published',
     };
     const { data, error } = await supabase.from('community_posts').insert(row).select().single();
     if (error) return json(res, 400, { error: error.message });
-    // Fire-and-forget: submit custom tags to the Tag Library as pending
+    // Fire-and-forget: submit custom tags to the Tag Library as pending; recount the book
     autoSubmitTags(row.mediums, row.markers, row.palettes).catch(() => {});
+    if (externalBookId) recountExternalBook(externalBookId).catch(() => {});
     const [post] = await decorate([data], user.id);
     return json(res, 201, post);
   }
@@ -341,36 +460,64 @@ module.exports = async function handler(req, res) {
     if (!user) return;
     const { id } = req.query;
     if (!id) return json(res, 400, { error: 'id required' });
-    const { data: post } = await supabase.from('community_posts').select('user_id').eq('id', id).single();
+    const { data: post } = await supabase.from('community_posts').select('user_id,external_book_id').eq('id', id).single();
     if (!post) return json(res, 404, { error: 'Not found' });
     if (post.user_id !== user.id && user.role !== 'admin') return json(res, 403, { error: 'Forbidden' });
     const { error } = await supabase.from('community_posts').delete().eq('id', id);
     if (error) return json(res, 400, { error: error.message });
+    if (post.external_book_id) recountExternalBook(post.external_book_id).catch(() => {});
     return json(res, 200, { success: true });
   }
 
-  // PUT — edit a post (owner or admin). Artwork image is NOT editable here.
+  // PUT — edit a post (owner or admin). Artwork images, book, tags & caption editable.
   if (req.method === 'PUT') {
     const user = await requireAuth(req, res);
     if (!user) return;
     const { id } = req.query;
     if (!id) return json(res, 400, { error: 'id required' });
-    const { data: existing } = await supabase.from('community_posts').select('user_id').eq('id', id).single();
+    const { data: existing } = await supabase.from('community_posts').select('user_id,external_book_id').eq('id', id).single();
     if (!existing) return json(res, 404, { error: 'Not found' });
     if (existing.user_id !== user.id && user.role !== 'admin') return json(res, 403, { error: 'Forbidden' });
     const b = req.body || {};
     const asArr = (v) => Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.trim()).map(x => x.trim()).slice(0, 20) : undefined;
     const updates = { updated_at: new Date().toISOString() };
+    // Editable images
+    if (Array.isArray(b.artwork_urls) && b.artwork_urls.length) {
+      const imgs = b.artwork_urls.filter(u => typeof u === 'string' && u.trim()).slice(0, 10);
+      if (imgs.length) { updates.artwork_urls = imgs; updates.artwork_url = imgs[0]; updates.thumb_url = b.thumb_url || imgs[0]; }
+    }
     if (b.caption !== undefined) updates.caption = String(b.caption).slice(0, CAPTION_MAX);
-    if (b.product_id !== undefined) { updates.product_id = b.product_id || null; if (b.product_id) { updates.external_book_title = null; updates.external_book_author = null; } }
-    if (b.external_book_title !== undefined && !b.product_id) updates.external_book_title = b.external_book_title || null;
-    if (b.external_book_author !== undefined && !b.product_id) updates.external_book_author = b.external_book_author || null;
+    // Book change — resolve external book library, clear book if switching to product/none
+    let newExtBookId = existing.external_book_id || null;
+    if (b.product_id !== undefined && b.product_id) {
+      updates.product_id = b.product_id;
+      updates.external_book_id = null; updates.external_book_title = null; updates.external_book_author = null;
+      newExtBookId = null;
+    } else if (b.external_book_title !== undefined) {
+      updates.product_id = null;
+      const t = String(b.external_book_title || '').trim();
+      if (t) {
+        const bk = await resolveExternalBook(t, b.external_book_author);
+        updates.external_book_id = bk ? bk.id : null;
+        updates.external_book_title = bk ? bk.title : t;
+        updates.external_book_author = bk ? bk.author : (b.external_book_author || null);
+        newExtBookId = bk ? bk.id : null;
+      } else {
+        updates.external_book_id = null; updates.external_book_title = null; updates.external_book_author = null;
+        newExtBookId = null;
+      }
+    } else if (b.product_id !== undefined && !b.product_id) {
+      updates.product_id = null;
+    }
     if (asArr(b.mediums) !== undefined) updates.mediums = asArr(b.mediums);
     if (asArr(b.markers) !== undefined) updates.markers = asArr(b.markers);
     if (asArr(b.palettes) !== undefined) updates.palettes = asArr(b.palettes);
     const { data, error } = await supabase.from('community_posts').update(updates).eq('id', id).select().single();
     if (error) return json(res, 400, { error: error.message });
     autoSubmitTags(updates.mediums || [], updates.markers || [], updates.palettes || []).catch(() => {});
+    // Recount both old and new external book if the link changed
+    if (existing.external_book_id && existing.external_book_id !== newExtBookId) recountExternalBook(existing.external_book_id).catch(() => {});
+    if (newExtBookId) recountExternalBook(newExtBookId).catch(() => {});
     const [post] = await decorate([data], user.id);
     return json(res, 200, post);
   }

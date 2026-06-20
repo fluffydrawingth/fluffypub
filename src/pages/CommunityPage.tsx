@@ -41,7 +41,7 @@ export default function CommunityPage() {
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [cozy, setCozy] = useState<any[]>([]);
   const [curation, setCuration] = useState<{ featured_books: any[]; featured_creators: any[] }>({ featured_books: [], featured_creators: [] });
-  const [facets, setFacets] = useState<{ palettes: any[]; markers: any[]; mediums: any[]; books: any[] }>({ palettes: [], markers: [], mediums: [], books: [] });
+  const [facets, setFacets] = useState<{ palettes: any[]; markers: any[]; mediums: any[]; books: any[]; externalBooks: any[] }>({ palettes: [], markers: [], mediums: [], books: [], externalBooks: [] });
   const [posts, setPosts] = useState<any[]>([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -50,7 +50,7 @@ export default function CommunityPage() {
   useEffect(() => {
     api.getCommunityCozyPicks().then((d: any) => setCozy(d?.posts || [])).catch(() => {});
     api.getCommunityCuration().then((d: any) => setCuration({ featured_books: d?.featured_books || [], featured_creators: d?.featured_creators || [] })).catch(() => {});
-    api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [], mediums: d?.mediums || [], books: d?.books || [] })).catch(() => {});
+    api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [], mediums: d?.mediums || [], books: d?.books || [], externalBooks: d?.externalBooks || [] })).catch(() => {});
   }, []);
 
   const loadPage = useCallback((pg: number, f: Filter) => {
@@ -112,10 +112,11 @@ export default function CommunityPage() {
         )}
 
         {/* 2. 🔎 Explore — filter chips */}
-        {isAll && (facets.books.length || facets.markers.length || facets.mediums.length || facets.palettes.length) ? (
+        {isAll && (facets.books.length || facets.externalBooks.length || facets.markers.length || facets.mediums.length || facets.palettes.length) ? (
           <div style={{ background: 'white', borderRadius: 16, padding: '14px 16px', marginBottom: 24, boxShadow: '0 1px 6px rgba(0,0,0,0.05)', border: `1px solid ${p}10` }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: theme.textColor, marginBottom: 10 }}>🔎 {tRaw('สำรวจตาม', 'Explore by')}</div>
             {facets.books.length > 0 && <ChipRow theme={theme} p={p} title={`📚 ${tRaw('หนังสือ Fluffy Pub', 'Fluffy Pub Books')}`} items={facets.books.map(b => ({ key: b.id, label: b.title, count: b.count }))} onPick={(it) => choose({ kind: 'product', value: it.key, label: it.label })} />}
+            {facets.externalBooks.length > 0 && <ChipRow theme={theme} p={p} title={`📖 ${tRaw('หนังสืออื่น ๆ / จากชุมชน', 'Other / Community Books')}`} items={facets.externalBooks.map(b => ({ key: b.slug, label: b.author ? `${b.title} · ${b.author}` : b.title, count: b.count }))} onPick={(it) => navigate(`/community/book/${it.key}`)} />}
             {facets.markers.length > 0 && <ChipRow theme={theme} p={p} title={`🖍️ ${tRaw('ปากกา / ชุดสี', 'Markers')}`} items={facets.markers.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'marker', value: it.key })} />}
             {facets.mediums.length > 0 && <ChipRow theme={theme} p={p} title={`🎨 ${tRaw('เทคนิค', 'Mediums')}`} items={facets.mediums.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'medium', value: it.key })} />}
             {facets.palettes.length > 0 && <ChipRow theme={theme} p={p} title={`🌷 ${tRaw('พาเลตต์', 'Palettes')}`} items={facets.palettes.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'palette', value: it.key })} />}
@@ -292,11 +293,11 @@ function CropModal({ file, theme, p, tRaw, onCrop, onSkip, onCancel }: {
 }
 
 // ── Upload form ───────────────────────────────────────────────────────────────
+type UpImg = { file: File; preview: string };
 function UploadForm({ theme, p, tRaw, onPosted }: any) {
-  const [origFile, setOrigFile] = useState<File | null>(null);   // raw file from picker
-  const [file, setFile] = useState<File | null>(null);           // file to upload (cropped or orig)
-  const [showCrop, setShowCrop] = useState(false);
-  const [preview, setPreview] = useState('');
+  const [images, setImages] = useState<UpImg[]>([]);            // cropped/final images to upload (max 10)
+  const [cropRaw, setCropRaw] = useState<File | null>(null);    // raw file awaiting crop
+  const [cropIdx, setCropIdx] = useState<number | null>(null);  // index being re-cropped (null = adding new)
   const [bookMode, setBookMode] = useState<'product' | 'external'>('product');
   const [prodQuery, setProdQuery] = useState('');
   const [prodResults, setProdResults] = useState<any[]>([]);
@@ -304,6 +305,7 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
   const [selProduct, setSelProduct] = useState<any>(null);
   const [extTitle, setExtTitle] = useState('');
   const [extAuthor, setExtAuthor] = useState('');
+  const [extResults, setExtResults] = useState<any[]>([]);
   const [mediums, setMediums] = useState<string[]>([]);
   const [markers, setMarkers] = useState<string[]>([]);
   const [palettes, setPalettes] = useState<string[]>([]);
@@ -317,21 +319,43 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
     if (!q) { setProdResults([]); return; }
     setProdResults(allProducts.filter(pr => (pr.title || '').toLowerCase().includes(q)).slice(0, 6));
   }, [prodQuery, allProducts]);
+  // External book autocomplete (debounced)
+  useEffect(() => {
+    const q = extTitle.trim();
+    if (q.length < 2) { setExtResults([]); return; }
+    const t = setTimeout(() => { api.getExternalBooks(q).then((d: any) => setExtResults(d?.books || [])).catch(() => {}); }, 250);
+    return () => clearTimeout(t);
+  }, [extTitle]);
 
-  const applyFile = (f: File) => { setFile(f); setPreview(URL.createObjectURL(f)); setShowCrop(false); };
-  const onPickRaw = (f: File) => { setOrigFile(f); setShowCrop(true); };
   const fld = { width: '100%', padding: '10px 13px', borderRadius: 10, border: `1.5px solid ${p}30`, fontSize: 14, outline: 'none', fontFamily: theme.fontFamily, boxSizing: 'border-box' as const };
+
+  // Crop flow: pick raw → modal → apply (replace if re-cropping, else append)
+  const onPickRaw = (f: File) => { setCropRaw(f); setCropIdx(null); };
+  const applyCropped = (f: File) => {
+    const img = { file: f, preview: URL.createObjectURL(f) };
+    setImages(prev => cropIdx != null ? prev.map((x, i) => i === cropIdx ? img : x) : [...prev, img]);
+    setCropRaw(null); setCropIdx(null);
+  };
+  const recrop = (i: number) => { setCropRaw(images[i].file); setCropIdx(i); };
+  const removeImg = (i: number) => setImages(prev => prev.filter((_, idx) => idx !== i));
 
   const submit = async () => {
     setErr('');
-    if (!file) { setErr(tRaw('กรุณาเลือกรูปผลงาน', 'Please choose your artwork image.')); return; }
+    if (!images.length) { setErr(tRaw('กรุณาเลือกรูปผลงาน', 'Please choose your artwork image.')); return; }
     setBusy(true);
     try {
-      const { full, thumb } = await makeImageVariants(file);
-      const [up, upT] = await Promise.all([api.uploadFile(full, 'community'), api.uploadFile(thumb, 'community')]);
-      if (up?.error) { setErr(up.error); setBusy(false); return; }
+      // Upload each image's full variant; thumb from the first (cover)
+      const fulls: string[] = [];
+      let coverThumb = '';
+      for (let i = 0; i < images.length; i++) {
+        const { full, thumb } = await makeImageVariants(images[i].file);
+        const [up, upT] = await Promise.all([api.uploadFile(full, 'community'), i === 0 ? api.uploadFile(thumb, 'community') : Promise.resolve(null)]);
+        if (up?.error) { setErr(up.error); setBusy(false); return; }
+        fulls.push(up.publicUrl);
+        if (i === 0) coverThumb = upT?.publicUrl || up.publicUrl;
+      }
       const res = await api.createCommunityPost({
-        artwork_url: up.publicUrl, thumb_url: upT?.publicUrl || up.publicUrl,
+        artwork_url: fulls[0], artwork_urls: fulls, thumb_url: coverThumb,
         product_id: bookMode === 'product' ? (selProduct?.id || null) : null,
         external_book_title: bookMode === 'external' ? extTitle.trim() || null : null,
         external_book_author: bookMode === 'external' ? extAuthor.trim() || null : null,
@@ -344,33 +368,57 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
 
   return (
     <>
-    {showCrop && origFile && (
+    {cropRaw && (
       <CropModal
-        file={origFile} theme={theme} p={p} tRaw={tRaw}
-        onCrop={f => applyFile(f)}
-        onSkip={() => applyFile(origFile)}
-        onCancel={() => { if (!file) { setOrigFile(null); } setShowCrop(false); }}
+        file={cropRaw} theme={theme} p={p} tRaw={tRaw}
+        onCrop={f => applyCropped(f)}
+        onSkip={() => applyCropped(cropRaw)}
+        onCancel={() => { setCropRaw(null); setCropIdx(null); }}
       />
     )}
     <div style={{ background: 'white', borderRadius: 18, padding: 20, boxShadow: '0 2px 14px rgba(0,0,0,0.06)', margin: '0 0 24px', border: `1.5px solid ${p}15` }}>
       <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1e293b', margin: '0 0 16px' }}>🎨 {tRaw('แบ่งปันผลงานของคุณ', 'Share your artwork')}</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 18 }} className="cm-form">
         <style>{`@media(max-width:640px){.cm-form{grid-template-columns:1fr!important}}`}</style>
-        {/* Left: artwork upload */}
+        {/* Left: artwork upload — multiple images */}
         <div>
-          <label style={{ display: 'block', cursor: 'pointer' }}>
-            <div style={{ aspectRatio: '4/5', borderRadius: 14, border: `2px dashed ${p}40`, background: preview ? '#f8fafc' : p + '08', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-              {preview
-                ? <img src={preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <span style={{ color: p, fontWeight: 700, fontSize: 13, textAlign: 'center', padding: 16 }}>🖼️ {tRaw('แตะเพื่ออัปโหลดรูปผลงาน', 'Tap to upload artwork')}</span>}
-            </div>
-            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onPickRaw(f); e.target.value = ''; }} />
-          </label>
-          {preview && (
-            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-              <button onClick={() => setShowCrop(true)} style={{ flex: 1, background: 'none', border: `1px solid ${p}40`, borderRadius: 8, padding: '5px', fontSize: 12, color: p, cursor: 'pointer', fontWeight: 700, fontFamily: theme.fontFamily }}>✂️ {tRaw('แก้ไขการตัด', 'Edit crop')}</button>
-              <button onClick={() => { setFile(null); setOrigFile(null); setPreview(''); }} style={{ flex: 1, background: 'none', border: `1px solid #e5e7eb`, borderRadius: 8, padding: '5px', fontSize: 12, color: '#94a3b8', cursor: 'pointer', fontFamily: theme.fontFamily }}>✕ {tRaw('เปลี่ยนรูป', 'Change')}</button>
-            </div>
+          {images.length === 0 ? (
+            <label style={{ display: 'block', cursor: 'pointer' }}>
+              <div style={{ aspectRatio: '4/5', borderRadius: 14, border: `2px dashed ${p}40`, background: p + '08', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ color: p, fontWeight: 700, fontSize: 13, textAlign: 'center', padding: 16 }}>🖼️ {tRaw('แตะเพื่ออัปโหลดรูปผลงาน', 'Tap to upload artwork')}</span>
+              </div>
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onPickRaw(f); e.target.value = ''; }} />
+            </label>
+          ) : (
+            <>
+              {/* Cover preview */}
+              <div style={{ aspectRatio: '4/5', borderRadius: 14, overflow: 'hidden', background: '#f8fafc', border: `1.5px solid ${p}20` }}>
+                <img src={images[0].preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              {/* Thumbnail strip */}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                {images.map((im, i) => (
+                  <div key={i} style={{ position: 'relative', width: 52, height: 52, borderRadius: 8, overflow: 'hidden', border: i === 0 ? `2px solid ${p}` : '1.5px solid #e5e7eb' }}>
+                    <img src={im.preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {i === 0 && <span style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: p, color: 'white', fontSize: 8, fontWeight: 800, textAlign: 'center' }}>{tRaw('ปก', 'Cover')}</span>}
+                    <button onClick={() => removeImg(i)} style={{ position: 'absolute', top: 0, right: 0, width: 16, height: 16, borderRadius: '0 0 0 6px', border: 'none', background: 'rgba(220,38,38,0.9)', color: 'white', fontSize: 10, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+                  </div>
+                ))}
+                {images.length < 10 && (
+                  <label style={{ width: 52, height: 52, borderRadius: 8, border: `1.5px dashed ${p}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: p, fontSize: 20, fontWeight: 700 }}>
+                    +
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onPickRaw(f); e.target.value = ''; }} />
+                  </label>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                <button onClick={() => recrop(0)} style={{ flex: 1, background: 'none', border: `1px solid ${p}40`, borderRadius: 8, padding: '5px', fontSize: 12, color: p, cursor: 'pointer', fontWeight: 700, fontFamily: theme.fontFamily }}>✂️ {tRaw('แก้ไขการตัดรูปปก', 'Edit cover crop')}</button>
+                <button onClick={() => setImages([])} style={{ flex: 1, background: 'none', border: `1px solid #e5e7eb`, borderRadius: 8, padding: '5px', fontSize: 12, color: '#94a3b8', cursor: 'pointer', fontFamily: theme.fontFamily }}>✕ {tRaw('ล้างทั้งหมด', 'Clear all')}</button>
+              </div>
+              {images.length > 1 && (
+                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6, textAlign: 'center' }}>{tRaw('รูปแรกคือภาพปก', 'First image is the cover')}</div>
+              )}
+            </>
           )}
         </div>
         {/* Right: metadata */}
@@ -400,9 +448,22 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
               )}
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-              <input value={extTitle} onChange={e => setExtTitle(e.target.value)} placeholder={tRaw('ชื่อหนังสือ', 'Book title')} style={fld} />
-              <input value={extAuthor} onChange={e => setExtAuthor(e.target.value)} placeholder={tRaw('ศิลปิน/สำนักพิมพ์', 'Artist / Publisher')} style={fld} />
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, position: 'relative' }}>
+                <input value={extTitle} onChange={e => setExtTitle(e.target.value)} placeholder={tRaw('ชื่อหนังสือ', 'Book title')} style={fld} />
+                <input value={extAuthor} onChange={e => setExtAuthor(e.target.value)} placeholder={tRaw('ศิลปิน/สำนักพิมพ์', 'Author / Brand')} style={fld} />
+              </div>
+              {extResults.length > 0 && (
+                <div style={{ border: '1px solid #f1f5f9', borderRadius: 10, marginTop: 4, overflow: 'hidden' }}>
+                  {extResults.map((bk: any) => (
+                    <button key={bk.id} onClick={() => { setExtTitle(bk.title); setExtAuthor(bk.author || ''); setExtResults([]); }}
+                      style={{ display: 'block', width: '100%', textAlign: 'left', background: 'white', border: 'none', borderBottom: '1px solid #f8fafc', cursor: 'pointer', padding: '8px 12px', fontSize: 13, fontFamily: theme.fontFamily, color: '#1e293b' }}>
+                      📖 {bk.title}{bk.author ? <span style={{ color: '#94a3b8' }}> by {bk.author}</span> : ''} <span style={{ color: '#cbd5e1', fontSize: 11 }}>· {bk.post_count}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>{tRaw('เลือกจากรายการเพื่อไม่ให้ซ้ำ หรือพิมพ์ชื่อใหม่', 'Pick from the list to avoid duplicates, or type a new one')}</div>
             </div>
           )}
 

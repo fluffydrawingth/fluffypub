@@ -113,9 +113,10 @@ export const api = {
   deleteAffiliatePayout: (id: string) => fetch(`/api/users?action=affiliate-payout&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 
   // Community — "Share Your Colorful World"
-  getCommunityPosts: (opts: { page?: number; limit?: number; product_id?: string; user_id?: string; palette?: string; marker?: string; medium?: string; month?: string } = {}) => {
+  getCommunityPosts: (opts: { page?: number; limit?: number; product_id?: string; external_book_id?: string; user_id?: string; palette?: string; marker?: string; medium?: string; month?: string } = {}) => {
     const q = new URLSearchParams({ action: 'list', page: String(opts.page ?? 0), limit: String(opts.limit ?? 20) });
     if (opts.product_id) q.set('product_id', opts.product_id);
+    if (opts.external_book_id) q.set('external_book_id', opts.external_book_id);
     if (opts.user_id) q.set('user_id', opts.user_id);
     if (opts.palette) q.set('palette', opts.palette);
     if (opts.marker) q.set('marker', opts.marker);
@@ -153,6 +154,10 @@ export const api = {
   deleteTag: (id: string) => fetch(`/api/community?action=admin-tag&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
   // Community Curation
   getCommunityCuration: () => fetch('/api/community?action=curation').then(r => r.json()),
+  // External Book Library
+  getExternalBooks: (q = '') => fetch(`/api/community?action=external-books&q=${encodeURIComponent(q)}`).then(r => r.json()),
+  getExternalBook: (slug: string) => fetch(`/api/community?action=external-book&slug=${encodeURIComponent(slug)}&guest_id=${getGuestId()}`, { headers: h() }).then(r => r.json()),
+  getCommunityRelated: (id: string) => fetch(`/api/community?action=related&id=${id}&guest_id=${getGuestId()}`, { headers: h() }).then(r => r.json()),
 
   // Analytics
   getAnalytics: () => fetch('/api/analytics', { headers: h() }).then(r => r.json()),

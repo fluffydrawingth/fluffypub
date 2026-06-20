@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
 import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
+import ImageCarousel from '../components/ImageCarousel';
+import CommunityCard from '../components/CommunityCard';
 
 const REACTIONS = [
   { type: 'love', emoji: '🩷', th: 'รักเลย', en: 'Love it' },
@@ -36,6 +38,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
   const [commenting, setCommenting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [related, setRelated] = useState<any[]>([]);
 
   // Owner edit — full form
   const [editing, setEditing] = useState(false);
@@ -60,6 +63,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
     }).catch(() => setLoading(false));
     api.getCommunityComments(postId).then((d: any) => setComments(d?.comments || [])).catch(() => {});
     api.getProducts().then((d: any) => setEAllProducts(Array.isArray(d) ? d : [])).catch(() => {});
+    api.getCommunityRelated(postId).then((d: any) => setRelated(d?.posts || [])).catch(() => {});
   }, [postId]);
 
   useEffect(() => {
@@ -142,6 +146,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
   );
 
   const c = post.creator;
+  const images = (post.artwork_urls && post.artwork_urls.length ? post.artwork_urls : [post.artwork_url]).filter(Boolean);
   const badge = c?.affiliate_enabled ? '🌷' : '👤';
   const isOwner = !!(user && c && user.id === c.id);
   const isAdmin = user?.role === 'admin';
@@ -158,12 +163,11 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
         <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 14, fontWeight: 600, padding: '0 0 16px' }}>← {tRaw('ชุมชน', 'Community')}</button>
 
         <div className="cp-grid" style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 24, alignItems: 'start' }}>
-          {/* Artwork — full original ratio, no cropping on detail page */}
+          {/* Artwork — full original ratio carousel, no cropping on detail page */}
           <div>
-            <button onClick={() => setLightbox(true)} title={tRaw('ขยายภาพ', 'Zoom')}
-              style={{ display: 'block', width: '100%', padding: 0, border: 'none', borderRadius: 18, overflow: 'hidden', cursor: 'zoom-in', background: p + '08', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-              <img src={post.artwork_url} alt={post.caption || 'artwork'} style={{ width: '100%', display: 'block' }} />
-            </button>
+            <div style={{ borderRadius: 18, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+              <ImageCarousel images={images} fit="contain" rounded={18} onImageClick={() => setLightbox(true)} />
+            </div>
             <div style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 6 }}>🔍 {tRaw('แตะที่ภาพเพื่อขยาย', 'Tap to zoom')}</div>
           </div>
 
@@ -250,6 +254,16 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
           </div>
         </div>
 
+        {/* You may also like */}
+        {related.length > 0 && (
+          <div style={{ marginTop: 40 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 900, color: theme.textColor, marginBottom: 14 }}>✨ {tRaw('คุณอาจชอบสิ่งนี้', 'You may also like')}</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 14 }}>
+              {related.map((rp: any) => <CommunityCard key={rp.id} post={rp} />)}
+            </div>
+          </div>
+        )}
+
         {/* Comments */}
         <div style={{ marginTop: 36, maxWidth: 680 }}>
           <h2 style={{ fontSize: 18, fontWeight: 900, color: theme.textColor, marginBottom: 14 }}>💬 {tRaw('ความคิดเห็น', 'Comments')} ({comments.length})</h2>
@@ -286,8 +300,10 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
       {/* Lightbox */}
       {lightbox && (
         <div onClick={() => setLightbox(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <button onClick={() => setLightbox(false)} style={{ position: 'fixed', top: 16, right: 16, width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', color: 'white', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 700 }}>✕</button>
-          <img src={post.artwork_url} alt={post.caption || 'artwork'} onClick={e => e.stopPropagation()} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8 }} />
+          <button onClick={() => setLightbox(false)} style={{ position: 'fixed', top: 16, right: 16, width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', color: 'white', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 700, zIndex: 1001 }}>✕</button>
+          <div onClick={e => e.stopPropagation()} style={{ maxWidth: '90%', maxHeight: '90%', width: 700 }}>
+            <ImageCarousel images={images} fit="contain" rounded={8} />
+          </div>
         </div>
       )}
 

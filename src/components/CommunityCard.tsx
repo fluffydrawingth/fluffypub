@@ -4,6 +4,7 @@ import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
+import ImageCarousel from './ImageCarousel';
 
 const REACTIONS: { type: string; emoji: string; th: string; en: string }[] = [
   { type: 'love',         emoji: '🩷', th: 'รักเลย',             en: 'Love it' },
@@ -46,13 +47,11 @@ export default function CommunityCard({ post }: { post: any }) {
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 10px 28px ${p}22`; }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; }}>
 
-      {/* Artwork — 4:5 ratio */}
-      <div style={{ position: 'relative', width: '100%', paddingBottom: '125%', background: `linear-gradient(135deg,${p}10,${p}05)`, flexShrink: 0 }}>
-        <img
-          src={post.thumb_url || post.artwork_url}
-          alt={post.caption || 'coloring'}
-          loading="lazy"
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+      {/* Artwork — 4:5 ratio, carousel if multiple images */}
+      <div style={{ position: 'relative', width: '100%', background: `linear-gradient(135deg,${p}10,${p}05)`, flexShrink: 0 }} onClick={(e) => { if ((post.artwork_urls?.length || 1) > 1) e.stopPropagation(); }}>
+        <ImageCarousel
+          images={(post.artwork_urls && post.artwork_urls.length ? post.artwork_urls : [post.thumb_url || post.artwork_url]).filter(Boolean)}
+          fit="cover" ratio="125%" stopPropagation onImageClick={open}
         />
       </div>
 
@@ -65,8 +64,21 @@ export default function CommunityCard({ post }: { post: any }) {
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily, textAlign: 'left', width: '100%' }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: p, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>📚 {post.product.title}</span>
             </button>
-          ) : post.external_book_title ? (
-            <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>📖 {post.external_book_title}{post.external_book_author ? ` by ${post.external_book_author}` : ''}</span>
+          ) : (post.external_book || post.external_book_title) ? (
+            (() => {
+              const title = post.external_book?.title || post.external_book_title;
+              const author = post.external_book?.author || post.external_book_author;
+              const slug = post.external_book?.slug;
+              const label = `📖 ${title}${author ? ` by ${author}` : ''}`;
+              return slug ? (
+                <button onClick={(e) => { e.stopPropagation(); navigate(`/community/book/${slug}`); }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily, textAlign: 'left', width: '100%' }}>
+                  <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{label}</span>
+                </button>
+              ) : (
+                <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{label}</span>
+              );
+            })()
           ) : <span />}
         </div>
 
