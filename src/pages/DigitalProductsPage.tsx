@@ -12,16 +12,32 @@ export default function DigitalProductsPage() {
   const { theme } = useTheme();
   const { tRaw } = useLang();
   const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<{ name: string; slug: string; icon: string; icon_type: string }[]>([]);
+  const [category, setCategory] = useState('All');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('featured');
   const p = theme.primaryColor;
 
   useEffect(() => {
     api.getProducts().then((d: any) => setAllProducts(Array.isArray(d) ? d : []));
+    api.getCategories().then((d: any) => { if (Array.isArray(d)) setCategories(d); });
   }, []);
 
-  let filtered = allProducts
-    .filter(isDigitalProduct)
+  const digitalProducts = allProducts.filter(isDigitalProduct);
+
+  // Category counts among DIGITAL products only — show tabs that actually have items
+  const catCounts: Record<string, number> = {};
+  digitalProducts.forEach(prod => {
+    const cats: string[] = prod.categories?.length ? prod.categories : (prod.category ? [prod.category] : []);
+    cats.forEach(c => { catCounts[c] = (catCounts[c] || 0) + 1; });
+  });
+
+  let filtered = digitalProducts
+    .filter(prod => {
+      if (category === 'All') return true;
+      const prodCats: string[] = prod.categories?.length ? prod.categories : (prod.category ? [prod.category] : []);
+      return prodCats.includes(category);
+    })
     .filter(prod => {
       if (!search) return true;
       return prod.title?.toLowerCase().includes(search.toLowerCase()) ||
@@ -67,8 +83,25 @@ export default function DigitalProductsPage() {
           </select>
         </div>
 
+        {/* Category filter tabs (digital products only) */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' as const }}>
+          <button style={selStyle(category === 'All')} onClick={() => setCategory('All')}>
+            🎨 {tRaw('ทั้งหมด', 'All')} ({digitalProducts.length})
+          </button>
+          {categories.map(cat => {
+            const count = catCounts[cat.name] || 0;
+            if (count === 0) return null;
+            return (
+              <button key={cat.name} style={selStyle(category === cat.name)} onClick={() => setCategory(cat.name)}>
+                {cat.icon_type === 'image' ? '' : (cat.icon || '')} {cat.name} ({count})
+              </button>
+            );
+          })}
+        </div>
+
         <p style={{ color: theme.textColor + '88', fontSize: 13, marginBottom: 16 }}>
           {tRaw(`แสดง ${filtered.length} รายการ`, `Showing ${filtered.length} item${filtered.length !== 1 ? 's' : ''}`)}
+          {category !== 'All' ? ` ${tRaw('ใน', 'in')} "${category}"` : ''}
         </p>
 
         {filtered.length === 0 ? (
