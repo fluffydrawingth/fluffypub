@@ -38,6 +38,7 @@ export default function CommunityPage() {
   const p = theme.primaryColor;
 
   const [showForm, setShowForm] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [cozy, setCozy] = useState<any[]>([]);
   const [curation, setCuration] = useState<{ featured_books: any[]; featured_creators: any[] }>({ featured_books: [], featured_creators: [] });
@@ -97,29 +98,36 @@ export default function CommunityPage() {
 
         {showForm && user && <UploadForm theme={theme} p={p} tRaw={tRaw} onPosted={onPosted} />}
 
-        {/* 1. 🌷 Cozy Picks — horizontal carousel at top */}
+        {/* 1. 🌷 Editor's Picks — horizontal carousel at top, fixed-height cards */}
         {isAll && cozy.length > 0 && (
           <div style={{ marginBottom: 28 }}>
             <SectionHead theme={theme} title={`🌷 ${tRaw('คัดสรรโดยทีม', "Editor's Picks")}`} />
             <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
               {cozy.map(post => (
-                <div key={'c' + post.id} style={{ minWidth: 160, maxWidth: 200, flexShrink: 0 }}>
-                  <CommunityCard post={post} />
+                <div key={'c' + post.id} style={{ width: 180, flexShrink: 0 }}>
+                  <CommunityCard post={post} compact />
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* 2. 🔎 Explore — filter chips */}
+        {/* 2. 🔎 Explore — collapsed by default */}
         {isAll && (facets.books.length || facets.externalBooks.length || facets.markers.length || facets.mediums.length || facets.palettes.length) ? (
-          <div style={{ background: 'white', borderRadius: 16, padding: '14px 16px', marginBottom: 24, boxShadow: '0 1px 6px rgba(0,0,0,0.05)', border: `1px solid ${p}10` }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: theme.textColor, marginBottom: 10 }}>🔎 {tRaw('สำรวจตาม', 'Explore by')}</div>
-            {facets.books.length > 0 && <ChipRow theme={theme} p={p} title={`📚 ${tRaw('หนังสือ Fluffy Pub', 'Fluffy Pub Books')}`} items={facets.books.map(b => ({ key: b.id, label: b.title, count: b.count }))} onPick={(it) => choose({ kind: 'product', value: it.key, label: it.label })} />}
-            {facets.externalBooks.length > 0 && <ChipRow theme={theme} p={p} title={`📖 ${tRaw('หนังสืออื่น ๆ / จากชุมชน', 'Other / Community Books')}`} items={facets.externalBooks.map(b => ({ key: b.slug, label: b.author ? `${b.title} · ${b.author}` : b.title, count: b.count }))} onPick={(it) => navigate(`/community/book/${it.key}`)} />}
-            {facets.markers.length > 0 && <ChipRow theme={theme} p={p} title={`🖍️ ${tRaw('ปากกา / ชุดสี', 'Markers')}`} items={facets.markers.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'marker', value: it.key })} />}
-            {facets.mediums.length > 0 && <ChipRow theme={theme} p={p} title={`🎨 ${tRaw('เทคนิค', 'Mediums')}`} items={facets.mediums.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'medium', value: it.key })} />}
-            {facets.palettes.length > 0 && <ChipRow theme={theme} p={p} title={`🌷 ${tRaw('พาเลตต์', 'Palettes')}`} items={facets.palettes.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'palette', value: it.key })} />}
+          <div style={{ background: 'white', borderRadius: 16, padding: '12px 16px', marginBottom: 24, boxShadow: '0 1px 6px rgba(0,0,0,0.05)', border: `1px solid ${p}10` }}>
+            <button onClick={() => setShowFilters(s => !s)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: theme.textColor }}>🔎 {tRaw('สำรวจ', 'Explore')} <span style={{ fontWeight: 500, color: '#94a3b8', fontSize: 12.5 }}>· 📚 {tRaw('หนังสือ', 'Books')} · 🖍️ {tRaw('ปากกา', 'Markers')} · 🎨 {tRaw('เทคนิค', 'Mediums')} · 🌷 {tRaw('พาเลตต์', 'Palettes')}</span></span>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: p, whiteSpace: 'nowrap', marginLeft: 10 }}>{showFilters ? `▲ ${tRaw('ซ่อนตัวกรอง', 'Hide filters')}` : `▼ ${tRaw('แสดงตัวกรอง', 'Show filters')}`}</span>
+            </button>
+            {showFilters && (
+              <div style={{ marginTop: 14 }}>
+                {facets.books.length > 0 && <ChipRow theme={theme} p={p} title={`📚 ${tRaw('หนังสือ Fluffy Pub', 'Fluffy Pub Books')}`} items={facets.books.map(b => ({ key: b.id, label: b.title, count: b.count }))} onPick={(it) => choose({ kind: 'product', value: it.key, label: it.label })} />}
+                {facets.externalBooks.length > 0 && <ChipRow theme={theme} p={p} title={`📖 ${tRaw('หนังสืออื่น ๆ / จากชุมชน', 'Other / Community Books')}`} items={facets.externalBooks.map(b => ({ key: b.slug, label: b.author ? `${b.title} · ${b.author}` : b.title, count: b.count }))} onPick={(it) => navigate(`/community/book/${it.key}`)} />}
+                {facets.markers.length > 0 && <ChipRow theme={theme} p={p} title={`🖍️ ${tRaw('ปากกา / ชุดสี', 'Markers')}`} items={facets.markers.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'marker', value: it.key })} />}
+                {facets.mediums.length > 0 && <ChipRow theme={theme} p={p} title={`🎨 ${tRaw('เทคนิค', 'Mediums')}`} items={facets.mediums.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'medium', value: it.key })} />}
+                {facets.palettes.length > 0 && <ChipRow theme={theme} p={p} title={`🌷 ${tRaw('พาเลตต์', 'Palettes')}`} items={facets.palettes.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'palette', value: it.key })} />}
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -214,6 +222,8 @@ function CropModal({ file, theme, p, tRaw, onCrop, onSkip, onCancel }: {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   // box is in canvas display coords; width and height are independent (free aspect ratio)
   const [box, setBox] = useState({ x: 20, y: 20, w: CROP_SZ - 40, h: CROP_SZ - 40 });
+  // The displayed image's rect within the CROP_SZ square (objectFit:contain letterbox)
+  const rect = useRef({ x: 0, y: 0, w: CROP_SZ, h: CROP_SZ });
   const dragging = useRef<{ mode: 'move' | 'resize'; mx: number; my: number; bx: number; by: number; bw: number; bh: number } | null>(null);
 
   useEffect(() => {
@@ -221,11 +231,12 @@ function CropModal({ file, theme, p, tRaw, onCrop, onSkip, onCancel }: {
     const image = new Image();
     image.onload = () => {
       setImg(image);
-      // Default crop: full image with natural aspect ratio
-      const aspect = image.naturalWidth / image.naturalHeight;
-      let w = CROP_SZ * 0.9, h = w / aspect;
-      if (h > CROP_SZ * 0.9) { h = CROP_SZ * 0.9; w = h * aspect; }
-      setBox({ x: (CROP_SZ - w) / 2, y: (CROP_SZ - h) / 2, w, h });
+      // Compute the contain-fit rect; default crop = the FULL image (so "use whole" = exact image)
+      const scale = Math.min(CROP_SZ / image.naturalWidth, CROP_SZ / image.naturalHeight);
+      const w = image.naturalWidth * scale, h = image.naturalHeight * scale;
+      const x = (CROP_SZ - w) / 2, y = (CROP_SZ - h) / 2;
+      rect.current = { x, y, w, h };
+      setBox({ x, y, w, h });
     };
     image.src = url;
     return () => URL.revokeObjectURL(url);
@@ -242,19 +253,23 @@ function CropModal({ file, theme, p, tRaw, onCrop, onSkip, onCancel }: {
   const onMove = (e: React.PointerEvent) => {
     const d = dragging.current;
     if (!d) return;
+    const r = rect.current;
     const dx = e.clientX - d.mx, dy = e.clientY - d.my;
     if (d.mode === 'move') {
-      setBox(b => ({ ...b, x: clamp(d.bx + dx, 0, CROP_SZ - b.w), y: clamp(d.by + dy, 0, CROP_SZ - b.h) }));
+      // Clamp movement within the image rect
+      setBox(b => ({ ...b, x: clamp(d.bx + dx, r.x, r.x + r.w - b.w), y: clamp(d.by + dy, r.y, r.y + r.h - b.h) }));
     } else {
-      const nw = clamp(d.bw + dx, 40, CROP_SZ - d.bx);
-      const nh = clamp(d.bh + dy, 40, CROP_SZ - d.by);
+      // Clamp resize within the image rect (right/bottom edges)
+      const nw = clamp(d.bw + dx, 40, r.x + r.w - d.bx);
+      const nh = clamp(d.bh + dy, 40, r.y + r.h - d.by);
       setBox(b => ({ ...b, w: nw, h: nh }));
     }
   };
 
   const confirm = () => {
     if (!img) return;
-    const scale = Math.max(CROP_SZ / img.naturalWidth, CROP_SZ / img.naturalHeight);
+    // Display uses objectFit:contain → scale by MIN so crop coords map to source correctly.
+    const scale = Math.min(CROP_SZ / img.naturalWidth, CROP_SZ / img.naturalHeight);
     const rw = img.naturalWidth * scale, rh = img.naturalHeight * scale;
     const ox = (CROP_SZ - rw) / 2, oy = (CROP_SZ - rh) / 2;
     const sx = (box.x - ox) / scale, sy = (box.y - oy) / scale;

@@ -14,7 +14,7 @@ const REACTIONS: { type: string; emoji: string; th: string; en: string }[] = [
   { type: 'want_to_try', emoji: '✨', th: 'อยากลองบ้าง',        en: 'Want to try' },
 ];
 
-export default function CommunityCard({ post }: { post: any }) {
+export default function CommunityCard({ post, compact = false }: { post: any; compact?: boolean }) {
   const { theme } = useTheme();
   const { navigate } = useRouter();
   const { tRaw } = useLang();
@@ -102,19 +102,19 @@ export default function CommunityCard({ post }: { post: any }) {
           </button>
         )}
 
-        {/* 🩷 Reactions */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 'auto', paddingTop: 8, borderTop: '1px solid #f1f5f9' }}>
+        {/* 🩷 Reactions — single row, no wrap, fixed height for even cards (hidden in compact) */}
+        {!compact && <div style={{ display: 'flex', flexWrap: 'nowrap', gap: 3, marginTop: 'auto', paddingTop: 8, borderTop: '1px solid #f1f5f9', overflow: 'hidden', height: 34, alignItems: 'center' }}>
           {REACTIONS.map(r => {
             const on = mine.includes(r.type);
             const n = counts[r.type] || 0;
             return (
               <button key={r.type} onClick={(e) => react(e, r.type)} title={tRaw(r.th, r.en)}
-                style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '2px 6px', borderRadius: 12, border: `1.5px solid ${on ? p : '#eef2f7'}`, background: on ? p + '12' : 'white', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: on ? p : '#64748b', fontFamily: theme.fontFamily }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '2px 5px', borderRadius: 12, border: `1.5px solid ${on ? p : '#eef2f7'}`, background: on ? p + '12' : 'white', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: on ? p : '#64748b', fontFamily: theme.fontFamily, flexShrink: 0 }}>
                 <span>{r.emoji}</span>{n > 0 && <span style={{ fontSize: 10 }}>{n}</span>}
               </button>
             );
           })}
-        </div>
+        </div>}
       </div>
     </div>
   );

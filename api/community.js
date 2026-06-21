@@ -208,14 +208,29 @@ module.exports = async function handler(req, res) {
     const page = Math.max(0, parseInt(req.query.page) || 0);
     const limit = Math.min(PAGE_LIMIT_MAX, Math.max(1, parseInt(req.query.limit) || 20));
     const from = page * limit;
+
+    // Tag filters (palettes/markers/mediums are jsonb) — filter in-memory by NORMALIZED
+    // value so "Ohuhu" / "ohuhu" / "OHUHU" all match the same canonical tag.
+    const tagField = req.query.palette ? 'palettes' : req.query.marker ? 'markers' : req.query.medium ? 'mediums' : null;
+    const tagValue = req.query.palette || req.query.marker || req.query.medium || null;
+    if (tagField && tagValue) {
+      const norm = String(tagValue).trim().toLowerCase();
+      let bq = supabase.from('community_posts').select('*').eq('status', 'published').order('created_at', { ascending: false }).range(0, 999);
+      if (req.query.product_id) bq = bq.eq('product_id', req.query.product_id);
+      if (req.query.user_id) bq = bq.eq('user_id', req.query.user_id);
+      const { data: allRows, error: tagErr } = await bq;
+      if (tagErr) return json(res, 500, { error: tagErr.message });
+      const matched = (allRows || []).filter(p => (p[tagField] || []).some(x => String(x).trim().toLowerCase() === norm));
+      const pageRows = matched.slice(from, from + limit);
+      const out = await decorate(pageRows, viewer?.id, req.query.guest_id);
+      return json(res, 200, { posts: out, total: matched.length, page, limit, hasMore: from + pageRows.length < matched.length });
+    }
+
     let q = supabase.from('community_posts').select('*', { count: 'exact' })
       .eq('status', 'published').order('created_at', { ascending: false });
     if (req.query.product_id) q = q.eq('product_id', req.query.product_id);
     if (req.query.external_book_id) q = q.eq('external_book_id', req.query.external_book_id);
     if (req.query.user_id) q = q.eq('user_id', req.query.user_id);
-    if (req.query.palette) q = q.contains('palettes', [req.query.palette]);
-    if (req.query.marker) q = q.contains('markers', [req.query.marker]);
-    if (req.query.medium) q = q.contains('mediums', [req.query.medium]);
     if (/^\d{4}-\d{2}$/.test(req.query.month || '')) {
       const [y, m] = req.query.month.split('-').map(Number);
       const start = new Date(Date.UTC(y, m - 1, 1)).toISOString();
@@ -252,8 +267,12 @@ module.exports = async function handler(req, res) {
     // 1. Same Fluffy Pub book / external book
     if (base.product_id) { const { data } = await q().eq('product_id', base.product_id); add(data); }
     if (picked.size < 6 && base.external_book_id) { const { data } = await q().eq('external_book_id', base.external_book_id); add(data); }
-    // 2. Same marker
-    if (picked.size < 6 && (base.markers || []).length) { const { data } = await q().overlaps('markers', base.markers); add(data); }
+    // 2. Same marker (jsonb — filter in-memory by normalized value)
+    if (picked.size < 6 && (base.markers || []).length) {
+      const wanted = new Set((base.markers || []).map(m => String(m).trim().toLowerCase()));
+      const { data } = await supabase.from('community_posts').select('*').eq('status', 'published').neq('id', id).order('created_at', { ascending: false }).range(0, 199);
+      add((data || []).filter(r => (r.markers || []).some(m => wanted.has(String(m).trim().toLowerCase()))));
+    }
     // 3. Same creator
     if (picked.size < 6 && base.user_id) { const { data } = await q().eq('user_id', base.user_id); add(data); }
     // 4. Recent fallback
@@ -681,16 +700,16 @@ module.exports = async function handler(req, res) {
     if (!admin) return;
     const { field, from, to } = req.body || {};
     if (!['mediums', 'markers', 'palettes'].includes(field) || !Array.isArray(from) || !from.length) return json(res, 400, { error: 'field, from[], to required' });
-    const fromSet = new Set(from.map(s => String(s)));
-    // Find posts that contain any of the source tags, then rewrite their array.
-    const { data: rows } = await supabase.from('community_posts').select('id,' + field).overlaps(field, from);
+    // Match source tags case-insensitively (jsonb — scan in-memory)
+    const fromSet = new Set(from.map(s => String(s).trim().toLowerCase()));
+    const { data: rows } = await supabase.from('community_posts').select('id,' + field).range(0, 9999);
     let changed = 0;
     for (const row of (rows || [])) {
       const arr = row[field] || [];
       const next = [];
       let hit = false;
       for (const v of arr) {
-        if (fromSet.has(String(v))) { hit = true; if (to && !next.includes(to)) next.push(to); }
+        if (fromSet.has(String(v).trim().toLowerCase())) { hit = true; if (to && !next.includes(to)) next.push(to); }
         else if (!next.includes(v)) next.push(v);
       }
       if (hit) { await supabase.from('community_posts').update({ [field]: next }).eq('id', row.id); changed++; }
