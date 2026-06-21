@@ -324,9 +324,12 @@ function ArtistsSection() {
   const { navigate } = useRouter();
   const { lang } = useLang();
   const tl = (en: string, th?: string) => (lang === 'th' && th) ? th : en;
-  const [artists, setArtists] = useState<any[]>([]);
-  useEffect(() => { api.getArtists().then((x: any) => setArtists(Array.isArray(x) ? x : [])); }, []);
+  const [allArtists, setAllArtists] = useState<any[]>([]);
+  useEffect(() => { api.getArtists().then((x: any) => setAllArtists(Array.isArray(x) ? x : [])); }, []);
   const AVATARS = ['🎨','🌸','✨','🐰','🌺','💕','🦊','🌈'];
+  // Show only artists flagged "Show on homepage". Fallback to all if none flagged yet.
+  const flagged = allArtists.filter(a => a.show_on_homepage);
+  const artists = (flagged.length ? flagged : allArtists).slice(0, 8);
   if (artists.length === 0) return null;
   return (
     <section style={{ background:'white' }}>
@@ -367,6 +370,11 @@ function ArtistsSection() {
               </div>
             </div>
           ))}
+        </div>
+        <div style={{ textAlign:'center', marginTop:36 }}>
+          <button onClick={()=>navigate('/artists')} style={{ background:'transparent', border:`2px solid ${theme.primaryColor}`, color:theme.primaryColor, cursor:'pointer', padding:'12px 32px', borderRadius:24, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily }}>
+            {tl(theme.labels?.artists_btn || 'View All Artists →', theme.labels?.artists_btn_th)}
+          </button>
         </div>
       </div>
     </section>

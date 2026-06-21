@@ -187,7 +187,7 @@ module.exports = async function handler(req, res) {
       return json(res, 200, { ...data, products: products || [] });
     }
     const { data: artists } = await supabase.from('profiles')
-      .select('id,name,username,artist_slug,bio,cover_image_url,avatar_url,website,social_links,artist_status,created_at,artist_id')
+      .select('id,name,username,artist_slug,bio,cover_image_url,avatar_url,website,social_links,artist_status,show_on_homepage,created_at,artist_id')
       .eq('role', 'artist').order('name');
     // Only real artist profiles — exclude promoted user accounts linked to another artist.
     const realArtists = (artists || []).filter(a => !a.artist_id || a.artist_id === a.id);
@@ -260,7 +260,7 @@ module.exports = async function handler(req, res) {
     if (!user) return;
     const { id } = req.query;
     if (!id) return json(res, 400, { error: 'id required' });
-    const allowed = ['name','artist_slug','bio','avatar_url','cover_image_url','website','social_links','artist_status'];
+    const allowed = ['name','artist_slug','bio','avatar_url','cover_image_url','website','social_links','artist_status','show_on_homepage'];
     const updates = {};
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
     updates.updated_at = new Date().toISOString();

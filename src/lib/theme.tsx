@@ -52,6 +52,7 @@ export interface ThemeConfig {
     categories_subtitle?: string; categories_subtitle_th?: string;
     artists_title?: string; artists_title_th?: string;
     artists_subtitle?: string; artists_subtitle_th?: string;
+    artists_btn?: string; artists_btn_th?: string;
     newsletter_title?: string; newsletter_title_th?: string;
     newsletter_body?: string; newsletter_body_th?: string;
     newsletter_btn?: string; newsletter_btn_th?: string;

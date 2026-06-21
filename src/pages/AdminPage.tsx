@@ -1512,6 +1512,14 @@ function ArtistsTab() {
   }, []);
   useEffect(()=>{load();},[load]);
 
+  const toggleHome = async (a:any) => {
+    const next = !a.show_on_homepage;
+    setArtists(list=>list.map(x=>x.id===a.id?{...x,show_on_homepage:next}:x)); // optimistic
+    const r = await api.updateArtist(a.id, { show_on_homepage: next });
+    if (r?.error) { setMsg('⚠️ '+r.error); setArtists(list=>list.map(x=>x.id===a.id?{...x,show_on_homepage:!next}:x)); }
+    else { setMsg(next?'✓ Shown on homepage':'✓ Hidden from homepage'); setTimeout(()=>setMsg(''),2500); }
+  };
+
   const resetForm = () => {
     setName(''); setSlug(''); setBio(''); setEmail(''); setAvatarUrl(''); setCoverUrl('');
     setWebsite(''); setInstagram(''); setTwitter(''); setArtistStatus('active');
@@ -1654,7 +1662,7 @@ function ArtistsTab() {
       {/* Artist table */}
       <div style={{...card,overflow:'hidden'}}>
         <table style={{width:'100%',borderCollapse:'collapse'}}>
-          <thead><tr style={{borderBottom:'2px solid #f3f4f6',background:'#fafafa'}}>{['','ARTIST','SLUG','PRODUCTS','STATUS',''].map((h,i)=><th key={i} style={{textAlign:'left',padding:'12px 16px',fontSize:11,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}</tr></thead>
+          <thead><tr style={{borderBottom:'2px solid #f3f4f6',background:'#fafafa'}}>{['','ARTIST','SLUG','PRODUCTS','STATUS','HOMEPAGE',''].map((h,i)=><th key={i} style={{textAlign:'left',padding:'12px 16px',fontSize:11,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}</tr></thead>
           <tbody>{artists.map(a=>(
             <tr key={a.id} style={{borderBottom:'1px solid #f9fafb'}}
               onMouseEnter={e=>(e.currentTarget.style.background='#fafafa')}
@@ -1671,6 +1679,12 @@ function ArtistsTab() {
               <td style={{padding:'12px 16px',fontSize:13,color:'#6b7280'}}>/{a.artist_slug}</td>
               <td style={{padding:'12px 16px',fontWeight:700,color:'#111827'}}>{a.productCount||0}</td>
               <td style={{padding:'12px 16px'}}><Badge color={a.artist_status==='active'?'#059669':'#6b7280'} bg={a.artist_status==='active'?'#d1fae5':'#f3f4f6'} text={a.artist_status==='active'?'Active':'Inactive'}/></td>
+              <td style={{padding:'12px 16px'}}>
+                <button onClick={()=>toggleHome(a)} title="Show this artist in the homepage Artists section"
+                  style={{padding:'5px 12px',borderRadius:8,border:`1.5px solid ${a.show_on_homepage?'#059669':'#e5e7eb'}`,background:a.show_on_homepage?'#d1fae5':'white',cursor:'pointer',fontSize:12,fontWeight:700,color:a.show_on_homepage?'#065f46':'#9ca3af',fontFamily:'inherit'}}>
+                  {a.show_on_homepage?'✓ On homepage':'Show on homepage'}
+                </button>
+              </td>
               <td style={{padding:'12px 16px'}}>
                 <div style={{display:'flex',gap:6}}>
                   <button onClick={()=>navigate(`/artists/${a.artist_slug}`)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:600,color:'#374151'}}>View</button>
