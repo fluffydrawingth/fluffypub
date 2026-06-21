@@ -41,17 +41,21 @@ export default function HomePage() {
     blog:             <BlogSection key="blog" />,
   };
 
-  const sections = theme.sections || ['hero','featured','categories','artists','newsletter'];
+  const sections = [...(theme.sections || ['hero','featured','categories','artists','newsletter'])];
+  // Always show "Color Your World" right below the featured collection
+  if (!sections.includes('community')) {
+    const fi = sections.indexOf('featured');
+    if (fi >= 0) sections.splice(fi + 1, 0, 'community');
+    else sections.push('community');
+  }
   return (
     <div style={{ fontFamily: theme.fontFamily }}>
       {sections.map(s => sectionMap[s])}
-      {/* Always show Color Your World once, even if not in the configured order */}
-      {!sections.includes('community') && sectionMap['community']}
     </div>
   );
 }
 
-// ── 🌈 Color Your World — Editor's Picks from Community (lightweight) ──────────
+// ── 🌈 Color Your World — Cozy Picks from Community (lightweight) ──────────────
 function CommunitySection() {
   const { theme } = useTheme();
   const { navigate } = useRouter();

@@ -2080,15 +2080,20 @@ function CommunityDashboardTab() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [msg, setMsg] = useState('');
+  // Post filters
+  const [postQ, setPostQ] = useState('');
+  const [postFeatured, setPostFeatured] = useState(false);
+  const [postFrom, setPostFrom] = useState('');
+  const [postTo, setPostTo] = useState('');
 
   // Community Curation
   const [themeCfg, setThemeCfg] = useState<any>(null);
   const [allProducts, setAllProducts] = useState<any[]>([]);
-  const [allUsers, setAllUsers] = useState<any[]>([]);
   const [featuredBookIds, setFeaturedBookIds] = useState<string[]>([]);
-  const [featuredCreatorIds, setFeaturedCreatorIds] = useState<string[]>([]);
+  const [featuredCreators, setFeaturedCreators] = useState<{ id: string; name: string }[]>([]);
   const [bookSearch, setBookSearch] = useState('');
   const [creatorSearch, setCreatorSearch] = useState('');
+  const [creatorResults, setCreatorResults] = useState<any[]>([]);
 
   // Tag Library
   const [tagLibType, setTagLibType] = useState('marker');
@@ -2101,8 +2106,8 @@ function CommunityDashboardTab() {
 
   const flash = (m:string) => { setMsg(m); setTimeout(()=>setMsg(''), 4000); };
   const loadStats = useCallback(()=>{ api.getCommunityStats().then((d:any)=>setStats(d&&!d.error?d:null)).catch(()=>{}); },[]);
-  const loadPosts = useCallback((st:string, pg:number)=>{
-    api.getCommunityAdminList(st, pg).then((d:any)=>{
+  const loadPosts = useCallback((pg:number, opts:{status?:string;q?:string;featured?:boolean;from?:string;to?:string})=>{
+    api.getCommunityAdminList({ page: pg, status: opts.status, q: opts.q, featured: opts.featured, date_from: opts.from, date_to: opts.to }).then((d:any)=>{
       setPosts(prev=> pg===0 ? (d?.posts||[]) : [...prev, ...(d?.posts||[])]);
       setHasMore(!!d?.hasMore);
     }).catch(()=>{});
@@ -2112,24 +2117,39 @@ function CommunityDashboardTab() {
     api.getAdminTags(type).then((d:any)=>{ setTagLibItems(d?.tags||[]); setTagLibLoading(false); }).catch(()=>setTagLibLoading(false));
   },[]);
 
+  const applyPostFilters = useCallback((pg:number)=>{
+    const st = statusTab === 'all' ? '' : statusTab;
+    loadPosts(pg, { status: st, q: postQ.trim(), featured: postFeatured, from: postFrom, to: postTo });
+  },[statusTab, postQ, postFeatured, postFrom, postTo, loadPosts]);
+
   useEffect(()=>{ loadStats(); }, [loadStats]);
-  useEffect(()=>{ setPage(0); loadPosts(statusTab, 0); }, [statusTab, loadPosts]);
+  // Reload page 0 whenever a filter changes (debounced for text search)
+  useEffect(()=>{ const t=setTimeout(()=>{ setPage(0); applyPostFilters(0); }, 300); return ()=>clearTimeout(t); }, [applyPostFilters]);
   useEffect(()=>{ loadTagLib(tagLibType); }, [tagLibType, loadTagLib]);
   useEffect(()=>{
     api.getTheme().then((t:any)=>{
       setThemeCfg(t||{});
       setFeaturedBookIds(t?.community?.featured_books||[]);
-      setFeaturedCreatorIds(t?.community?.featured_creators||[]);
     }).catch(()=>{});
     api.getProducts().then((d:any)=>setAllProducts(Array.isArray(d)?d:[])).catch(()=>{});
+    // Resolve existing featured creators (ids → names) for display
+    api.getCommunityCuration().then((d:any)=>{ if(Array.isArray(d?.featured_creators)) setFeaturedCreators(d.featured_creators.map((c:any)=>({id:c.id,name:c.name}))); }).catch(()=>{});
   },[]);
 
-  const refresh = () => { loadStats(); setPage(0); loadPosts(statusTab, 0); };
+  // Featured-creator autocomplete (debounced)
+  useEffect(()=>{
+    const q = creatorSearch.trim();
+    if (q.length < 2) { setCreatorResults([]); return; }
+    const t = setTimeout(()=>{ api.searchFeaturedCreators(q).then((d:any)=>setCreatorResults(d?.creators||[])).catch(()=>{}); }, 250);
+    return ()=>clearTimeout(t);
+  },[creatorSearch]);
+
+  const refresh = () => { loadStats(); setPage(0); applyPostFilters(0); };
   const doFeature = async (id:string, on:boolean) => { const r=await api.featureCommunityPost(id,on); if(r?.error)return flash('⚠️ '+r.error); flash(on?'✓ Added to Cozy Picks':'✓ Removed'); refresh(); };
   const doStatus = async (id:string, status:string, confirmMsg?:string) => { if(confirmMsg&&!confirm(confirmMsg))return; const r=await api.setCommunityStatus(id,status); if(r?.error)return flash('⚠️ '+r.error); flash('✓ Updated'); refresh(); };
 
   const saveCuration = async () => {
-    const cfg = { ...(themeCfg||{}), community: { featured_books: featuredBookIds.slice(0,4), featured_creators: featuredCreatorIds.slice(0,3) } };
+    const cfg = { ...(themeCfg||{}), community: { featured_books: featuredBookIds.slice(0,4), featured_creators: featuredCreators.slice(0,3).map(c=>c.id) } };
     const r = await api.saveTheme(cfg);
     if (r?.error) return flash('⚠️ '+r.error);
     setThemeCfg(cfg); flash('✓ Curation saved');
@@ -2165,7 +2185,6 @@ function CommunityDashboardTab() {
 
   const bookResults = bookSearch.trim() ? allProducts.filter(p=>p.title?.toLowerCase().includes(bookSearch.toLowerCase())).slice(0,6) : [];
   const pinnedBooks = allProducts.filter(p=>featuredBookIds.includes(p.id));
-  const pinnedCreators: any[] = [];
 
   return (
     <div style={{padding:32}}>
@@ -2189,36 +2208,58 @@ function CommunityDashboardTab() {
         {tabBtn('tags','🏷️ Tag Library')}
       </div>
 
-      {/* ── Posts ── */}
+      {/* ── Posts (compact table) ── */}
       {communityTab==='posts' && <>
-        <div style={{display:'flex',gap:8,marginBottom:14}}>
-          {[['published','Published'],['hidden','Hidden'],['deleted','Deleted']].map(([k,lbl])=>(
-            <button key={k} onClick={()=>setStatusTab(k)} style={{padding:'7px 16px',borderRadius:18,border:'none',cursor:'pointer',fontSize:13,fontWeight:700,background:statusTab===k?P:P+'15',color:statusTab===k?'white':P,fontFamily:'inherit'}}>{lbl}</button>
-          ))}
+        {/* Filters */}
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:14}}>
+          <input value={postQ} onChange={e=>setPostQ(e.target.value)} placeholder="🔎 Search creator or book..." style={{flex:'1 1 220px',minWidth:180,padding:'8px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'}} />
+          <select value={statusTab} onChange={e=>setStatusTab(e.target.value)} style={{padding:'8px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit'}}>
+            <option value="all">All statuses</option><option value="published">Published</option><option value="hidden">Hidden</option><option value="deleted">Deleted</option>
+          </select>
+          <label style={{display:'flex',alignItems:'center',gap:6,fontSize:13,color:'#374151',fontWeight:600,cursor:'pointer'}}>
+            <input type="checkbox" checked={postFeatured} onChange={e=>setPostFeatured(e.target.checked)} /> 🌷 Cozy Picks only
+          </label>
+          <input type="date" value={postFrom} onChange={e=>setPostFrom(e.target.value)} title="From date" style={{padding:'7px 10px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit'}} />
+          <input type="date" value={postTo} onChange={e=>setPostTo(e.target.value)} title="To date" style={{padding:'7px 10px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit'}} />
+          {(postQ||postFeatured||postFrom||postTo||statusTab!=='published')&&<button onClick={()=>{setPostQ('');setPostFeatured(false);setPostFrom('');setPostTo('');setStatusTab('published');}} style={{padding:'8px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',background:'white',color:'#6b7280',cursor:'pointer',fontSize:12,fontWeight:600}}>Clear</button>}
         </div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:14}}>
-          {posts.map(post=>(
-            <div key={post.id} style={{...card,padding:0,overflow:'hidden'}}>
-              <div style={{position:'relative',width:'100%',paddingBottom:'125%',background:'#f3f4f6'}}>
-                <img src={post.thumb_url||post.artwork_url} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
-              </div>
-              <div style={{padding:'10px 12px'}}>
-                <div style={{fontSize:12,fontWeight:700,color:'#111827',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{post.creator?.name||'—'}</div>
-                <div style={{fontSize:11,color:'#9ca3af',marginBottom:8}}>{post.created_at?new Date(post.created_at).toLocaleDateString():''}{post.featured?' · 🌷':''}</div>
-                <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
-                  <button onClick={()=>window.open(`/#/community/${post.id}`,'_blank')} style={btnS('#e5e7eb','#374151')}>👁️ View</button>
-                  {statusTab==='published'&&<button onClick={()=>doFeature(post.id,!post.featured)} style={btnS('#fbcfe8','#9d174d')}>{post.featured?'➖ Unpin':'🌷 Cozy Pick'}</button>}
-                  {statusTab==='published'&&<button onClick={()=>doStatus(post.id,'hidden')} style={btnS('#fef3c7','#92400e')}>🙈 Hide</button>}
-                  {statusTab==='hidden'&&<button onClick={()=>doStatus(post.id,'published')} style={btnS('#d1fae5','#065f46')}>♻️ Restore</button>}
-                  {statusTab!=='deleted'&&<button onClick={()=>doStatus(post.id,'deleted','Delete this post?')} style={btnS('#fee2e2','#dc2626')}>🗑️ Delete</button>}
-                  {statusTab==='deleted'&&<button onClick={()=>doStatus(post.id,'published')} style={btnS('#d1fae5','#065f46')}>♻️ Restore</button>}
-                </div>
-              </div>
-            </div>
-          ))}
+
+        <div style={{...card,padding:0,overflow:'auto'}}>
+          <table style={{width:'100%',borderCollapse:'collapse',minWidth:760}}>
+            <thead><tr style={{background:'#f8fafc',borderBottom:'2px solid #f1f5f9'}}>
+              {['','Creator','Book','Date','Status','Cozy','Actions'].map((hh,i)=>(
+                <th key={i} style={{textAlign:'left',padding:'10px 12px',fontSize:11,color:'#888',fontWeight:700,textTransform:'uppercase',whiteSpace:'nowrap'}}>{hh}</th>
+              ))}
+            </tr></thead>
+            <tbody>{posts.map(post=>{
+              const book = post.product?.title || post.external_book?.title || post.external_book_title || '—';
+              const stColor:any = post.status==='published'?['#d1fae5','#065f46']:post.status==='hidden'?['#fef3c7','#92400e']:['#fee2e2','#dc2626'];
+              return (
+                <tr key={post.id} style={{borderBottom:'1px solid #f8fafc'}}>
+                  <td style={{padding:'8px 12px'}}>
+                    <img src={post.thumb_url||post.artwork_url} alt="" style={{width:40,height:50,objectFit:'cover',borderRadius:6,background:'#f3f4f6',display:'block'}} />
+                  </td>
+                  <td style={{padding:'8px 12px',fontSize:13,fontWeight:700,color:'#111827',maxWidth:140,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{post.creator?.name||'—'}</td>
+                  <td style={{padding:'8px 12px',fontSize:12.5,color:'#475569',maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{book}</td>
+                  <td style={{padding:'8px 12px',fontSize:12,color:'#94a3b8',whiteSpace:'nowrap'}}>{post.created_at?new Date(post.created_at).toLocaleDateString():''}</td>
+                  <td style={{padding:'8px 12px'}}><span style={{background:stColor[0],color:stColor[1],borderRadius:20,padding:'2px 9px',fontSize:11,fontWeight:700,textTransform:'capitalize'}}>{post.status}</span></td>
+                  <td style={{padding:'8px 12px',fontSize:14,textAlign:'center'}}>{post.featured?'🌷':'—'}</td>
+                  <td style={{padding:'8px 12px'}}>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+                      <button onClick={()=>window.open(`/#/community/${post.id}`,'_blank')} style={btnS('#e5e7eb','#374151')}>👁️</button>
+                      {post.status==='published'&&<button onClick={()=>doFeature(post.id,!post.featured)} style={btnS('#fbcfe8','#9d174d')}>{post.featured?'➖':'🌷'}</button>}
+                      {post.status==='published'&&<button onClick={()=>doStatus(post.id,'hidden')} style={btnS('#fef3c7','#92400e')}>🙈</button>}
+                      {post.status!=='published'&&<button onClick={()=>doStatus(post.id,'published')} style={btnS('#d1fae5','#065f46')}>♻️</button>}
+                      {post.status!=='deleted'&&<button onClick={()=>doStatus(post.id,'deleted','Delete this post?')} style={btnS('#fee2e2','#dc2626')}>🗑️</button>}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}</tbody>
+          </table>
+          {posts.length===0&&<div style={{textAlign:'center',padding:'40px',color:'#9ca3af',fontSize:14}}>No posts match these filters.</div>}
         </div>
-        {posts.length===0&&<div style={{textAlign:'center',padding:'40px',color:'#9ca3af',fontSize:14}}>No {statusTab} posts.</div>}
-        {hasMore&&<div style={{textAlign:'center',marginTop:18}}><button onClick={()=>{const np=page+1;setPage(np);loadPosts(statusTab,np);}} style={{padding:'9px 24px',borderRadius:20,border:`1.5px solid ${P}`,background:'white',color:P,cursor:'pointer',fontSize:13,fontWeight:700}}>Load more</button></div>}
+        {hasMore&&<div style={{textAlign:'center',marginTop:18}}><button onClick={()=>{const np=page+1;setPage(np);applyPostFilters(np);}} style={{padding:'9px 24px',borderRadius:20,border:`1.5px solid ${P}`,background:'white',color:P,cursor:'pointer',fontSize:13,fontWeight:700}}>Load more</button></div>}
       </>}
 
       {/* ── Curation ── */}
@@ -2250,22 +2291,32 @@ function CommunityDashboardTab() {
           </>}
         </div>
 
-        {/* Featured Creators */}
+        {/* Featured Creators — autocomplete search of approved Fluffy Creators */}
         <div style={{...card,padding:20,marginBottom:20}}>
           <h2 style={{fontSize:15,fontWeight:800,color:'#111827',margin:'0 0 4px'}}>👤 Featured Creators <span style={{fontWeight:500,color:'#9ca3af',fontSize:13}}>(max 3)</span></h2>
-          <p style={{fontSize:12,color:'#6b7280',margin:'0 0 12px'}}>Enter user IDs of creators to feature on the Community page.</p>
+          <p style={{fontSize:12,color:'#6b7280',margin:'0 0 12px'}}>Search by name, username or email and click to feature on the Community page.</p>
           <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}>
-            {featuredCreatorIds.map((uid:string)=>(
-              <div key={uid} style={{display:'flex',alignItems:'center',gap:6,background:'#f8fafc',border:'1.5px solid #e5e7eb',borderRadius:10,padding:'6px 10px'}}>
-                <span style={{fontSize:12,fontWeight:700,color:'#1e293b',fontFamily:'monospace'}}>{uid.slice(0,8)}…</span>
-                <button onClick={()=>setFeaturedCreatorIds(ids=>ids.filter(i=>i!==uid))} style={{background:'none',border:'none',color:'#dc2626',cursor:'pointer',fontSize:13,fontWeight:700}}>✕</button>
+            {featuredCreators.map((cr)=>(
+              <div key={cr.id} style={{display:'flex',alignItems:'center',gap:6,background:'#f8fafc',border:'1.5px solid #e5e7eb',borderRadius:10,padding:'6px 10px'}}>
+                <span style={{fontSize:12,fontWeight:700,color:'#1e293b'}}>🌷 {cr.name}</span>
+                <button onClick={()=>setFeaturedCreators(list=>list.filter(c=>c.id!==cr.id))} style={{background:'none',border:'none',color:'#dc2626',cursor:'pointer',fontSize:13,fontWeight:700}}>✕</button>
               </div>
             ))}
+            {featuredCreators.length===0&&<span style={{fontSize:12,color:'#94a3b8'}}>No creators featured yet.</span>}
           </div>
-          {featuredCreatorIds.length < 3 && (
-            <div style={{display:'flex',gap:8}}>
-              <input id="creator-id-input" placeholder="Paste user ID..." style={{flex:1,padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'monospace',boxSizing:'border-box'}} />
-              <button onClick={()=>{ const el=document.getElementById('creator-id-input') as HTMLInputElement; const v=el.value.trim(); if(v&&!featuredCreatorIds.includes(v))setFeaturedCreatorIds(ids=>[...ids,v]); el.value=''; }} style={{padding:'9px 16px',borderRadius:10,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:700}}>Add</button>
+          {featuredCreators.length < 3 && (
+            <div style={{position:'relative'}}>
+              <input value={creatorSearch} onChange={e=>setCreatorSearch(e.target.value)} placeholder="Search Fluffy Creators..." style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'}} />
+              {creatorResults.length>0 && (
+                <div style={{border:'1px solid #f1f5f9',borderRadius:10,marginTop:4,overflow:'hidden'}}>
+                  {creatorResults.filter((cr:any)=>!featuredCreators.some(f=>f.id===cr.id)).map((cr:any)=>(
+                    <button key={cr.id} onClick={()=>{ setFeaturedCreators(list=>[...list,{id:cr.id,name:cr.name}]); setCreatorSearch(''); setCreatorResults([]); }}
+                      style={{display:'block',width:'100%',textAlign:'left',background:'white',border:'none',borderBottom:'1px solid #f8fafc',cursor:'pointer',padding:'8px 12px',fontSize:13,fontFamily:'inherit',color:'#1e293b'}}>
+                      🌷 {cr.name} {cr.email && <span style={{color:'#94a3b8',fontSize:11}}>· {cr.email}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -142,7 +142,15 @@ export const api = {
   updateCommunityPost: (id: string, data: any) => fetch(`/api/community?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   // Admin — Community Dashboard
   getCommunityStats: () => fetch('/api/community?action=admin-stats', { headers: h() }).then(r => r.json()),
-  getCommunityAdminList: (status = '', page = 0) => fetch(`/api/community?action=admin-list&status=${status}&page=${page}`, { headers: h() }).then(r => r.json()),
+  getCommunityAdminList: (opts: { status?: string; page?: number; q?: string; featured?: boolean; date_from?: string; date_to?: string } = {}) => {
+    const qs = new URLSearchParams({ action: 'admin-list', page: String(opts.page ?? 0) });
+    if (opts.status) qs.set('status', opts.status);
+    if (opts.q) qs.set('q', opts.q);
+    if (opts.featured) qs.set('featured', '1');
+    if (opts.date_from) qs.set('date_from', opts.date_from);
+    if (opts.date_to) qs.set('date_to', opts.date_to);
+    return fetch(`/api/community?${qs.toString()}`, { headers: h() }).then(r => r.json());
+  },
   setCommunityStatus: (id: string, status: string) => fetch(`/api/community?action=admin-status&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify({ status }) }).then(r => r.json()),
   featureCommunityPost: (id: string, on: boolean) => fetch(`/api/community?action=admin-feature&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify({ on }) }).then(r => r.json()),
   mergeCommunityTags: (field: string, from: string[], to: string) => fetch('/api/community?action=admin-merge-tags', { method: 'POST', headers: h(), body: JSON.stringify({ field, from, to }) }).then(r => r.json()),
@@ -158,6 +166,7 @@ export const api = {
   getExternalBooks: (q = '') => fetch(`/api/community?action=external-books&q=${encodeURIComponent(q)}`).then(r => r.json()),
   getExternalBook: (slug: string) => fetch(`/api/community?action=external-book&slug=${encodeURIComponent(slug)}&guest_id=${getGuestId()}`, { headers: h() }).then(r => r.json()),
   getCommunityRelated: (id: string) => fetch(`/api/community?action=related&id=${id}&guest_id=${getGuestId()}`, { headers: h() }).then(r => r.json()),
+  searchFeaturedCreators: (q: string) => fetch(`/api/community?action=admin-creators-search&q=${encodeURIComponent(q)}`, { headers: h() }).then(r => r.json()),
 
   // Analytics
   getAnalytics: () => fetch('/api/analytics', { headers: h() }).then(r => r.json()),

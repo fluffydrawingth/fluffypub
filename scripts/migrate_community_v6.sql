@@ -14,3 +14,7 @@ alter table profiles
 -- Array of { name, url } — max 2 enforced in the API. Affiliate links allowed.
 alter table community_posts
   add column if not exists recommended_tools jsonb default '[]'::jsonb;
+
+-- Force PostgREST (Supabase API) to refresh its schema cache so the new columns
+-- are usable immediately (fixes "Could not find the 'creator_bio' column ..." error).
+notify pgrst, 'reload schema';

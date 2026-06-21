@@ -273,12 +273,12 @@ module.exports = async function handler(req, res) {
     return json(res, 200, post);
   }
 
-  // GET related — "You may also like": same book > same marker > same creator > recent
+  // GET related — "You may also like": same book > same marker/medium > same creator > cozy picks
   if (req.method === 'GET' && action === 'related') {
     const viewer = await getUser(req);
     const { id } = req.query;
     if (!id) return json(res, 400, { error: 'id required' });
-    const { data: base } = await supabase.from('community_posts').select('id,user_id,product_id,external_book_id,markers').eq('id', id).single();
+    const { data: base } = await supabase.from('community_posts').select('id,user_id,product_id,external_book_id,markers,mediums').eq('id', id).single();
     if (!base) return json(res, 200, { posts: [] });
     const picked = new Map();
     const add = (rows) => { for (const r of (rows || [])) { if (r.id !== id && !picked.has(r.id) && picked.size < 6) picked.set(r.id, r); } };
@@ -286,15 +286,16 @@ module.exports = async function handler(req, res) {
     // 1. Same Fluffy Pub book / external book
     if (base.product_id) { const { data } = await q().eq('product_id', base.product_id); add(data); }
     if (picked.size < 6 && base.external_book_id) { const { data } = await q().eq('external_book_id', base.external_book_id); add(data); }
-    // 2. Same marker (jsonb — filter in-memory by normalized value)
-    if (picked.size < 6 && (base.markers || []).length) {
-      const wanted = new Set((base.markers || []).map(m => String(m).trim().toLowerCase()));
+    // 2. Same marker OR medium (jsonb — filter in-memory by normalized value)
+    const wantedTags = new Set([...(base.markers || []), ...(base.mediums || [])].map(m => String(m).trim().toLowerCase()));
+    if (picked.size < 6 && wantedTags.size) {
       const { data } = await supabase.from('community_posts').select('*').eq('status', 'published').neq('id', id).order('created_at', { ascending: false }).range(0, 199);
-      add((data || []).filter(r => (r.markers || []).some(m => wanted.has(String(m).trim().toLowerCase()))));
+      add((data || []).filter(r => [...(r.markers || []), ...(r.mediums || [])].some(m => wantedTags.has(String(m).trim().toLowerCase()))));
     }
     // 3. Same creator
     if (picked.size < 6 && base.user_id) { const { data } = await q().eq('user_id', base.user_id); add(data); }
-    // 4. Recent fallback
+    // 4. Other Cozy Picks, then recent
+    if (picked.size < 6) { const { data } = await q().eq('featured', true); add(data); }
     if (picked.size < 6) { const { data } = await q(); add(data); }
     const decorated = await decorate([...picked.values()].slice(0, 6), viewer?.id, req.query.guest_id);
     return json(res, 200, { posts: decorated });
@@ -596,19 +597,46 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { creations: creations || 0, creators, today: today || 0, comments: comments || 0, reports: 0, cozyPicks: cozy || 0, cozyMax: 6 });
   }
 
-  // GET ?action=admin-list&status=&page= — all posts (any status) for moderation
+  // GET ?action=admin-list&status=&page=&q=&featured=&date_from=&date_to= — moderation table
   if (req.method === 'GET' && action === 'admin-list') {
     const admin = await requireAuth(req, res, ['admin']);
     if (!admin) return;
     const page = Math.max(0, parseInt(req.query.page) || 0);
-    const limit = 24;
+    const limit = 20;
     const from = page * limit;
-    let q = supabase.from('community_posts').select('*', { count: 'exact' }).order('created_at', { ascending: false });
+    // Direct column filters (status / cozy pick / date) applied in DB
+    let q = supabase.from('community_posts').select('*').order('created_at', { ascending: false });
     if (req.query.status) q = q.eq('status', req.query.status);
-    q = q.range(from, from + limit - 1);
-    const { data, count } = await q;
-    const posts = await decorate(data || [], admin.id);
-    return json(res, 200, { posts, total: count || 0, page, hasMore: from + (data?.length || 0) < (count || 0) });
+    if (req.query.featured === '1') q = q.eq('featured', true);
+    if (req.query.date_from) q = q.gte('created_at', new Date(req.query.date_from).toISOString());
+    if (req.query.date_to) { const d = new Date(req.query.date_to); d.setHours(23, 59, 59, 999); q = q.lte('created_at', d.toISOString()); }
+    q = q.range(0, 999); // cap; decorate + text-filter + paginate in memory
+    const { data } = await q;
+    let posts = await decorate(data || [], admin.id);
+    // Text search across creator name, book title (Fluffy Pub + external)
+    const term = String(req.query.q || '').trim().toLowerCase();
+    if (term) {
+      posts = posts.filter(pt => {
+        const creator = (pt.creator?.name || '').toLowerCase();
+        const book = (pt.product?.title || pt.external_book?.title || pt.external_book_title || '').toLowerCase();
+        return creator.includes(term) || book.includes(term);
+      });
+    }
+    const total = posts.length;
+    const pageRows = posts.slice(from, from + limit);
+    return json(res, 200, { posts: pageRows, total, page, hasMore: from + pageRows.length < total });
+  }
+
+  // GET ?action=admin-creators-search&q= — autocomplete approved Fluffy Creators
+  if (req.method === 'GET' && action === 'admin-creators-search') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const term = String(req.query.q || '').trim();
+    let q = supabase.from('profiles').select('id,name,username,email,avatar_url').eq('affiliate_enabled', true);
+    if (term) q = q.or(`name.ilike.%${term}%,username.ilike.%${term}%,email.ilike.%${term}%`);
+    const { data } = await q.order('name').range(0, 9);
+    const creators = (data || []).map(u => ({ id: u.id, name: u.username || u.name || u.email || 'Creator', email: u.email || '', avatar_url: u.avatar_url || null }));
+    return json(res, 200, { creators });
   }
 
   // POST ?action=admin-status&id= {status} — publish / hide / delete (soft)

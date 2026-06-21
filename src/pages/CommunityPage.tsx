@@ -98,10 +98,10 @@ export default function CommunityPage() {
 
         {showForm && user && <UploadForm theme={theme} p={p} tRaw={tRaw} onPosted={onPosted} user={user} />}
 
-        {/* 1. 🌷 Editor's Picks — horizontal carousel at top, fixed-height cards */}
+        {/* 1. 🌷 Cozy Picks — horizontal carousel at top, fixed-height cards */}
         {isAll && cozy.length > 0 && (
           <div style={{ marginBottom: 28 }}>
-            <SectionHead theme={theme} title={`🌷 ${tRaw('คัดสรรโดยทีม', "Editor's Picks")}`} />
+            <SectionHead theme={theme} title={`🌷 ${tRaw('คอลเลกชันอบอุ่น', 'Cozy Picks')}`} />
             <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
               {cozy.map(post => (
                 <div key={'c' + post.id} style={{ width: 180, flexShrink: 0 }}>

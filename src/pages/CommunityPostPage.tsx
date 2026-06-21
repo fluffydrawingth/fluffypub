@@ -273,12 +273,16 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
           </div>
         </div>
 
-        {/* You may also like */}
+        {/* You may also like — horizontal carousel, no wrapping */}
         {related.length > 0 && (
           <div style={{ marginTop: 40 }}>
             <h2 style={{ fontSize: 18, fontWeight: 900, color: theme.textColor, marginBottom: 14 }}>✨ {tRaw('คุณอาจชอบสิ่งนี้', 'You may also like')}</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 14 }}>
-              {related.map((rp: any) => <CommunityCard key={rp.id} post={rp} />)}
+            <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 8, scrollSnapType: 'x mandatory' }}>
+              {related.map((rp: any) => (
+                <div key={rp.id} style={{ width: 180, flexShrink: 0, scrollSnapAlign: 'start' }}>
+                  <CommunityCard post={rp} compact />
+                </div>
+              ))}
             </div>
           </div>
         )}
