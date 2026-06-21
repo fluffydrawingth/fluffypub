@@ -27,6 +27,22 @@ export default function AffiliateDashboardPage() {
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  // Time filter + collapsible/section state
+  const [range, setRange] = useState<'7'|'30'|'90'|'all'|'month'>('month');
+  const now = new Date();
+  const [fMonth, setFMonth] = useState(now.getMonth() + 1);
+  const [fYear, setFYear] = useState(now.getFullYear());
+  const [openSec, setOpenSec] = useState<Record<string, boolean>>({ physical: false, digital: false, payout: false });
+  const [shown, setShown] = useState<Record<string, number>>({ physical: 5, digital: 5, payout: 5 });
+  const toggleSec = (k: string) => setOpenSec(s => ({ ...s, [k]: !s[k] }));
+  const inRange = (dateStr?: string) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr); const t = d.getTime();
+    if (range === 'all') return true;
+    if (range === 'month') return d.getMonth() + 1 === fMonth && d.getFullYear() === fYear;
+    const days = Number(range);
+    return t >= Date.now() - days * 86400000;
+  };
 
   // Payout account form
   const [acct, setAcct] = useState({ payout_account_name:'', payout_bank_name:'', payout_account_number:'', payout_payment_method:'Bank Transfer', payout_note:'' });
@@ -96,20 +112,42 @@ export default function AffiliateDashboardPage() {
   if (loading) return <div style={{ minHeight:'60vh', display:'flex', alignItems:'center', justifyContent:'center', fontSize:32 }}>⏳</div>;
 
   const codes = data?.codes || [];
-  const orders = data?.orders || [];
-  const digitalCommissions = data?.digitalCommissions || [];
-  const dcStatus: Record<string,{c:string,bg:string,t:string}> = {
-    pending:{c:'#92400e',bg:'#fef3c7',t:'Pending'}, confirmed:{c:'#1d4ed8',bg:'#dbeafe',t:'Confirmed'}, paid:{c:'#065f46',bg:'#d1fae5',t:'Paid'}, cancelled:{c:'#991b1b',bg:'#fee2e2',t:'Cancelled'},
+  const allOrders = data?.orders || [];
+  const allDigital = data?.digitalCommissions || [];
+  const allPayouts = data?.payouts || [];
+  // Digital status: 🟡 Pending → 🟠 Eligible (confirmed) → 🟢 Paid
+  const dcStatus: Record<string,{c:string,bg:string,t:string,tip:string}> = {
+    pending:  {c:'#92400e',bg:'#fef3c7',t:`🟡 ${tRaw('รอตรวจสอบ','Pending')}`,   tip: tRaw('มีคำสั่งซื้อแต่ยังไม่เข้าเงื่อนไข','Order exists but not eligible yet.')},
+    confirmed:{c:'#9a3412',bg:'#ffedd5',t:`🟠 ${tRaw('เข้าเงื่อนไข','Eligible')}`, tip: tRaw('ยืนยันแล้ว รอจ่ายเงิน','Confirmed and waiting for payout.')},
+    paid:     {c:'#065f46',bg:'#d1fae5',t:`🟢 ${tRaw('จ่ายแล้ว','Paid')}`,        tip: tRaw('โอนค่าคอมมิชชันแล้ว','Commission has been transferred.')},
+    cancelled:{c:'#991b1b',bg:'#fee2e2',t:`${tRaw('ยกเลิก','Cancelled')}`,        tip: tRaw('คำสั่งซื้อถูกยกเลิก','Order was cancelled.')},
   };
-  const s = data?.summary || { ordersReferred:0, physicalRevenueTHB:0, commissionEarned:0, paidCommission:0, pendingCommission:0 };
+
+  // Filter all data by the selected time range
+  const orders = allOrders.filter((o:any) => inRange(o.created_at));
+  const digitalCommissions = allDigital.filter((c:any) => inRange(c.created_at));
+  const payouts = allPayouts.filter((py:any) => range === 'all' ? true : range === 'month' ? (py.month === fMonth && py.year === fYear) : inRange(new Date(py.year, (py.month||1)-1, 15).toISOString()));
+
+  // Reactive summary computed from the filtered period
+  const physEarned = orders.filter((o:any)=>o.status==='delivered');
+  const eligibleComm = physEarned.reduce((s:number,o:any)=>s+Number(o.affiliate_commission_thb||0),0)
+    + digitalCommissions.filter((c:any)=>['confirmed','paid'].includes(c.status)).reduce((s:number,c:any)=>s+Number(c.commission_amount||0),0);
+  const paidComm = physEarned.filter((o:any)=>o.affiliate_paid_at).reduce((s:number,o:any)=>s+Number(o.affiliate_commission_thb||0),0)
+    + digitalCommissions.filter((c:any)=>c.status==='paid').reduce((s:number,c:any)=>s+Number(c.commission_amount||0),0);
+  const pendingPayout = eligibleComm - paidComm;
+  const waiting = orders.filter((o:any)=>o.status!=='delivered'&&o.status!=='cancelled').reduce((s:number,o:any)=>s+Number(o.affiliate_commission_thb||0),0)
+    + digitalCommissions.filter((c:any)=>c.status==='pending').reduce((s:number,c:any)=>s+Number(c.commission_amount||0),0);
 
   const cards = [
-    { label: tRaw('คำสั่งซื้อที่แนะนำ','Orders Referred'), value: s.ordersReferred, icon:'📦', color:'#10b981' },
-    { label: tRaw('ยอดขายที่เข้าเงื่อนไข','Eligible Sales'), value: thb(s.physicalRevenueTHB), icon:'💰', color:'#f59e0b' },
-    { label: tRaw('คอมมิชชันที่ได้รับ','Commission Earned'), value: thb(s.commissionEarned), icon:'🏦', color:'#8b5cf6' },
-    { label: tRaw('คอมมิชชันค้างจ่าย','Pending Commission'), value: thb(s.pendingCommission), icon:'⏳', color:'#ef4444' },
-    { label: tRaw('คอมมิชชันที่จ่ายแล้ว','Paid Commission'), value: thb(s.paidCommission), icon:'✅', color:'#06b6d4' },
+    { label: tRaw('คำสั่งซื้อที่แนะนำ','Recommended orders'), value: orders.length + digitalCommissions.length, icon:'📦', color:'#10b981' },
+    { label: tRaw('คอมมิชชันที่เข้าเงื่อนไข','Eligible commission'), value: thb(eligibleComm), icon:'💰', color:'#f59e0b' },
+    { label: tRaw('รอจ่าย','Pending payout'), value: thb(pendingPayout), icon:'🏦', color:'#8b5cf6' },
+    { label: tRaw('กำลังรอเข้าเงื่อนไข','Waiting for payout'), value: thb(waiting), icon:'⏳', color:'#ef4444' },
+    { label: tRaw('จ่ายแล้ว','Paid commission'), value: thb(paidComm), icon:'✅', color:'#06b6d4' },
   ];
+
+  // Compact "this period" summary
+  const physCount = orders.length, digCount = digitalCommissions.length;
 
   return (
     <div style={{ minHeight:'100vh', background:'#f8fafc', fontFamily:theme.fontFamily }}>
@@ -195,6 +233,31 @@ export default function AffiliateDashboardPage() {
           ))}
         </div>
 
+        {/* Time filters */}
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center', marginBottom:16 }}>
+          {([['7','7d'],['30','30d'],['90','90d'],['month','Month'],['all','All time']] as [any,string][]).map(([k,lbl])=>(
+            <button key={k} onClick={()=>setRange(k)} style={{ padding:'7px 14px', borderRadius:18, border:'none', cursor:'pointer', fontSize:13, fontWeight:700, background:range===k?p:p+'15', color:range===k?'white':p, fontFamily:theme.fontFamily }}>{lbl==='7d'?tRaw('7 วัน','Last 7d'):lbl==='30d'?tRaw('30 วัน','Last 30d'):lbl==='90d'?tRaw('90 วัน','Last 90d'):lbl==='Month'?tRaw('รายเดือน','Month'):tRaw('ทั้งหมด','All time')}</button>
+          ))}
+          {range==='month' && (
+            <>
+              <select value={fMonth} onChange={e=>setFMonth(Number(e.target.value))} style={{ padding:'7px 10px', borderRadius:10, border:'1.5px solid #e5e7eb', fontSize:13, fontFamily:theme.fontFamily }}>
+                {MONTHS.slice(1).map((m,i)=><option key={m} value={i+1}>{m}</option>)}
+              </select>
+              <select value={fYear} onChange={e=>setFYear(Number(e.target.value))} style={{ padding:'7px 10px', borderRadius:10, border:'1.5px solid #e5e7eb', fontSize:13, fontFamily:theme.fontFamily }}>
+                {[0,1,2].map(d=>now.getFullYear()-d).map(y=><option key={y} value={y}>{y}</option>)}
+              </select>
+            </>
+          )}
+        </div>
+
+        {/* Compact period summary */}
+        <div style={{ background:'white', borderRadius:14, padding:'12px 16px', boxShadow:'0 2px 10px rgba(0,0,0,0.05)', marginBottom:18, display:'flex', gap:20, flexWrap:'wrap', alignItems:'center' }}>
+          <span style={{ fontSize:13, fontWeight:800, color:'#1e293b' }}>📈 {range==='month'?`${MONTHS[fMonth]} ${fYear}`:range==='all'?tRaw('ทั้งหมด','All time'):tRaw(`${range} วันล่าสุด`,`Last ${range} days`)}</span>
+          <span style={{ fontSize:13, color:'#64748b' }}>📦 {tRaw('สินค้าจัดส่ง','Physical')}: <b>{physCount}</b></span>
+          <span style={{ fontSize:13, color:'#64748b' }}>🖥️ {tRaw('ดิจิทัล','Digital')}: <b>{digCount}</b></span>
+          <span style={{ fontSize:13, color:'#64748b' }}>💰 {tRaw('คอมมิชชันรวม','Total commission')}: <b style={{ color:'#059669' }}>{thb(eligibleComm)}</b></span>
+        </div>
+
         {/* Summary cards */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))', gap:14, marginBottom:28 }}>
           {cards.map(c => (
@@ -210,8 +273,14 @@ export default function AffiliateDashboardPage() {
           ))}
         </div>
 
-        {/* History */}
-        <h2 style={{ fontSize:18, fontWeight:800, color:'#1e293b', marginBottom:12 }}>📦 {tRaw('คอมมิชชันสินค้าจัดส่ง (โค้ด)','Physical product commission (code)')}</h2>
+        {/* 📦 Physical Product Commission — collapsible */}
+        <button onClick={()=>toggleSec('physical')} style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', background:'white', border:'none', borderRadius:14, padding:'14px 18px', cursor:'pointer', boxShadow:'0 2px 10px rgba(0,0,0,0.05)', marginBottom: openSec.physical?12:12, fontFamily:theme.fontFamily }}>
+          <span style={{ fontSize:15, fontWeight:800, color:'#1e293b' }}>📦 {tRaw('คอมมิชชันสินค้าจัดส่ง','Physical Product Commission')} ({orders.length})</span>
+          <span style={{ fontSize:13, fontWeight:700, color:p }}>{openSec.physical ? `▲ ${tRaw('ซ่อน','Hide')}` : `▼ ${tRaw('ดูรายละเอียด','View details')}`}</span>
+        </button>
+        {!openSec.physical ? null : orders.length === 0 ? (
+          <div style={{ background:'white', borderRadius:16, padding:'32px', textAlign:'center', color:'#94a3b8', fontSize:13.5, boxShadow:'0 2px 10px rgba(0,0,0,0.05)', marginBottom:8 }}>📦 {tRaw('ยังไม่มีคำสั่งซื้อที่แนะนำ','No referred orders yet.')}<br/><span style={{ fontSize:12 }}>{tRaw('แชร์ลิงก์ครีเอเตอร์ของคุณเพื่อเริ่มรับค่าคอมมิชชัน','Share your creator link to start earning.')}</span></div>
+        ) : (<>
         <div style={{ background:'white', borderRadius:16, overflow:'auto', boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>
           <table style={{ width:'100%', borderCollapse:'collapse', minWidth:720 }}>
             <thead><tr style={{ background:'#f8fafc', borderBottom:'2px solid #f1f5f9' }}>
@@ -219,7 +288,7 @@ export default function AffiliateDashboardPage() {
                 <th key={h} style={{ textAlign:'left', padding:'11px 14px', fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', whiteSpace:'nowrap' }}>{h}</th>
               ))}
             </tr></thead>
-            <tbody>{orders.map((o: any) => {
+            <tbody>{orders.slice(0, shown.physical).map((o: any) => {
               const si = STATUS_LABEL[o.status] || { t:o.status, c:'#64748b', bg:'#f1f5f9' };
               const earned = o.status === 'delivered';
               return (
@@ -238,38 +307,53 @@ export default function AffiliateDashboardPage() {
               );
             })}</tbody>
           </table>
-          {!orders.length && <div style={{ textAlign:'center', padding:36, color:'#94a3b8' }}>{tRaw('ยังไม่มีคำสั่งซื้อที่แนะนำ','No referred orders yet.')}</div>}
         </div>
+        {orders.length > shown.physical && <div style={{ textAlign:'center', margin:'10px 0' }}><span style={{ fontSize:12, color:'#94a3b8', marginRight:10 }}>{tRaw('แสดง','Showing')} {Math.min(shown.physical,orders.length)} / {orders.length}</span><button onClick={()=>setShown(s=>({...s,physical:s.physical+5}))} style={{ padding:'6px 16px', borderRadius:16, border:`1.5px solid ${p}`, background:'white', color:p, cursor:'pointer', fontSize:12.5, fontWeight:700 }}>{tRaw('ดูเพิ่มเติม','Load more')}</button></div>}
+        </>)}
 
-        {/* Digital product commission (from community ?ref= links) */}
-        <h2 style={{ fontSize:18, fontWeight:800, color:'#1e293b', margin:'28px 0 12px' }}>💾 {tRaw('คอมมิชชันสินค้าดิจิทัล (ลิงก์จากโพสต์)','Digital product commission (community links)')}</h2>
+        {/* 🖥️ Digital Product Commission — collapsible */}
+        <button onClick={()=>toggleSec('digital')} style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', background:'white', border:'none', borderRadius:14, padding:'14px 18px', cursor:'pointer', boxShadow:'0 2px 10px rgba(0,0,0,0.05)', margin:'18px 0 12px', fontFamily:theme.fontFamily }}>
+          <span style={{ fontSize:15, fontWeight:800, color:'#1e293b' }}>🖥️ {tRaw('คอมมิชชันสินค้าดิจิทัล','Digital Product Commission')} ({digitalCommissions.length})</span>
+          <span style={{ fontSize:13, fontWeight:700, color:p }}>{openSec.digital ? `▲ ${tRaw('ซ่อน','Hide')}` : `▼ ${tRaw('ดูรายละเอียด','View details')}`}</span>
+        </button>
+        {!openSec.digital ? null : digitalCommissions.length === 0 ? (
+          <div style={{ background:'white', borderRadius:16, padding:'32px', textAlign:'center', color:'#94a3b8', fontSize:13.5, boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>🖥️ {tRaw('ยังไม่มีคอมมิชชันดิจิทัล','No digital commissions yet.')}<br/><span style={{ fontSize:12 }}>{tRaw('การแนะนำจากชุมชนจะแสดงที่นี่','Community referrals will appear here.')}</span></div>
+        ) : (<>
         <div style={{ background:'white', borderRadius:16, overflow:'auto', boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>
-          <table style={{ width:'100%', borderCollapse:'collapse', minWidth:680 }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', minWidth:720 }}>
             <thead><tr style={{ background:'#f8fafc', borderBottom:'2px solid #f1f5f9' }}>
-              {['Product','Date','Sale','%','Commission','Status'].map(hh => (
+              {['Product','Date','Purchases','Sale','%','Commission','Status'].map(hh => (
                 <th key={hh} style={{ textAlign:'left', padding:'11px 14px', fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', whiteSpace:'nowrap' }}>{hh}</th>
               ))}
             </tr></thead>
-            <tbody>{digitalCommissions.map((c: any) => {
-              const si = dcStatus[c.status] || { t:c.status, c:'#64748b', bg:'#f1f5f9' };
+            <tbody>{digitalCommissions.slice(0, shown.digital).map((c: any) => {
+              const si = dcStatus[c.status] || { t:c.status, c:'#64748b', bg:'#f1f5f9', tip:'' };
               const cur = (n:number)=> c.currency==='USD' ? `$${Number(n||0).toFixed(2)}` : thb(n);
               return (
                 <tr key={c.id} style={{ borderBottom:'1px solid #f8fafc' }}>
                   <td style={{ padding:'10px 14px', fontSize:12.5, fontWeight:700, color:'#1e293b', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.product_title || '—'}</td>
                   <td style={{ padding:'10px 14px', fontSize:12, color:'#64748b', whiteSpace:'nowrap' }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
+                  <td style={{ padding:'10px 14px', fontSize:13, color:'#1e293b' }}>1</td>
                   <td style={{ padding:'10px 14px', fontSize:13, color:'#1e293b' }}>{cur(c.sale_amount)}</td>
                   <td style={{ padding:'10px 14px', fontSize:12, color:'#64748b' }}>{c.commission_percent}%</td>
                   <td style={{ padding:'10px 14px', fontSize:13, fontWeight:800, color: c.status==='cancelled' ? '#94a3b8' : '#059669' }}>{cur(c.commission_amount)}</td>
-                  <td style={{ padding:'10px 14px' }}><span style={{ background:si.bg, color:si.c, borderRadius:20, padding:'3px 10px', fontSize:11, fontWeight:700 }}>{si.t}</span></td>
+                  <td style={{ padding:'10px 14px' }}><span title={si.tip} style={{ background:si.bg, color:si.c, borderRadius:20, padding:'3px 10px', fontSize:11, fontWeight:700, cursor:'help' }}>{si.t}</span></td>
                 </tr>
               );
             })}</tbody>
           </table>
-          {!digitalCommissions.length && <div style={{ textAlign:'center', padding:36, color:'#94a3b8' }}>{tRaw('ยังไม่มีคอมมิชชันดิจิทัล','No digital commission yet.')}</div>}
         </div>
+        {digitalCommissions.length > shown.digital && <div style={{ textAlign:'center', margin:'10px 0' }}><span style={{ fontSize:12, color:'#94a3b8', marginRight:10 }}>{tRaw('แสดง','Showing')} {Math.min(shown.digital,digitalCommissions.length)} / {digitalCommissions.length}</span><button onClick={()=>setShown(s=>({...s,digital:s.digital+5}))} style={{ padding:'6px 16px', borderRadius:16, border:`1.5px solid ${p}`, background:'white', color:p, cursor:'pointer', fontSize:12.5, fontWeight:700 }}>{tRaw('ดูเพิ่มเติม','Load more')}</button></div>}
+        </>)}
 
-        {/* Payout history */}
-        <h2 style={{ fontSize:18, fontWeight:800, color:'#1e293b', margin:'28px 0 12px' }}>{tRaw('ประวัติการจ่ายเงิน','Payout History')}</h2>
+        {/* 💸 Payout History — collapsible */}
+        <button onClick={()=>toggleSec('payout')} style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', background:'white', border:'none', borderRadius:14, padding:'14px 18px', cursor:'pointer', boxShadow:'0 2px 10px rgba(0,0,0,0.05)', margin:'18px 0 12px', fontFamily:theme.fontFamily }}>
+          <span style={{ fontSize:15, fontWeight:800, color:'#1e293b' }}>💸 {tRaw('ประวัติการจ่ายเงิน','Payout History')} ({payouts.length})</span>
+          <span style={{ fontSize:13, fontWeight:700, color:p }}>{openSec.payout ? `▲ ${tRaw('ซ่อน','Hide')}` : `▼ ${tRaw('ดูรายละเอียด','View details')}`}</span>
+        </button>
+        {!openSec.payout ? null : payouts.length === 0 ? (
+          <div style={{ background:'white', borderRadius:16, padding:'32px', textAlign:'center', color:'#94a3b8', fontSize:13.5, boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>💸 {tRaw('ยังไม่มีประวัติการจ่ายเงิน','No payout history yet.')}<br/><span style={{ fontSize:12 }}>{tRaw('บันทึกการจ่ายเงินจะแสดงที่นี่หลังการโอน','Your payout records will appear here after transfers.')}</span></div>
+        ) : (<>
         <div style={{ background:'white', borderRadius:16, overflow:'auto', boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>
           <table style={{ width:'100%', borderCollapse:'collapse', minWidth:640 }}>
             <thead><tr style={{ background:'#f8fafc', borderBottom:'2px solid #f1f5f9' }}>
@@ -277,7 +361,7 @@ export default function AffiliateDashboardPage() {
                 <th key={hh} style={{ textAlign:'left', padding:'11px 14px', fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', whiteSpace:'nowrap' }}>{hh}</th>
               ))}
             </tr></thead>
-            <tbody>{(data?.payouts||[]).map((py:any) => {
+            <tbody>{payouts.slice(0, shown.payout).map((py:any) => {
               const paid = py.status === 'paid';
               return (
                 <tr key={py.id} style={{ borderBottom:'1px solid #f8fafc' }}>
@@ -292,8 +376,9 @@ export default function AffiliateDashboardPage() {
               );
             })}</tbody>
           </table>
-          {!(data?.payouts||[]).length && <div style={{ textAlign:'center', padding:36, color:'#94a3b8' }}>{tRaw('ยังไม่มีประวัติการจ่ายเงิน','No payouts yet.')}</div>}
         </div>
+        {payouts.length > shown.payout && <div style={{ textAlign:'center', margin:'10px 0' }}><span style={{ fontSize:12, color:'#94a3b8', marginRight:10 }}>{tRaw('แสดง','Showing')} {Math.min(shown.payout,payouts.length)} / {payouts.length}</span><button onClick={()=>setShown(s=>({...s,payout:s.payout+5}))} style={{ padding:'6px 16px', borderRadius:16, border:`1.5px solid ${p}`, background:'white', color:p, cursor:'pointer', fontSize:12.5, fontWeight:700 }}>{tRaw('ดูเพิ่มเติม','Load more')}</button></div>}
+        </>)}
 
         {/* Payout account details */}
         <h2 style={{ fontSize:18, fontWeight:800, color:'#1e293b', margin:'28px 0 12px' }}>{tRaw('ข้อมูลบัญชีรับเงิน','Payout Account Details')}</h2>

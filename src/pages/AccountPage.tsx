@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import ProductCard from '../components/ProductCard';
 import { useFavorites } from '../lib/favorites';
 import { useLang } from '../lib/lang';
+import { isImageUrl, AVATAR_EMOJIS } from '../lib/avatar';
 
 type Tab = 'orders' | 'favorites' | 'profile';
 
@@ -537,6 +538,7 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
   const [communityAbout, setCommunityAbout] = useState('');
   const [communityCountry, setCommunityCountry] = useState('');
   const [communityMedium, setCommunityMedium] = useState('');
+  const [avatarEmoji, setAvatarEmoji] = useState('');
   const [saving, setSaving]             = useState(false);
   const [msg, setMsg]                   = useState('');
   const [loaded, setLoaded]             = useState(false);
@@ -577,6 +579,8 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
       }
 
       setUsername(profile.username || '');
+      // Customer avatar = an emoji stored in avatar_url (image URLs are creator-only)
+      setAvatarEmoji(isImageUrl(profile.avatar_url) ? '' : (profile.avatar_url || ''));
       setCommunityAbout(profile.community_about || '');
       setCommunityCountry(profile.community_country || '');
       setCommunityMedium(profile.community_favorite_medium || '');
@@ -600,6 +604,7 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
       const payload = {
         name: fullName || user?.name || '',
         username: username.trim(),
+        avatar_url: avatarEmoji || null,
         community_about: communityAbout.slice(0, 80),
         community_country: communityCountry.trim() || null,
         community_favorite_medium: communityMedium.trim() || null,
@@ -655,6 +660,14 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
 
       {inp(tRaw('ชื่อผู้ใช้ (ชื่อที่แสดง)','Username (display name)'), username, setUsername)}
       <div style={{fontSize:11,color:'#94a3b8',marginTop:-10,marginBottom:14}}>{tRaw('ชื่อที่แสดงต่อสาธารณะ ไม่ใช่ชื่อจริงหรือที่อยู่','A public display name — not your real name or address.')}</div>
+
+      {/* Choose avatar — emoji only for customers (no image upload) */}
+      <h4 style={{fontSize:14,fontWeight:800,color:'#374151',margin:'6px 0 8px'}}>🎨 {tRaw('เลือกอวตารของคุณ','Choose your avatar')}</h4>
+      <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:18}}>
+        {AVATAR_EMOJIS.map(em=>(
+          <button key={em} type="button" onClick={()=>setAvatarEmoji(a=>a===em?'':em)} style={{width:46,height:46,borderRadius:'50%',border:`2px solid ${avatarEmoji===em?p:'#e5e7eb'}`,background:avatarEmoji===em?p+'15':'white',cursor:'pointer',fontSize:22,lineHeight:1}}>{em}</button>
+        ))}
+      </div>
 
       <h4 style={{fontSize:14,fontWeight:800,color:'#374151',margin:'6px 0 12px'}}>🌈 {tRaw('โปรไฟล์ชุมชน','Community Profile')}</h4>
       <div style={{marginBottom:14}}>

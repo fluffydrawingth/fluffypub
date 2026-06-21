@@ -4,7 +4,6 @@ import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
 import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
-import { useGuidelines } from '../lib/useGuidelines';
 
 // Bilingual fallback bullets — used only until the admin edits the
 // "affiliate-guidelines" Legal Page (Admin → Legal Pages).
@@ -14,7 +13,8 @@ const DEFAULT_GUIDELINES = [
   { th: 'ค่าคอมมิชชันได้รับจากการขายสินค้าที่เข้าเงื่อนไขเท่านั้น', en: 'Commission is earned only from eligible product sales' },
   { th: 'ค่าคอมมิชชันเริ่มนับหลังได้รับอนุมัติเท่านั้น', en: 'Commission starts after approval' },
   { th: 'ค่าคอมมิชชัน Fluffy Creator ใช้ได้กับสินค้าที่เข้าเงื่อนไขเท่านั้น', en: 'Fluffy Creator commission applies only to eligible products.' },
-  { th: 'Fluffy Pub อาจยกเลิกสิทธิ์ Fluffy Creator ได้หากจำเป็น', en: 'Fluffy Pub may revoke Fluffy Creator access if necessary' },
+  { th: 'Fluffy Pub อาจยกเลิกสิทธิ์ Fluffy Creator ได้หากจำเป็น', en: 'Fluffy Pub may revoke Fluffy Creator access if necessary.' },
+  { th: 'รายละเอียดเพิ่มเติมจะแสดงหลังได้รับอนุมัติ', en: 'More details will be available after approval.' },
 ];
 
 const PLATFORMS: { value: string; label: string }[] = [
@@ -31,7 +31,9 @@ export default function AffiliateApplicationPage() {
   const { user } = useAuth();
   const { tRaw } = useLang();
   const p = theme.primaryColor;
-  const { bullets: guidelines } = useGuidelines('affiliate-guidelines', DEFAULT_GUIDELINES.map(g => tRaw(g.th, g.en)));
+  // Always render guidelines in the active UI language (do NOT pull from the CMS legal
+  // page, which stores a single language and caused EN/TH mixing).
+  const guidelines = DEFAULT_GUIDELINES.map(g => tRaw(g.th, g.en));
 
   const [name, setName] = useState('');
   const [link, setLink] = useState('');

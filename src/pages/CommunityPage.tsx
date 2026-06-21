@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
+import { isImageUrl } from '../lib/avatar';
 import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
 import { makeImageVariants } from '../lib/imageThumb';
@@ -208,7 +209,7 @@ export default function CommunityPage() {
                 <button key={c.id} onClick={() => navigate(`/creator/${c.id}`)}
                   style={{ background: 'white', border: `1.5px solid ${p}15`, borderRadius: 16, padding: '16px 14px', cursor: 'pointer', minWidth: 130, textAlign: 'center', fontFamily: theme.fontFamily, flexShrink: 0 }}>
                   <div style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', background: p + '20', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>
-                    {c.avatar_url ? <img src={c.avatar_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (c.affiliate_enabled ? '🌷' : '👤')}
+                    {isImageUrl(c.avatar_url) ? <img src={c.avatar_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (c.avatar_url || (c.affiliate_enabled ? '🌷' : '👤'))}
                   </div>
                   <div style={{ fontSize: 12.5, fontWeight: 800, color: '#1e293b', marginBottom: 2 }}>{c.affiliate_enabled ? '🌷' : '👤'} {c.name}</div>
                   {c.community_country && <div style={{ fontSize: 10.5, color: '#94a3b8' }}>📍 {c.community_country}</div>}
