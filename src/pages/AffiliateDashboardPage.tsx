@@ -40,11 +40,14 @@ export default function AffiliateDashboardPage() {
 
   useEffect(() => {
     api.me().then((d: any) => {
-      if (d && !d.error) setCp(c => ({
-        creator_bio: d.creator_bio || '', creator_tiktok: d.creator_tiktok || '',
-        creator_instagram: d.creator_instagram || '', creator_youtube: d.creator_youtube || '',
-        creator_website: d.creator_website || '',
-      }));
+      if (d && !d.error) {
+        const cr = d.social_links?.creator || {};
+        setCp({
+          creator_bio: cr.bio || '', creator_tiktok: cr.tiktok || '',
+          creator_instagram: cr.instagram || '', creator_youtube: cr.youtube || '',
+          creator_website: cr.website || '',
+        });
+      }
     }).catch(() => {});
   }, []);
 

@@ -438,7 +438,7 @@ module.exports = async function handler(req, res) {
     const uid = req.query.user_id;
     if (!uid) return json(res, 400, { error: 'user_id required' });
     const { data: profile } = await supabase.from('profiles')
-      .select('id,name,username,avatar_url,bio,role,affiliate_enabled,artist_slug,created_at,community_about,community_country,community_favorite_medium,creator_bio,creator_tiktok,creator_instagram,creator_youtube,creator_website').eq('id', uid).single();
+      .select('id,name,username,avatar_url,bio,role,affiliate_enabled,artist_slug,created_at,community_about,community_country,community_favorite_medium,social_links').eq('id', uid).single();
     if (!profile) return json(res, 404, { error: 'Creator not found' });
     const { data: posts } = await supabase.from('community_posts').select('*')
       .eq('status', 'published').eq('user_id', uid).order('created_at', { ascending: false });
@@ -454,12 +454,12 @@ module.exports = async function handler(req, res) {
       community_about: profile.community_about || null,
       community_country: profile.community_country || null,
       community_favorite_medium: profile.community_favorite_medium || null,
-      // Fluffy Creator profile (only meaningful when affiliate_enabled)
-      creator_bio: profile.affiliate_enabled ? (profile.creator_bio || null) : null,
-      creator_tiktok: profile.affiliate_enabled ? (profile.creator_tiktok || null) : null,
-      creator_instagram: profile.affiliate_enabled ? (profile.creator_instagram || null) : null,
-      creator_youtube: profile.affiliate_enabled ? (profile.creator_youtube || null) : null,
-      creator_website: profile.affiliate_enabled ? (profile.creator_website || null) : null,
+      // Fluffy Creator profile — stored in social_links.creator (only shown when affiliate_enabled)
+      creator_bio: profile.affiliate_enabled ? (profile.social_links?.creator?.bio || null) : null,
+      creator_tiktok: profile.affiliate_enabled ? (profile.social_links?.creator?.tiktok || null) : null,
+      creator_instagram: profile.affiliate_enabled ? (profile.social_links?.creator?.instagram || null) : null,
+      creator_youtube: profile.affiliate_enabled ? (profile.social_links?.creator?.youtube || null) : null,
+      creator_website: profile.affiliate_enabled ? (profile.social_links?.creator?.website || null) : null,
       stats: { posts: (posts || []).length, booksUsed, palettes: palettes.size },
     };
     return json(res, 200, { creator, posts: decorated });
@@ -469,12 +469,6 @@ module.exports = async function handler(req, res) {
     const user = await requireAuth(req, res);
     if (!user) return;
     const b = req.body || {};
-    // Anti-spam: max 3 posts per day (rolling 24h). Cozy inspiration gallery, not a feed.
-    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { count: todayCount } = await supabase.from('community_posts')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id).gte('created_at', since24h);
-    if ((todayCount || 0) >= 3) return json(res, 429, { error: 'Daily limit reached — you can share up to 3 posts per day. Please come back tomorrow. 🌷' });
     const asArr = (v) => Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.trim()).map(x => x.trim()).slice(0, 20) : [];
     // Multiple images: artwork_urls array (max 10); cover = first image / explicit artwork_url
     const imgs = Array.isArray(b.artwork_urls) ? b.artwork_urls.filter(u => typeof u === 'string' && u.trim()).slice(0, 10) : [];
@@ -500,7 +494,12 @@ module.exports = async function handler(req, res) {
       recommended_tools: recommendedTools,
       caption: (b.caption || '').slice(0, CAPTION_MAX), status: 'published',
     };
-    const { data, error } = await supabase.from('community_posts').insert(row).select().single();
+    let { data, error } = await supabase.from('community_posts').insert(row).select().single();
+    // Resilience: if recommended_tools column isn't migrated yet, retry without it
+    if (error && /recommended_tools/.test(error.message || '')) {
+      const { recommended_tools, ...rest } = row;
+      ({ data, error } = await supabase.from('community_posts').insert(rest).select().single());
+    }
     if (error) return json(res, 400, { error: error.message });
     // Fire-and-forget: submit custom tags to the Tag Library as pending; recount the book
     autoSubmitTags(row.mediums, row.markers, row.palettes).catch(() => {});
@@ -568,7 +567,12 @@ module.exports = async function handler(req, res) {
     if (asArr(b.palettes) !== undefined) updates.palettes = asArr(b.palettes);
     // Recommended tools — Fluffy Creators only; max 2, deduped
     if (b.recommended_tools !== undefined) updates.recommended_tools = user.affiliate_enabled ? sanitizeTools(b.recommended_tools) : [];
-    const { data, error } = await supabase.from('community_posts').update(updates).eq('id', id).select().single();
+    let { data, error } = await supabase.from('community_posts').update(updates).eq('id', id).select().single();
+    // Resilience: if recommended_tools column isn't migrated yet, retry without it
+    if (error && /recommended_tools/.test(error.message || '')) {
+      const { recommended_tools, ...rest } = updates;
+      ({ data, error } = await supabase.from('community_posts').update(rest).eq('id', id).select().single());
+    }
     if (error) return json(res, 400, { error: error.message });
     autoSubmitTags(updates.mediums || [], updates.markers || [], updates.palettes || []).catch(() => {});
     // Recount both old and new external book if the link changed

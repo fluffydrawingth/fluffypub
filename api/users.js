@@ -368,9 +368,20 @@ module.exports = async function handler(req, res) {
       const user = await requireAuth(req, res);
       if (!user) return;
       const body = req.body || {};
-      const fields = ['name','username','bio','first_name','last_name','phone','delivery_email','shipping_address','province','postal_code','preferred_lang','community_about','community_country','community_favorite_medium','creator_bio','creator_tiktok','creator_instagram','creator_youtube','creator_website'];
+      const fields = ['name','username','bio','first_name','last_name','phone','delivery_email','shipping_address','province','postal_code','preferred_lang','community_about','community_country','community_favorite_medium'];
       const updates = { updated_at: new Date().toISOString() };
       fields.forEach(f => { if (body[f] !== undefined) updates[f] = body[f]; });
+
+      // Fluffy Creator profile — stored inside the existing social_links jsonb
+      // (under a "creator" sub-object) so it needs NO new DB columns/migration.
+      const creatorKeys = ['creator_bio','creator_tiktok','creator_instagram','creator_youtube','creator_website'];
+      if (creatorKeys.some(k => body[k] !== undefined)) {
+        const { data: cur } = await supabase.from('profiles').select('social_links').eq('id', user.id).single();
+        const sl = (cur && cur.social_links) || {};
+        const creator = { ...(sl.creator || {}) };
+        creatorKeys.forEach(k => { if (body[k] !== undefined) creator[k.replace('creator_', '')] = body[k]; });
+        updates.social_links = { ...sl, creator };
+      }
       console.log('[users PUT] user:', user.id, 'updating:', JSON.stringify(updates));
 
       // upsert keyed by user.id (auth.users.id) — NEVER by email
@@ -381,7 +392,7 @@ module.exports = async function handler(req, res) {
         role: user.role || 'customer',
         ...updates,
       };
-      const PROFILE_SELECT = 'id,email,name,username,role,bio,artist_slug,favorites,first_name,last_name,phone,delivery_email,shipping_address,province,postal_code,preferred_lang,community_about,community_country,community_favorite_medium,creator_bio,creator_tiktok,creator_instagram,creator_youtube,creator_website';
+      const PROFILE_SELECT = 'id,email,name,username,role,bio,artist_slug,favorites,first_name,last_name,phone,delivery_email,shipping_address,province,postal_code,preferred_lang,community_about,community_country,community_favorite_medium,social_links';
       const { data, error } = await supabase
         .from('profiles')
         .upsert(upsertData, { onConflict: 'id' })
