@@ -5,6 +5,7 @@ import { useLang } from '../lib/lang';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
 import ImageCarousel from './ImageCarousel';
+import BadgeIcon from './BadgeIcon';
 
 const REACTIONS: { type: string; emoji: string; th: string; en: string }[] = [
   { type: 'love',         emoji: '🩷', th: 'รักเลย',             en: 'Love it' },
@@ -20,8 +21,6 @@ export default function CommunityCard({ post, compact = false }: { post: any; co
   const { tRaw } = useLang();
   const p = theme.primaryColor;
   const creator = post.creator;
-  // 🌷 = Fluffy Creator, 👤 = Community Member
-  const badge = creator?.affiliate_enabled ? '🌷' : '👤';
 
   const [counts, setCounts] = useState<Record<string, number>>(post.reactions || {});
   const [mine, setMine] = useState<string[]>(post.myReactions || []);
@@ -96,9 +95,9 @@ export default function CommunityCard({ post, compact = false }: { post: any; co
           <button onClick={(e) => { e.stopPropagation(); navigate(`/creator/${creator.id}`); }}
             style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily, marginBottom: 10, overflow: 'hidden' }}>
             <span style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', background: p + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, flexShrink: 0 }}>
-              {creator.avatar_url ? <img src={creator.avatar_url} alt={creator.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : badge}
+              {creator.avatar_url ? <img src={creator.avatar_url} alt={creator.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <BadgeIcon affiliate={creator.affiliate_enabled} size={12} />}
             </span>
-            <span style={{ fontSize: 11.5, fontWeight: 700, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{badge} {creator.name}</span>
+            <span style={{ fontSize: 11.5, fontWeight: 700, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><BadgeIcon affiliate={creator.affiliate_enabled} size={12} /> {creator.name}</span>
           </button>
         )}
 

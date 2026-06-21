@@ -4,6 +4,7 @@ import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
 import ProductCard from '../components/ProductCard';
+import BadgeIcon from '../components/BadgeIcon';
 
 export default function HomePage() {
   const { theme } = useTheme();
@@ -73,8 +74,8 @@ function CommunitySection() {
   return (
     <section style={{ padding: '48px 16px', maxWidth: 1200, margin: '0 auto' }}>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
-        <h2 style={{ fontSize: 'clamp(22px,3vw,30px)', fontWeight: 900, color: theme.textColor, margin: '0 0 6px' }}>🌈 {tl('Color Your World', 'แต่งแต้มโลกของคุณ')}</h2>
-        <p style={{ fontSize: 14, color: theme.textColor + '99', margin: 0 }}>{tl('Real coloring results from our community', 'ผลงานระบายสีจริงจากชุมชนของเรา')}</p>
+        <h2 style={{ fontSize: 'clamp(22px,3vw,30px)', fontWeight: 900, color: theme.textColor, margin: '0 0 6px' }}>{tl(theme.labels?.community_title || '🌈 Color Your World', theme.labels?.community_title_th)}</h2>
+        <p style={{ fontSize: 14, color: theme.textColor + '99', margin: 0 }}>{tl(theme.labels?.community_subtitle || 'Real coloring results from our community', theme.labels?.community_subtitle_th)}</p>
       </div>
 
       <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 10, scrollSnapType: 'x mandatory' }}>
@@ -89,7 +90,7 @@ function CommunitySection() {
               </div>
               <div style={{ padding: '10px 12px 12px' }}>
                 {bookTitle && <div style={{ fontSize: 11.5, fontWeight: 700, color: p, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📚 {bookTitle}</div>}
-                {post.creator && <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.creator.affiliate_enabled ? '🌷' : '👤'} {post.creator.name}</div>}
+                {post.creator && <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><BadgeIcon affiliate={post.creator.affiliate_enabled} size={12} /> {post.creator.name}</div>}
               </div>
             </button>
           );
@@ -98,7 +99,7 @@ function CommunitySection() {
 
       <div style={{ textAlign: 'center', marginTop: 22 }}>
         <button onClick={() => navigate('/community')} style={{ background: p, color: 'white', border: 'none', cursor: 'pointer', padding: '12px 28px', borderRadius: 24, fontSize: 14.5, fontWeight: 800, fontFamily: theme.fontFamily }}>
-          ✨ {tl('Explore Community', 'สำรวจชุมชน')} →
+          {tl(theme.labels?.community_btn || '✨ Explore Community →', theme.labels?.community_btn_th)}
         </button>
       </div>
     </section>

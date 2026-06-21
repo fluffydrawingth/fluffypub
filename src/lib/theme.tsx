@@ -56,6 +56,12 @@ export interface ThemeConfig {
     newsletter_body?: string; newsletter_body_th?: string;
     newsletter_btn?: string; newsletter_btn_th?: string;
     newsletter_success?: string; newsletter_success_th?: string;
+    community_title?: string; community_title_th?: string;
+    community_subtitle?: string; community_subtitle_th?: string;
+    community_btn?: string; community_btn_th?: string;
+    // Community badges (emoji or uploaded image URL)
+    creator_badge?: string; creator_badge_img?: string;
+    customer_badge?: string; customer_badge_img?: string;
   };
   footer: FooterConfig;
 }

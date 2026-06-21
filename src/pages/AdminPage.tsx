@@ -3389,6 +3389,83 @@ function ThemeTab() {
             </div>
           </div>
 
+          {/* ── Card: Color Your World (Community) ─────────────── */}
+          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:18}}>🌈</span>
+              <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Color Your World (Community Cozy Picks)</span>
+            </div>
+            <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Homepage carousel of admin-picked Cozy Picks. Shows below the featured collection.</p>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              {([
+                ['community_title','community_title_th','Section title','🌈 Color Your World','🌈 แต่งแต้มโลกของคุณ'],
+                ['community_subtitle','community_subtitle_th','Subtitle','Real coloring results from our community','ผลงานระบายสีจริงจากชุมชนของเรา'],
+                ['community_btn','community_btn_th','Button text','✨ Explore Community →','✨ สำรวจชุมชน →'],
+              ] as [string,string,string,string,string][]).map(([key,keyTh,label,ph,phTh])=>(
+                <React.Fragment key={key}>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label} (EN)</label>
+                    <input value={(draft.labels||{})[key]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [key]:e.target.value}}))} placeholder={ph}
+                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                  </div>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>{label} (TH)</label>
+                    <input value={(draft.labels||{})[keyTh]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [keyTh]:e.target.value}}))} placeholder={phTh}
+                      style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}}
+                      onFocus={e=>e.target.style.borderColor=P} onBlur={e=>e.target.style.borderColor='#e5e7eb'} />
+                  </div>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Card: Community Badges (Creator / Customer) ────── */}
+          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:18}}>🌷</span>
+              <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Community Badges</span>
+            </div>
+            <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>The mark shown next to names in Community. Use an emoji, or upload your own image (image overrides emoji).</p>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+              {([
+                ['🌷 Fluffy Creator','creator_badge','creator_badge_img','🌷'],
+                ['👤 Community Member','customer_badge','customer_badge_img','👤'],
+              ] as [string,string,string,string][]).map(([label,emojiKey,imgKey,def])=>{
+                const L:any = draft.labels||{};
+                const img = L[imgKey];
+                return (
+                  <div key={emojiKey} style={{border:'1.5px solid #f3f4f6',borderRadius:12,padding:14}}>
+                    <div style={{fontSize:13,fontWeight:800,color:'#374151',marginBottom:10}}>{label}</div>
+                    <div style={{display:'flex',alignItems:'center',gap:12}}>
+                      <div style={{width:52,height:52,borderRadius:'50%',background:'#f8fafc',border:'1.5px solid #e5e7eb',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,overflow:'hidden',flexShrink:0}}>
+                        {img ? <img src={img} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}} /> : (L[emojiKey]||def)}
+                      </div>
+                      <div style={{flex:1}}>
+                        <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>Emoji</label>
+                        <input value={L[emojiKey]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [emojiKey]:e.target.value}}))} placeholder={def} maxLength={4}
+                          style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:18,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} />
+                      </div>
+                    </div>
+                    <div style={{display:'flex',gap:8,marginTop:10}}>
+                      <label style={{flex:1,padding:'8px',borderRadius:8,border:`1.5px dashed ${P}50`,textAlign:'center',cursor:'pointer',fontSize:12,fontWeight:700,color:P}}>
+                        📤 Upload image
+                        <input type="file" accept="image/*" style={{display:'none'}} onChange={async e=>{
+                          const f=e.target.files?.[0]; e.target.value='';
+                          if(!f)return;
+                          const r:any=await api.uploadFile(f,'badges');
+                          const url=r?.publicUrl||r?.url;
+                          if(url) setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [imgKey]:url}}));
+                        }} />
+                      </label>
+                      {img && <button onClick={()=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [imgKey]:''}}))} style={{padding:'8px 12px',borderRadius:8,border:'1.5px solid #fca5a5',background:'white',color:'#dc2626',cursor:'pointer',fontSize:12,fontWeight:700}}>Remove</button>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* ── Card: Featured Products ───────────────────────── */}
           <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
             <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
@@ -3499,7 +3576,7 @@ function ThemeTab() {
             </div>
             <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Drag or click ↑↓ to reorder sections on the homepage.</p>
             {draft.sections?.map((s:string,i:number)=>{
-              const sLabels:any={hero:'🌟 Hero Banner',featured:'⭐ Featured Products',categories:'📂 Browse by Category',artists:'🎨 Meet Our Artists',newsletter:'💌 Newsletter',blog:'📄 Blog / Pages'};
+              const sLabels:any={hero:'🌟 Hero Banner',featured:'⭐ Featured Products',community:'🌈 Color Your World',categories:'📂 Browse by Category',artists:'🎨 Meet Our Artists',newsletter:'💌 Newsletter',blog:'📄 Blog / Pages'};
               return (
                 <div key={s} style={{display:'flex',alignItems:'center',gap:10,background:'#fafafa',borderRadius:10,padding:'11px 14px',marginBottom:6,border:'1px solid #f3f4f6'}}>
                   <span style={{color:'#d1d5db',fontSize:16,userSelect:'none' as const}}>⠿</span>

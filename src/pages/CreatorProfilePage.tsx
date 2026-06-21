@@ -4,6 +4,7 @@ import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
 import CommunityCard from '../components/CommunityCard';
+import BadgeIcon from '../components/BadgeIcon';
 
 // Build a full URL from a username/handle or raw link for each platform.
 function socialUrl(kind: string, raw: string): string {
@@ -41,7 +42,6 @@ export default function CreatorProfilePage({ userId }: { userId: string }) {
 
   const c = data.creator;
   const posts = data.posts || [];
-  const badge = c.affiliate_enabled ? '🌷' : '👤';
   const joined = c.joined ? new Date(c.joined).toLocaleDateString(undefined, { year: 'numeric', month: 'short' }) : '';
   const stat = (label: string, value: any) => (
     <div style={{ textAlign: 'center' }}>
@@ -59,10 +59,10 @@ export default function CreatorProfilePage({ userId }: { userId: string }) {
         {/* Header */}
         <div style={{ background: 'white', borderRadius: 20, padding: 24, boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: `1.5px solid ${p}12`, display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
           <div style={{ width: 80, height: 80, borderRadius: '50%', overflow: 'hidden', background: p + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, flexShrink: 0 }}>
-            {c.avatar_url ? <img src={c.avatar_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '👤'}
+            {c.avatar_url ? <img src={c.avatar_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <BadgeIcon affiliate={c.affiliate_enabled} size={36} />}
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#1e293b', margin: '0 0 4px' }}>{badge} {c.name}</h1>
+            <h1 style={{ fontSize: 22, fontWeight: 900, color: '#1e293b', margin: '0 0 4px' }}><BadgeIcon affiliate={c.affiliate_enabled} size={20} /> {c.name}</h1>
             {c.artist_slug && <button onClick={() => navigate(`/artists/${c.artist_slug}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 12, fontWeight: 700, padding: 0, marginBottom: 4 }}>{tRaw('ดูหน้าศิลปิน →', 'View artist page →')}</button>}
             {/* Fluffy Creator bio takes priority; else customer about-me */}
             {(c.creator_bio || c.bio) && <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, margin: '4px 0 0' }}>{c.creator_bio || c.bio}</p>}
