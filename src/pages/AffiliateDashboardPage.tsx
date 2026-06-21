@@ -35,6 +35,8 @@ export default function AffiliateDashboardPage() {
 
   // Fluffy Creator profile (shown on the Community creator page)
   const [cp, setCp] = useState({ creator_bio:'', creator_tiktok:'', creator_instagram:'', creator_youtube:'', creator_website:'' });
+  const [avatar, setAvatar] = useState('');
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [cpMsg, setCpMsg] = useState('');
   const [cpSaving, setCpSaving] = useState(false);
 
@@ -47,13 +49,23 @@ export default function AffiliateDashboardPage() {
           creator_instagram: cr.instagram || '', creator_youtube: cr.youtube || '',
           creator_website: cr.website || '',
         });
+        setAvatar(d.avatar_url || '');
       }
     }).catch(() => {});
   }, []);
 
+  const uploadAvatar = async (file: File) => {
+    setAvatarUploading(true);
+    const r: any = await api.uploadFile(file, 'avatars').catch(() => null);
+    setAvatarUploading(false);
+    const url = r?.publicUrl || r?.url;
+    if (url) setAvatar(url);
+    else setCpMsg('⚠️ Upload failed');
+  };
+
   const saveCp = async () => {
     setCpSaving(true); setCpMsg('');
-    const res = await api.updateMe(cp);
+    const res = await api.updateMe({ ...cp, avatar_url: avatar || null });
     setCpSaving(false);
     setCpMsg(res?.error ? ('⚠️ ' + res.error) : '✓ Saved');
     setTimeout(() => setCpMsg(''), 3000);
@@ -109,6 +121,20 @@ export default function AffiliateDashboardPage() {
         <h2 style={{ fontSize:18, fontWeight:800, color:'#1e293b', marginBottom:12 }}>🌷 {tRaw('โปรไฟล์ครีเอเตอร์','Creator Profile')}</h2>
         <div style={{ background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 10px rgba(0,0,0,0.05)', marginBottom:28 }}>
           <p style={{ fontSize:12, color:'#94a3b8', marginTop:0, marginBottom:16 }}>{tRaw('ข้อมูลนี้จะแสดงบนหน้าโปรไฟล์ครีเอเตอร์ของคุณในชุมชน','This appears on your Community creator profile page.')}</p>
+          {/* Profile picture */}
+          <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:16 }}>
+            <div style={{ width:64, height:64, borderRadius:'50%', overflow:'hidden', background:p+'20', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, flexShrink:0 }}>
+              {avatar ? <img src={avatar} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : '🌷'}
+            </div>
+            <div>
+              <label style={{ display:'inline-block', padding:'8px 16px', borderRadius:10, border:`1.5px dashed ${p}50`, cursor:'pointer', fontSize:13, fontWeight:700, color:p, fontFamily:theme.fontFamily }}>
+                {avatarUploading ? tRaw('กำลังอัปโหลด...','Uploading...') : `📤 ${tRaw('อัปโหลดรูปโปรไฟล์','Upload profile picture')}`}
+                <input type="file" accept="image/*" style={{ display:'none' }} disabled={avatarUploading} onChange={e=>{ const f=e.target.files?.[0]; if(f)uploadAvatar(f); e.target.value=''; }} />
+              </label>
+              {avatar && <button onClick={()=>setAvatar('')} style={{ marginLeft:8, padding:'8px 12px', borderRadius:10, border:'1.5px solid #fca5a5', background:'white', color:'#dc2626', cursor:'pointer', fontSize:12, fontWeight:700 }}>{tRaw('ลบ','Remove')}</button>}
+              <div style={{ fontSize:11, color:'#94a3b8', marginTop:4 }}>{tRaw('ไม่บังคับ — ใช้รูปเริ่มต้นหากไม่อัปโหลด','Optional — default avatar is used if empty')}</div>
+            </div>
+          </div>
           <div style={{ marginBottom:14 }}>
             <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#374151', marginBottom:6 }}>{tRaw('แนะนำตัวครีเอเตอร์','Creator bio')}</label>
             <textarea value={cp.creator_bio} onChange={e=>setCp(c=>({...c,creator_bio:e.target.value}))} rows={3} maxLength={300} placeholder={tRaw('เล่าเกี่ยวกับสไตล์การระบายสีของคุณ...','Tell the community about your coloring style...')} style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:`1.5px solid ${p}30`, fontSize:14, outline:'none', fontFamily:theme.fontFamily, resize:'vertical', boxSizing:'border-box' }} />

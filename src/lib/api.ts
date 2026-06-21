@@ -167,6 +167,12 @@ export const api = {
   getExternalBook: (slug: string) => fetch(`/api/community?action=external-book&slug=${encodeURIComponent(slug)}&guest_id=${getGuestId()}`, { headers: h() }).then(r => r.json()),
   getCommunityRelated: (id: string) => fetch(`/api/community?action=related&id=${id}&guest_id=${getGuestId()}`, { headers: h() }).then(r => r.json()),
   searchFeaturedCreators: (q: string) => fetch(`/api/community?action=admin-creators-search&q=${encodeURIComponent(q)}`, { headers: h() }).then(r => r.json()),
+  searchCommunity: (q: string, page = 0) => fetch(`/api/community?action=search&q=${encodeURIComponent(q)}&page=${page}&guest_id=${getGuestId()}`, { headers: h() }).then(r => r.json()),
+  // Admin External Book Library
+  getAdminBooks: () => fetch('/api/community?action=admin-books', { headers: h() }).then(r => r.json()),
+  renameAdminBook: (id: string, title: string, author: string) => fetch(`/api/community?action=admin-book-rename&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify({ title, author }) }).then(r => r.json()),
+  mergeAdminBooks: (from: string[], to: string) => fetch('/api/community?action=admin-book-merge', { method: 'POST', headers: h(), body: JSON.stringify({ from, to }) }).then(r => r.json()),
+  deleteAdminBook: (id: string) => fetch(`/api/community?action=admin-book&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 
   // Analytics
   getAnalytics: () => fetch('/api/analytics', { headers: h() }).then(r => r.json()),

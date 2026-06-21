@@ -2121,6 +2121,9 @@ function CommunityDashboardTab() {
   const [tagLibType, setTagLibType] = useState('marker');
   const [tagLibItems, setTagLibItems] = useState<any[]>([]);
   const [tagLibLoading, setTagLibLoading] = useState(false);
+  // External Books library
+  const [libBooks, setLibBooks] = useState<any[]>([]);
+  const [bookMergeSel, setBookMergeSel] = useState<string[]>([]);
   const [newTagName, setNewTagName] = useState('');
   const [tagFrom, setTagFrom] = useState('');
   const [tagTo, setTagTo] = useState('');
@@ -2134,10 +2137,31 @@ function CommunityDashboardTab() {
       setHasMore(!!d?.hasMore);
     }).catch(()=>{});
   },[]);
+  const loadBooks = useCallback(() => { api.getAdminBooks().then((d:any)=>setLibBooks(d?.books||[])).catch(()=>{}); },[]);
   const loadTagLib = useCallback((type:string) => {
+    if (type === 'books') { loadBooks(); return; }
     setTagLibLoading(true);
     api.getAdminTags(type).then((d:any)=>{ setTagLibItems(d?.tags||[]); setTagLibLoading(false); }).catch(()=>setTagLibLoading(false));
-  },[]);
+  },[loadBooks]);
+
+  const renameBook = async (bk:any) => {
+    const title = prompt('Book title:', bk.title); if (title===null) return;
+    const author = prompt('Author / brand:', bk.author||''); if (author===null) return;
+    const r = await api.renameAdminBook(bk.id, title.trim(), author.trim());
+    if (r?.error) return flash('⚠️ '+r.error); flash('✓ Renamed'); loadBooks();
+  };
+  const deleteBook = async (bk:any) => {
+    if (!confirm(`Delete "${bk.title}"? Posts using it stay but become untagged. This cannot be undone.`)) return;
+    const r = await api.deleteAdminBook(bk.id);
+    if (r?.error) return flash('⚠️ '+r.error); flash('✓ Deleted'); loadBooks();
+  };
+  const mergeBooks = async () => {
+    if (bookMergeSel.length < 2) return flash('⚠️ Select 2+ books, then click the keeper');
+    const to = bookMergeSel[bookMergeSel.length-1];
+    const from = bookMergeSel.slice(0,-1);
+    const r = await api.mergeAdminBooks(from, to);
+    if (r?.error) return flash('⚠️ '+r.error); flash('✓ Merged'); setBookMergeSel([]); loadBooks();
+  };
 
   const applyPostFilters = useCallback((pg:number)=>{
     const st = statusTab === 'all' ? '' : statusTab;
@@ -2349,10 +2373,36 @@ function CommunityDashboardTab() {
       {/* ── Tag Library ── */}
       {communityTab==='tags' && <>
         <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-          {[['marker','🖍️ Markers'],['medium','🎨 Mediums'],['palette','🌷 Palettes']].map(([k,lbl])=>(
+          {[['marker','🖍️ Markers'],['medium','🎨 Mediums'],['palette','🌷 Palettes'],['books','📖 External Books']].map(([k,lbl])=>(
             <button key={k} onClick={()=>setTagLibType(k)} style={{padding:'7px 16px',borderRadius:18,border:'none',cursor:'pointer',fontSize:13,fontWeight:700,background:tagLibType===k?P:P+'15',color:tagLibType===k?'white':P,fontFamily:'inherit'}}>{lbl}</button>
           ))}
         </div>
+
+        {/* External Books management */}
+        {tagLibType==='books' ? (
+          <div style={{...card,padding:16,marginBottom:20}}>
+            <p style={{fontSize:12,color:'#6b7280',margin:'0 0 12px'}}>Community-entered books. Rename to fix spelling, merge duplicates (select 2+, last clicked = keeper), or delete (posts stay, become untagged).</p>
+            {bookMergeSel.length>=2 && <button onClick={mergeBooks} style={{marginBottom:12,padding:'8px 16px',borderRadius:10,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:700}}>Merge {bookMergeSel.length} → keep last</button>}
+            <div style={{display:'flex',flexDirection:'column',gap:6}}>
+              {libBooks.map((bk:any)=>{
+                const sel = bookMergeSel.includes(bk.id);
+                return (
+                  <div key={bk.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',borderRadius:10,border:`1.5px solid ${sel?P:'#f1f5f9'}`,background:sel?P+'08':'white'}}>
+                    <input type="checkbox" checked={sel} onChange={()=>setBookMergeSel(s=>sel?s.filter(x=>x!==bk.id):[...s,bk.id])} />
+                    <div style={{flex:1}}>
+                      <span style={{fontSize:13,fontWeight:700,color:'#1e293b'}}>📖 {bk.title}</span>
+                      {bk.author && <span style={{fontSize:12,color:'#94a3b8'}}> by {bk.author}</span>}
+                      <span style={{fontSize:11,color:'#cbd5e1'}}> · {bk.post_count||0} posts · {bk.creator_count||0} creators</span>
+                    </div>
+                    <button onClick={()=>renameBook(bk)} style={{padding:'4px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:600,color:'#374151'}}>Rename</button>
+                    <button onClick={()=>deleteBook(bk)} style={{padding:'4px 10px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:12,fontWeight:600,color:'#dc2626'}}>Delete</button>
+                  </div>
+                );
+              })}
+              {libBooks.length===0&&<span style={{fontSize:13,color:'#9ca3af'}}>No external books yet.</span>}
+            </div>
+          </div>
+        ) : <>
 
         {/* Add new approved tag */}
         <div style={{...card,padding:16,marginBottom:16}}>
@@ -2396,6 +2446,7 @@ function CommunityDashboardTab() {
             <button onClick={mergeTags} style={{padding:'9px 18px',borderRadius:10,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:700}}>Merge</button>
           </div>
         </div>
+        </>}
       </>}
     </div>
   );

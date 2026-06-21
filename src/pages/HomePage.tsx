@@ -78,7 +78,7 @@ function CommunitySection() {
         <p style={{ fontSize: 14, color: theme.textColor + '99', margin: 0 }}>{tl(theme.labels?.community_subtitle || 'Real coloring results from our community', theme.labels?.community_subtitle_th)}</p>
       </div>
 
-      <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 10, scrollSnapType: 'x mandatory' }}>
+      <div style={{ display: 'flex', gap: 14, paddingBottom: 10, scrollSnapType: 'x mandatory', justifyContent: posts.length > 6 ? 'flex-start' : 'center', overflowX: posts.length > 6 ? 'auto' : 'visible', flexWrap: 'nowrap' }}>
         {posts.map(post => {
           const cover = (post.artwork_urls && post.artwork_urls.length ? post.artwork_urls[0] : post.thumb_url || post.artwork_url);
           const bookTitle = post.product?.title || post.external_book?.title || post.external_book_title || '';

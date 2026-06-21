@@ -40,6 +40,8 @@ export default function CommunityPage() {
   const [showForm, setShowForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filter, setFilter] = useState<Filter>(initialFilter);
+  const [searchQ, setSearchQ] = useState('');
+  const [debouncedQ, setDebouncedQ] = useState('');
   const [cozy, setCozy] = useState<any[]>([]);
   const [curation, setCuration] = useState<{ featured_books: any[]; featured_creators: any[] }>({ featured_books: [], featured_creators: [] });
   const [facets, setFacets] = useState<{ palettes: any[]; markers: any[]; mediums: any[]; books: any[]; externalBooks: any[] }>({ palettes: [], markers: [], mediums: [], books: [], externalBooks: [] });
@@ -54,27 +56,37 @@ export default function CommunityPage() {
     api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [], mediums: d?.mediums || [], books: d?.books || [], externalBooks: d?.externalBooks || [] })).catch(() => {});
   }, []);
 
-  const loadPage = useCallback((pg: number, f: Filter) => {
+  const loadPage = useCallback((pg: number, f: Filter, q: string) => {
     setLoading(true);
+    const done = (d: any) => {
+      const list = d?.posts || [];
+      setPosts(prev => pg === 0 ? list : [...prev, ...list]);
+      setHasMore(!!d?.hasMore);
+      setLoading(false);
+    };
+    // Universal search overrides tag filters
+    if (q && q.trim()) {
+      api.searchCommunity(q.trim(), pg).then(done).catch(() => setLoading(false));
+      return;
+    }
     const opts: any = { page: pg, limit: PAGE };
     if (f.kind === 'palette') opts.palette = f.value;
     if (f.kind === 'marker') opts.marker = f.value;
     if (f.kind === 'medium') opts.medium = f.value;
     if (f.kind === 'month') opts.month = f.value;
     if (f.kind === 'product') opts.product_id = f.value;
-    api.getCommunityPosts(opts).then((d: any) => {
-      const list = d?.posts || [];
-      setPosts(prev => pg === 0 ? list : [...prev, ...list]);
-      setHasMore(!!d?.hasMore);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    api.getCommunityPosts(opts).then(done).catch(() => setLoading(false));
   }, []);
 
-  useEffect(() => { setPage(0); loadPage(0, filter); }, [filter, loadPage]);
+  // Debounce the search input
+  useEffect(() => { const t = setTimeout(() => setDebouncedQ(searchQ), 300); return () => clearTimeout(t); }, [searchQ]);
+  useEffect(() => { setPage(0); loadPage(0, filter, debouncedQ); }, [filter, debouncedQ, loadPage]);
 
   const onPosted = (post: any) => { setShowForm(false); setPosts(prev => [post, ...prev]); };
-  const isAll = filter.kind === 'all';
-  const choose = (f: Filter) => { setFilter(f); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const searching = debouncedQ.trim().length > 0;
+  const isAll = filter.kind === 'all' && !searching;
+  const choose = (f: Filter) => { setSearchQ(''); setDebouncedQ(''); setFilter(f); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const browseAll = () => { setSearchQ(''); setDebouncedQ(''); setFilter({ kind: 'all' }); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
   return (
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
@@ -98,13 +110,36 @@ export default function CommunityPage() {
 
         {showForm && user && <UploadForm theme={theme} p={p} tRaw={tRaw} onPosted={onPosted} user={user} />}
 
-        {/* 1. 🌷 Cozy Picks — horizontal carousel at top, fixed-height cards */}
+        {/* 🔎 Universal search — searches captions, books, creators, markers, mediums, palettes */}
+        <div style={{ maxWidth: 620, margin: '0 auto 22px' }}>
+          <div style={{ position: 'relative' }}>
+            <input
+              value={searchQ}
+              onChange={e => setSearchQ(e.target.value)}
+              placeholder={tRaw('🔎 ค้นหาผลงาน หนังสือ ครีเอเตอร์ ปากกา หรือคำบรรยาย…', '🔎 Search creations, books, creators, markers or captions…')}
+              style={{ width: '100%', padding: '12px 40px 12px 16px', borderRadius: 24, border: `1.5px solid ${p}30`, fontSize: 14, outline: 'none', fontFamily: theme.fontFamily, boxSizing: 'border-box', background: 'white' }}
+              onFocus={e => e.currentTarget.style.borderColor = p}
+              onBlur={e => e.currentTarget.style.borderColor = p + '30'}
+            />
+            {searchQ && <button onClick={browseAll} aria-label="Clear" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#94a3b8' }}>✕</button>}
+          </div>
+          {!searching && (
+            <div style={{ textAlign: 'center', marginTop: 10 }}>
+              <button onClick={browseAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 13, fontWeight: 700, fontFamily: theme.fontFamily }}>✨ {tRaw('ดูผลงานทั้งหมด', 'Browse all creations')}</button>
+            </div>
+          )}
+        </div>
+
+        {/* 1. 🌷 Cozy Picks — centered single row (≤6), carousel (>6). Secondary inspiration. */}
         {isAll && cozy.length > 0 && (
-          <div style={{ marginBottom: 28 }}>
-            <SectionHead theme={theme} title={`🌷 ${tRaw('คอลเลกชันอบอุ่น', 'Cozy Picks')}`} />
-            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ textAlign: 'center', marginBottom: 14 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 900, color: theme.textColor, margin: '0 0 2px' }}>🌷 {tRaw('คอลเลกชันอบอุ่น', 'Cozy Picks')}</h2>
+              <p style={{ fontSize: 12.5, color: theme.textColor + '88', margin: 0 }}>{tRaw('ผลงานคัดสรรเพื่อจุดประกายการระบายสีของคุณ', 'A few cozy artworks we love — to inspire your next session.')}</p>
+            </div>
+            <div style={{ display: 'flex', gap: 14, paddingBottom: 8, justifyContent: cozy.length > 6 ? 'flex-start' : 'center', overflowX: cozy.length > 6 ? 'auto' : 'visible', flexWrap: 'nowrap' }}>
               {cozy.map(post => (
-                <div key={'c' + post.id} style={{ width: 180, flexShrink: 0 }}>
+                <div key={'c' + post.id} style={{ width: 204, flexShrink: 0 }}>
                   <CommunityCard post={post} compact />
                 </div>
               ))}
@@ -131,15 +166,16 @@ export default function CommunityPage() {
           </div>
         ) : null}
 
-        {/* 3. 🆕 New Creations */}
+        {/* 3. 🆕 New Creations / Search results */}
         <SectionHead theme={theme} title={
-          isAll ? `🆕 ${tRaw('ผลงานใหม่ล่าสุด', 'New Creations')}`
+          searching ? `🔎 ${tRaw('ผลการค้นหา', 'Results for')} “${debouncedQ.trim()}”`
+            : isAll ? `🆕 ${tRaw('ผลงานใหม่ล่าสุด', 'New Creations')}`
             : filter.kind === 'palette' ? `🌷 ${filter.value}`
             : filter.kind === 'marker' ? `🖍️ ${filter.value}`
             : filter.kind === 'medium' ? `🎨 ${filter.value}`
             : filter.kind === 'product' ? `📚 ${filter.label || tRaw('จากเล่มนี้', 'This book')}`
             : `📅 ${filter.value}`
-        } onClear={!isAll ? () => setFilter({ kind: 'all' }) : undefined} clearLabel={tRaw('ล้าง', 'Clear')} />
+        } onClear={(!isAll || searching) ? browseAll : undefined} clearLabel={tRaw('ล้าง', 'Clear')} />
 
         {!loading && posts.length === 0 ? (
           <Empty theme={theme} tRaw={tRaw} isAll={isAll} />
@@ -149,7 +185,7 @@ export default function CommunityPage() {
             {loading && <div style={{ textAlign: 'center', padding: 24, color: '#9ca3af', fontSize: 26 }}>⏳</div>}
             {hasMore && !loading && (
               <div style={{ textAlign: 'center', marginTop: 20 }}>
-                <button onClick={() => { const np = page + 1; setPage(np); loadPage(np, filter); }} style={{ background: 'transparent', border: `2px solid ${p}`, color: p, cursor: 'pointer', padding: '10px 28px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily }}>{tRaw('ดูเพิ่มเติม', 'Load more')}</button>
+                <button onClick={() => { const np = page + 1; setPage(np); loadPage(np, filter, debouncedQ); }} style={{ background: 'transparent', border: `2px solid ${p}`, color: p, cursor: 'pointer', padding: '10px 28px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily }}>{tRaw('ดูเพิ่มเติม', 'Load more')}</button>
               </div>
             )}
           </>

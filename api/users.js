@@ -371,7 +371,7 @@ module.exports = async function handler(req, res) {
       const user = await requireAuth(req, res);
       if (!user) return;
       const body = req.body || {};
-      const fields = ['name','username','bio','first_name','last_name','phone','delivery_email','shipping_address','province','postal_code','preferred_lang','community_about','community_country','community_favorite_medium'];
+      const fields = ['name','username','bio','avatar_url','first_name','last_name','phone','delivery_email','shipping_address','province','postal_code','preferred_lang','community_about','community_country','community_favorite_medium'];
       const updates = { updated_at: new Date().toISOString() };
       fields.forEach(f => { if (body[f] !== undefined) updates[f] = body[f]; });
 
@@ -395,7 +395,7 @@ module.exports = async function handler(req, res) {
         role: user.role || 'customer',
         ...updates,
       };
-      const PROFILE_SELECT = 'id,email,name,username,role,bio,artist_slug,favorites,first_name,last_name,phone,delivery_email,shipping_address,province,postal_code,preferred_lang,community_about,community_country,community_favorite_medium,social_links';
+      const PROFILE_SELECT = 'id,email,name,username,role,bio,avatar_url,artist_slug,favorites,first_name,last_name,phone,delivery_email,shipping_address,province,postal_code,preferred_lang,community_about,community_country,community_favorite_medium,social_links';
       const { data, error } = await supabase
         .from('profiles')
         .upsert(upsertData, { onConflict: 'id' })

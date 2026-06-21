@@ -221,6 +221,41 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { success: true });
   }
 
+  // GET search — universal search across ALL posts (caption, book, creator, marker/medium/palette).
+  // Tag-independent: a post with no tags is still found by caption/book/creator.
+  if (req.method === 'GET' && action === 'search') {
+    const viewer = await getUser(req);
+    const term = String(req.query.q || '').trim().toLowerCase();
+    const page = Math.max(0, parseInt(req.query.page) || 0);
+    const limit = Math.min(PAGE_LIMIT_MAX, Math.max(1, parseInt(req.query.limit) || 20));
+    if (!term) return json(res, 200, { posts: [], total: 0, page, hasMore: false });
+    const { data: rows } = await supabase.from('community_posts').select('*')
+      .eq('status', 'published').order('created_at', { ascending: false }).range(0, 999);
+    const uids = [...new Set((rows || []).map(r => r.user_id).filter(Boolean))];
+    const pids = [...new Set((rows || []).map(r => r.product_id).filter(Boolean))];
+    const ebids = [...new Set((rows || []).map(r => r.external_book_id).filter(Boolean))];
+    const [{ data: us }, { data: prs }, { data: ebs }] = await Promise.all([
+      uids.length ? supabase.from('profiles').select('id,name,username').in('id', uids) : Promise.resolve({ data: [] }),
+      pids.length ? supabase.from('products').select('id,title').in('id', pids) : Promise.resolve({ data: [] }),
+      ebids.length ? supabase.from('external_books').select('id,title,author').in('id', ebids) : Promise.resolve({ data: [] }),
+    ]);
+    const uMap = Object.fromEntries((us || []).map(u => [u.id, u]));
+    const pMap = Object.fromEntries((prs || []).map(p => [p.id, p]));
+    const eMap = Object.fromEntries((ebs || []).map(b => [b.id, b]));
+    const matched = (rows || []).filter(r => {
+      const u = uMap[r.user_id]; const pr = pMap[r.product_id]; const eb = eMap[r.external_book_id];
+      const hay = [
+        r.caption, pr && pr.title, eb && eb.title, r.external_book_title, (eb && eb.author) || r.external_book_author,
+        u && (u.username || u.name), ...(r.markers || []), ...(r.mediums || []), ...(r.palettes || []),
+      ].filter(Boolean).join('   ').toLowerCase();
+      return hay.includes(term);
+    });
+    const from = page * limit;
+    const slice = matched.slice(from, from + limit);
+    const decorated = await decorate(slice, viewer?.id, req.query.guest_id);
+    return json(res, 200, { posts: decorated, total: matched.length, page, hasMore: from + slice.length < matched.length });
+  }
+
   // GET list — paginated, newest first; optional product/user/palette/marker/medium filters
   if (req.method === 'GET' && (action === 'list' || !action)) {
     const viewer = await getUser(req);
@@ -678,6 +713,59 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { success: true });
   }
 
+  // ─────────────────── Admin: External Book Library ───────────────────
+
+  // GET ?action=admin-books — all external books with usage counts
+  if (req.method === 'GET' && action === 'admin-books') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { data } = await supabase.from('external_books').select('*').order('post_count', { ascending: false }).order('title');
+    return json(res, 200, { books: data || [] });
+  }
+
+  // POST ?action=admin-book-rename&id= {title,author} — rename a book (and its author/brand)
+  if (req.method === 'POST' && action === 'admin-book-rename') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { id } = req.query;
+    const title = String((req.body || {}).title || '').trim();
+    const author = String((req.body || {}).author || '').trim();
+    if (!id || !title) return json(res, 400, { error: 'id and title required' });
+    const normalized = (title + '|' + author).toLowerCase();
+    const { error } = await supabase.from('external_books').update({ title, author: author || null, normalized_title: normalized }).eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
+  }
+
+  // POST ?action=admin-book-merge {from:[ids], to:id} — repoint posts, delete dupes
+  if (req.method === 'POST' && action === 'admin-book-merge') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { from, to } = req.body || {};
+    if (!Array.isArray(from) || !from.length || !to) return json(res, 400, { error: 'from[] and to required' });
+    const sources = from.filter(x => x !== to);
+    if (!sources.length) return json(res, 200, { success: true, changed: 0 });
+    const { data: target } = await supabase.from('external_books').select('title,author').eq('id', to).single();
+    // Repoint posts from each source to the target
+    await supabase.from('community_posts').update({ external_book_id: to, external_book_title: target?.title || null, external_book_author: target?.author || null }).in('external_book_id', sources);
+    await supabase.from('external_books').delete().in('id', sources);
+    await recountExternalBook(to);
+    return json(res, 200, { success: true });
+  }
+
+  // DELETE ?action=admin-book&id= — delete a book; affected posts become untagged (book cleared)
+  if (req.method === 'DELETE' && action === 'admin-book') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { id } = req.query;
+    if (!id) return json(res, 400, { error: 'id required' });
+    // Clear the book reference on posts so nothing breaks (posts remain, just untagged)
+    await supabase.from('community_posts').update({ external_book_id: null, external_book_title: null, external_book_author: null }).eq('external_book_id', id);
+    const { error } = await supabase.from('external_books').delete().eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
+  }
+
   // ─────────────────── Tag Library ───────────────────
 
   // GET ?action=tags&type=medium|marker|palette — approved tags for upload form
@@ -728,14 +816,28 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { success: true });
   }
 
-  // DELETE ?action=admin-tag&id= — delete a tag
+  // DELETE ?action=admin-tag&id= — delete a tag AND strip it from posts (posts stay, untagged)
   if (req.method === 'DELETE' && action === 'admin-tag') {
     const admin = await requireAuth(req, res, ['admin']);
     if (!admin) return;
     const { id } = req.query;
     if (!id) return json(res, 400, { error: 'id required' });
+    const { data: tag } = await supabase.from('community_tags').select('type,name,normalized').eq('id', id).single();
     const { error } = await supabase.from('community_tags').delete().eq('id', id);
     if (error) return json(res, 400, { error: error.message });
+    // Strip the tag value from any posts that used it (case-insensitive), keeping posts intact
+    if (tag) {
+      const field = tag.type === 'medium' ? 'mediums' : tag.type === 'marker' ? 'markers' : 'palettes';
+      const norm = (tag.normalized || tag.name || '').toLowerCase();
+      const { data: rows } = await supabase.from('community_posts').select('id,' + field).range(0, 9999);
+      for (const row of (rows || [])) {
+        const arr = row[field] || [];
+        if (arr.some(v => String(v).trim().toLowerCase() === norm)) {
+          const next = arr.filter(v => String(v).trim().toLowerCase() !== norm);
+          await supabase.from('community_posts').update({ [field]: next }).eq('id', row.id);
+        }
+      }
+    }
     return json(res, 200, { success: true });
   }
 
@@ -755,8 +857,9 @@ module.exports = async function handler(req, res) {
     const cMap = Object.fromEntries((creators||[]).map(c=>[c.id,c]));
     return json(res, 200, {
       featured_books: bookIds.map(id=>bMap[id]).filter(Boolean),
+      // Only still-active Fluffy Creators appear as Featured (revoked auto-drop)
       featured_creators: creatorIds.map(id=>{
-        const c = cMap[id]; if (!c) return null;
+        const c = cMap[id]; if (!c || !c.affiliate_enabled) return null;
         return { id:c.id, name:c.username||c.name||'Community Member', avatar_url:c.avatar_url||null, affiliate_enabled:!!c.affiliate_enabled, community_about:c.community_about||null, community_country:c.community_country||null, community_favorite_medium:c.community_favorite_medium||null };
       }).filter(Boolean),
     });
