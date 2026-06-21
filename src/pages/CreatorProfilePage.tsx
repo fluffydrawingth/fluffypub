@@ -5,6 +5,17 @@ import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
 import CommunityCard from '../components/CommunityCard';
 
+// Build a full URL from a username/handle or raw link for each platform.
+function socialUrl(kind: string, raw: string): string {
+  const v = String(raw || '').trim();
+  if (/^https?:\/\//i.test(v)) return v;
+  const handle = v.replace(/^@/, '');
+  if (kind === 'tiktok') return `https://www.tiktok.com/@${handle}`;
+  if (kind === 'instagram') return `https://www.instagram.com/${handle}`;
+  if (kind === 'youtube') return v.startsWith('@') ? `https://www.youtube.com/${v}` : `https://www.youtube.com/@${handle}`;
+  return `https://${v}`;
+}
+
 // Community creator profile — avatar, bio, joined date, stats, and their gallery.
 export default function CreatorProfilePage({ userId }: { userId: string }) {
   const { theme } = useTheme();
@@ -53,12 +64,22 @@ export default function CreatorProfilePage({ userId }: { userId: string }) {
           <div style={{ flex: 1, minWidth: 200 }}>
             <h1 style={{ fontSize: 22, fontWeight: 900, color: '#1e293b', margin: '0 0 4px' }}>{badge} {c.name}</h1>
             {c.artist_slug && <button onClick={() => navigate(`/artists/${c.artist_slug}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 12, fontWeight: 700, padding: 0, marginBottom: 4 }}>{tRaw('ดูหน้าศิลปิน →', 'View artist page →')}</button>}
-            {c.bio && <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, margin: '4px 0 0' }}>{c.bio}</p>}
+            {/* Fluffy Creator bio takes priority; else customer about-me */}
+            {(c.creator_bio || c.bio) && <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, margin: '4px 0 0' }}>{c.creator_bio || c.bio}</p>}
             {c.community_about && <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.55, margin: '6px 0 0' }}>{c.community_about}</p>}
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
               {c.community_country && <span style={{ fontSize: 12, color: '#64748b' }}>📍 {c.community_country}</span>}
               {c.community_favorite_medium && <span style={{ fontSize: 12, color: '#64748b' }}>🎨 {c.community_favorite_medium}</span>}
             </div>
+            {/* Fluffy Creator social links — only for approved creators */}
+            {(c.creator_tiktok || c.creator_instagram || c.creator_youtube || c.creator_website) && (
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
+                {c.creator_tiktok && <a href={socialUrl('tiktok', c.creator_tiktok)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 700, color: p, textDecoration: 'none' }}>🎵 TikTok</a>}
+                {c.creator_instagram && <a href={socialUrl('instagram', c.creator_instagram)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 700, color: p, textDecoration: 'none' }}>📸 Instagram</a>}
+                {c.creator_youtube && <a href={socialUrl('youtube', c.creator_youtube)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 700, color: p, textDecoration: 'none' }}>▶️ YouTube</a>}
+                {c.creator_website && <a href={socialUrl('web', c.creator_website)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 700, color: p, textDecoration: 'none' }}>🌐 Website</a>}
+              </div>
+            )}
             {joined && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>{tRaw('เข้าร่วมเมื่อ', 'Joined')} {joined}</div>}
           </div>
           <div style={{ display: 'flex', gap: 20 }}>

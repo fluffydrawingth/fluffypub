@@ -96,7 +96,7 @@ export default function CommunityPage() {
           )}
         </div>
 
-        {showForm && user && <UploadForm theme={theme} p={p} tRaw={tRaw} onPosted={onPosted} />}
+        {showForm && user && <UploadForm theme={theme} p={p} tRaw={tRaw} onPosted={onPosted} user={user} />}
 
         {/* 1. 🌷 Editor's Picks — horizontal carousel at top, fixed-height cards */}
         {isAll && cozy.length > 0 && (
@@ -309,7 +309,7 @@ function CropModal({ file, theme, p, tRaw, onCrop, onSkip, onCancel }: {
 
 // ── Upload form ───────────────────────────────────────────────────────────────
 type UpImg = { file: File; preview: string };
-function UploadForm({ theme, p, tRaw, onPosted }: any) {
+function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
   const [images, setImages] = useState<UpImg[]>([]);            // cropped/final images to upload (max 10)
   const [cropRaw, setCropRaw] = useState<File | null>(null);    // raw file awaiting crop
   const [cropIdx, setCropIdx] = useState<number | null>(null);  // index being re-cropped (null = adding new)
@@ -324,6 +324,7 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
   const [mediums, setMediums] = useState<string[]>([]);
   const [markers, setMarkers] = useState<string[]>([]);
   const [palettes, setPalettes] = useState<string[]>([]);
+  const [tools, setTools] = useState<{ name: string; url: string }[]>([]);
   const [caption, setCaption] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -375,6 +376,7 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
         external_book_title: bookMode === 'external' ? extTitle.trim() || null : null,
         external_book_author: bookMode === 'external' ? extAuthor.trim() || null : null,
         mediums, markers, palettes, caption: caption.trim(),
+        recommended_tools: user?.affiliate_enabled ? tools.filter(t => t.name.trim()) : [],
       });
       if (res?.error) { setErr(res.error); setBusy(false); return; }
       onPosted(res);
@@ -486,6 +488,9 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
           <LibraryTagBlock type="marker" label={`🖍️ ${tRaw('ปากกา/ชุดที่ใช้', 'Marker / set used')}`} values={markers} setValues={setMarkers} addPh={tRaw('เพิ่มชุดปากกา...', 'Suggest a marker set...')} theme={theme} p={p} fld={fld} tRaw={tRaw} />
           <LibraryTagBlock type="palette" label={`🌷 ${tRaw('พาเลตต์ที่ใช้', 'Palette used')}`} values={palettes} setValues={setPalettes} addPh={tRaw('เพิ่มพาเลตต์...', 'Suggest a palette...')} theme={theme} p={p} fld={fld} tRaw={tRaw} />
 
+          {/* Recommended tools — Fluffy Creators only (affiliate links allowed, max 2) */}
+          {user?.affiliate_enabled && <RecommendedToolsBlock tools={tools} setTools={setTools} theme={theme} p={p} fld={fld} tRaw={tRaw} />}
+
           <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', margin: '4px 0 6px' }}>✏️ {tRaw('คำบรรยาย', 'Caption')} <span style={{ color: '#9ca3af', fontWeight: 500 }}>({caption.length}/300)</span></div>
           <textarea value={caption} maxLength={300} onChange={e => setCaption(e.target.value)} rows={2} placeholder={tRaw('เล่าเกี่ยวกับผลงานชิ้นนี้...', 'Tell us about this piece...')} style={{ ...fld, resize: 'vertical' }} />
 
@@ -497,6 +502,27 @@ function UploadForm({ theme, p, tRaw, onPosted }: any) {
       </div>
     </div>
     </>
+  );
+}
+
+// Recommended coloring tools (Fluffy Creators only). Max 2, name + optional affiliate link.
+export function RecommendedToolsBlock({ tools, setTools, theme, p, fld, tRaw }: any) {
+  const add = () => { if (tools.length >= 2) return; setTools([...tools, { name: '', url: '' }]); };
+  const upd = (i: number, k: string, v: string) => setTools(tools.map((t: any, idx: number) => idx === i ? { ...t, [k]: v } : t));
+  const remove = (i: number) => setTools(tools.filter((_: any, idx: number) => idx !== i));
+  return (
+    <div style={{ marginBottom: 12, background: p + '06', border: `1px solid ${p}18`, borderRadius: 12, padding: 12 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 2 }}>🌷 {tRaw('เครื่องมือที่แนะนำ', 'Recommended tools')} <span style={{ fontWeight: 500, color: '#9ca3af' }}>({tools.length}/2)</span></div>
+      <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 8 }}>{tRaw('เฉพาะอุปกรณ์ระบายสี · ใส่ลิงก์พันธมิตรได้', 'Coloring tools only · affiliate links allowed')}</div>
+      {tools.map((t: any, i: number) => (
+        <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+          <input value={t.name} onChange={e => upd(i, 'name', e.target.value)} placeholder={tRaw('เช่น Ohuhu Pastel 48', 'e.g. Ohuhu Pastel 48')} style={{ ...fld, flex: 1, fontSize: 13 }} />
+          <input value={t.url} onChange={e => upd(i, 'url', e.target.value)} placeholder={tRaw('ลิงก์ (ไม่บังคับ)', 'Link (optional)')} style={{ ...fld, flex: 1, fontSize: 13 }} />
+          <button onClick={() => remove(i)} style={{ padding: '0 12px', borderRadius: 10, border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontWeight: 700 }}>✕</button>
+        </div>
+      ))}
+      {tools.length < 2 && <button onClick={add} style={{ padding: '7px 14px', borderRadius: 10, border: `1.5px dashed ${p}50`, background: 'white', color: p, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: theme.fontFamily }}>+ {tRaw('เพิ่มเครื่องมือ', 'Add tool')}</button>}
+    </div>
   );
 }
 

@@ -6,6 +6,7 @@ import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
 import ImageCarousel from '../components/ImageCarousel';
 import CommunityCard from '../components/CommunityCard';
+import { RecommendedToolsBlock } from './CommunityPage';
 
 const REACTIONS = [
   { type: 'love', emoji: '🩷', th: 'รักเลย', en: 'Love it' },
@@ -53,6 +54,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
   const [eAllProducts, setEAllProducts] = useState<any[]>([]);
   const [eExtTitle, setEExtTitle] = useState('');
   const [eExtAuthor, setEExtAuthor] = useState('');
+  const [eTools, setETools] = useState<{ name: string; url: string }[]>([]);
   const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
@@ -98,6 +100,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
     setEPalettes(post.palettes || []);
     setEExtTitle(post.external_book_title || '');
     setEExtAuthor(post.external_book_author || '');
+    setETools((post.recommended_tools || []).map((t: any) => ({ name: t.name || '', url: t.url || '' })));
     if (post.product) { setEBookMode('product'); setESelProduct(post.product); }
     else if (post.external_book_title) setEBookMode('external');
     else setEBookMode('none');
@@ -115,6 +118,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
       external_book_title: eBookMode === 'external' ? eExtTitle.trim() || null : null,
       external_book_author: eBookMode === 'external' ? eExtAuthor.trim() || null : null,
     };
+    if (post.creator?.affiliate_enabled) body.recommended_tools = eTools.filter(t => t.name.trim());
     const res = await api.updateCommunityPost(postId, body);
     setSavingEdit(false);
     if (res && !res.error) { setPost(res); setEditing(false); }
@@ -211,6 +215,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
                 eProdResults={eProdResults}
                 eExtTitle={eExtTitle} setEExtTitle={setEExtTitle}
                 eExtAuthor={eExtAuthor} setEExtAuthor={setEExtAuthor}
+                eTools={eTools} setETools={setETools} isCreator={!!c?.affiliate_enabled}
                 savingEdit={savingEdit} onSave={saveEdit} onCancel={() => setEditing(false)}
               />
             ) : (
@@ -235,6 +240,20 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
                     {chips(post.palettes, '🌷', '#fce7f3', '#be185d')}
                   </div>
                 ) : null}
+
+                {/* Recommended tools — Fluffy Creator's coloring tool picks */}
+                {post.recommended_tools?.length > 0 && (
+                  <div style={{ marginBottom: 18 }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', marginBottom: 6 }}>🌷 {tRaw('เครื่องมือที่ครีเอเตอร์แนะนำ', "Creator's recommended tools")}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {post.recommended_tools.map((t: any, i: number) => t.url ? (
+                        <a key={i} href={t.url} target="_blank" rel="noopener noreferrer sponsored" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: p + '12', color: p, borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 800, textDecoration: 'none' }}>🖍️ {t.name} →</a>
+                      ) : (
+                        <span key={i} style={{ background: '#f1f5f9', color: '#475569', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 700 }}>🖍️ {t.name}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
 
@@ -326,7 +345,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
 }
 
 // ── Full edit form ─────────────────────────────────────────────────────────────
-function FullEditForm({ post, p, theme, tRaw, efld, eCaption, setECaption, eMediums, setEMediums, eMarkers, setEMarkers, ePalettes, setEPalettes, eBookMode, setEBookMode, eSelProduct, setESelProduct, eProdQuery, setEProdQuery, eProdResults, eExtTitle, setEExtTitle, eExtAuthor, setEExtAuthor, savingEdit, onSave, onCancel }: any) {
+function FullEditForm({ post, p, theme, tRaw, efld, eCaption, setECaption, eMediums, setEMediums, eMarkers, setEMarkers, ePalettes, setEPalettes, eBookMode, setEBookMode, eSelProduct, setESelProduct, eProdQuery, setEProdQuery, eProdResults, eExtTitle, setEExtTitle, eExtAuthor, setEExtAuthor, eTools, setETools, isCreator, savingEdit, onSave, onCancel }: any) {
   return (
     <div style={{ background: '#f8fafc', borderRadius: 14, padding: 16, marginBottom: 18, border: `1.5px solid ${p}20` }}>
       <div style={{ fontSize: 14, fontWeight: 800, color: '#1e293b', marginBottom: 12 }}>✏️ {tRaw('แก้ไขโพสต์', 'Edit post')}</div>
@@ -367,6 +386,8 @@ function FullEditForm({ post, p, theme, tRaw, efld, eCaption, setECaption, eMedi
       <TagEditBlock label={`🎨 ${tRaw('สื่อที่ใช้', 'Medium')}`} type="medium" values={eMediums} setValues={setEMediums} theme={theme} p={p} efld={efld} tRaw={tRaw} />
       <TagEditBlock label={`🖍️ ${tRaw('ปากกา/ชุดที่ใช้', 'Marker / set')}`} type="marker" values={eMarkers} setValues={setEMarkers} theme={theme} p={p} efld={efld} tRaw={tRaw} />
       <TagEditBlock label={`🌷 ${tRaw('พาเลตต์ที่ใช้', 'Palette')}`} type="palette" values={ePalettes} setValues={setEPalettes} theme={theme} p={p} efld={efld} tRaw={tRaw} />
+
+      {isCreator && <RecommendedToolsBlock tools={eTools} setTools={setETools} theme={theme} p={p} fld={efld} tRaw={tRaw} />}
 
       <div style={{ fontSize: 12, fontWeight: 800, color: '#374151', margin: '4px 0 4px' }}>✏️ {tRaw('คำบรรยาย', 'Caption')} <span style={{ fontWeight: 500, color: '#9ca3af' }}>({eCaption.length}/300)</span></div>
       <textarea value={eCaption} maxLength={300} onChange={e => setECaption(e.target.value)} rows={3} style={{ ...efld, resize: 'vertical', marginBottom: 12 }} />
