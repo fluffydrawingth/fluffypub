@@ -164,6 +164,7 @@ export const api = {
   getCommunityCuration: () => fetch('/api/community?action=curation').then(r => r.json()),
   // External Book Library
   getExternalBooks: (q = '') => fetch(`/api/community?action=external-books&q=${encodeURIComponent(q)}`).then(r => r.json()),
+  getExternalAuthors: (q = '') => fetch(`/api/community?action=external-authors&q=${encodeURIComponent(q)}`).then(r => r.json()),
   getExternalBook: (slug: string) => fetch(`/api/community?action=external-book&slug=${encodeURIComponent(slug)}&guest_id=${getGuestId()}`, { headers: h() }).then(r => r.json()),
   getCommunityRelated: (id: string) => fetch(`/api/community?action=related&id=${id}&guest_id=${getGuestId()}`, { headers: h() }).then(r => r.json()),
   searchFeaturedCreators: (q: string) => fetch(`/api/community?action=admin-creators-search&q=${encodeURIComponent(q)}`, { headers: h() }).then(r => r.json()),

@@ -357,6 +357,8 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
   const [extTitle, setExtTitle] = useState('');
   const [extAuthor, setExtAuthor] = useState('');
   const [extResults, setExtResults] = useState<any[]>([]);
+  const [authorResults, setAuthorResults] = useState<string[]>([]);
+  const [authorFocus, setAuthorFocus] = useState(false);
   const [mediums, setMediums] = useState<string[]>([]);
   const [markers, setMarkers] = useState<string[]>([]);
   const [palettes, setPalettes] = useState<string[]>([]);
@@ -378,6 +380,12 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
     const t = setTimeout(() => { api.getExternalBooks(q).then((d: any) => setExtResults(d?.books || [])).catch(() => {}); }, 250);
     return () => clearTimeout(t);
   }, [extTitle]);
+  // External author / brand autocomplete (debounced)
+  useEffect(() => {
+    if (!authorFocus) return;
+    const t = setTimeout(() => { api.getExternalAuthors(extAuthor.trim()).then((d: any) => setAuthorResults(d?.authors || [])).catch(() => {}); }, 250);
+    return () => clearTimeout(t);
+  }, [extAuthor, authorFocus]);
 
   const fld = { width: '100%', padding: '10px 13px', borderRadius: 10, border: `1.5px solid ${p}30`, fontSize: 14, outline: 'none', fontFamily: theme.fontFamily, boxSizing: 'border-box' as const };
 
@@ -504,7 +512,16 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
             <div style={{ marginBottom: 12 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, position: 'relative' }}>
                 <input value={extTitle} onChange={e => setExtTitle(e.target.value)} placeholder={tRaw('ชื่อหนังสือ', 'Book title')} style={fld} />
-                <input value={extAuthor} onChange={e => setExtAuthor(e.target.value)} placeholder={tRaw('ศิลปิน/สำนักพิมพ์', 'Author / Brand')} style={fld} />
+                <div style={{ position: 'relative' }}>
+                  <input value={extAuthor} onChange={e => setExtAuthor(e.target.value)} onFocus={() => setAuthorFocus(true)} onBlur={() => setTimeout(() => setAuthorFocus(false), 150)} placeholder={tRaw('ศิลปิน/สำนักพิมพ์', 'Author / Brand')} style={{ ...fld, width: '100%' }} />
+                  {authorFocus && authorResults.filter(a => a.toLowerCase() !== extAuthor.trim().toLowerCase()).length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: 'white', border: '1px solid #f1f5f9', borderRadius: 10, marginTop: 4, overflow: 'hidden', boxShadow: '0 6px 18px rgba(0,0,0,0.1)' }}>
+                      {authorResults.filter(a => a.toLowerCase() !== extAuthor.trim().toLowerCase()).map((a: string) => (
+                        <button key={a} onMouseDown={() => { setExtAuthor(a); setAuthorFocus(false); }} style={{ display: 'block', width: '100%', textAlign: 'left', background: 'white', border: 'none', borderBottom: '1px solid #f8fafc', cursor: 'pointer', padding: '8px 12px', fontSize: 13, fontFamily: theme.fontFamily, color: '#1e293b' }}>👤 {a}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               {extResults.length > 0 && (
                 <div style={{ border: '1px solid #f1f5f9', borderRadius: 10, marginTop: 4, overflow: 'hidden' }}>

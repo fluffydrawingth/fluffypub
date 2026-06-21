@@ -401,6 +401,25 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { books: data || [] });
   }
 
+  // GET external-authors — distinct author/brand suggestions for autocomplete
+  if (req.method === 'GET' && action === 'external-authors') {
+    const qStr = String(req.query.q || '').trim();
+    let q = supabase.from('external_books').select('author').not('author', 'is', null);
+    if (qStr) q = q.ilike('author', `%${qStr}%`);
+    const { data } = await q.range(0, 99);
+    // De-dupe case-insensitively, keep first-seen spelling
+    const seen = new Set(); const authors = [];
+    for (const r of (data || [])) {
+      const a = String(r.author || '').trim();
+      if (!a) continue;
+      const k = a.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k); authors.push(a);
+      if (authors.length >= 8) break;
+    }
+    return json(res, 200, { authors });
+  }
+
   // GET external-book — dedicated page: book info + its community posts
   if (req.method === 'GET' && action === 'external-book') {
     const viewer = await getUser(req);
