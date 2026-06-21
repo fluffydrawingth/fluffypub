@@ -94,6 +94,33 @@ function sanitizeTools(input) {
   return out;
 }
 
+// Keywords: search-only. Max 5, ≤20 chars each, trimmed, lowercased, de-duped.
+function sanitizeKeywords(input) {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set(); const out = [];
+  for (const k of input) {
+    const v = String(k || '').trim().toLowerCase().slice(0, 20);
+    if (!v || seen.has(v)) continue;
+    seen.add(v); out.push(v);
+    if (out.length >= 5) break;
+  }
+  return out;
+}
+
+// Structured coloring details: [{ medium, brand? }]. Max 10 rows.
+function sanitizeColoringDetails(input) {
+  if (!Array.isArray(input)) return [];
+  const out = [];
+  for (const d of input) {
+    const medium = String(d?.medium || '').trim().slice(0, 60);
+    const brand = String(d?.brand || '').trim().slice(0, 60);
+    if (!medium) continue;
+    out.push({ medium, brand: brand || null });
+    if (out.length >= 10) break;
+  }
+  return out;
+}
+
 // Find an existing external book by normalized title+author, or create one.
 // normalized_title = "title|author" (both lowercased) for case-insensitive dedup.
 async function resolveExternalBook(title, author) {
@@ -247,6 +274,7 @@ module.exports = async function handler(req, res) {
       const hay = [
         r.caption, pr && pr.title, eb && eb.title, r.external_book_title, (eb && eb.author) || r.external_book_author,
         u && (u.username || u.name), ...(r.markers || []), ...(r.mediums || []), ...(r.palettes || []),
+        ...(r.keywords || []), ...(Array.isArray(r.coloring_details) ? r.coloring_details.flatMap(d => [d && d.medium, d && d.brand]) : []),
       ].filter(Boolean).join('   ').toLowerCase();
       return hay.includes(term);
     });
@@ -546,12 +574,14 @@ module.exports = async function handler(req, res) {
       external_book_author: b.product_id ? null : extAuthor,
       mediums: asArr(b.mediums), markers: asArr(b.markers), palettes: asArr(b.palettes),
       recommended_tools: recommendedTools,
+      keywords: sanitizeKeywords(b.keywords),
+      coloring_details: sanitizeColoringDetails(b.coloring_details),
       caption: (b.caption || '').slice(0, CAPTION_MAX), status: 'published',
     };
     let { data, error } = await supabase.from('community_posts').insert(row).select().single();
-    // Resilience: if recommended_tools column isn't migrated yet, retry without it
-    if (error && /recommended_tools/.test(error.message || '')) {
-      const { recommended_tools, ...rest } = row;
+    // Resilience: drop not-yet-migrated optional columns and retry
+    if (error && /(recommended_tools|keywords|coloring_details)/.test(error.message || '')) {
+      const { recommended_tools, keywords, coloring_details, ...rest } = row;
       ({ data, error } = await supabase.from('community_posts').insert(rest).select().single());
     }
     if (error) return json(res, 400, { error: error.message });
@@ -621,10 +651,12 @@ module.exports = async function handler(req, res) {
     if (asArr(b.palettes) !== undefined) updates.palettes = asArr(b.palettes);
     // Recommended tools — Fluffy Creators only; max 2, deduped
     if (b.recommended_tools !== undefined) updates.recommended_tools = user.affiliate_enabled ? sanitizeTools(b.recommended_tools) : [];
+    if (b.keywords !== undefined) updates.keywords = sanitizeKeywords(b.keywords);
+    if (b.coloring_details !== undefined) updates.coloring_details = sanitizeColoringDetails(b.coloring_details);
     let { data, error } = await supabase.from('community_posts').update(updates).eq('id', id).select().single();
-    // Resilience: if recommended_tools column isn't migrated yet, retry without it
-    if (error && /recommended_tools/.test(error.message || '')) {
-      const { recommended_tools, ...rest } = updates;
+    // Resilience: drop not-yet-migrated optional columns and retry
+    if (error && /(recommended_tools|keywords|coloring_details)/.test(error.message || '')) {
+      const { recommended_tools, keywords, coloring_details, ...rest } = updates;
       ({ data, error } = await supabase.from('community_posts').update(rest).eq('id', id).select().single());
     }
     if (error) return json(res, 400, { error: error.message });

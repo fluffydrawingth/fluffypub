@@ -7,7 +7,7 @@ import { api } from '../lib/api';
 import ImageCarousel from '../components/ImageCarousel';
 import CommunityCard from '../components/CommunityCard';
 import BadgeIcon from '../components/BadgeIcon';
-import { RecommendedToolsBlock } from './CommunityPage';
+import { RecommendedToolsBlock, StructuredMediumBlock, KeywordsBlock } from './CommunityPage';
 
 const REACTIONS = [
   { type: 'love', emoji: '🩷', th: 'รักเลย', en: 'Love it' },
@@ -45,8 +45,8 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
   // Owner edit — full form
   const [editing, setEditing] = useState(false);
   const [eCaption, setECaption] = useState('');
-  const [eMediums, setEMediums] = useState<string[]>([]);
-  const [eMarkers, setEMarkers] = useState<string[]>([]);
+  const [eDetails, setEDetails] = useState<{ medium: string; brand: string }[]>([{ medium: '', brand: '' }]);
+  const [eKeywords, setEKeywords] = useState<string[]>([]);
   const [ePalettes, setEPalettes] = useState<string[]>([]);
   const [eBookMode, setEBookMode] = useState<'product' | 'external' | 'none'>('none');
   const [eSelProduct, setESelProduct] = useState<any>(null);
@@ -96,8 +96,12 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
 
   const startEdit = () => {
     setECaption(post.caption || '');
-    setEMediums(post.mediums || []);
-    setEMarkers(post.markers || []);
+    // Load structured rows from coloring_details, else derive from legacy mediums/markers
+    const cd = Array.isArray(post.coloring_details) && post.coloring_details.length
+      ? post.coloring_details.map((d: any) => ({ medium: d.medium || '', brand: d.brand || '' }))
+      : (post.mediums || []).map((m: string, i: number) => ({ medium: m, brand: (post.markers || [])[i] || '' }));
+    setEDetails(cd.length ? cd : [{ medium: '', brand: '' }]);
+    setEKeywords(post.keywords || []);
     setEPalettes(post.palettes || []);
     setEExtTitle(post.external_book_title || '');
     setEExtAuthor(post.external_book_author || '');
@@ -112,8 +116,10 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
     setSavingEdit(true);
     const body: any = {
       caption: eCaption,
-      mediums: eMediums,
-      markers: eMarkers,
+      coloring_details: eDetails.filter(d => d.medium.trim()).map(d => ({ medium: d.medium.trim(), brand: d.brand.trim() })),
+      mediums: [...new Set(eDetails.map(d => d.medium.trim()).filter(Boolean))],
+      markers: [...new Set(eDetails.map(d => d.brand.trim()).filter(Boolean))],
+      keywords: eKeywords,
       palettes: ePalettes,
       product_id: eBookMode === 'product' ? (eSelProduct?.id || null) : null,
       external_book_title: eBookMode === 'external' ? eExtTitle.trim() || null : null,
@@ -206,8 +212,8 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
               <FullEditForm
                 post={post} p={p} theme={theme} tRaw={tRaw} efld={efld}
                 eCaption={eCaption} setECaption={setECaption}
-                eMediums={eMediums} setEMediums={setEMediums}
-                eMarkers={eMarkers} setEMarkers={setEMarkers}
+                eDetails={eDetails} setEDetails={setEDetails}
+                eKeywords={eKeywords} setEKeywords={setEKeywords}
                 ePalettes={ePalettes} setEPalettes={setEPalettes}
                 eBookMode={eBookMode} setEBookMode={setEBookMode}
                 eSelProduct={eSelProduct} setESelProduct={setESelProduct}
@@ -220,36 +226,56 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
               />
             ) : (
               <>
-                {post.caption && <p style={{ fontSize: 15, color: '#334155', lineHeight: 1.7, margin: '0 0 18px' }}>{post.caption}</p>}
+                {/* 1. Caption box — prominent, at top */}
+                {post.caption && (
+                  <div style={{ background: p + '0c', border: `1.5px solid ${p}20`, borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
+                    <p style={{ fontSize: 16, color: '#334155', lineHeight: 1.6, margin: 0, fontWeight: 600 }}>{post.caption}</p>
+                  </div>
+                )}
 
-                {/* Book used */}
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', marginBottom: 6 }}>📚 {tRaw('หนังสือที่ใช้', 'Book used')}</div>
+                {/* 2. Book used box */}
+                <div style={{ background: 'white', border: '1.5px solid #f1f5f9', borderRadius: 14, padding: '12px 16px', marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', marginBottom: 8 }}>📚 {tRaw('หนังสือที่ใช้', 'Book used')}</div>
                   {post.product ? (
                     <button onClick={() => navigate(`/products/${post.product.slug}${c?.affiliate_enabled ? `?ref=${c.id}` : ''}`)} style={{ background: p + '12', color: p, border: 'none', cursor: 'pointer', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>📚 {post.product.title} →</button>
-                  ) : post.external_book_title ? (
-                    <div style={{ fontSize: 14, color: '#475569' }}>📖 {post.external_book_title}{post.external_book_author ? ` by ${post.external_book_author}` : ''}</div>
+                  ) : (post.external_book?.title || post.external_book_title) ? (
+                    <div style={{ fontSize: 14, color: '#475569', fontWeight: 600 }}>📖 {post.external_book?.title || post.external_book_title}{(post.external_book?.author || post.external_book_author) ? <span style={{ fontWeight: 400 }}> by {post.external_book?.author || post.external_book_author}</span> : ''}</div>
                   ) : <div style={{ fontSize: 13, color: '#cbd5e1' }}>—</div>}
                 </div>
 
-                {/* Coloring details */}
-                {(post.mediums?.length || post.markers?.length || post.palettes?.length) ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
-                    {chips(post.mediums, '🎨', '#f3e8ff', '#7c3aed')}
-                    {chips(post.markers, '🖍️', '#dbeafe', '#1d4ed8')}
-                    {chips(post.palettes, '🌷', '#fce7f3', '#be185d')}
-                  </div>
-                ) : null}
-
-                {/* Recommended tools — Fluffy Creator's coloring tool picks */}
-                {post.recommended_tools?.length > 0 && (
-                  <div style={{ marginBottom: 18 }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', marginBottom: 6 }}>🌷 {tRaw('เครื่องมือที่ครีเอเตอร์แนะนำ', "Creator's recommended tools")}</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {post.recommended_tools.map((t: any, i: number) => t.url ? (
-                        <a key={i} href={t.url} target="_blank" rel="noopener noreferrer sponsored" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: p + '12', color: p, borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 800, textDecoration: 'none' }}>🖍️ {t.name} →</a>
+                {/* 3. Coloring details box — structured medium — brand pairs */}
+                {(() => {
+                  const pairs = Array.isArray(post.coloring_details) ? post.coloring_details.filter((d: any) => d && d.medium) : [];
+                  const hasAny = pairs.length || post.mediums?.length || post.markers?.length || post.palettes?.length;
+                  if (!hasAny) return null;
+                  return (
+                    <div style={{ background: 'white', border: '1.5px solid #f1f5f9', borderRadius: 14, padding: '12px 16px', marginBottom: 14 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', marginBottom: 8 }}>🎨 {tRaw('รายละเอียดการลงสี', 'Coloring details')}</div>
+                      {pairs.length ? (
+                        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, color: '#334155', lineHeight: 1.8 }}>
+                          {pairs.map((d: any, i: number) => <li key={i}><b>{d.medium}</b>{d.brand ? ` — ${d.brand}` : <span style={{ color: '#94a3b8' }}> — {tRaw('ไม่ระบุยี่ห้อ', 'unknown brand')}</span>}</li>)}
+                        </ul>
                       ) : (
-                        <span key={i} style={{ background: '#f1f5f9', color: '#475569', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 700 }}>🖍️ {t.name}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {post.mediums?.length > 0 && <div style={{ fontSize: 13.5, color: '#334155' }}><span style={{ color: '#7c3aed', fontWeight: 700 }}>🎨 {tRaw('เทคนิค', 'Mediums')}:</span> {post.mediums.join(', ')}</div>}
+                          {post.markers?.length > 0 && <div style={{ fontSize: 13.5, color: '#334155' }}><span style={{ color: '#1d4ed8', fontWeight: 700 }}>🖍️ {tRaw('ปากกา/ชุดสี', 'Markers / sets')}:</span> {post.markers.join(', ')}</div>}
+                          {post.palettes?.length > 0 && <div style={{ fontSize: 13.5, color: '#334155' }}><span style={{ color: '#be185d', fontWeight: 700 }}>🌷 {tRaw('พาเลตต์', 'Palettes')}:</span> {post.palettes.join(', ')}</div>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* 4. Creator recommendations box — Fluffy Creator picks (detail page only) */}
+                {post.recommended_tools?.length > 0 && (
+                  <div style={{ background: p + '08', border: `1.5px solid ${p}20`, borderRadius: 14, padding: '12px 16px', marginBottom: 14 }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: p, marginBottom: 8 }}>🖍 {tRaw('เครื่องมือที่ครีเอเตอร์แนะนำ', 'Creator recommendations')}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {post.recommended_tools.map((t: any, i: number) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>{t.name}</span>
+                          {t.url && <a href={t.url} target="_blank" rel="noopener noreferrer sponsored" style={{ fontSize: 13, fontWeight: 800, color: p, textDecoration: 'none', whiteSpace: 'nowrap' }}>{tRaw('ดูลิงก์', 'View link')} →</a>}
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -348,7 +374,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
 }
 
 // ── Full edit form ─────────────────────────────────────────────────────────────
-function FullEditForm({ post, p, theme, tRaw, efld, eCaption, setECaption, eMediums, setEMediums, eMarkers, setEMarkers, ePalettes, setEPalettes, eBookMode, setEBookMode, eSelProduct, setESelProduct, eProdQuery, setEProdQuery, eProdResults, eExtTitle, setEExtTitle, eExtAuthor, setEExtAuthor, eTools, setETools, isCreator, savingEdit, onSave, onCancel }: any) {
+function FullEditForm({ post, p, theme, tRaw, efld, eCaption, setECaption, eDetails, setEDetails, eKeywords, setEKeywords, ePalettes, setEPalettes, eBookMode, setEBookMode, eSelProduct, setESelProduct, eProdQuery, setEProdQuery, eProdResults, eExtTitle, setEExtTitle, eExtAuthor, setEExtAuthor, eTools, setETools, isCreator, savingEdit, onSave, onCancel }: any) {
   return (
     <div style={{ background: '#f8fafc', borderRadius: 14, padding: 16, marginBottom: 18, border: `1.5px solid ${p}20` }}>
       <div style={{ fontSize: 14, fontWeight: 800, color: '#1e293b', marginBottom: 12 }}>✏️ {tRaw('แก้ไขโพสต์', 'Edit post')}</div>
@@ -386,9 +412,9 @@ function FullEditForm({ post, p, theme, tRaw, efld, eCaption, setECaption, eMedi
         </div>
       )}
 
-      <TagEditBlock label={`🎨 ${tRaw('สื่อที่ใช้', 'Medium')}`} type="medium" values={eMediums} setValues={setEMediums} theme={theme} p={p} efld={efld} tRaw={tRaw} />
-      <TagEditBlock label={`🖍️ ${tRaw('ปากกา/ชุดที่ใช้', 'Marker / set')}`} type="marker" values={eMarkers} setValues={setEMarkers} theme={theme} p={p} efld={efld} tRaw={tRaw} />
+      <StructuredMediumBlock details={eDetails} setDetails={setEDetails} theme={theme} p={p} fld={efld} tRaw={tRaw} />
       <TagEditBlock label={`🌷 ${tRaw('พาเลตต์ที่ใช้', 'Palette')}`} type="palette" values={ePalettes} setValues={setEPalettes} theme={theme} p={p} efld={efld} tRaw={tRaw} />
+      <KeywordsBlock keywords={eKeywords} setKeywords={setEKeywords} theme={theme} p={p} fld={efld} tRaw={tRaw} />
 
       {isCreator && <RecommendedToolsBlock tools={eTools} setTools={setETools} theme={theme} p={p} fld={efld} tRaw={tRaw} />}
 

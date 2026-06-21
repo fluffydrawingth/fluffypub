@@ -16,6 +16,10 @@ const GRID = [
   `@media(min-width:768px) and (max-width:999px){.cm-grid{column-count:2;column-gap:12px}}`,
   `@media(max-width:767px){.cm-grid{column-count:1}}`,
   `.cm-grid>div{margin-bottom:16px}`,
+  // Cozy Picks row: centered when it fits, always horizontally swipeable (esp. mobile)
+  `.cozy-row{display:flex;gap:14px;padding-bottom:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;justify-content:center}`,
+  `.cozy-row.many{justify-content:flex-start}`,
+  `@media(max-width:760px){.cozy-row{justify-content:flex-start}}`,
 ].join('');
 
 type Filter = { kind: 'all' | 'palette' | 'marker' | 'medium' | 'month' | 'product'; value?: string; label?: string };
@@ -42,6 +46,7 @@ export default function CommunityPage() {
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [searchQ, setSearchQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
+  const [exploreQ, setExploreQ] = useState('');
   const [cozy, setCozy] = useState<any[]>([]);
   const [curation, setCuration] = useState<{ featured_books: any[]; featured_creators: any[] }>({ featured_books: [], featured_creators: [] });
   const [facets, setFacets] = useState<{ palettes: any[]; markers: any[]; mediums: any[]; books: any[]; externalBooks: any[] }>({ palettes: [], markers: [], mediums: [], books: [], externalBooks: [] });
@@ -121,23 +126,18 @@ export default function CommunityPage() {
               onFocus={e => e.currentTarget.style.borderColor = p}
               onBlur={e => e.currentTarget.style.borderColor = p + '30'}
             />
-            {searchQ && <button onClick={browseAll} aria-label="Clear" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#94a3b8' }}>✕</button>}
+            {searchQ && <button onClick={() => { setSearchQ(''); setDebouncedQ(''); }} aria-label="Clear" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#94a3b8' }}>✕</button>}
           </div>
-          {!searching && (
-            <div style={{ textAlign: 'center', marginTop: 10 }}>
-              <button onClick={browseAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 13, fontWeight: 700, fontFamily: theme.fontFamily }}>✨ {tRaw('ดูผลงานทั้งหมด', 'Browse all creations')}</button>
-            </div>
-          )}
         </div>
 
-        {/* 1. 🌷 Cozy Picks — centered single row (≤6), carousel (>6). Secondary inspiration. */}
+        {/* 1. 🌷 Cozy Picks — uses the same wording as the homepage (theme labels). */}
         {isAll && cozy.length > 0 && (
           <div style={{ marginBottom: 32 }}>
             <div style={{ textAlign: 'center', marginBottom: 14 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 900, color: theme.textColor, margin: '0 0 2px' }}>🌷 {tRaw('คอลเลกชันอบอุ่น', 'Cozy Picks')}</h2>
-              <p style={{ fontSize: 12.5, color: theme.textColor + '88', margin: 0 }}>{tRaw('ผลงานคัดสรรเพื่อจุดประกายการระบายสีของคุณ', 'A few cozy artworks we love — to inspire your next session.')}</p>
+              <h2 style={{ fontSize: 18, fontWeight: 900, color: theme.textColor, margin: '0 0 2px' }}>{tRaw(theme.labels?.community_title_th || '🌈 แต่งแต้มโลกของคุณ', theme.labels?.community_title || '🌈 Color Your World')}</h2>
+              <p style={{ fontSize: 12.5, color: theme.textColor + '88', margin: 0 }}>{tRaw(theme.labels?.community_subtitle_th || 'ผลงานระบายสีจริงจากชุมชนของเรา', theme.labels?.community_subtitle || 'Real coloring results from our community')}</p>
             </div>
-            <div style={{ display: 'flex', gap: 14, paddingBottom: 8, justifyContent: cozy.length > 6 ? 'flex-start' : 'center', overflowX: cozy.length > 6 ? 'auto' : 'visible', flexWrap: 'nowrap' }}>
+            <div className={'cozy-row' + (cozy.length > 6 ? ' many' : '')}>
               {cozy.map(post => (
                 <div key={'c' + post.id} style={{ width: 204, flexShrink: 0 }}>
                   <CommunityCard post={post} compact />
@@ -146,25 +146,6 @@ export default function CommunityPage() {
             </div>
           </div>
         )}
-
-        {/* 2. 🔎 Explore — collapsed by default */}
-        {isAll && (facets.books.length || facets.externalBooks.length || facets.markers.length || facets.mediums.length || facets.palettes.length) ? (
-          <div style={{ background: 'white', borderRadius: 16, padding: '12px 16px', marginBottom: 24, boxShadow: '0 1px 6px rgba(0,0,0,0.05)', border: `1px solid ${p}10` }}>
-            <button onClick={() => setShowFilters(s => !s)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily }}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: theme.textColor }}>🔎 {tRaw('สำรวจ', 'Explore')} <span style={{ fontWeight: 500, color: '#94a3b8', fontSize: 12.5 }}>· 📚 {tRaw('หนังสือ', 'Books')} · 🖍️ {tRaw('ปากกา', 'Markers')} · 🎨 {tRaw('เทคนิค', 'Mediums')} · 🌷 {tRaw('พาเลตต์', 'Palettes')}</span></span>
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: p, whiteSpace: 'nowrap', marginLeft: 10 }}>{showFilters ? `▲ ${tRaw('ซ่อนตัวกรอง', 'Hide filters')}` : `▼ ${tRaw('แสดงตัวกรอง', 'Show filters')}`}</span>
-            </button>
-            {showFilters && (
-              <div style={{ marginTop: 14 }}>
-                {facets.books.length > 0 && <ChipRow theme={theme} p={p} title={`📚 ${tRaw('หนังสือ Fluffy Pub', 'Fluffy Pub Books')}`} items={facets.books.map(b => ({ key: b.id, label: b.title, count: b.count }))} onPick={(it) => choose({ kind: 'product', value: it.key, label: it.label })} />}
-                {facets.externalBooks.length > 0 && <ChipRow theme={theme} p={p} title={`📖 ${tRaw('หนังสืออื่น ๆ / จากชุมชน', 'Other / Community Books')}`} items={facets.externalBooks.map(b => ({ key: b.slug, label: b.author ? `${b.title} · ${b.author}` : b.title, count: b.count }))} onPick={(it) => navigate(`/community/book/${it.key}`)} />}
-                {facets.markers.length > 0 && <ChipRow theme={theme} p={p} title={`🖍️ ${tRaw('ปากกา / ชุดสี', 'Markers')}`} items={facets.markers.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'marker', value: it.key })} />}
-                {facets.mediums.length > 0 && <ChipRow theme={theme} p={p} title={`🎨 ${tRaw('เทคนิค', 'Mediums')}`} items={facets.mediums.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'medium', value: it.key })} />}
-                {facets.palettes.length > 0 && <ChipRow theme={theme} p={p} title={`🌷 ${tRaw('พาเลตต์', 'Palettes')}`} items={facets.palettes.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'palette', value: it.key })} />}
-              </div>
-            )}
-          </div>
-        ) : null}
 
         {/* 3. 🆕 New Creations / Search results */}
         <SectionHead theme={theme} title={
@@ -190,6 +171,33 @@ export default function CommunityPage() {
             )}
           </>
         )}
+
+        {/* 5. 🔎 Explore — advanced filters, collapsed by default, at the bottom */}
+        {isAll && (facets.books.length || facets.externalBooks.length || facets.markers.length || facets.mediums.length || facets.palettes.length) ? (
+          <div style={{ background: 'white', borderRadius: 16, padding: '12px 16px', margin: '32px 0 24px', boxShadow: '0 1px 6px rgba(0,0,0,0.05)', border: `1px solid ${p}10` }}>
+            <button onClick={() => setShowFilters(s => !s)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: theme.textColor }}>🔎 {tRaw('สำรวจ (ตัวกรองขั้นสูง)', 'Explore (advanced filters)')}</span>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: p, whiteSpace: 'nowrap', marginLeft: 10 }}>{showFilters ? `▲ ${tRaw('ซ่อน', 'Hide')}` : `▼ ${tRaw('แสดง', 'Show')}`}</span>
+            </button>
+            {showFilters && (
+              <div style={{ marginTop: 14 }}>
+                <input value={exploreQ} onChange={e => setExploreQ(e.target.value)} placeholder={tRaw('ค้นหาหนังสือ ปากกา เทคนิค หรือพาเลตต์…', 'Search books, markers, mediums or palettes…')} style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${p}25`, fontSize: 13, outline: 'none', fontFamily: theme.fontFamily, boxSizing: 'border-box', marginBottom: 12 }} />
+                {(() => {
+                  const fq = exploreQ.trim().toLowerCase();
+                  const fb = (arr: any[], key: string) => fq ? arr.filter(x => String(x[key] || '').toLowerCase().includes(fq)) : arr;
+                  const books = fb(facets.books, 'title'), ext = fb(facets.externalBooks, 'title'), mk = fb(facets.markers, 'name'), md = fb(facets.mediums, 'name'), pl = fb(facets.palettes, 'name');
+                  return <>
+                    {books.length > 0 && <ChipRow theme={theme} p={p} title={`📚 ${tRaw('หนังสือ Fluffy Pub', 'Fluffy Pub Books')}`} items={books.map(b => ({ key: b.id, label: b.title, count: b.count }))} onPick={(it) => choose({ kind: 'product', value: it.key, label: it.label })} />}
+                    {ext.length > 0 && <ChipRow theme={theme} p={p} title={`📖 ${tRaw('หนังสืออื่น ๆ / จากชุมชน', 'Other / Community Books')}`} items={ext.map(b => ({ key: b.slug, label: b.author ? `${b.title} · ${b.author}` : b.title, count: b.count }))} onPick={(it) => navigate(`/community/book/${it.key}`)} />}
+                    {mk.length > 0 && <ChipRow theme={theme} p={p} title={`🖍️ ${tRaw('ปากกา / ชุดสี', 'Markers')}`} items={mk.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'marker', value: it.key })} />}
+                    {md.length > 0 && <ChipRow theme={theme} p={p} title={`🎨 ${tRaw('เทคนิค', 'Mediums')}`} items={md.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'medium', value: it.key })} />}
+                    {pl.length > 0 && <ChipRow theme={theme} p={p} title={`🌷 ${tRaw('พาเลตต์', 'Palettes')}`} items={pl.map(t => ({ key: t.name, label: t.name, count: t.count }))} onPick={(it) => choose({ kind: 'palette', value: it.key })} />}
+                  </>;
+                })()}
+              </div>
+            )}
+          </div>
+        ) : null}
 
         {/* 4. Featured Creators (admin-curated) */}
         {isAll && curation.featured_creators.length > 0 && (
@@ -359,8 +367,8 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
   const [extResults, setExtResults] = useState<any[]>([]);
   const [authorResults, setAuthorResults] = useState<string[]>([]);
   const [authorFocus, setAuthorFocus] = useState(false);
-  const [mediums, setMediums] = useState<string[]>([]);
-  const [markers, setMarkers] = useState<string[]>([]);
+  const [details, setDetails] = useState<{ medium: string; brand: string }[]>([{ medium: '', brand: '' }]);
+  const [keywords, setKeywords] = useState<string[]>([]);
   const [palettes, setPalettes] = useState<string[]>([]);
   const [tools, setTools] = useState<{ name: string; url: string }[]>([]);
   const [caption, setCaption] = useState('');
@@ -419,7 +427,13 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
         product_id: bookMode === 'product' ? (selProduct?.id || null) : null,
         external_book_title: bookMode === 'external' ? extTitle.trim() || null : null,
         external_book_author: bookMode === 'external' ? extAuthor.trim() || null : null,
-        mediums, markers, palettes, caption: caption.trim(),
+        // Structured medium+brand rows; also derive flat arrays for Explore filters/search
+        coloring_details: details.filter(d => d.medium.trim()).map(d => ({ medium: d.medium.trim(), brand: d.brand.trim() })),
+        mediums: [...new Set(details.map(d => d.medium.trim()).filter(Boolean))],
+        markers: [...new Set(details.map(d => d.brand.trim()).filter(Boolean))],
+        palettes,
+        keywords,
+        caption: caption.trim(),
         recommended_tools: user?.affiliate_enabled ? tools.filter(t => t.name.trim()) : [],
       });
       if (res?.error) { setErr(res.error); setBusy(false); return; }
@@ -537,9 +551,9 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
             </div>
           )}
 
-          <LibraryTagBlock type="medium" label={`🎨 ${tRaw('สื่อที่ใช้', 'Medium')}`} values={mediums} setValues={setMediums} addPh={tRaw('เพิ่มสื่อของคุณเอง...', 'Suggest a medium...')} theme={theme} p={p} fld={fld} tRaw={tRaw} />
-          <LibraryTagBlock type="marker" label={`🖍️ ${tRaw('ปากกา/ชุดที่ใช้', 'Marker / set used')}`} values={markers} setValues={setMarkers} addPh={tRaw('เพิ่มชุดปากกา...', 'Suggest a marker set...')} theme={theme} p={p} fld={fld} tRaw={tRaw} />
+          <StructuredMediumBlock details={details} setDetails={setDetails} theme={theme} p={p} fld={fld} tRaw={tRaw} />
           <LibraryTagBlock type="palette" label={`🌷 ${tRaw('พาเลตต์ที่ใช้', 'Palette used')}`} values={palettes} setValues={setPalettes} addPh={tRaw('เพิ่มพาเลตต์...', 'Suggest a palette...')} theme={theme} p={p} fld={fld} tRaw={tRaw} />
+          <KeywordsBlock keywords={keywords} setKeywords={setKeywords} theme={theme} p={p} fld={fld} tRaw={tRaw} />
 
           {/* Recommended tools — Fluffy Creators only (affiliate links allowed, max 2) */}
           {user?.affiliate_enabled && <RecommendedToolsBlock tools={tools} setTools={setTools} theme={theme} p={p} fld={fld} tRaw={tRaw} />}
@@ -555,6 +569,68 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
       </div>
     </div>
     </>
+  );
+}
+
+const MEDIUM_OPTIONS = ['Alcohol Marker', 'Acrylic', 'Colored Pencil', 'Watercolor', 'Gel Pen', 'Crayon', 'Digital', 'Other'];
+
+// Structured coloring rows: Medium (dropdown) + Brand/set (optional autocomplete). Repeatable.
+export function StructuredMediumBlock({ details, setDetails, theme, p, fld, tRaw }: any) {
+  const [brandSugg, setBrandSugg] = useState<string[]>([]);
+  const [focusIdx, setFocusIdx] = useState<number | null>(null);
+  useEffect(() => { api.getCommunityTags('marker').then((d: any) => setBrandSugg((d?.tags || []).map((t: any) => t.name))).catch(() => {}); }, []);
+  const upd = (i: number, k: string, v: string) => setDetails(details.map((d: any, idx: number) => idx === i ? { ...d, [k]: v } : d));
+  const add = () => { if (details.length < 10) setDetails([...details, { medium: '', brand: '' }]); };
+  const remove = (i: number) => setDetails(details.length > 1 ? details.filter((_: any, idx: number) => idx !== i) : [{ medium: '', brand: '' }]);
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 6 }}>🎨 {tRaw('สื่อ + ยี่ห้อ/ชุดที่ใช้', 'Medium + brand / set used')}</div>
+      {details.map((row: any, i: number) => {
+        const sugg = row.brand.trim() ? brandSugg.filter(b => b.toLowerCase().includes(row.brand.toLowerCase()) && b.toLowerCase() !== row.brand.toLowerCase()).slice(0, 6) : [];
+        return (
+          <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'flex-start' }}>
+            <select value={row.medium} onChange={e => upd(i, 'medium', e.target.value)} style={{ ...fld, flex: 1, fontSize: 13, padding: '9px 10px' }}>
+              <option value="">{tRaw('เลือกสื่อ...', 'Select medium...')}</option>
+              {MEDIUM_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <input value={row.brand} onChange={e => upd(i, 'brand', e.target.value)} onFocus={() => setFocusIdx(i)} onBlur={() => setTimeout(() => setFocusIdx(f => f === i ? null : f), 150)} placeholder={tRaw('ยี่ห้อ/ชุด (ไม่บังคับ)', 'Brand / set (optional)')} style={{ ...fld, width: '100%', fontSize: 13 }} />
+              {focusIdx === i && sugg.length > 0 && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: 'white', border: '1px solid #f1f5f9', borderRadius: 10, marginTop: 2, overflow: 'hidden', boxShadow: '0 6px 18px rgba(0,0,0,0.1)' }}>
+                  {sugg.map(b => <button key={b} onMouseDown={() => { upd(i, 'brand', b); setFocusIdx(null); }} style={{ display: 'block', width: '100%', textAlign: 'left', background: 'white', border: 'none', cursor: 'pointer', padding: '7px 11px', fontSize: 13, fontFamily: theme.fontFamily, color: '#1e293b' }}>{b}</button>)}
+                </div>
+              )}
+            </div>
+            <button onClick={() => remove(i)} style={{ padding: '0 11px', borderRadius: 10, border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontWeight: 700, alignSelf: 'stretch' }}>✕</button>
+          </div>
+        );
+      })}
+      {details.length < 10 && <button onClick={add} style={{ padding: '6px 14px', borderRadius: 10, border: `1.5px dashed ${p}50`, background: 'white', color: p, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: theme.fontFamily }}>+ {tRaw('เพิ่มสื่ออีก', 'Add another medium')}</button>}
+    </div>
+  );
+}
+
+// Keywords — search-only, never shown publicly. Max 5, ≤20 chars, lowercased, deduped.
+export function KeywordsBlock({ keywords, setKeywords, theme, p, fld, tRaw }: any) {
+  const [val, setVal] = useState('');
+  const addKw = () => {
+    const v = val.trim().toLowerCase().slice(0, 20);
+    if (v && keywords.length < 5 && !keywords.includes(v)) setKeywords([...keywords, v]);
+    setVal('');
+  };
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 2 }}>🔑 {tRaw('คำค้นหา (ไม่บังคับ)', 'Keywords (optional)')} <span style={{ fontWeight: 500, color: '#9ca3af' }}>({keywords.length}/5)</span></div>
+      <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 6 }}>{tRaw('ช่วยให้ค้นหาเจอง่ายขึ้น — ไม่แสดงต่อสาธารณะ', 'Helps people find your post in search — never shown publicly.')}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 6 }}>
+        {keywords.map((k: string) => (
+          <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: p + '12', color: p, borderRadius: 16, padding: '3px 10px', fontSize: 12, fontWeight: 700 }}>{k}
+            <button onClick={() => setKeywords(keywords.filter((x: string) => x !== k))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontWeight: 800 }}>✕</button>
+          </span>
+        ))}
+      </div>
+      {keywords.length < 5 && <input value={val} onChange={e => setVal(e.target.value.slice(0, 20))} onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addKw(); } }} onBlur={addKw} placeholder={tRaw('เช่น cozy, pink, school', 'e.g. cozy, pink, school')} style={{ ...fld, fontSize: 13 }} />}
+    </div>
   );
 }
 

@@ -66,9 +66,10 @@ async function handleSupabaseUpload(req, res) {
   //  - 'slips'      : payment slips — no login required (guest checkout).
   //  - 'community'  : any LOGGED-IN user (customer/artist/creator) — community artwork.
   //  - everything else (products, artists, pages, …): admin/artist only.
-  if (folder === 'community') {
-    if (!user) return json(res, 401, { error: 'Please log in to share your artwork.' });
-    if (!String(fileType).startsWith('image/')) return json(res, 400, { error: 'Community uploads must be images.' });
+  if (folder === 'community' || folder === 'avatars') {
+    // Community artwork & profile/avatar pictures — any logged-in user, images only.
+    if (!user) return json(res, 401, { error: 'Please log in to upload.' });
+    if (!String(fileType).startsWith('image/')) return json(res, 400, { error: 'Uploads must be images.' });
   } else if (folder !== 'slips') {
     if (!user) return json(res, 401, { error: 'Not authenticated' });
     if (!['admin', 'artist'].includes(user?.role)) return json(res, 403, { error: 'Forbidden' });
