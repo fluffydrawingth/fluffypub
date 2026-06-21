@@ -4,7 +4,6 @@ import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
-import ImageCarousel from './ImageCarousel';
 import BadgeIcon from './BadgeIcon';
 
 const REACTIONS: { type: string; emoji: string; th: string; en: string }[] = [
@@ -46,13 +45,22 @@ export default function CommunityCard({ post, compact = false }: { post: any; co
       onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 10px 28px ${p}22`; }}
       onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; }}>
 
-      {/* Artwork — 4:5 ratio, carousel if multiple images */}
-      <div style={{ position: 'relative', width: '100%', background: `linear-gradient(135deg,${p}10,${p}05)`, flexShrink: 0 }} onClick={(e) => { if ((post.artwork_urls?.length || 1) > 1) e.stopPropagation(); }}>
-        <ImageCarousel
-          images={(post.artwork_urls && post.artwork_urls.length ? post.artwork_urls : [post.thumb_url || post.artwork_url]).filter(Boolean)}
-          fit="cover" ratio="125%" stopPropagation onImageClick={open}
-        />
-      </div>
+      {/* Artwork — static 4:5 cover (feed stays a cozy gallery, NOT interactive). */}
+      {(() => {
+        const imgs = (post.artwork_urls && post.artwork_urls.length ? post.artwork_urls : [post.thumb_url || post.artwork_url]).filter(Boolean);
+        const cover = post.thumb_url || imgs[0];
+        const extra = imgs.length;
+        return (
+          <div style={{ position: 'relative', width: '100%', paddingBottom: '125%', background: `linear-gradient(135deg,${p}10,${p}05)`, flexShrink: 0 }}>
+            <img src={cover} alt={post.caption || 'coloring'} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+            {extra > 1 && (
+              <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: 'white', fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 3 }}>
+                🖼️ +{extra - 1}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       <div style={{ padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', flex: 1 }}>
 

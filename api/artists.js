@@ -187,13 +187,15 @@ module.exports = async function handler(req, res) {
       return json(res, 200, { ...data, products: products || [] });
     }
     const { data: artists } = await supabase.from('profiles')
-      .select('id,name,username,artist_slug,bio,cover_image_url,avatar_url,website,social_links,artist_status,show_on_homepage,created_at,artist_id')
+      .select('id,name,username,artist_slug,bio,cover_image_url,avatar_url,website,social_links,artist_status,created_at,artist_id')
       .eq('role', 'artist').order('name');
     // Only real artist profiles — exclude promoted user accounts linked to another artist.
     const realArtists = (artists || []).filter(a => !a.artist_id || a.artist_id === a.id);
     const { data: products } = await supabase.from('products').select('artist_id').eq('active', true);
     const result = realArtists.map(a => ({
       ...a,
+      // Homepage flag lives in social_links (migration-free)
+      show_on_homepage: !!(a.social_links && a.social_links.show_on_homepage),
       productCount: (products || []).filter(p => p.artist_id === a.id).length,
     }));
     return json(res, 200, result);
@@ -260,9 +262,15 @@ module.exports = async function handler(req, res) {
     if (!user) return;
     const { id } = req.query;
     if (!id) return json(res, 400, { error: 'id required' });
-    const allowed = ['name','artist_slug','bio','avatar_url','cover_image_url','website','social_links','artist_status','show_on_homepage'];
+    const allowed = ['name','artist_slug','bio','avatar_url','cover_image_url','website','social_links','artist_status'];
     const updates = {};
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
+    // Homepage flag stored inside social_links (migration-free)
+    if (req.body.show_on_homepage !== undefined) {
+      const { data: cur } = await supabase.from('profiles').select('social_links').eq('id', id).single();
+      const sl = (cur && cur.social_links) || {};
+      updates.social_links = { ...sl, ...(updates.social_links || {}), show_on_homepage: !!req.body.show_on_homepage };
+    }
     updates.updated_at = new Date().toISOString();
     const { data, error } = await supabase.from('profiles').update(updates).eq('id', id).select().single();
     if (error) return json(res, 400, { error: error.message });

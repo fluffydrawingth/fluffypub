@@ -1857,9 +1857,14 @@ function AffiliateRequestsTab() {
     if (res?.error) { setMsg('⚠️ ' + res.error); return; }
     setMsg('✓ Fluffy Creator access revoked.'); load(); setTimeout(()=>setMsg(''), 4000);
   };
+  const enable = async (userId: string) => {
+    const res = await api.enableAffiliate(userId);
+    if (res?.error) { setMsg('⚠️ ' + res.error); return; }
+    setMsg('✓ Fluffy Creator access re-enabled.'); load(); setTimeout(()=>setMsg(''), 4000);
+  };
 
   const STATUS: Record<string,{c:string,bg:string,t:string}> = {
-    pending:{c:'#92400e',bg:'#fef3c7',t:'Pending'}, approved:{c:'#065f46',bg:'#d1fae5',t:'Approved'}, rejected:{c:'#991b1b',bg:'#fee2e2',t:'Rejected'},
+    pending:{c:'#92400e',bg:'#fef3c7',t:'Pending'}, approved:{c:'#065f46',bg:'#d1fae5',t:'Approved'}, rejected:{c:'#991b1b',bg:'#fee2e2',t:'Rejected'}, revoked:{c:'#92400e',bg:'#fffbeb',t:'Revoked'},
   };
 
   return (
@@ -1887,6 +1892,9 @@ function AffiliateRequestsTab() {
                   </>)}
                   {r.status==='approved'&&(
                     <button onClick={()=>revoke(r.user_id)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fcd34d',background:'#fffbeb',cursor:'pointer',fontSize:12,fontWeight:700,color:'#b45309'}}>Revoke</button>
+                  )}
+                  {r.status==='revoked'&&(
+                    <button onClick={()=>enable(r.user_id)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #6ee7b7',background:'#d1fae5',cursor:'pointer',fontSize:12,fontWeight:700,color:'#065f46'}}>Re-enable</button>
                   )}
                   <button onClick={()=>del(r.id, r.username||r.email||'this user')} style={{padding:'5px 12px',borderRadius:8,border:'1px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:12,fontWeight:700,color:'#dc2626'}}>Delete</button>
                 </div>

@@ -169,8 +169,8 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
         <div className="cp-grid" style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 24, alignItems: 'start' }}>
           {/* Artwork — full original ratio carousel, no cropping on detail page */}
           <div>
-            <div style={{ borderRadius: 18, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-              <ImageCarousel images={images} fit="contain" rounded={18} onImageClick={() => setLightbox(true)} />
+            <div style={{ filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.08))' }}>
+              <ImageCarousel images={images} fit="contain" rounded={18} onImageClick={() => setLightbox(true)} thumbnails />
             </div>
             <div style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 6 }}>🔍 {tRaw('แตะที่ภาพเพื่อขยาย', 'Tap to zoom')}</div>
           </div>

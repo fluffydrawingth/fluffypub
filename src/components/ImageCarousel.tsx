@@ -8,6 +8,7 @@ export default function ImageCarousel({
   rounded = 0,
   onImageClick,
   stopPropagation = false,
+  thumbnails = false,
 }: {
   images: string[];
   fit?: 'cover' | 'contain';
@@ -15,6 +16,7 @@ export default function ImageCarousel({
   rounded?: number;
   onImageClick?: () => void;
   stopPropagation?: boolean;
+  thumbnails?: boolean;
 }) {
   const [idx, setIdx] = useState(0);
   const touchX = useRef<number | null>(null);
@@ -52,17 +54,29 @@ export default function ImageCarousel({
   );
 
   if (fit === 'contain') {
-    // Detail mode: natural height, single image visible
+    // Detail mode: natural height, single image visible, optional thumbnail strip (3+ images)
     return (
-      <div style={{ position: 'relative', width: '100%', borderRadius: rounded, overflow: 'hidden', background: '#0000000a' }}
-        onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        <img src={list[idx]} alt="" onClick={onImageClick} style={{ width: '100%', display: 'block', cursor: onImageClick ? 'zoom-in' : 'default' }} />
-        {!single && <>
-          {arrowBtn('left', -1)}
-          {arrowBtn('right', 1)}
-          <Dots n={n} idx={idx} />
-          <Counter idx={idx} n={n} />
-        </>}
+      <div>
+        <div style={{ position: 'relative', width: '100%', borderRadius: rounded, overflow: 'hidden', background: '#0000000a' }}
+          onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+          <img src={list[idx]} alt="" onClick={onImageClick} style={{ width: '100%', display: 'block', cursor: onImageClick ? 'zoom-in' : 'default' }} />
+          {!single && <>
+            {arrowBtn('left', -1)}
+            {arrowBtn('right', 1)}
+            <Dots n={n} idx={idx} />
+            <Counter idx={idx} n={n} />
+          </>}
+        </div>
+        {thumbnails && n >= 3 && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, overflowX: 'auto', paddingBottom: 4 }}>
+            {list.map((src, i) => (
+              <button key={i} onClick={() => setIdx(i)} aria-label={`Image ${i + 1}`}
+                style={{ flexShrink: 0, width: 56, height: 56, borderRadius: 8, overflow: 'hidden', border: i === idx ? '2.5px solid #ec4899' : '1.5px solid #e5e7eb', cursor: 'pointer', padding: 0, background: 'none' }}>
+                <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: i === idx ? 1 : 0.7 }} />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     );
   }

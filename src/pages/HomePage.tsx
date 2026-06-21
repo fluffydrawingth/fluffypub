@@ -87,6 +87,7 @@ function CommunitySection() {
               style={{ scrollSnapAlign: 'start', flexShrink: 0, width: 210, background: 'white', border: `1.5px solid ${p}15`, borderRadius: 16, overflow: 'hidden', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily, textAlign: 'left', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
               <div style={{ position: 'relative', width: '100%', paddingBottom: '125%', background: `linear-gradient(135deg,${p}10,${p}05)` }}>
                 <img src={cover} alt={post.caption || 'coloring'} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                {(post.artwork_urls?.length || 0) > 1 && <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: 'white', fontSize: 10.5, fontWeight: 700, padding: '3px 7px', borderRadius: 12 }}>🖼️ +{post.artwork_urls.length - 1}</div>}
               </div>
               <div style={{ padding: '10px 12px 12px' }}>
                 {bookTitle && <div style={{ fontSize: 11.5, fontWeight: 700, color: p, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📚 {bookTitle}</div>}

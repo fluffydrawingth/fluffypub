@@ -143,6 +143,8 @@ module.exports = async function handler(req, res) {
     if (error) return json(res, 400, { error: error.message });
     // Deactivate their codes so they stop validating at checkout (orders/commissions untouched)
     await supabase.from('affiliate_codes').update({ active: false, updated_at: new Date().toISOString() }).eq('user_id', id);
+    // Reflect the revoked state on their request row so the admin list shows it correctly
+    await supabase.from('affiliate_requests').update({ status: 'revoked' }).eq('user_id', id);
     return json(res, 200, { success: true });
   }
 
@@ -155,6 +157,7 @@ module.exports = async function handler(req, res) {
     const { error } = await supabase.from('profiles').update({ affiliate_enabled: true, updated_at: new Date().toISOString() }).eq('id', id);
     if (error) return json(res, 400, { error: error.message });
     await supabase.from('affiliate_codes').update({ active: true, updated_at: new Date().toISOString() }).eq('user_id', id);
+    await supabase.from('affiliate_requests').update({ status: 'approved' }).eq('user_id', id);
     return json(res, 200, { success: true });
   }
 
