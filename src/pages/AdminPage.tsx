@@ -411,6 +411,11 @@ function ProductsTab() {
   const [isHot, setIsHot] = useState(false);
 
   const [descTh, setDescTh] = useState('');
+  // Creator commission settings (digital affiliate)
+  const [commissionEnabled, setCommissionEnabled] = useState(false);
+  const [commissionPct, setCommissionPct] = useState('5');
+  const [minThb, setMinThb] = useState('99');
+  const [minUsd, setMinUsd] = useState('2.99');
 
   const [categories, setCategories] = useState<string[]>([]);
   const [searchQ, setSearchQ] = useState('');
@@ -453,6 +458,7 @@ function ProductsTab() {
     setArtistId(''); setIsDigital(true); setIsPhysical(false); setRichBlocks([]);
     setR2Key(''); setR2FileName(''); setR2FileSize(0); setR2FileType(''); setR2UploadMsg('');
     setPhysicalRoyaltyTHB(''); setDigitalRoyaltyPct('');
+    setCommissionEnabled(false); setCommissionPct('5'); setMinThb('99'); setMinUsd('2.99');
     setIsNew(false); setIsHot(false);
     setEditingId(null);
   };
@@ -478,6 +484,10 @@ function ProductsTab() {
     setR2FileSize(pr.file_size||0); setR2FileType(pr.file_type||''); setR2UploadMsg('');
     setPhysicalRoyaltyTHB(pr.artist_physical_royalty_thb != null ? String(pr.artist_physical_royalty_thb) : '');
     setDigitalRoyaltyPct(pr.digital_artist_royalty_percent != null ? String(pr.digital_artist_royalty_percent) : '');
+    setCommissionEnabled(!!pr.commission_enabled);
+    setCommissionPct(pr.creator_commission_percent != null ? String(pr.creator_commission_percent) : '5');
+    setMinThb(pr.minimum_price_thb != null ? String(pr.minimum_price_thb) : '99');
+    setMinUsd(pr.minimum_price_usd != null ? String(pr.minimum_price_usd) : '2.99');
     setIsNew(!!pr.is_new); setIsHot(!!pr.is_hot);
     setEditingId(pr.id);
     setShowForm(true);
@@ -512,6 +522,10 @@ function ProductsTab() {
       description_th:descTh||null,
       artist_physical_royalty_thb: physicalRoyaltyTHB ? parseFloat(physicalRoyaltyTHB) : null,
       digital_artist_royalty_percent: digitalRoyaltyPct ? parseFloat(digitalRoyaltyPct) : null,
+      commission_enabled: commissionEnabled,
+      creator_commission_percent: commissionPct ? parseFloat(commissionPct) : 5,
+      minimum_price_thb: minThb ? parseFloat(minThb) : 99,
+      minimum_price_usd: minUsd ? parseFloat(minUsd) : 2.99,
       is_new: isNew,
       is_hot: isHot,
     };
@@ -707,6 +721,21 @@ function ProductsTab() {
                 <div style={{fontSize:11,color:'#1d4ed8',marginBottom:8}}>Artist earns: sale price × royalty % — e.g. 80% means artist gets 80%, platform keeps 20%</div>
                 <div style={{fontSize:12,color:'#1d4ed8',background:'#dbeafe',borderRadius:8,padding:'8px 12px'}}>
                   💡 ไฟล์จะถูกเก็บใน Cloudflare R2 — ลิงค์ดาวน์โหลดจะถูกสร้างเมื่อลูกค้าชำระเงินแล้ว
+                </div>
+
+                {/* Fluffy Creator commission (digital affiliate from community ?ref= links) */}
+                <div style={{marginTop:12,padding:'12px 14px',borderRadius:10,border:'1.5px solid #ede9fe',background:'#faf5ff'}}>
+                  <label style={{display:'flex',alignItems:'center',gap:8,fontSize:13,fontWeight:800,color:'#6d28d9',cursor:'pointer'}}>
+                    <input type="checkbox" checked={commissionEnabled} onChange={e=>setCommissionEnabled(e.target.checked)} /> 🌷 Enable Fluffy Creator commission
+                  </label>
+                  <div style={{fontSize:11,color:'#7c3aed',margin:'4px 0 10px'}}>Pays a % to the approved creator whose community link (?ref=) led to the sale. No commission below the minimum price.</div>
+                  {commissionEnabled && (
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
+                      {inp('Commission % (default 5)', commissionPct, setCommissionPct, '5', 'number')}
+                      {inp('Min price THB (default 99)', minThb, setMinThb, '99', 'number')}
+                      {inp('Min price USD (default 2.99)', minUsd, setMinUsd, '2.99', 'number')}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1823,12 +1852,27 @@ function AffiliateRequestsTab() {
   const [code, setCode] = useState('');
   const [discount, setDiscount] = useState('10');
   const [commission, setCommission] = useState('20');
+  // Invite-by-search
+  const [inviteQ, setInviteQ] = useState('');
+  const [inviteResults, setInviteResults] = useState<any[]>([]);
 
   const load = useCallback(() => {
     setLoading(true);
     api.getAffiliateRequests().then(reqs => { setRequests(Array.isArray(reqs)?reqs:[]); setLoading(false); }).catch(()=>setLoading(false));
   }, []);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const q = inviteQ.trim();
+    if (q.length < 2) { setInviteResults([]); return; }
+    const t = setTimeout(() => { api.searchUsers(q).then((d:any)=>setInviteResults(d?.users||[])).catch(()=>{}); }, 250);
+    return () => clearTimeout(t);
+  }, [inviteQ]);
+  const invite = async (u:any) => {
+    const res = await api.inviteAffiliate(u.id);
+    if (res?.error) { setMsg('⚠️ ' + res.error); return; }
+    setMsg(`✓ ${u.name} invited as Fluffy Creator.`); setInviteQ(''); setInviteResults([]); load();
+    setTimeout(()=>setMsg(''), 4000);
+  };
 
   const startApprove = (id: string) => { setApproving(approving===id?null:id); setCode(''); setDiscount('10'); setCommission('20'); setMsg(''); };
   const approve = async (id: string) => {
@@ -1870,8 +1914,28 @@ function AffiliateRequestsTab() {
   return (
     <div style={{padding:32}}>
       <h1 style={{fontSize:28,fontWeight:900,color:'#111827',margin:'0 0 8px'}}>Fluffy Creator Requests</h1>
-      <p style={{fontSize:13,color:'#6b7280',margin:'0 0 24px'}}>Approving grants Fluffy Creator access (keeps existing role) and creates their code.</p>
+      <p style={{fontSize:13,color:'#6b7280',margin:'0 0 16px'}}>Approving grants Fluffy Creator access (keeps existing role) and creates their code. You can also invite a user directly below.</p>
       {msg&&<div style={{marginBottom:16,padding:'10px 16px',borderRadius:12,background:msg.startsWith('✓')?'#d1fae5':'#fee2e2',color:msg.startsWith('✓')?'#065f46':'#991b1b',fontSize:13,fontWeight:600}}>{msg}</div>}
+
+      {/* Invite a creator directly */}
+      <div style={{...card,padding:16,marginBottom:20}}>
+        <div style={{fontSize:13,fontWeight:800,color:'#374151',marginBottom:8}}>✉️ Invite a Fluffy Creator</div>
+        <div style={{position:'relative',maxWidth:480}}>
+          <input value={inviteQ} onChange={e=>setInviteQ(e.target.value)} placeholder="Search user by name or email..." style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'}} />
+          {inviteResults.length>0 && (
+            <div style={{position:'absolute',top:'100%',left:0,right:0,zIndex:20,background:'white',border:'1px solid #f1f5f9',borderRadius:10,marginTop:4,overflow:'hidden',boxShadow:'0 6px 18px rgba(0,0,0,0.1)'}}>
+              {inviteResults.map((u:any)=>(
+                <div key={u.id} style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',borderBottom:'1px solid #f8fafc'}}>
+                  <div style={{flex:1,fontSize:13,color:'#1e293b'}}>{u.name} {u.email && <span style={{color:'#94a3b8',fontSize:11}}>· {u.email}</span>}</div>
+                  {u.affiliate_enabled
+                    ? <span style={{fontSize:11,color:'#059669',fontWeight:700}}>✓ Already a creator</span>
+                    : <button onClick={()=>invite(u)} style={{padding:'5px 12px',borderRadius:8,border:'none',background:P,color:'white',cursor:'pointer',fontSize:12,fontWeight:700}}>Invite as Fluffy Creator</button>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
       <div style={{...card,overflow:'hidden'}}>
         <table style={{width:'100%',borderCollapse:'collapse'}}>
           <thead><tr style={{borderBottom:'2px solid #f3f4f6',background:'#fafafa'}}>{['NAME','EMAIL','PLATFORM','LINK','DATE','STATUS',''].map((h,i)=><th key={i} style={{textAlign:'left',padding:'12px 16px',fontSize:11,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}</tr></thead>
@@ -1933,12 +1997,20 @@ function AffiliatesTab() {
   const [msg, setMsg] = useState('');
   const [expanded, setExpanded] = useState<string|null>(null);
   const [selId, setSelId] = useState('');   // selected affiliate (dropdown)
+  const [commissions, setCommissions] = useState<any[]>([]);
 
   const load = useCallback(() => {
     setLoading(true);
     api.getAffiliates().then(d => { setAffiliates(Array.isArray(d)?d:[]); setLoading(false); }).catch(()=>setLoading(false));
+    api.getCreatorCommissions().then((d:any)=>setCommissions(d?.commissions||[])).catch(()=>{});
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  const commPaid = async (id:string) => {
+    const res = await api.markCommissionPaid(id);
+    if (res?.error) return flash('⚠️ '+res.error);
+    flash('✓ Commission marked paid.'); load();
+  };
 
   const flash = (m: string) => { setMsg(m); setTimeout(()=>setMsg(''), 4000); };
 
@@ -2089,6 +2161,33 @@ function AffiliatesTab() {
           )}
         </div>
       ))}
+
+      {/* Digital commission records (from community ?ref= links) */}
+      <h2 style={{fontSize:18,fontWeight:800,color:'#111827',margin:'28px 0 12px'}}>💾 Digital Commission Records</h2>
+      <div style={{...card,overflow:'auto'}}>
+        <table style={{width:'100%',borderCollapse:'collapse',minWidth:760}}>
+          <thead><tr style={{background:'#fafafa',borderBottom:'2px solid #f3f4f6'}}>
+            {['Creator','Product','Date','Sale','%','Commission','Status',''].map((hh,i)=><th key={i} style={{textAlign:'left',padding:'10px 14px',fontSize:11,color:'#888',fontWeight:700,textTransform:'uppercase',whiteSpace:'nowrap'}}>{hh}</th>)}
+          </tr></thead>
+          <tbody>{commissions.map((c:any)=>{
+            const st:any = c.status==='paid'?['#d1fae5','#065f46']:c.status==='confirmed'?['#dbeafe','#1d4ed8']:c.status==='cancelled'?['#fee2e2','#991b1b']:['#fef3c7','#92400e'];
+            const cur=(n:number)=>c.currency==='USD'?`$${Number(n||0).toFixed(2)}`:thb(n);
+            return (
+              <tr key={c.id} style={{borderBottom:'1px solid #f8fafc'}}>
+                <td style={{padding:'9px 14px',fontSize:13,fontWeight:700,color:'#111827'}}>{c.creator_name||'—'}</td>
+                <td style={{padding:'9px 14px',fontSize:12.5,color:'#475569',maxWidth:180,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.product_title||'—'}</td>
+                <td style={{padding:'9px 14px',fontSize:12,color:'#94a3b8',whiteSpace:'nowrap'}}>{c.created_at?new Date(c.created_at).toLocaleDateString():''}</td>
+                <td style={{padding:'9px 14px',fontSize:13,color:'#1e293b'}}>{cur(c.sale_amount)}</td>
+                <td style={{padding:'9px 14px',fontSize:12,color:'#64748b'}}>{c.commission_percent}%</td>
+                <td style={{padding:'9px 14px',fontSize:13,fontWeight:800,color:'#059669'}}>{cur(c.commission_amount)}</td>
+                <td style={{padding:'9px 14px'}}><span style={{background:st[0],color:st[1],borderRadius:20,padding:'2px 9px',fontSize:11,fontWeight:700,textTransform:'capitalize'}}>{c.status}</span></td>
+                <td style={{padding:'9px 14px'}}>{c.status==='confirmed'&&<button onClick={()=>commPaid(c.id)} style={{padding:'4px 10px',borderRadius:8,border:'none',background:P,color:'white',cursor:'pointer',fontSize:12,fontWeight:700}}>Mark paid</button>}</td>
+              </tr>
+            );
+          })}</tbody>
+        </table>
+        {commissions.length===0&&<div style={{textAlign:'center',padding:'32px',color:'#9ca3af',fontSize:13}}>No digital commission records yet.</div>}
+      </div>
     </div>
   );
 }

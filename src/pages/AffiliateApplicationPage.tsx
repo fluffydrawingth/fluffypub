@@ -11,8 +11,9 @@ import { useGuidelines } from '../lib/useGuidelines';
 const DEFAULT_GUIDELINES = [
   { th: 'แชร์ Fluffy Pub อย่างเป็นธรรมชาติ', en: 'Share Fluffy Pub organically' },
   { th: 'ห้ามสแปมหรือโปรโมตที่ทำให้เข้าใจผิด', en: 'No spam or misleading promotions' },
-  { th: 'ค่าคอมมิชชันจะได้รับหลังจากจัดส่งสำเร็จเท่านั้น', en: 'Commissions are earned only after successful delivery' },
-  { th: 'โค้ด Fluffy Creator ใช้ได้กับสินค้าจริง (Physical) เท่านั้น', en: 'Fluffy Creator codes apply to Physical Products only' },
+  { th: 'ค่าคอมมิชชันได้รับจากการขายสินค้าที่เข้าเงื่อนไขเท่านั้น', en: 'Commission is earned only from eligible product sales' },
+  { th: 'ค่าคอมมิชชันเริ่มนับหลังได้รับอนุมัติเท่านั้น', en: 'Commission starts after approval' },
+  { th: 'ค่าคอมมิชชัน Fluffy Creator ใช้ได้กับสินค้าที่เข้าเงื่อนไขเท่านั้น', en: 'Fluffy Creator commission applies only to eligible products.' },
   { th: 'Fluffy Pub อาจยกเลิกสิทธิ์ Fluffy Creator ได้หากจำเป็น', en: 'Fluffy Pub may revoke Fluffy Creator access if necessary' },
 ];
 
@@ -96,7 +97,7 @@ export default function AffiliateApplicationPage() {
             {tRaw('สมัครเป็น Fluffy Creator', 'Become a Fluffy Creator')}
           </h1>
           <p style={{ fontSize:15, color:'#64748b', lineHeight:1.7, margin:0 }}>
-            {tRaw('แชร์ Fluffy Pub และรับค่าคอมมิชชันจากการแนะนำสินค้าจริง', 'Share Fluffy Pub and earn commission for referring physical product sales.')}
+            {tRaw('แชร์ Fluffy Pub และรับค่าคอมมิชชันจากการขายสินค้าที่เข้าเงื่อนไข', 'Share Fluffy Pub and earn commission from eligible product sales.')}
           </p>
         </div>
 

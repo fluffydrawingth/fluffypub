@@ -648,6 +648,40 @@ module.exports = async function handler(req, res) {
       console.error('[orders POST] INSERT ERROR:', error.code, error.message, error.details, error.hint);
       return json(res, 400, { error: error.message, code: error.code, hint: error.hint });
     }
+    // ── Digital creator commission ledger (separate from physical code/commission) ──
+    // Never blocks checkout: if the v8 schema isn't applied, this is skipped silently.
+    try {
+      if (refCreatorId && (!authUser || authUser.id !== refCreatorId)) {
+        const { data: creator } = await supabase.from('profiles').select('id,affiliate_enabled,affiliate_approved_at').eq('id', refCreatorId).single();
+        const approvedAt = creator && creator.affiliate_approved_at ? new Date(creator.affiliate_approved_at) : null;
+        // No retroactive commission: creator must be approved before this order
+        if (creator && creator.affiliate_enabled && approvedAt && approvedAt <= new Date()) {
+          const digitalItems = orderItems.filter(i => (i.optionType || i.type) === 'digital');
+          if (digitalItems.length) {
+            const isUSD = order.currency === 'USD';
+            const dpids = [...new Set(digitalItems.map(i => i.productId))];
+            const { data: cset } = await supabase.from('products')
+              .select('id,commission_enabled,creator_commission_percent,minimum_price_thb,minimum_price_usd').in('id', dpids);
+            const csMap = Object.fromEntries((cset || []).map(p => [p.id, p]));
+            const rows = [];
+            for (const it of digitalItems) {
+              const cs = csMap[it.productId];
+              if (!cs || !cs.commission_enabled) continue;
+              const unit = isUSD ? (it.unitPriceUSD || 0) : (it.unitPriceTHB || 0);
+              const min = isUSD ? Number(cs.minimum_price_usd != null ? cs.minimum_price_usd : 2.99) : Number(cs.minimum_price_thb != null ? cs.minimum_price_thb : 99);
+              if (unit < min) continue; // below minimum eligible price → no commission
+              const lineTotal = isUSD ? unit * it.qty : (it.lineTotalTHB || 0);
+              const pct = Number(cs.creator_commission_percent != null ? cs.creator_commission_percent : 5);
+              const amount = Math.round(lineTotal * pct) / 100; // pct% of line total, 2dp
+              if (amount <= 0) continue;
+              rows.push({ creator_id: refCreatorId, order_id: order.id, product_id: it.productId, product_title: it.title, buyer_id: authUser ? authUser.id : null, sale_amount: lineTotal, currency: order.currency, commission_percent: pct, commission_amount: amount, status: 'pending' });
+            }
+            if (rows.length) await supabase.from('creator_commissions').insert(rows);
+          }
+        }
+      }
+    } catch (e) { console.error('[digital commission] skipped:', e.message); }
+
     // Send confirmation emails
     const orderRef = (order.id || '').slice(-8).toUpperCase();
     await sendEmail(customerEmail, `✅ คำสั่งซื้อ #${orderRef} รับแล้ว — Fluffy Pub`, await tplOrderCreated(order), { orderId: order.id, eventType: 'order_created' });
@@ -762,6 +796,11 @@ module.exports = async function handler(req, res) {
     }).eq('id', id).select().single();
     if (error) return json(res, 400, { error: error.message });
 
+    // Digital-only orders deliver instantly on payment → confirm their commission now
+    if (isDigitalOnly) {
+      try { await supabase.from('creator_commissions').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('order_id', id).eq('status', 'pending'); } catch (_) { /* not migrated */ }
+    }
+
     // Decrease stock for physical items now that payment is confirmed
     await adjustStock(data.items, -1);
 
@@ -797,6 +836,15 @@ module.exports = async function handler(req, res) {
     const { data, error } = await supabase.from('orders').update(updates).eq('id', id).select().single();
     if (error) return json(res, 404, { error: 'Order not found' });
 
+    // Digital commission: confirm on delivery, cancel on cancellation (matches physical rule)
+    try {
+      if (status === 'delivered' && before?.status !== 'delivered') {
+        await supabase.from('creator_commissions').update({ status: 'confirmed', confirmed_at: new Date().toISOString() }).eq('order_id', id).eq('status', 'pending');
+      } else if (status === 'cancelled') {
+        await supabase.from('creator_commissions').update({ status: 'cancelled' }).eq('order_id', id).in('status', ['pending', 'confirmed']);
+      }
+    } catch (_) { /* schema not migrated yet — ignore */ }
+
     // Send shipped notification when status changes to 'shipped', or tracking is newly added
     const trackingAdded = tracking_number && tracking_number !== before?.tracking_number;
     const justShipped = status === 'shipped' && before?.status !== 'shipped';
@@ -829,6 +877,8 @@ module.exports = async function handler(req, res) {
       .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq('id', id).select().single();
     if (error) return json(res, 400, { error: error.message });
+    // Cancel any digital commission attributed to this order
+    try { await supabase.from('creator_commissions').update({ status: 'cancelled' }).eq('order_id', id).in('status', ['pending', 'confirmed']); } catch (_) { /* not migrated */ }
     // Restore stock if order was paid
     if (cancelData.payment_status === 'paid') {
       await adjustStock(cancelData.items, +1);

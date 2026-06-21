@@ -161,6 +161,43 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { success: true });
   }
 
+  // GET ?action=user-search&q= — admin: find any user by name/username/email (for inviting)
+  if (req.method === 'GET' && action === 'user-search') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const term = String(req.query.q || '').trim();
+    if (!term) return json(res, 200, { users: [] });
+    const { data } = await supabase.from('profiles')
+      .select('id,name,username,email,affiliate_enabled')
+      .or(`name.ilike.%${term}%,username.ilike.%${term}%,email.ilike.%${term}%`)
+      .order('name').range(0, 9);
+    return json(res, 200, { users: (data || []).map(u => ({ id: u.id, name: u.username || u.name || u.email || 'User', email: u.email || '', affiliate_enabled: !!u.affiliate_enabled })) });
+  }
+
+  // POST ?action=affiliate-invite&id=<userId> — admin grants Fluffy Creator access directly
+  if (req.method === 'POST' && action === 'affiliate-invite') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { id } = req.query;
+    if (!id) return json(res, 400, { error: 'user id required' });
+    const { data: pf } = await supabase.from('profiles').select('id,affiliate_approved_at,name,username,email').eq('id', id).single();
+    if (!pf) return json(res, 404, { error: 'User not found' });
+    const now = new Date().toISOString();
+    // Set approval date only on first grant — commission is never retroactive
+    const upd = { affiliate_enabled: true, updated_at: now };
+    if (!pf.affiliate_approved_at) upd.affiliate_approved_at = now;
+    const { error } = await supabase.from('profiles').update(upd).eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    // Upsert an approved request row so the admin lists show them consistently
+    const { data: existing } = await supabase.from('affiliate_requests').select('id').eq('user_id', id).limit(1);
+    if (existing && existing.length) {
+      await supabase.from('affiliate_requests').update({ status: 'approved' }).eq('user_id', id);
+    } else {
+      await supabase.from('affiliate_requests').insert({ user_id: id, username: pf.username || pf.name || null, email: pf.email || null, status: 'approved', message: 'Invited by admin' });
+    }
+    return json(res, 200, { success: true });
+  }
+
   // GET ?action=affiliate-list — admin: all affiliates with codes + earnings
   if (req.method === 'GET' && action === 'affiliate-list') {
     const admin = await requireAuth(req, res, ['admin']);
@@ -201,7 +238,45 @@ module.exports = async function handler(req, res) {
       payout_payment_method: user.payout_payment_method || '',
       payout_note: user.payout_note || '',
     };
-    return json(res, 200, { codes: codes || [], orders: orders || [], payouts: payouts || [], payoutAccount, summary: summarizeAffiliate(orders || []) });
+    // Digital product commission ledger (creator's own). Empty if v8 not migrated.
+    let digitalCommissions = [];
+    try {
+      const { data: dc } = await supabase.from('creator_commissions').select('*').eq('creator_id', user.id).order('created_at', { ascending: false });
+      digitalCommissions = dc || [];
+    } catch (_) { /* not migrated */ }
+    return json(res, 200, { codes: codes || [], orders: orders || [], payouts: payouts || [], payoutAccount, summary: summarizeAffiliate(orders || []), digitalCommissions });
+  }
+
+  // GET ?action=creator-commissions[&creator_id=] — admin: digital commission records
+  if (req.method === 'GET' && action === 'creator-commissions') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    let dc = [];
+    try {
+      let q = supabase.from('creator_commissions').select('*').order('created_at', { ascending: false }).range(0, 499);
+      if (req.query.creator_id) q = q.eq('creator_id', req.query.creator_id);
+      const { data } = await q;
+      dc = data || [];
+      // attach creator names
+      const ids = [...new Set(dc.map(r => r.creator_id).filter(Boolean))];
+      if (ids.length) {
+        const { data: ppl } = await supabase.from('profiles').select('id,name,username,email').in('id', ids);
+        const m = Object.fromEntries((ppl || []).map(u => [u.id, u]));
+        dc = dc.map(r => ({ ...r, creator_name: m[r.creator_id] ? (m[r.creator_id].username || m[r.creator_id].name || m[r.creator_id].email) : '—' }));
+      }
+    } catch (_) { /* not migrated */ }
+    return json(res, 200, { commissions: dc });
+  }
+
+  // POST ?action=commission-mark-paid&id= — admin marks a digital commission paid
+  if (req.method === 'POST' && action === 'commission-mark-paid') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { id } = req.query;
+    if (!id) return json(res, 400, { error: 'id required' });
+    const { error } = await supabase.from('creator_commissions').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
   }
 
   // POST ?action=affiliate-code — admin creates an extra code for an affiliate

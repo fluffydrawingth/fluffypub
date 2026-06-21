@@ -77,7 +77,7 @@ module.exports = async function handler(req, res) {
     if (!product) return json(res, 404, { error: 'Not found' });
     if (user.role === 'artist' && product.artist_id !== user.id) return json(res, 403, { error: 'Forbidden' });
     const allowed = ['title','price','original_price','category','categories','description','description_th','description_en','rich_description','image','cover_image_url','type','is_physical','is_digital','pages','tags','search_keywords','active','status','physical_stock','shipping_required','shipping_note','variants','title_th','title_en','price_thb','price_usd'];
-    if (user.role === 'admin') allowed.push('featured','bestseller','is_new','is_hot','digital_download_url','download_instruction','artist_id','artist_name','r2_key','r2_file_name','file_size','file_type','artist_physical_royalty_thb','digital_platform_fee_thb','digital_platform_fee_usd','digital_artist_royalty_percent');
+    if (user.role === 'admin') allowed.push('featured','bestseller','is_new','is_hot','digital_download_url','download_instruction','artist_id','artist_name','r2_key','r2_file_name','file_size','file_type','artist_physical_royalty_thb','digital_platform_fee_thb','digital_platform_fee_usd','digital_artist_royalty_percent','commission_enabled','creator_commission_percent','minimum_price_thb','minimum_price_usd');
     const updates = { updated_at: new Date().toISOString() };
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
     // Recalculate type string from boolean fields

@@ -97,11 +97,15 @@ export default function AffiliateDashboardPage() {
 
   const codes = data?.codes || [];
   const orders = data?.orders || [];
+  const digitalCommissions = data?.digitalCommissions || [];
+  const dcStatus: Record<string,{c:string,bg:string,t:string}> = {
+    pending:{c:'#92400e',bg:'#fef3c7',t:'Pending'}, confirmed:{c:'#1d4ed8',bg:'#dbeafe',t:'Confirmed'}, paid:{c:'#065f46',bg:'#d1fae5',t:'Paid'}, cancelled:{c:'#991b1b',bg:'#fee2e2',t:'Cancelled'},
+  };
   const s = data?.summary || { ordersReferred:0, physicalRevenueTHB:0, commissionEarned:0, paidCommission:0, pendingCommission:0 };
 
   const cards = [
     { label: tRaw('คำสั่งซื้อที่แนะนำ','Orders Referred'), value: s.ordersReferred, icon:'📦', color:'#10b981' },
-    { label: tRaw('ยอดขายสินค้าจริง','Physical Revenue'), value: thb(s.physicalRevenueTHB), icon:'💰', color:'#f59e0b' },
+    { label: tRaw('ยอดขายที่เข้าเงื่อนไข','Eligible Sales'), value: thb(s.physicalRevenueTHB), icon:'💰', color:'#f59e0b' },
     { label: tRaw('คอมมิชชันที่ได้รับ','Commission Earned'), value: thb(s.commissionEarned), icon:'🏦', color:'#8b5cf6' },
     { label: tRaw('คอมมิชชันค้างจ่าย','Pending Commission'), value: thb(s.pendingCommission), icon:'⏳', color:'#ef4444' },
     { label: tRaw('คอมมิชชันที่จ่ายแล้ว','Paid Commission'), value: thb(s.paidCommission), icon:'✅', color:'#06b6d4' },
@@ -115,7 +119,19 @@ export default function AffiliateDashboardPage() {
         </button>
 
         <h1 style={{ fontSize:24, fontWeight:900, color:'#1e293b', marginBottom:6 }}>🤝 {tRaw('แดชบอร์ด Fluffy Creator','Fluffy Creator Dashboard')}</h1>
-        <p style={{ fontSize:13, color:'#94a3b8', marginBottom:24 }}>{tRaw('คอมมิชชันจะนับเมื่อคำสั่งซื้อจัดส่งสำเร็จเท่านั้น','Commission counts only once an order is delivered.')}</p>
+        <p style={{ fontSize:13, color:'#94a3b8', marginBottom:16 }}>{tRaw('ค่าคอมมิชชันได้รับจากการขายสินค้าที่เข้าเงื่อนไข และนับหลังได้รับอนุมัติเท่านั้น','Commission applies only to eligible Fluffy Pub products, and counts only after your approval date.')}</p>
+
+        {/* How commission works — physical (code) + digital (community ?ref= links) */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:24 }}>
+          <div style={{ background:'white', borderRadius:14, padding:'14px 16px', boxShadow:'0 2px 10px rgba(0,0,0,0.05)', borderLeft:'4px solid #f59e0b' }}>
+            <div style={{ fontSize:13, fontWeight:800, color:'#1e293b', marginBottom:4 }}>📦 {tRaw('สินค้าจัดส่ง (ใช้โค้ด)','Physical products (your code)')}</div>
+            <div style={{ fontSize:12, color:'#64748b', lineHeight:1.6 }}>{tRaw('ลูกค้าใส่โค้ดของคุณตอนชำระเงิน → ลด ฿10 ให้ลูกค้า, คุณได้ ฿20','Customer enters your code at checkout → ฿10 off for them, ฿20 commission for you.')}</div>
+          </div>
+          <div style={{ background:'white', borderRadius:14, padding:'14px 16px', boxShadow:'0 2px 10px rgba(0,0,0,0.05)', borderLeft:'4px solid #8b5cf6' }}>
+            <div style={{ fontSize:13, fontWeight:800, color:'#1e293b', marginBottom:4 }}>💾 {tRaw('สินค้าดิจิทัล (ลิงก์จากโพสต์)','Digital products (community links)')}</div>
+            <div style={{ fontSize:12, color:'#64748b', lineHeight:1.6 }}>{tRaw('ลิงก์สินค้าจากโพสต์ชุมชนของคุณจะมี ?ref= อัตโนมัติ → รับคอมมิชชันเป็น % ของสินค้าที่เข้าเงื่อนไข','Product links in your Community posts auto-include ?ref= → earn a % commission on eligible digital sales.')}</div>
+          </div>
+        </div>
 
         {/* Creator Profile — appears on your Community creator page */}
         <h2 style={{ fontSize:18, fontWeight:800, color:'#1e293b', marginBottom:12 }}>🌷 {tRaw('โปรไฟล์ครีเอเตอร์','Creator Profile')}</h2>
@@ -195,7 +211,7 @@ export default function AffiliateDashboardPage() {
         </div>
 
         {/* History */}
-        <h2 style={{ fontSize:18, fontWeight:800, color:'#1e293b', marginBottom:12 }}>{tRaw('ประวัติ Fluffy Creator','Fluffy Creator History')}</h2>
+        <h2 style={{ fontSize:18, fontWeight:800, color:'#1e293b', marginBottom:12 }}>📦 {tRaw('คอมมิชชันสินค้าจัดส่ง (โค้ด)','Physical product commission (code)')}</h2>
         <div style={{ background:'white', borderRadius:16, overflow:'auto', boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>
           <table style={{ width:'100%', borderCollapse:'collapse', minWidth:720 }}>
             <thead><tr style={{ background:'#f8fafc', borderBottom:'2px solid #f1f5f9' }}>
@@ -223,6 +239,33 @@ export default function AffiliateDashboardPage() {
             })}</tbody>
           </table>
           {!orders.length && <div style={{ textAlign:'center', padding:36, color:'#94a3b8' }}>{tRaw('ยังไม่มีคำสั่งซื้อที่แนะนำ','No referred orders yet.')}</div>}
+        </div>
+
+        {/* Digital product commission (from community ?ref= links) */}
+        <h2 style={{ fontSize:18, fontWeight:800, color:'#1e293b', margin:'28px 0 12px' }}>💾 {tRaw('คอมมิชชันสินค้าดิจิทัล (ลิงก์จากโพสต์)','Digital product commission (community links)')}</h2>
+        <div style={{ background:'white', borderRadius:16, overflow:'auto', boxShadow:'0 2px 10px rgba(0,0,0,0.05)' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', minWidth:680 }}>
+            <thead><tr style={{ background:'#f8fafc', borderBottom:'2px solid #f1f5f9' }}>
+              {['Product','Date','Sale','%','Commission','Status'].map(hh => (
+                <th key={hh} style={{ textAlign:'left', padding:'11px 14px', fontSize:11, color:'#888', fontWeight:700, textTransform:'uppercase', whiteSpace:'nowrap' }}>{hh}</th>
+              ))}
+            </tr></thead>
+            <tbody>{digitalCommissions.map((c: any) => {
+              const si = dcStatus[c.status] || { t:c.status, c:'#64748b', bg:'#f1f5f9' };
+              const cur = (n:number)=> c.currency==='USD' ? `$${Number(n||0).toFixed(2)}` : thb(n);
+              return (
+                <tr key={c.id} style={{ borderBottom:'1px solid #f8fafc' }}>
+                  <td style={{ padding:'10px 14px', fontSize:12.5, fontWeight:700, color:'#1e293b', maxWidth:200, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{c.product_title || '—'}</td>
+                  <td style={{ padding:'10px 14px', fontSize:12, color:'#64748b', whiteSpace:'nowrap' }}>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
+                  <td style={{ padding:'10px 14px', fontSize:13, color:'#1e293b' }}>{cur(c.sale_amount)}</td>
+                  <td style={{ padding:'10px 14px', fontSize:12, color:'#64748b' }}>{c.commission_percent}%</td>
+                  <td style={{ padding:'10px 14px', fontSize:13, fontWeight:800, color: c.status==='cancelled' ? '#94a3b8' : '#059669' }}>{cur(c.commission_amount)}</td>
+                  <td style={{ padding:'10px 14px' }}><span style={{ background:si.bg, color:si.c, borderRadius:20, padding:'3px 10px', fontSize:11, fontWeight:700 }}>{si.t}</span></td>
+                </tr>
+              );
+            })}</tbody>
+          </table>
+          {!digitalCommissions.length && <div style={{ textAlign:'center', padding:36, color:'#94a3b8' }}>{tRaw('ยังไม่มีคอมมิชชันดิจิทัล','No digital commission yet.')}</div>}
         </div>
 
         {/* Payout history */}
