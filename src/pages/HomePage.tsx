@@ -35,15 +35,69 @@ export default function HomePage() {
     featured:         <FeaturedSection key="featured" products={featured} />,
     digital_products: <DigitalProductsSection key="digital_products" products={digitalProducts} />,
     categories:       <CategoriesSection key="categories" allProducts={allProducts} />,
+    community:        <CommunitySection key="community" />,
     artists:          <ArtistsSection key="artists" />,
     newsletter:       <NewsletterSection key="newsletter" />,
     blog:             <BlogSection key="blog" />,
   };
 
+  const sections = theme.sections || ['hero','featured','categories','artists','newsletter'];
   return (
     <div style={{ fontFamily: theme.fontFamily }}>
-      {(theme.sections || ['hero','featured','categories','artists','newsletter']).map(s => sectionMap[s])}
+      {sections.map(s => sectionMap[s])}
+      {/* Always show Color Your World once, even if not in the configured order */}
+      {!sections.includes('community') && sectionMap['community']}
     </div>
+  );
+}
+
+// ── 🌈 Color Your World — Editor's Picks from Community (lightweight) ──────────
+function CommunitySection() {
+  const { theme } = useTheme();
+  const { navigate } = useRouter();
+  const { lang } = useLang();
+  const tl = (en: string, th?: string) => (lang === 'th' && th) ? th : en;
+  const p = theme.primaryColor;
+  const [posts, setPosts] = useState<any[]>([]);
+
+  useEffect(() => {
+    api.getCommunityCozyPicks().then((d: any) => setPosts((d?.posts || []).slice(0, 6))).catch(() => {});
+  }, []);
+
+  if (!posts.length) return null;
+
+  return (
+    <section style={{ padding: '48px 16px', maxWidth: 1200, margin: '0 auto' }}>
+      <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        <h2 style={{ fontSize: 'clamp(22px,3vw,30px)', fontWeight: 900, color: theme.textColor, margin: '0 0 6px' }}>🌈 {tl('Color Your World', 'แต่งแต้มโลกของคุณ')}</h2>
+        <p style={{ fontSize: 14, color: theme.textColor + '99', margin: 0 }}>{tl('Real coloring results from our community', 'ผลงานระบายสีจริงจากชุมชนของเรา')}</p>
+      </div>
+
+      <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 10, scrollSnapType: 'x mandatory' }}>
+        {posts.map(post => {
+          const cover = (post.artwork_urls && post.artwork_urls.length ? post.artwork_urls[0] : post.thumb_url || post.artwork_url);
+          const bookTitle = post.product?.title || post.external_book?.title || post.external_book_title || '';
+          return (
+            <button key={post.id} onClick={() => navigate(`/community/${post.id}`)}
+              style={{ scrollSnapAlign: 'start', flexShrink: 0, width: 210, background: 'white', border: `1.5px solid ${p}15`, borderRadius: 16, overflow: 'hidden', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily, textAlign: 'left', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
+              <div style={{ position: 'relative', width: '100%', paddingBottom: '125%', background: `linear-gradient(135deg,${p}10,${p}05)` }}>
+                <img src={cover} alt={post.caption || 'coloring'} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              <div style={{ padding: '10px 12px 12px' }}>
+                {bookTitle && <div style={{ fontSize: 11.5, fontWeight: 700, color: p, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📚 {bookTitle}</div>}
+                {post.creator && <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.creator.affiliate_enabled ? '🌷' : '👤'} {post.creator.name}</div>}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ textAlign: 'center', marginTop: 22 }}>
+        <button onClick={() => navigate('/community')} style={{ background: p, color: 'white', border: 'none', cursor: 'pointer', padding: '12px 28px', borderRadius: 24, fontSize: 14.5, fontWeight: 800, fontFamily: theme.fontFamily }}>
+          ✨ {tl('Explore Community', 'สำรวจชุมชน')} →
+        </button>
+      </div>
+    </section>
   );
 }
 

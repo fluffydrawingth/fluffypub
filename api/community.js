@@ -55,6 +55,7 @@ async function decorate(posts, viewerId, guestId) {
     return {
       ...post,
       artwork_urls: urls,
+      recommended_tools: Array.isArray(post.recommended_tools) ? post.recommended_tools : [],
       creator: u ? {
         id: u.id,
         name: u.username || u.name || 'Community Member',
@@ -73,6 +74,24 @@ async function decorate(posts, viewerId, guestId) {
 
 function slugify(s) {
   return String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'book';
+}
+
+// Sanitize per-post recommended coloring tools (Fluffy Creators only).
+// Rules: max 2, must have a name, no duplicate URLs, only http(s) links.
+function sanitizeTools(input) {
+  if (!Array.isArray(input)) return [];
+  const out = [];
+  const seenUrls = new Set();
+  for (const t of input) {
+    const name = String(t?.name || '').trim().slice(0, 80);
+    let url = String(t?.url || '').trim().slice(0, 500);
+    if (!name) continue;
+    if (url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
+    if (url) { const key = url.toLowerCase(); if (seenUrls.has(key)) continue; seenUrls.add(key); }
+    out.push({ name, url: url || null });
+    if (out.length >= 2) break;
+  }
+  return out;
 }
 
 // Find an existing external book by normalized title+author, or create one.
@@ -418,7 +437,7 @@ module.exports = async function handler(req, res) {
     const uid = req.query.user_id;
     if (!uid) return json(res, 400, { error: 'user_id required' });
     const { data: profile } = await supabase.from('profiles')
-      .select('id,name,username,avatar_url,bio,role,affiliate_enabled,artist_slug,created_at,community_about,community_country,community_favorite_medium').eq('id', uid).single();
+      .select('id,name,username,avatar_url,bio,role,affiliate_enabled,artist_slug,created_at,community_about,community_country,community_favorite_medium,creator_bio,creator_tiktok,creator_instagram,creator_youtube,creator_website').eq('id', uid).single();
     if (!profile) return json(res, 404, { error: 'Creator not found' });
     const { data: posts } = await supabase.from('community_posts').select('*')
       .eq('status', 'published').eq('user_id', uid).order('created_at', { ascending: false });
@@ -434,6 +453,12 @@ module.exports = async function handler(req, res) {
       community_about: profile.community_about || null,
       community_country: profile.community_country || null,
       community_favorite_medium: profile.community_favorite_medium || null,
+      // Fluffy Creator profile (only meaningful when affiliate_enabled)
+      creator_bio: profile.affiliate_enabled ? (profile.creator_bio || null) : null,
+      creator_tiktok: profile.affiliate_enabled ? (profile.creator_tiktok || null) : null,
+      creator_instagram: profile.affiliate_enabled ? (profile.creator_instagram || null) : null,
+      creator_youtube: profile.affiliate_enabled ? (profile.creator_youtube || null) : null,
+      creator_website: profile.affiliate_enabled ? (profile.creator_website || null) : null,
       stats: { posts: (posts || []).length, booksUsed, palettes: palettes.size },
     };
     return json(res, 200, { creator, posts: decorated });
@@ -443,6 +468,12 @@ module.exports = async function handler(req, res) {
     const user = await requireAuth(req, res);
     if (!user) return;
     const b = req.body || {};
+    // Anti-spam: max 3 posts per day (rolling 24h). Cozy inspiration gallery, not a feed.
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count: todayCount } = await supabase.from('community_posts')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id).gte('created_at', since24h);
+    if ((todayCount || 0) >= 3) return json(res, 429, { error: 'Daily limit reached — you can share up to 3 posts per day. Please come back tomorrow. 🌷' });
     const asArr = (v) => Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.trim()).map(x => x.trim()).slice(0, 20) : [];
     // Multiple images: artwork_urls array (max 10); cover = first image / explicit artwork_url
     const imgs = Array.isArray(b.artwork_urls) ? b.artwork_urls.filter(u => typeof u === 'string' && u.trim()).slice(0, 10) : [];
@@ -456,6 +487,8 @@ module.exports = async function handler(req, res) {
       if (bk) { externalBookId = bk.id; extTitle = bk.title; extAuthor = bk.author; }
       else { extTitle = b.external_book_title; extAuthor = b.external_book_author || null; }
     }
+    // Recommended tools — Fluffy Creators (affiliate_enabled) only; max 2, deduped
+    const recommendedTools = user.affiliate_enabled ? sanitizeTools(b.recommended_tools) : [];
     const row = {
       user_id: user.id, artwork_url: cover, artwork_urls: artworkUrls, thumb_url: b.thumb_url || cover,
       product_id: b.product_id || null,
@@ -463,6 +496,7 @@ module.exports = async function handler(req, res) {
       external_book_title: b.product_id ? null : extTitle,
       external_book_author: b.product_id ? null : extAuthor,
       mediums: asArr(b.mediums), markers: asArr(b.markers), palettes: asArr(b.palettes),
+      recommended_tools: recommendedTools,
       caption: (b.caption || '').slice(0, CAPTION_MAX), status: 'published',
     };
     const { data, error } = await supabase.from('community_posts').insert(row).select().single();
@@ -531,6 +565,8 @@ module.exports = async function handler(req, res) {
     if (asArr(b.mediums) !== undefined) updates.mediums = asArr(b.mediums);
     if (asArr(b.markers) !== undefined) updates.markers = asArr(b.markers);
     if (asArr(b.palettes) !== undefined) updates.palettes = asArr(b.palettes);
+    // Recommended tools — Fluffy Creators only; max 2, deduped
+    if (b.recommended_tools !== undefined) updates.recommended_tools = user.affiliate_enabled ? sanitizeTools(b.recommended_tools) : [];
     const { data, error } = await supabase.from('community_posts').update(updates).eq('id', id).select().single();
     if (error) return json(res, 400, { error: error.message });
     autoSubmitTags(updates.mediums || [], updates.markers || [], updates.palettes || []).catch(() => {});

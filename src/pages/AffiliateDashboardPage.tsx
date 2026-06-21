@@ -33,6 +33,29 @@ export default function AffiliateDashboardPage() {
   const [acctMsg, setAcctMsg] = useState('');
   const [acctSaving, setAcctSaving] = useState(false);
 
+  // Fluffy Creator profile (shown on the Community creator page)
+  const [cp, setCp] = useState({ creator_bio:'', creator_tiktok:'', creator_instagram:'', creator_youtube:'', creator_website:'' });
+  const [cpMsg, setCpMsg] = useState('');
+  const [cpSaving, setCpSaving] = useState(false);
+
+  useEffect(() => {
+    api.me().then((d: any) => {
+      if (d && !d.error) setCp(c => ({
+        creator_bio: d.creator_bio || '', creator_tiktok: d.creator_tiktok || '',
+        creator_instagram: d.creator_instagram || '', creator_youtube: d.creator_youtube || '',
+        creator_website: d.creator_website || '',
+      }));
+    }).catch(() => {});
+  }, []);
+
+  const saveCp = async () => {
+    setCpSaving(true); setCpMsg('');
+    const res = await api.updateMe(cp);
+    setCpSaving(false);
+    setCpMsg(res?.error ? ('⚠️ ' + res.error) : '✓ Saved');
+    setTimeout(() => setCpMsg(''), 3000);
+  };
+
   useEffect(() => {
     if (!user) return;
     // Server-authoritative access: getMyAffiliate returns data only if the profile's
@@ -78,6 +101,35 @@ export default function AffiliateDashboardPage() {
 
         <h1 style={{ fontSize:24, fontWeight:900, color:'#1e293b', marginBottom:6 }}>🤝 {tRaw('แดชบอร์ด Fluffy Creator','Fluffy Creator Dashboard')}</h1>
         <p style={{ fontSize:13, color:'#94a3b8', marginBottom:24 }}>{tRaw('คอมมิชชันจะนับเมื่อคำสั่งซื้อจัดส่งสำเร็จเท่านั้น','Commission counts only once an order is delivered.')}</p>
+
+        {/* Creator Profile — appears on your Community creator page */}
+        <h2 style={{ fontSize:18, fontWeight:800, color:'#1e293b', marginBottom:12 }}>🌷 {tRaw('โปรไฟล์ครีเอเตอร์','Creator Profile')}</h2>
+        <div style={{ background:'white', borderRadius:16, padding:24, boxShadow:'0 2px 10px rgba(0,0,0,0.05)', marginBottom:28 }}>
+          <p style={{ fontSize:12, color:'#94a3b8', marginTop:0, marginBottom:16 }}>{tRaw('ข้อมูลนี้จะแสดงบนหน้าโปรไฟล์ครีเอเตอร์ของคุณในชุมชน','This appears on your Community creator profile page.')}</p>
+          <div style={{ marginBottom:14 }}>
+            <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#374151', marginBottom:6 }}>{tRaw('แนะนำตัวครีเอเตอร์','Creator bio')}</label>
+            <textarea value={cp.creator_bio} onChange={e=>setCp(c=>({...c,creator_bio:e.target.value}))} rows={3} maxLength={300} placeholder={tRaw('เล่าเกี่ยวกับสไตล์การระบายสีของคุณ...','Tell the community about your coloring style...')} style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:`1.5px solid ${p}30`, fontSize:14, outline:'none', fontFamily:theme.fontFamily, resize:'vertical', boxSizing:'border-box' }} />
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            {([
+              ['creator_tiktok', tRaw('TikTok (ชื่อผู้ใช้)','TikTok username'), '@username'],
+              ['creator_instagram', tRaw('Instagram (ชื่อผู้ใช้)','Instagram username'), '@username'],
+              ['creator_youtube', tRaw('YouTube (ช่อง)','YouTube channel'), tRaw('ชื่อช่อง หรือลิงก์','Channel name or link')],
+              ['creator_website', tRaw('เว็บไซต์ (ไม่บังคับ)','Website (optional)'), 'https://...'],
+            ] as [keyof typeof cp,string,string][]).map(([k,label,ph]) => (
+              <div key={k}>
+                <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#374151', marginBottom:6 }}>{label}</label>
+                <input value={cp[k]} onChange={e=>setCp(c=>({...c,[k]:e.target.value}))} placeholder={ph} style={{ width:'100%', padding:'11px 14px', borderRadius:12, border:`1.5px solid ${p}30`, fontSize:14, outline:'none', fontFamily:theme.fontFamily, boxSizing:'border-box' }} />
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop:16, display:'flex', alignItems:'center', gap:12 }}>
+            <button onClick={saveCp} disabled={cpSaving} style={{ background:cpSaving?p+'88':p, color:'white', border:'none', cursor:cpSaving?'wait':'pointer', padding:'11px 24px', borderRadius:14, fontSize:14, fontWeight:800, fontFamily:theme.fontFamily }}>
+              {cpSaving ? tRaw('กำลังบันทึก...','Saving...') : tRaw('บันทึกโปรไฟล์','Save Profile')}
+            </button>
+            {cpMsg && <span style={{ fontSize:13, fontWeight:700, color:cpMsg.startsWith('✓')?'#059669':'#dc2626' }}>{cpMsg}</span>}
+          </div>
+        </div>
 
         {/* My code(s) */}
         <div style={{ display:'flex', gap:12, flexWrap:'wrap', marginBottom:24 }}>
