@@ -225,7 +225,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET' && action === 'affiliate-my') {
     const user = await requireAuth(req, res);
     if (!user) return;
-    if (!user.affiliate_enabled) return json(res, 403, { error: 'No affiliate access' });
+    if (!user.affiliate_enabled && user.role !== 'admin') return json(res, 403, { error: 'No affiliate access' });
     const { data: codes } = await supabase.from('affiliate_codes').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
     const { data: orders } = await supabase.from('orders')
       .select('id,status,items,total_thb,affiliate_code,affiliate_discount_thb,affiliate_commission_thb,affiliate_paid_at,created_at,delivered_at')

@@ -102,7 +102,7 @@ export default function CommunityPage() {
         {/* Header — centered */}
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
           <h1 style={{ fontSize: 'clamp(20px,3vw,28px)', fontWeight: 900, color: theme.textColor, margin: '0 0 4px' }}>{tRaw('แบ่งปันโลกสีสันของคุณ', 'Share Your Colorful World')} 🌈</h1>
-          <p style={{ color: theme.textColor + '88', fontSize: 13, margin: '0 0 14px' }}>{tRaw('แรงบันดาลใจการระบายสีจากชุมชน', 'Coloring inspiration from the community')}</p>
+          <p style={{ color: theme.textColor + '88', fontSize: 13, margin: '0 0 14px' }}>{tRaw('พื้นที่อบอุ่นสำหรับแบ่งปันผลงาน เคล็ดลับ และเครื่องมือที่ชอบ', 'A cozy place to share artwork, coloring tips and favorite tools.')}</p>
           {user ? (
             <button onClick={() => setShowForm(s => !s)} style={{ background: p, color: 'white', border: 'none', cursor: 'pointer', padding: '9px 22px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily }}>
               {showForm ? tRaw('ปิด', 'Close') : `🎨 ${tRaw('แบ่งปันผลงาน', 'Share artwork')}`}
@@ -372,6 +372,8 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [palettes, setPalettes] = useState<string[]>([]);
   const [tools, setTools] = useState<{ name: string; url: string }[]>([]);
+  const [postType, setPostType] = useState<'artwork' | 'tip' | 'tools'>('artwork');
+  const canAffiliate = !!(user?.affiliate_enabled || user?.role === 'admin');
   const [caption, setCaption] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -435,7 +437,8 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
         palettes,
         keywords,
         caption: caption.trim(),
-        recommended_tools: user?.affiliate_enabled ? tools.filter(t => t.name.trim()) : [],
+        post_type: postType,
+        recommended_tools: canAffiliate ? tools.filter(t => t.name.trim()) : [],
       });
       if (res?.error) { setErr(res.error); setBusy(false); return; }
       onPosted(res);
@@ -453,7 +456,18 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
       />
     )}
     <div style={{ background: 'white', borderRadius: 18, padding: 20, boxShadow: '0 2px 14px rgba(0,0,0,0.06)', margin: '0 0 24px', border: `1.5px solid ${p}15` }}>
-      <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1e293b', margin: '0 0 16px' }}>🎨 {tRaw('แบ่งปันผลงานของคุณ', 'Share your artwork')}</h3>
+      <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1e293b', margin: '0 0 12px' }}>🎨 {tRaw('แบ่งปันกับชุมชน', 'Share with the community')}</h3>
+      {/* 📝 Post type */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 6 }}>📝 {tRaw('ประเภทโพสต์', 'Post type')}</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {([['artwork', `🎨 ${tRaw('ผลงาน', 'Artwork')}`], ['tip', `✨ ${tRaw('เคล็ดลับ/เทคนิค', 'Tip / Technique')}`], ['tools', `🛍️ ${tRaw('เครื่องมือที่ชอบ', 'Favorite Tools')}`]] as const).map(([k, lbl]) => (
+            <button key={k} type="button" onClick={() => setPostType(k)} style={{ padding: '7px 14px', borderRadius: 18, border: `1.5px solid ${postType === k ? p : '#e5e7eb'}`, background: postType === k ? p + '12' : 'white', color: postType === k ? p : '#64748b', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: theme.fontFamily }}>{lbl}</button>
+          ))}
+        </div>
+        {postType === 'tip' && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>{tRaw('มินิทูทอเรียล: 1–5 รูป + คำบรรยายสั้น ๆ', 'Mini tutorial: 1–5 images + a short caption.')}</div>}
+        {postType === 'tools' && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>{tRaw('แนะนำเครื่องมือที่คุณชอบ (ใส่ลิงก์ได้)', 'Recommend tools you love (links allowed).')}</div>}
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 18 }} className="cm-form">
         <style>{`@media(max-width:640px){.cm-form{grid-template-columns:1fr!important}}`}</style>
         {/* Left: artwork upload — multiple images */}
@@ -557,7 +571,7 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
           <KeywordsBlock keywords={keywords} setKeywords={setKeywords} theme={theme} p={p} fld={fld} tRaw={tRaw} />
 
           {/* Recommended tools — Fluffy Creators only (affiliate links allowed, max 2) */}
-          {user?.affiliate_enabled && <RecommendedToolsBlock tools={tools} setTools={setTools} theme={theme} p={p} fld={fld} tRaw={tRaw} />}
+          {canAffiliate && <RecommendedToolsBlock tools={tools} setTools={setTools} theme={theme} p={p} fld={fld} tRaw={tRaw} />}
 
           <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', margin: '4px 0 6px' }}>✏️ {tRaw('คำบรรยาย', 'Caption')} <span style={{ color: '#9ca3af', fontWeight: 500 }}>({caption.length}/300)</span></div>
           <textarea value={caption} maxLength={300} onChange={e => setCaption(e.target.value)} rows={2} placeholder={tRaw('เล่าเกี่ยวกับผลงานชิ้นนี้...', 'Tell us about this piece...')} style={{ ...fld, resize: 'vertical' }} />

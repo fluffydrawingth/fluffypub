@@ -729,14 +729,16 @@ function AffiliateCard({p,theme,user}:any) {
   }, [user?.id, user?.affiliate_enabled]);
 
   if (!loaded) return null;
+  // Admins have full access and never apply — they always see the dashboard, never the application.
+  const isAdmin = user?.role === 'admin';
   const status = request?.status;
-  const showDashboard = isAffiliate || !!user?.affiliate_enabled;
+  const showDashboard = isAffiliate || !!user?.affiliate_enabled || isAdmin;
 
   return (
     <div style={{background:'white',borderRadius:20,padding:28,boxShadow:'0 2px 10px rgba(0,0,0,0.05)',marginTop:20}}>
       <h3 style={{fontSize:18,fontWeight:800,color:'#1e293b',marginBottom:8}}>🤝 {tRaw('โปรแกรม Fluffy Creator','Fluffy Creator Program')}</h3>
       <p style={{fontSize:13,color:'#64748b',marginBottom:18,lineHeight:1.6}}>
-        {tRaw('แชร์ Fluffy Pub และรับค่าคอมมิชชันจากการแนะนำสินค้าจริง','Share Fluffy Pub and earn commission for referring physical product sales.')}
+        {tRaw('แชร์ Fluffy Pub และรับค่าคอมมิชชันจากการขายสินค้าที่เข้าเงื่อนไข','Share Fluffy Pub and earn commission from eligible product sales.')}
       </p>
 
       {showDashboard ? (

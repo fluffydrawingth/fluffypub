@@ -35,7 +35,7 @@ export default function Navbar() {
   const isAdmin = user?.role === 'admin' && user?.email === ADMIN_EMAIL;
   // Same permission logic the route guards use, so the dropdown and the dashboards agree.
   const isArtist = user?.role === 'artist' && !!(user?.artistId || (user as any)?.artist_id);
-  const isAffiliate = !!(user as any)?.affiliate_enabled;
+  const isAffiliate = !!(user as any)?.affiliate_enabled || isAdmin;
   const dashPath = isAdmin ? '/admin' : isArtist ? '/artist-dashboard' : '/account';
 
   // Use theme label overrides if set, otherwise fall back to lang translations

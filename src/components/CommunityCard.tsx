@@ -54,6 +54,12 @@ export default function CommunityCard({ post, compact = false }: { post: any; co
         return (
           <div style={{ position: 'relative', width: '100%', paddingBottom: '125%', background: `linear-gradient(135deg,${p}10,${p}05)`, flexShrink: 0 }}>
             <img src={cover} alt={post.caption || 'coloring'} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+            {post.post_type === 'tip' && (
+              <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(124,58,237,0.92)', color: 'white', fontSize: 10.5, fontWeight: 800, padding: '3px 8px', borderRadius: 12 }}>✨ {tRaw('วิธีทำ', 'How to')}</div>
+            )}
+            {post.post_type === 'tools' && (
+              <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(15,118,110,0.92)', color: 'white', fontSize: 10.5, fontWeight: 800, padding: '3px 8px', borderRadius: 12 }}>🛍️ {tRaw('เครื่องมือ', 'Tools')}</div>
+            )}
             {extra > 1 && (
               <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: 'white', fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 3 }}>
                 🖼️ +{extra - 1}

@@ -60,7 +60,7 @@ async function decorate(posts, viewerId, guestId) {
         id: u.id,
         name: u.username || u.name || 'Community Member',
         avatar_url: u.avatar_url || null,
-        affiliate_enabled: !!u.affiliate_enabled,
+        affiliate_enabled: !!u.affiliate_enabled || u.role === 'admin',
         artist_slug: u.role === 'artist' ? (u.artist_slug || null) : null,
       } : null,
       product: pr ? { id: pr.id, title: pr.title, slug: pr.slug, image: pr.image, cover_image_url: pr.cover_image_url } : null,
@@ -564,10 +564,12 @@ module.exports = async function handler(req, res) {
       if (bk) { externalBookId = bk.id; extTitle = bk.title; extAuthor = bk.author; }
       else { extTitle = b.external_book_title; extAuthor = b.external_book_author || null; }
     }
-    // Recommended tools — Fluffy Creators (affiliate_enabled) only; max 2, deduped
-    const recommendedTools = user.affiliate_enabled ? sanitizeTools(b.recommended_tools) : [];
+    // Affiliate links — Fluffy Creators or Admins only; max 2, deduped
+    const canAffiliate = user.affiliate_enabled || user.role === 'admin';
+    const recommendedTools = canAffiliate ? sanitizeTools(b.recommended_tools) : [];
     const row = {
       user_id: user.id, artwork_url: cover, artwork_urls: artworkUrls, thumb_url: b.thumb_url || cover,
+      post_type: ['artwork', 'tip', 'tools'].includes(b.post_type) ? b.post_type : 'artwork',
       product_id: b.product_id || null,
       external_book_id: externalBookId,
       external_book_title: b.product_id ? null : extTitle,
@@ -580,8 +582,8 @@ module.exports = async function handler(req, res) {
     };
     let { data, error } = await supabase.from('community_posts').insert(row).select().single();
     // Resilience: drop not-yet-migrated optional columns and retry
-    if (error && /(recommended_tools|keywords|coloring_details)/.test(error.message || '')) {
-      const { recommended_tools, keywords, coloring_details, ...rest } = row;
+    if (error && /(recommended_tools|keywords|coloring_details|post_type)/.test(error.message || '')) {
+      const { recommended_tools, keywords, coloring_details, post_type, ...rest } = row;
       ({ data, error } = await supabase.from('community_posts').insert(rest).select().single());
     }
     if (error) return json(res, 400, { error: error.message });
@@ -649,14 +651,15 @@ module.exports = async function handler(req, res) {
     if (asArr(b.mediums) !== undefined) updates.mediums = asArr(b.mediums);
     if (asArr(b.markers) !== undefined) updates.markers = asArr(b.markers);
     if (asArr(b.palettes) !== undefined) updates.palettes = asArr(b.palettes);
-    // Recommended tools — Fluffy Creators only; max 2, deduped
-    if (b.recommended_tools !== undefined) updates.recommended_tools = user.affiliate_enabled ? sanitizeTools(b.recommended_tools) : [];
+    // Affiliate links — Fluffy Creators or Admins only; max 2, deduped
+    if (b.recommended_tools !== undefined) updates.recommended_tools = (user.affiliate_enabled || user.role === 'admin') ? sanitizeTools(b.recommended_tools) : [];
     if (b.keywords !== undefined) updates.keywords = sanitizeKeywords(b.keywords);
     if (b.coloring_details !== undefined) updates.coloring_details = sanitizeColoringDetails(b.coloring_details);
+    if (b.post_type !== undefined && ['artwork', 'tip', 'tools'].includes(b.post_type)) updates.post_type = b.post_type;
     let { data, error } = await supabase.from('community_posts').update(updates).eq('id', id).select().single();
     // Resilience: drop not-yet-migrated optional columns and retry
-    if (error && /(recommended_tools|keywords|coloring_details)/.test(error.message || '')) {
-      const { recommended_tools, keywords, coloring_details, ...rest } = updates;
+    if (error && /(recommended_tools|keywords|coloring_details|post_type)/.test(error.message || '')) {
+      const { recommended_tools, keywords, coloring_details, post_type, ...rest } = updates;
       ({ data, error } = await supabase.from('community_posts').update(rest).eq('id', id).select().single());
     }
     if (error) return json(res, 400, { error: error.message });
