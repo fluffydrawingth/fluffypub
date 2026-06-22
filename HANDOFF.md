@@ -1,10 +1,115 @@
 # Fluffy Pub — Project Handoff
 
-_Last updated: 2026-06-19_
+_Last updated: 2026-06-22_
 
 A bilingual (Thai/English) e-commerce site for adorable coloring books — physical + digital
-products, an artist marketplace, and an affiliate program. This document is the single
-orientation point for anyone (human or AI) picking up the project.
+products, an artist marketplace, an affiliate ("Fluffy Creator") program, and a **Community**.
+This document is the single orientation point for anyone (human or AI) picking up the project.
+
+> **§0 below is the most recent work (Community + Fluffy Creator).** Sections 1–10 are the
+> stable foundation. If something "doesn't save," it's almost always an **unrun migration** —
+> see §0.2.
+
+---
+
+## 0. RECENT WORK — Community + Fluffy Creator (read first)
+
+### 0.1 Local-dev caveat
+The Vite dev server does **NOT** run `/api/*`. Backend/data flows only work on a real Vercel
+deploy. Locally, verify with: `npx tsc --noEmit` (pre-existing 25 errors are baseline; aim for
+0 *new*), `curl -s localhost:5173/src/...` (Vite transform = compile check), and preview render
+checks. Note: `api/community.js` is flagged "binary" by `grep` (emoji bytes) — use `grep -a`.
+
+### 0.2 ⚠️ MIGRATIONS — run in Supabase SQL editor, in order
+All idempotent + safe to re-run; each ends with `notify pgrst, 'reload schema';`. **Features
+silently no-op until their migration runs** — the API degrades gracefully (retry-without-column)
+so checkout/posting never break, but data won't persist.
+
+| File | Adds | Powers |
+|------|------|--------|
+| `migrate_community_v4.sql` | `community_tags`; profile `community_about/country/favorite_medium` | Tag Library, community profile |
+| `migrate_community_v5.sql` | `community_posts.artwork_urls`; `external_books` + `external_book_id` | Multi-image, External Book Library |
+| `migrate_creator_separation.sql` | profile `affiliate_approved_at` | No-retroactive commission |
+| `migrate_community_v6.sql` | `community_posts.recommended_tools` (+ unused `creator_*` profile cols) | Recommended tools |
+| `migrate_community_v8.sql` | product commission cols + `creator_commissions` ledger | Digital commission engine |
+| `migrate_community_v9.sql` | `community_posts.keywords / coloring_details / recommended_tools / post_type` | Keywords, structured medium, post types |
+
+Order: v4 → v5 → creator_separation → v6 → v8 → v9. **v5 is confirmed applied** (multi-image
+works); the rest were likely NOT applied — confirm. (`migrate_community_v7.sql` exists for an
+artist `show_on_homepage` column but is **not required** — that flag + creator profile fields
+were intentionally stored in the existing `social_links` jsonb to avoid migration dependency.)
+
+### 0.3 Community feature set
+- **Pages/files:** `src/pages/CommunityPage.tsx` (feed), `CommunityPostPage.tsx` (detail),
+  `CreatorProfilePage.tsx`, `ExternalBookPage.tsx` (`/community/book/:slug`),
+  `src/components/CommunityCard.tsx`, `ImageCarousel.tsx`, `BadgeIcon.tsx`; backend in
+  `api/community.js` (all via `?action=`).
+- **Layout order:** Hero → Share → 🔎 Search → 🌷 Cozy Picks → 🆕 New Creations →
+  🔎 Explore (collapsed, bottom) → Featured Creators.
+- **Universal search** (`?action=search`): caption, book, creator, mediums, marker brands,
+  keywords, coloring-detail brands. Debounced/live. **Explore** = separate advanced filters
+  with its own internal search field.
+- **Post types** (`post_type`): 🎨 Artwork (default) / ✨ Tip / 🛍️ Tools. Tip & Tools show
+  `✨ How to` / `🛍️ Tools` badges on cards; Artwork = no badge.
+- **Cards** = static cover (NOT interactive), `🖼️ +N` multi-image indicator, 4:5 ratio.
+  **Detail** = full carousel (swipe, counter, thumbnails for 3+), boxed layout: Caption →
+  Book used → Coloring details (structured `medium — brand` pairs) → Creator recommendations
+  → reactions → "You may also like" carousel → comments.
+- **Create/edit form:** post-type selector, multi-image upload + crop (free aspect, "use
+  original"), Fluffy Pub product OR external book (autocomplete + dedup), **structured medium
+  rows** (dropdown + optional brand autocomplete), palettes, **keywords** (max 5, ≤20 chars,
+  lowercased, search-only, never shown), caption (300), recommended tools (creators/admin only).
+- **Tag/jsonb gotcha:** `mediums/markers/palettes/keywords/coloring_details` are jsonb;
+  PostgREST `.contains/.overlaps` does NOT match jsonb → all tag filtering/search/merge is done
+  **in-memory with case-insensitive normalization**. Don't revert to `.contains`.
+
+### 0.4 Fluffy Creator & commission
+- Community (open to all logged-in users) is **separate** from Fluffy Creator (apply→admin
+  approve, or admin invite). `affiliate_enabled` = the permission flag.
+- **Physical:** customer enters creator **code** at checkout → ฿10 off / ฿20 commission;
+  counts when order `delivered`.
+- **Digital:** `?ref=creatorId` on community product links (approved creators/**admin** only)
+  → `creator_commissions` ledger. Per-product: `commission_enabled`,
+  `creator_commission_percent` (def 5), `minimum_price_thb/usd` (def **99 / 2.99**). Status
+  **pending → confirmed (delivered) → paid** / cancelled. Never retroactive (`affiliate_approved_at`).
+- **Creator Dashboard** (`AffiliateDashboardPage.tsx`): time filters (7/30/90d/Month/All),
+  reactive summary cards, monthly summary, collapsible Physical/Digital/Payout sections (5 rows
+  + Load more), status pills + tooltips, friendly empty states, profile (bio/socials in
+  `social_links`) + emoji-or-image avatar upload.
+- **Admin** (`AdminPage.tsx`): Community Dashboard (posts table w/ filters+pagination,
+  curation, Tag Library incl. External Books approve/rename/merge/delete), invite creator by
+  search, digital-commission records + mark-paid, per-product commission settings, CMS for
+  homepage "Color Your World" + community badges.
+
+### 0.5 Roles (this iteration)
+- **Admin** = full access, treated as affiliate-enabled for community links, **never** sees
+  "Apply to Become a Fluffy Creator", has creator-dashboard access. Affiliate links = Fluffy
+  Creators **or** Admin only. Blog = admin only.
+- Customer avatar = emoji picker (no upload); Creator avatar = image upload; both in
+  `avatar_url`. `src/lib/avatar.ts` `isImageUrl()` decides emoji vs `<img>`.
+- Badges (`BadgeIcon.tsx`): 🌷 creator / 👤 member — admin-configurable emoji or image.
+
+### 0.6 Bugs fixed (don't reintroduce)
+- Crop modal: was cover-scale math on a `contain` display → wrong crop. Now `Math.min` +
+  default box = full image rect.
+- jsonb `.contains` filter returned nothing → in-memory normalized matching.
+- Universal search had a client method but no backend handler (405) → added.
+- Artists vanished sitewide: a query selected a not-yet-migrated `show_on_homepage` → moved to
+  `social_links`.
+- Creator avatar upload 403 → `'avatars'` folder allowed for any logged-in user in `upload.js`.
+- Revoke left creator "active" → now sets `affiliate_enabled=false` + request `status='revoked'`;
+  revoked creators auto-drop from Featured Creators.
+- Apply-page EN/TH mixing → guidelines render from translated defaults (not the CMS legal page).
+
+### 0.7 Deferred / TODO
+- **Comment system rework (NOT done):** one-level replies (`parent_id`), soft-delete
+  ("Deleted comment", keep replies), 15-min edit window, admin-delete-any. Needs a migration
+  (`community_comments.parent_id / edited_at / deleted`) + UI rewrite. (The post `✨ How to`
+  badge from that request IS done.)
+- Digital "clicks" tracking has no infra (dashboard shows Purchases = 1/row).
+- **Deploy reminder:** the code is committed/pushed, but the **migrations in §0.2 must be run
+  in Supabase** for the features to actually persist/work. Run them, then verify (§9 below if
+  present, or §0.4/0.5 expectations).
 
 ---
 
