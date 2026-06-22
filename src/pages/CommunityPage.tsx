@@ -9,7 +9,7 @@ import { api } from '../lib/api';
 import { makeImageVariants } from '../lib/imageThumb';
 import CommunityCard from '../components/CommunityCard';
 
-const PAGE = 20;
+const PAGE = 12;
 const GRID = [
   `.cm-grid{column-count:4;column-gap:16px}`,
   `@media(min-width:1600px){.cm-grid{column-count:5}}`,

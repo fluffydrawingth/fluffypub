@@ -254,7 +254,7 @@ module.exports = async function handler(req, res) {
     const viewer = await getUser(req);
     const term = String(req.query.q || '').trim().toLowerCase();
     const page = Math.max(0, parseInt(req.query.page) || 0);
-    const limit = Math.min(PAGE_LIMIT_MAX, Math.max(1, parseInt(req.query.limit) || 20));
+    const limit = Math.min(PAGE_LIMIT_MAX, Math.max(1, parseInt(req.query.limit) || 12));
     if (!term) return json(res, 200, { posts: [], total: 0, page, hasMore: false });
     const { data: rows } = await supabase.from('community_posts').select('*')
       .eq('status', 'published').order('created_at', { ascending: false }).range(0, 999);
@@ -288,7 +288,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET' && (action === 'list' || !action)) {
     const viewer = await getUser(req);
     const page = Math.max(0, parseInt(req.query.page) || 0);
-    const limit = Math.min(PAGE_LIMIT_MAX, Math.max(1, parseInt(req.query.limit) || 20));
+    const limit = Math.min(PAGE_LIMIT_MAX, Math.max(1, parseInt(req.query.limit) || 12));
     const from = page * limit;
 
     // Tag filters (palettes/markers/mediums are jsonb) — filter in-memory by NORMALIZED
@@ -826,7 +826,7 @@ module.exports = async function handler(req, res) {
   // GET ?action=tags&type=medium|marker|palette — approved tags for upload form
   if (req.method === 'GET' && action === 'tags') {
     const type = req.query.type;
-    if (!['medium','marker','palette'].includes(type)) return json(res, 400, { error: 'type required' });
+    if (!['medium','marker','palette','challenge'].includes(type)) return json(res, 400, { error: 'type required' });
     const { data } = await supabase.from('community_tags').select('id,name,post_count').eq('type', type).eq('status','approved').order('post_count', { ascending: false }).order('name');
     return json(res, 200, { tags: data || [] });
   }
@@ -836,7 +836,7 @@ module.exports = async function handler(req, res) {
     const user = await requireAuth(req, res);
     if (!user) return;
     const { type, name } = req.body || {};
-    if (!['medium','marker','palette'].includes(type) || !String(name||'').trim()) return json(res, 400, { error: 'type and name required' });
+    if (!['medium','marker','palette','challenge'].includes(type) || !String(name||'').trim()) return json(res, 400, { error: 'type and name required' });
     const normalized = String(name).trim().toLowerCase();
     const display = String(name).trim();
     const { data: existing } = await supabase.from('community_tags').select('id,name,status').eq('type', type).eq('normalized', normalized).single();

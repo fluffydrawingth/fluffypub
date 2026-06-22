@@ -2493,7 +2493,7 @@ function CommunityDashboardTab() {
       {/* ── Tag Library ── */}
       {communityTab==='tags' && <>
         <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-          {[['marker','🖍️ Markers'],['medium','🎨 Mediums'],['palette','🌷 Palettes'],['books','📖 External Books']].map(([k,lbl])=>(
+          {[['marker','🖍️ Markers'],['medium','🎨 Mediums'],['palette','🌷 Palettes'],['challenge','🏆 Challenges'],['books','📖 External Books']].map(([k,lbl])=>(
             <button key={k} onClick={()=>setTagLibType(k)} style={{padding:'7px 16px',borderRadius:18,border:'none',cursor:'pointer',fontSize:13,fontWeight:700,background:tagLibType===k?P:P+'15',color:tagLibType===k?'white':P,fontFamily:'inherit'}}>{lbl}</button>
           ))}
         </div>
