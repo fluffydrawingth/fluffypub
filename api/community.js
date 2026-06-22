@@ -313,6 +313,7 @@ module.exports = async function handler(req, res) {
     if (req.query.product_id) q = q.eq('product_id', req.query.product_id);
     if (req.query.external_book_id) q = q.eq('external_book_id', req.query.external_book_id);
     if (req.query.user_id) q = q.eq('user_id', req.query.user_id);
+    if (['artwork', 'tip'].includes(req.query.post_type)) q = q.eq('post_type', req.query.post_type);
     if (/^\d{4}-\d{2}$/.test(req.query.month || '')) {
       const [y, m] = req.query.month.split('-').map(Number);
       const start = new Date(Date.UTC(y, m - 1, 1)).toISOString();

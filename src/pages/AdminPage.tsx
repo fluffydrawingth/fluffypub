@@ -1994,6 +1994,7 @@ function AffiliateRequestsTab() {
 
 // ── Affiliates (management + earnings + payouts) ─────────────────────────────
 function AffiliatesTab() {
+  const { user } = useAuth();
   const [affiliates, setAffiliates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState('');
@@ -2015,6 +2016,16 @@ function AffiliatesTab() {
   };
 
   const flash = (m: string) => { setMsg(m); setTimeout(()=>setMsg(''), 4000); };
+
+  // Admin = highest role; ensure the admin has a creator/affiliate record so they appear
+  // in the list and can manage their own code. No application needed.
+  const adminInList = !!user && affiliates.some((a:any) => a.id === user.id);
+  const createAdminCreator = async () => {
+    if (!user) return;
+    const res = await api.inviteAffiliate(user.id);
+    if (res?.error) return flash('⚠️ '+res.error);
+    flash('✓ Creator profile created for admin.'); load();
+  };
 
   const toggleAccess = async (a: any) => {
     const res = a.affiliate_enabled ? await api.revokeAffiliate(a.id) : await api.enableAffiliate(a.id);
@@ -2055,8 +2066,16 @@ function AffiliatesTab() {
   return (
     <div style={{padding:32}}>
       <h1 style={{fontSize:28,fontWeight:900,color:'#111827',margin:'0 0 8px'}}>Fluffy Creators</h1>
-      <p style={{fontSize:13,color:'#6b7280',margin:'0 0 24px'}}>Manage Fluffy Creator access, codes, earnings, and commission payouts. Commission counts only on delivered orders.</p>
+      <p style={{fontSize:13,color:'#6b7280',margin:'0 0 16px'}}>Manage Fluffy Creator access, codes, earnings, and commission payouts. Commission counts only on delivered orders.</p>
       {msg&&<div style={{marginBottom:16,padding:'10px 16px',borderRadius:12,background:msg.startsWith('✓')?'#d1fae5':'#fee2e2',color:msg.startsWith('✓')?'#065f46':'#991b1b',fontSize:13,fontWeight:600}}>{msg}</div>}
+
+      {/* Admin = highest role: ensure admin has a creator record (no application needed) */}
+      {user && !adminInList && (
+        <div style={{...card,padding:'14px 18px',marginBottom:16,display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap',borderLeft:'4px solid #8b5cf6'}}>
+          <span style={{fontSize:13,color:'#374151',fontWeight:600}}>👑 Admin has Fluffy Creator permissions but no creator record yet. Create one to manage your own code &amp; commissions.</span>
+          <button onClick={createAdminCreator} style={{padding:'9px 18px',borderRadius:10,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:700,whiteSpace:'nowrap'}}>➕ Create creator profile for admin</button>
+        </div>
+      )}
 
       {loading&&<div style={{textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>Loading...</div>}
       {!loading&&affiliates.length===0&&<div style={{...card,textAlign:'center',padding:'48px',color:'#9ca3af',fontSize:14}}>No affiliates yet.</div>}

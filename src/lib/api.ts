@@ -117,11 +117,12 @@ export const api = {
   deleteAffiliatePayout: (id: string) => fetch(`/api/users?action=affiliate-payout&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 
   // Community — "Share Your Colorful World"
-  getCommunityPosts: (opts: { page?: number; limit?: number; product_id?: string; external_book_id?: string; user_id?: string; palette?: string; marker?: string; medium?: string; month?: string } = {}) => {
+  getCommunityPosts: (opts: { page?: number; limit?: number; product_id?: string; external_book_id?: string; user_id?: string; palette?: string; marker?: string; medium?: string; month?: string; post_type?: string } = {}) => {
     const q = new URLSearchParams({ action: 'list', page: String(opts.page ?? 0), limit: String(opts.limit ?? 20) });
     if (opts.product_id) q.set('product_id', opts.product_id);
     if (opts.external_book_id) q.set('external_book_id', opts.external_book_id);
     if (opts.user_id) q.set('user_id', opts.user_id);
+    if (opts.post_type) q.set('post_type', opts.post_type);
     if (opts.palette) q.set('palette', opts.palette);
     if (opts.marker) q.set('marker', opts.marker);
     if (opts.medium) q.set('medium', opts.medium);

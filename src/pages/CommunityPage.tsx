@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
+import { useT } from '../config/translations';
 import { isImageUrl } from '../lib/avatar';
 import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
@@ -40,6 +41,7 @@ export default function CommunityPage() {
   const { navigate } = useRouter();
   const { user } = useAuth();
   const { tRaw } = useLang();
+  const t = useT();
   const p = theme.primaryColor;
 
   const [showForm, setShowForm] = useState(false);
@@ -48,6 +50,7 @@ export default function CommunityPage() {
   const [searchQ, setSearchQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   const [exploreQ, setExploreQ] = useState('');
+  const [postTab, setPostTab] = useState<'all' | 'gallery' | 'tips'>('all');
   const [cozy, setCozy] = useState<any[]>([]);
   const [curation, setCuration] = useState<{ featured_books: any[]; featured_creators: any[] }>({ featured_books: [], featured_creators: [] });
   const [facets, setFacets] = useState<{ palettes: any[]; markers: any[]; mediums: any[]; books: any[]; externalBooks: any[] }>({ palettes: [], markers: [], mediums: [], books: [], externalBooks: [] });
@@ -62,7 +65,7 @@ export default function CommunityPage() {
     api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [], mediums: d?.mediums || [], books: d?.books || [], externalBooks: d?.externalBooks || [] })).catch(() => {});
   }, []);
 
-  const loadPage = useCallback((pg: number, f: Filter, q: string) => {
+  const loadPage = useCallback((pg: number, f: Filter, q: string, ptab: string) => {
     setLoading(true);
     const done = (d: any) => {
       const list = d?.posts || [];
@@ -81,12 +84,14 @@ export default function CommunityPage() {
     if (f.kind === 'medium') opts.medium = f.value;
     if (f.kind === 'month') opts.month = f.value;
     if (f.kind === 'product') opts.product_id = f.value;
+    if (ptab === 'gallery') opts.post_type = 'artwork';
+    if (ptab === 'tips') opts.post_type = 'tip';
     api.getCommunityPosts(opts).then(done).catch(() => setLoading(false));
   }, []);
 
   // Debounce the search input
   useEffect(() => { const t = setTimeout(() => setDebouncedQ(searchQ), 300); return () => clearTimeout(t); }, [searchQ]);
-  useEffect(() => { setPage(0); loadPage(0, filter, debouncedQ); }, [filter, debouncedQ, loadPage]);
+  useEffect(() => { setPage(0); loadPage(0, filter, debouncedQ, postTab); }, [filter, debouncedQ, postTab, loadPage]);
 
   const onPosted = (post: any) => { setShowForm(false); setPosts(prev => [post, ...prev]); };
   const searching = debouncedQ.trim().length > 0;
@@ -130,12 +135,18 @@ export default function CommunityPage() {
             />
             {searchQ && <button onClick={() => { setSearchQ(''); setDebouncedQ(''); }} aria-label="Clear" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#94a3b8' }}>✕</button>}
           </div>
+          {/* Filter tabs: All | Gallery | Tips / How to */}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+            {([['all', t('all')], ['gallery', `🎨 ${t('gallery')}`], ['tips', `✨ ${t('tips_howto')}`]] as const).map(([k, lbl]) => (
+              <button key={k} onClick={() => { setPostTab(k); setSearchQ(''); setDebouncedQ(''); setFilter({ kind: 'all' }); }} style={{ padding: '7px 16px', borderRadius: 18, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, background: postTab === k ? p : p + '15', color: postTab === k ? 'white' : p, fontFamily: theme.fontFamily }}>{lbl}</button>
+            ))}
+          </div>
         </div>
 
         {/* 1. 🌷 Cozy Picks — small section label (page header is the hero above, no duplication). */}
         {isAll && cozy.length > 0 && (
           <div style={{ marginBottom: 32 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: theme.textColor, marginBottom: 12 }}>🌷 {tRaw('คอลเลกชันอบอุ่น', 'Cozy Picks')}</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: theme.textColor, marginBottom: 12 }}>🌷 {t('cozy_picks')}</div>
             <div className={'cozy-row' + (cozy.length > 6 ? ' many' : '')}>
               {cozy.map(post => (
                 <div key={'c' + post.id} style={{ width: 204, flexShrink: 0 }}>
@@ -149,7 +160,7 @@ export default function CommunityPage() {
         {/* 3. 🆕 New Creations / Search results */}
         <SectionHead theme={theme} title={
           searching ? `🔎 ${tRaw('ผลการค้นหา', 'Results for')} “${debouncedQ.trim()}”`
-            : isAll ? `🆕 ${tRaw('ผลงานใหม่ล่าสุด', 'New Creations')}`
+            : isAll ? `🆕 ${t('new_creations')}`
             : filter.kind === 'palette' ? `🌷 ${filter.value}`
             : filter.kind === 'marker' ? `🖍️ ${filter.value}`
             : filter.kind === 'medium' ? `🎨 ${filter.value}`
@@ -165,7 +176,7 @@ export default function CommunityPage() {
             {loading && <div style={{ textAlign: 'center', padding: 24, color: '#9ca3af', fontSize: 26 }}>⏳</div>}
             {hasMore && !loading && (
               <div style={{ textAlign: 'center', marginTop: 20 }}>
-                <button onClick={() => { const np = page + 1; setPage(np); loadPage(np, filter, debouncedQ); }} style={{ background: 'transparent', border: `2px solid ${p}`, color: p, cursor: 'pointer', padding: '10px 28px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily }}>{tRaw('ดูเพิ่มเติม', 'Load more')}</button>
+                <button onClick={() => { const np = page + 1; setPage(np); loadPage(np, filter, debouncedQ, postTab); }} style={{ background: 'transparent', border: `2px solid ${p}`, color: p, cursor: 'pointer', padding: '10px 28px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily }}>{t('load_more')}</button>
               </div>
             )}
           </>
@@ -459,12 +470,11 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 6 }}>📝 {tRaw('ประเภทโพสต์', 'Post type')}</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {([['artwork', `🎨 ${tRaw('ผลงาน', 'Artwork')}`], ['tip', `✨ ${tRaw('เคล็ดลับ/เทคนิค', 'Tip / Technique')}`], ['tools', `🛍️ ${tRaw('เครื่องมือที่ชอบ', 'Favorite Tools')}`]] as const).map(([k, lbl]) => (
+          {([['artwork', `🎨 ${tRaw('แกลเลอรีผลงาน', 'Gallery')}`], ['tip', `✨ ${tRaw('เทคนิคและวิธีระบายสี', 'Tips / How to')}`]] as const).map(([k, lbl]) => (
             <button key={k} type="button" onClick={() => setPostType(k)} style={{ padding: '7px 14px', borderRadius: 18, border: `1.5px solid ${postType === k ? p : '#e5e7eb'}`, background: postType === k ? p + '12' : 'white', color: postType === k ? p : '#64748b', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: theme.fontFamily }}>{lbl}</button>
           ))}
         </div>
         {postType === 'tip' && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>{tRaw('มินิทูทอเรียล: 1–5 รูป + คำบรรยายสั้น ๆ', 'Mini tutorial: 1–5 images + a short caption.')}</div>}
-        {postType === 'tools' && <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>{tRaw('แนะนำเครื่องมือที่คุณชอบ (ใส่ลิงก์ได้)', 'Recommend tools you love (links allowed).')}</div>}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 18 }} className="cm-form">
         <style>{`@media(max-width:640px){.cm-form{grid-template-columns:1fr!important}}`}</style>
