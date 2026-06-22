@@ -1,20 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
+import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
 
 export default function LegalPage({ slug }: { slug: string }) {
   const { theme } = useTheme();
   const { navigate } = useRouter();
+  const { lang } = useLang();
   const [page, setPage] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const p = theme.primaryColor;
 
   useEffect(() => {
-    api.getLegalPage(slug)
-      .then(d => { setPage(d?.error ? null : d); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [slug]);
+    setLoading(true);
+    // Per-language CMS: in English, prefer "<slug>-en"; fall back to the base page.
+    const load = async () => {
+      if (lang === 'en') {
+        const en = await api.getLegalPage(`${slug}-en`).catch(() => null);
+        if (en && !en.error) { setPage(en); setLoading(false); return; }
+      }
+      const base = await api.getLegalPage(slug).catch(() => null);
+      setPage(base && !base.error ? base : null);
+      setLoading(false);
+    };
+    load();
+  }, [slug, lang]);
 
   if (loading) return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>⏳</div>

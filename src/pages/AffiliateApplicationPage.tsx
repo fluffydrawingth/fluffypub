@@ -3,6 +3,7 @@ import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useAuth } from '../lib/auth';
 import { useLang } from '../lib/lang';
+import { useGuidelines } from '../lib/useGuidelines';
 import { api } from '../lib/api';
 
 // Bilingual fallback bullets — used only until the admin edits the
@@ -31,9 +32,9 @@ export default function AffiliateApplicationPage() {
   const { user } = useAuth();
   const { tRaw } = useLang();
   const p = theme.primaryColor;
-  // Always render guidelines in the active UI language (do NOT pull from the CMS legal
-  // page, which stores a single language and caused EN/TH mixing).
-  const guidelines = DEFAULT_GUIDELINES.map(g => tRaw(g.th, g.en));
+  // Language-aware CMS: TH = "affiliate-guidelines", EN = "affiliate-guidelines-en".
+  // Falls back to the language-correct defaults when that page is empty/missing.
+  const { bullets: guidelines } = useGuidelines('affiliate-guidelines', DEFAULT_GUIDELINES.map(g => tRaw(g.th, g.en)));
 
   const [name, setName] = useState('');
   const [link, setLink] = useState('');

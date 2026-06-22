@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from './api';
+import { useLang } from './lang';
 
 // Guidelines = the short bullet list shown before submitting an artist/affiliate request.
 // They are stored as a Legal Page (Admin → Legal Pages) keyed by slug, with ONE bullet
@@ -64,12 +65,16 @@ export function parseBullets(content: string | null | undefined): string[] {
  * Returns the resolved bullets plus a `loaded` flag.
  */
 export function useGuidelines(slug: GuidelineSlug, defaults: string[]) {
+  const { lang } = useLang();
   const [bullets, setBullets] = useState<string[]>(defaults);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    api.getLegalPage(slug)
+    // Per-language editable CMS: Thai = "<slug>", English = "<slug>-en".
+    // If the language page is empty/missing, fall back to the (already language-correct) defaults.
+    const wanted = lang === 'en' ? `${slug}-en` : slug;
+    api.getLegalPage(wanted)
       .then((page: any) => {
         if (!alive) return;
         const parsed = page && !page.error ? parseBullets(page.content) : [];
@@ -78,9 +83,9 @@ export function useGuidelines(slug: GuidelineSlug, defaults: string[]) {
       })
       .catch(() => { if (alive) { setBullets(defaults); setLoaded(true); } });
     return () => { alive = false; };
-  // defaults is a stable literal at call sites; slug drives the fetch
+  // defaults is a stable literal at call sites; slug + lang drive the fetch
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+  }, [slug, lang]);
 
   return { bullets, loaded };
 }

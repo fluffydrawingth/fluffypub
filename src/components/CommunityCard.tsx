@@ -48,8 +48,9 @@ export default function CommunityCard({ post, compact = false }: { post: any; co
 
       {/* Artwork — static 4:5 cover (feed stays a cozy gallery, NOT interactive). */}
       {(() => {
-        const imgs = (post.artwork_urls && post.artwork_urls.length ? post.artwork_urls : [post.thumb_url || post.artwork_url]).filter(Boolean);
-        const cover = post.thumb_url || imgs[0];
+        const imgs = (post.artwork_urls && post.artwork_urls.length ? post.artwork_urls : [post.artwork_url || post.thumb_url]).filter(Boolean);
+        // Use the full-resolution artwork for a crisp gallery look (fall back to thumb only if missing)
+        const cover = imgs[0] || post.artwork_url || post.thumb_url;
         const extra = imgs.length;
         return (
           <div style={{ position: 'relative', width: '100%', paddingBottom: '125%', background: `linear-gradient(135deg,${p}10,${p}05)`, flexShrink: 0 }}>

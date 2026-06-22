@@ -101,8 +101,9 @@ export default function CommunityPage() {
 
         {/* Header — centered */}
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          <h1 style={{ fontSize: 'clamp(20px,3vw,28px)', fontWeight: 900, color: theme.textColor, margin: '0 0 4px' }}>{tRaw('แบ่งปันโลกสีสันของคุณ', 'Share Your Colorful World')} 🌈</h1>
-          <p style={{ color: theme.textColor + '88', fontSize: 13, margin: '0 0 14px' }}>{tRaw('พื้นที่อบอุ่นสำหรับแบ่งปันผลงาน เคล็ดลับ และเครื่องมือที่ชอบ', 'A cozy place to share artwork, coloring tips and favorite tools.')}</p>
+          {/* Single page header — editable in Admin → Theme & CMS → Page Sections (Color Your World) */}
+          <h1 style={{ fontSize: 'clamp(20px,3vw,28px)', fontWeight: 900, color: theme.textColor, margin: '0 0 4px' }}>{tRaw(theme.labels?.community_title_th || '🌈 แต่งแต้มโลกของคุณ', theme.labels?.community_title || '🌈 Color Your World')}</h1>
+          <p style={{ color: theme.textColor + '88', fontSize: 13, margin: '0 0 14px' }}>{tRaw(theme.labels?.community_subtitle_th || 'พื้นที่อบอุ่นสำหรับแบ่งปันผลงาน เคล็ดลับ และเครื่องมือที่ชอบ', theme.labels?.community_subtitle || 'A cozy place to share artwork, coloring tips and favorite tools.')}</p>
           {user ? (
             <button onClick={() => setShowForm(s => !s)} style={{ background: p, color: 'white', border: 'none', cursor: 'pointer', padding: '9px 22px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily }}>
               {showForm ? tRaw('ปิด', 'Close') : `🎨 ${tRaw('แบ่งปันผลงาน', 'Share artwork')}`}
@@ -131,13 +132,10 @@ export default function CommunityPage() {
           </div>
         </div>
 
-        {/* 1. 🌷 Cozy Picks — uses the same wording as the homepage (theme labels). */}
+        {/* 1. 🌷 Cozy Picks — small section label (page header is the hero above, no duplication). */}
         {isAll && cozy.length > 0 && (
           <div style={{ marginBottom: 32 }}>
-            <div style={{ textAlign: 'center', marginBottom: 14 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 900, color: theme.textColor, margin: '0 0 2px' }}>{tRaw(theme.labels?.community_title_th || '🌈 แต่งแต้มโลกของคุณ', theme.labels?.community_title || '🌈 Color Your World')}</h2>
-              <p style={{ fontSize: 12.5, color: theme.textColor + '88', margin: 0 }}>{tRaw(theme.labels?.community_subtitle_th || 'ผลงานระบายสีจริงจากชุมชนของเรา', theme.labels?.community_subtitle || 'Real coloring results from our community')}</p>
-            </div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: theme.textColor, marginBottom: 12 }}>🌷 {tRaw('คอลเลกชันอบอุ่น', 'Cozy Picks')}</div>
             <div className={'cozy-row' + (cozy.length > 6 ? ' many' : '')}>
               {cozy.map(post => (
                 <div key={'c' + post.id} style={{ width: 204, flexShrink: 0 }}>
