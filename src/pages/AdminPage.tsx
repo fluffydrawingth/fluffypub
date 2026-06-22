@@ -12,7 +12,7 @@ import ImageCropEditor from '../components/ImageCropEditor';
 import HtmlEditor from '../components/HtmlEditor';
 
 const ADMIN_EMAIL = 'fluffydrawing.th@gmail.com';
-type Tab = 'dashboard'|'products'|'orders'|'artists'|'artist-requests'|'payouts'|'affiliate-requests'|'affiliates'|'community'|'categories'|'pages'|'free-downloads'|'legal'|'theme'|'lang';
+type Tab = 'dashboard'|'products'|'orders'|'artists'|'artist-requests'|'payouts'|'affiliate-requests'|'affiliates'|'community'|'categories'|'pages'|'free-downloads'|'legal'|'policies'|'theme'|'lang';
 
 function NavItem({icon,label,active,onClick}:any) {
   return (
@@ -40,7 +40,7 @@ export default function AdminPage() {
   const TAB_LABELS: Record<Tab, string> = {
     dashboard:'Dashboard', products:'Products', orders:'Orders', artists:'Artists', 'artist-requests':'Artist Requests', payouts:'Artist Payouts',
     'affiliate-requests':'Fluffy Creator Requests', affiliates:'Fluffy Creators', community:'Community Dashboard',
-    categories:'Categories', pages:'Pages', 'free-downloads':'Free Downloads', legal:'Legal Pages', theme:'Theme & CMS', lang:'Language CMS',
+    categories:'Categories', pages:'Pages', 'free-downloads':'Free Downloads', legal:'Legal Pages', policies:'Creator & Artist Policies', theme:'Theme & CMS', lang:'Language CMS',
   };
 
   const selectTab = (t: Tab) => { setTab(t); setSidebarOpen(false); };
@@ -70,6 +70,7 @@ export default function AdminPage() {
         <NavItem icon="📄" label="Pages"          active={tab==='pages'}           onClick={()=>selectTab('pages')} />
         <NavItem icon="⬇️" label="Free Downloads" active={tab==='free-downloads'}  onClick={()=>selectTab('free-downloads')} />
         <NavItem icon="⚖️" label="Legal Pages"    active={tab==='legal'}           onClick={()=>selectTab('legal')} />
+        <NavItem icon="📜" label="Creator & Artist Policies" active={tab==='policies'} onClick={()=>selectTab('policies')} />
         <NavItem icon="✨" label="Theme & CMS"    active={tab==='theme'}           onClick={()=>selectTab('theme')} />
         <NavItem icon="🌐" label="Language CMS" active={tab==='lang'}       onClick={()=>selectTab('lang')} />
       </nav>
@@ -121,6 +122,7 @@ export default function AdminPage() {
         {tab==='pages'           && <PagesCMSTab />}
         {tab==='free-downloads'  && <FreeDownloadsTab />}
         {tab==='legal'           && <LegalPagesTab />}
+        {tab==='policies'        && <PoliciesTab />}
         {tab==='theme'           && <ThemeTab />}
         {tab==='lang'       && <LanguageCMSTab />}
       </div>
@@ -3116,6 +3118,96 @@ function FeaturedProductsPicker({ draft, setDraft }: any) {
         })}
       </div>
       {ids.length > 0 && <div style={{marginTop:6,fontSize:12,color:P,fontWeight:600}}>{ids.length} product{ids.length!==1?'s':''} selected</div>}
+    </div>
+  );
+}
+
+// ── Creator & Artist Policies Tab ─────────────────────────────────────────────
+// Dedicated editor for the guideline + agreement copy shown on the request pages,
+// in BOTH languages. Stored as legal_pages slugs: "<base>" (Thai) and "<base>-en"
+// (English). Guidelines = one bullet per line. Agreement = free text.
+function PoliciesTab() {
+  const P = '#f472b6';
+  const card = { background:'white', borderRadius:16, boxShadow:'0 2px 10px rgba(0,0,0,0.06)' };
+  const tok = () => localStorage.getItem('fluffy_token') || '';
+  const [pages, setPages] = useState<Record<string, any>>({});
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [msg, setMsg] = useState('');
+  const [savingKey, setSavingKey] = useState('');
+
+  const ITEMS: { base: string; title: string; kind: 'bullets'|'text' }[] = [
+    { base: 'artist-guidelines',    title: '🎨 Artist Guidelines',          kind: 'bullets' },
+    { base: 'artist-agreement',     title: '🎨 Artist Agreement',           kind: 'text' },
+    { base: 'affiliate-guidelines', title: '🤝 Fluffy Creator Guidelines',  kind: 'bullets' },
+    { base: 'affiliate-agreement',  title: '🤝 Fluffy Creator Agreement',   kind: 'text' },
+  ];
+
+  const load = async () => {
+    const r = await fetch('/api/pages?type=legal', { headers: { Authorization: `Bearer ${tok()}` } });
+    const all = await r.json().catch(() => []);
+    const map: Record<string, any> = {};
+    (Array.isArray(all) ? all : []).forEach((pg: any) => { map[pg.slug] = pg; });
+    setPages(map);
+    const d: Record<string, string> = {};
+    ITEMS.forEach(it => {
+      d[it.base] = map[it.base]?.content || '';
+      d[`${it.base}-en`] = map[`${it.base}-en`]?.content || '';
+    });
+    setDraft(d);
+  };
+  useEffect(() => { load(); }, []);
+
+  const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(''), 3500); };
+
+  const save = async (slug: string, title: string) => {
+    setSavingKey(slug);
+    const content = draft[slug] || '';
+    const existing = pages[slug];
+    try {
+      if (existing?.id) {
+        await fetch(`/api/pages?type=legal&id=${existing.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` }, body: JSON.stringify({ content, published: true }) });
+      } else {
+        await fetch('/api/pages?type=legal', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok()}` }, body: JSON.stringify({ title, slug, content, published: true }) });
+      }
+      flash('✓ Saved'); await load();
+    } catch { flash('⚠️ Save failed'); }
+    setSavingKey('');
+  };
+
+  const ta = (slug: string) => (
+    <textarea value={draft[slug] || ''} onChange={e => setDraft(d => ({ ...d, [slug]: e.target.value }))} rows={7}
+      style={{ width:'100%', padding:'11px 13px', borderRadius:10, border:'1.5px solid #e5e7eb', fontSize:13, fontFamily:'inherit', boxSizing:'border-box', resize:'vertical', lineHeight:1.6 }} />
+  );
+
+  return (
+    <div style={{ padding:32 }}>
+      <h1 style={{ fontSize:28, fontWeight:900, color:'#111827', margin:'0 0 6px' }}>📜 Creator & Artist Policies</h1>
+      <p style={{ fontSize:13, color:'#6b7280', margin:'0 0 8px' }}>Edit the guidelines &amp; agreements shown on the Artist and Fluffy Creator request pages — in both languages.</p>
+      <p style={{ fontSize:12, color:'#9ca3af', margin:'0 0 20px' }}>Guidelines: <b>one bullet per line</b>. Agreement: free text. Leave English empty to fall back to the built-in defaults.</p>
+      {msg && <div style={{ marginBottom:16, padding:'10px 16px', borderRadius:12, background:msg.startsWith('✓')?'#d1fae5':'#fee2e2', color:msg.startsWith('✓')?'#065f46':'#991b1b', fontSize:13, fontWeight:600 }}>{msg}</div>}
+
+      {ITEMS.map(it => (
+        <div key={it.base} style={{ ...card, padding:20, marginBottom:18 }}>
+          <h2 style={{ fontSize:16, fontWeight:800, color:'#111827', margin:'0 0 4px' }}>{it.title}</h2>
+          <p style={{ fontSize:11.5, color:'#9ca3af', margin:'0 0 14px' }}>{it.kind === 'bullets' ? 'One bullet per line.' : 'Full agreement text.'}</p>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+            <div>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+                <label style={{ fontSize:12.5, fontWeight:700, color:'#374151' }}>🇹🇭 ไทย (Thai)</label>
+                <button onClick={() => save(it.base, it.title.replace(/^[^\sA-Za-z]+\s*/, ''))} disabled={savingKey===it.base} style={{ padding:'5px 14px', borderRadius:8, border:'none', background:P, color:'white', cursor:'pointer', fontSize:12, fontWeight:700 }}>{savingKey===it.base?'Saving…':'Save TH'}</button>
+              </div>
+              {ta(it.base)}
+            </div>
+            <div>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+                <label style={{ fontSize:12.5, fontWeight:700, color:'#374151' }}>🇬🇧 English</label>
+                <button onClick={() => save(`${it.base}-en`, `${it.title.replace(/^[^\sA-Za-z]+\s*/, '')} (EN)`)} disabled={savingKey===`${it.base}-en`} style={{ padding:'5px 14px', borderRadius:8, border:'none', background:P, color:'white', cursor:'pointer', fontSize:12, fontWeight:700 }}>{savingKey===`${it.base}-en`?'Saving…':'Save EN'}</button>
+              </div>
+              {ta(`${it.base}-en`)}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
