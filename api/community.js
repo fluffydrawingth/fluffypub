@@ -470,6 +470,18 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { creators });
   }
 
+  // GET saved-posts — posts the logged-in user bookmarked (save reaction)
+  if (req.method === 'GET' && action === 'saved-posts') {
+    const user = await getUser(req);
+    if (!user) return json(res, 200, { posts: [] });
+    const { data: saves } = await supabase.from('community_reactions').select('post_id').eq('user_id', user.id).eq('type', 'save');
+    const ids = (saves || []).map(r => r.post_id).filter(Boolean);
+    if (!ids.length) return json(res, 200, { posts: [] });
+    const { data: posts } = await supabase.from('community_posts').select('*').eq('status', 'published').in('id', ids).order('created_at', { ascending: false });
+    const decorated = await decorate(posts || [], user.id, null);
+    return json(res, 200, { posts: decorated });
+  }
+
   // GET external-books — autocomplete suggestions (q) or top books by usage
   if (req.method === 'GET' && action === 'external-books') {
     const qStr = String(req.query.q || '').trim();

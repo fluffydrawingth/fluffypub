@@ -8,13 +8,13 @@ import { useFavorites } from '../lib/favorites';
 import { useLang } from '../lib/lang';
 import { isImageUrl, AVATAR_EMOJIS } from '../lib/avatar';
 
-type Tab = 'orders' | 'favorites' | 'profile';
+type Tab = 'orders' | 'favorites' | 'saved' | 'profile';
 
 export default function AccountPage() {
   const { theme } = useTheme();
   const { route, navigate } = useRouter();
   const { user, logout, refreshUser } = useAuth();
-  const [tab, setTab] = useState<Tab>(() => { const t = route.params?.tab; return (t === 'orders' || t === 'profile' || t === 'favorites') ? t as Tab : 'orders'; });
+  const [tab, setTab] = useState<Tab>(() => { const t = route.params?.tab; return (t === 'orders' || t === 'profile' || t === 'favorites' || t === 'saved') ? t as Tab : 'orders'; });
   const { t, tRaw, lang } = useLang();
   const p = theme.primaryColor;
 
@@ -28,7 +28,7 @@ export default function AccountPage() {
     return null;
   }
 
-  const tabs: [string,string,string][] = [['orders','📦',tRaw('คำสั่งซื้อ','Orders')],['profile','👤',tRaw('โปรไฟล์','Profile')],['favorites','❤️',tRaw('รายการโปรด','Favorites')]];
+  const tabs: [string,string,string][] = [['orders','📦',tRaw('คำสั่งซื้อ','Orders')],['saved','🔖',tRaw('บันทึกไว้','Saved')],['profile','👤',tRaw('โปรไฟล์','Profile')],['favorites','❤️',tRaw('รายการโปรด','Favorites')]];
 
   return (
     <div style={{ minHeight:'100vh', background:'#f8fafc', fontFamily:theme.fontFamily }}>
@@ -51,6 +51,7 @@ export default function AccountPage() {
         </div>
 
         {tab==='orders' && <OrdersTab p={p} theme={theme} />}
+        {tab==='saved' && <SavedTab p={p} theme={theme} navigate={navigate} />}
         {tab==='favorites' && <FavoritesTab p={p} theme={theme} navigate={navigate} />}
         {tab==='profile' && <ProfileTab key={user.id} user={user} p={p} theme={theme} refreshUser={refreshUser} />}
       </div>
@@ -491,6 +492,93 @@ function OrdersTab({p,theme}:any) {
   );
 }
 
+function SavedTab({p,theme,navigate}:any) {
+  const { tRaw } = useLang();
+  const [posts, setPosts] = useState<any[]>([]);
+  const [creators, setCreators] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([api.getSavedPosts(), api.getFollowedCreators()]).then(([sp, fc]) => {
+      setPosts(sp?.posts || []);
+      setCreators(fc?.creators || []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  const unfollow = async (id: string) => {
+    setCreators(prev => prev.filter(c => c.id !== id));
+    await api.unfollowCreator(id).catch(() => {});
+  };
+
+  if (loading) return <div style={{textAlign:'center',padding:40,color:'#888'}}>Loading...</div>;
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:28}}>
+      {/* Saved Posts */}
+      <div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
+          <h3 style={{fontSize:17,fontWeight:900,color:'#1e293b',margin:0}}>🔖 {tRaw('โพสต์ที่บันทึกไว้','Saved Posts')}</h3>
+          <button onClick={()=>navigate('/community')} style={{background:'none',border:'none',cursor:'pointer',color:p,fontSize:12.5,fontWeight:700}}>{tRaw('ดูชุมชน →','Browse community →')}</button>
+        </div>
+        {posts.length === 0 ? (
+          <div style={{background:'white',borderRadius:16,padding:'32px 24px',textAlign:'center',color:'#94a3b8'}}>
+            <div style={{fontSize:40,marginBottom:10}}>🔖</div>
+            <div style={{fontWeight:700,color:'#1e293b',marginBottom:6}}>{tRaw('ยังไม่มีโพสต์ที่บันทึก','No saved posts yet')}</div>
+            <div style={{fontSize:13}}>{tRaw('กดไอคอน 🔖 บนโพสต์เพื่อบันทึก','Tap 🔖 on any community post to save it here.')}</div>
+          </div>
+        ) : (
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:10}}>
+            {posts.map((post:any) => (
+              <div key={post.id} onClick={()=>navigate(`/community/${post.id}`)} style={{cursor:'pointer',borderRadius:14,overflow:'hidden',background:'white',boxShadow:'0 1px 6px rgba(0,0,0,0.07)',border:`1.5px solid ${p}10`}}>
+                <img src={post.thumb_url||post.artwork_url} alt="" style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}} />
+                <div style={{padding:'8px 10px'}}>
+                  <div style={{fontSize:11.5,fontWeight:700,color:'#1e293b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{post.creator?.name||'—'}</div>
+                  {post.caption&&<div style={{fontSize:11,color:'#94a3b8',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{post.caption}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Following Creators */}
+      <div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
+          <h3 style={{fontSize:17,fontWeight:900,color:'#1e293b',margin:0}}>💗 {tRaw('ครีเอเตอร์ที่ติดตาม','Following Creators')}</h3>
+          <button onClick={()=>navigate('/community/creators')} style={{background:'none',border:'none',cursor:'pointer',color:p,fontSize:12.5,fontWeight:700}}>{tRaw('ค้นหาครีเอเตอร์ →','Find more →')}</button>
+        </div>
+        {creators.length === 0 ? (
+          <div style={{background:'white',borderRadius:16,padding:'32px 24px',textAlign:'center',color:'#94a3b8'}}>
+            <div style={{fontSize:40,marginBottom:10}}>🌷</div>
+            <div style={{fontWeight:700,color:'#1e293b',marginBottom:6}}>{tRaw('ยังไม่ได้ติดตามครีเอเตอร์','Not following anyone yet')}</div>
+            <div style={{fontSize:13,marginBottom:16}}>{tRaw('ค้นพบครีเอเตอร์ที่คุณชอบ','Discover creators you love in the community.')}</div>
+            <button onClick={()=>navigate('/community/creators')} style={{background:p,color:'white',border:'none',cursor:'pointer',padding:'9px 20px',borderRadius:18,fontSize:13,fontWeight:700,fontFamily:'inherit'}}>
+              {tRaw('ค้นหาครีเอเตอร์','Find Creators')}
+            </button>
+          </div>
+        ) : (
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {creators.map((c:any)=>(
+              <div key={c.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',borderRadius:14,background:'white',border:`1.5px solid ${p}12`,boxShadow:'0 1px 4px rgba(0,0,0,0.05)'}}>
+                <div onClick={()=>navigate(`/creator/${c.id}`)} style={{width:46,height:46,borderRadius:'50%',overflow:'hidden',background:p+'20',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0,cursor:'pointer',border:`1.5px solid ${p}20`}}>
+                  {isImageUrl(c.avatar_url)?<img src={c.avatar_url} alt={c.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:(c.avatar_url||'👤')}
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div onClick={()=>navigate(`/creator/${c.id}`)} style={{fontSize:14,fontWeight:800,color:'#1e293b',cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{c.name}</div>
+                  <div style={{fontSize:11.5,color:'#94a3b8'}}>{[c.community_country,c.community_favorite_medium].filter(Boolean).join(' · ')}</div>
+                </div>
+                <div style={{fontSize:11.5,color:p,fontWeight:700,flexShrink:0}}>{c.posts} {tRaw('โพสต์','posts')}</div>
+                <button onClick={()=>unfollow(c.id)} title={tRaw('เลิกติดตาม','Unfollow')} style={{background:'none',border:'1.5px solid #e2e8f0',borderRadius:14,padding:'5px 11px',fontSize:12,color:'#94a3b8',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function FavoritesTab({p,theme,navigate}:any) {
   const { favIds } = useFavorites();
   const { tRaw } = useLang();
@@ -704,7 +792,6 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
     </div>
     {user.role === 'customer' && <ArtistRequestCard p={p} theme={theme} />}
     {user.role === 'artist' && <ArtistStudioCard p={p} theme={theme} />}
-    <FollowingCreatorsCard p={p} theme={theme} />
     <AffiliateCard p={p} theme={theme} user={user} />
    </>
   );
