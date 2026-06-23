@@ -597,10 +597,10 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
 
 const MEDIUM_OPTIONS = ['Alcohol Marker', 'Acrylic', 'Colored Pencil', 'Watercolor', 'Gel Pen', 'Crayon', 'Digital', 'Other'];
 
-// Structured coloring rows: Medium (dropdown) + Brand/set (optional autocomplete). Repeatable.
+// Structured coloring rows: Medium (dropdown) + Brand/set (dropdown of admin-managed
+// brands via <datalist>, with free typing). Repeatable. Brand list = approved marker tags.
 export function StructuredMediumBlock({ details, setDetails, theme, p, fld, tRaw }: any) {
   const [brandSugg, setBrandSugg] = useState<string[]>([]);
-  const [focusIdx, setFocusIdx] = useState<number | null>(null);
   useEffect(() => { api.getCommunityTags('marker').then((d: any) => setBrandSugg((d?.tags || []).map((t: any) => t.name))).catch(() => {}); }, []);
   const upd = (i: number, k: string, v: string) => setDetails(details.map((d: any, idx: number) => idx === i ? { ...d, [k]: v } : d));
   const add = () => { if (details.length < 10) setDetails([...details, { medium: '', brand: '' }]); };
@@ -608,26 +608,18 @@ export function StructuredMediumBlock({ details, setDetails, theme, p, fld, tRaw
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 6 }}>🎨 {tRaw('สื่อ + ยี่ห้อ/ชุดที่ใช้', 'Medium + brand / set used')}</div>
-      {details.map((row: any, i: number) => {
-        const sugg = row.brand.trim() ? brandSugg.filter(b => b.toLowerCase().includes(row.brand.toLowerCase()) && b.toLowerCase() !== row.brand.toLowerCase()).slice(0, 6) : [];
-        return (
-          <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'flex-start' }}>
-            <select value={row.medium} onChange={e => upd(i, 'medium', e.target.value)} style={{ ...fld, flex: 1, fontSize: 13, padding: '9px 10px' }}>
-              <option value="">{tRaw('เลือกสื่อ...', 'Select medium...')}</option>
-              {MEDIUM_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-            <div style={{ flex: 1, position: 'relative' }}>
-              <input value={row.brand} onChange={e => upd(i, 'brand', e.target.value)} onFocus={() => setFocusIdx(i)} onBlur={() => setTimeout(() => setFocusIdx(f => f === i ? null : f), 150)} placeholder={tRaw('ยี่ห้อ/ชุด (ไม่บังคับ)', 'Brand / set (optional)')} style={{ ...fld, width: '100%', fontSize: 13 }} />
-              {focusIdx === i && sugg.length > 0 && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, background: 'white', border: '1px solid #f1f5f9', borderRadius: 10, marginTop: 2, overflow: 'hidden', boxShadow: '0 6px 18px rgba(0,0,0,0.1)' }}>
-                  {sugg.map(b => <button key={b} onMouseDown={() => { upd(i, 'brand', b); setFocusIdx(null); }} style={{ display: 'block', width: '100%', textAlign: 'left', background: 'white', border: 'none', cursor: 'pointer', padding: '7px 11px', fontSize: 13, fontFamily: theme.fontFamily, color: '#1e293b' }}>{b}</button>)}
-                </div>
-              )}
-            </div>
-            <button onClick={() => remove(i)} style={{ padding: '0 11px', borderRadius: 10, border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontWeight: 700, alignSelf: 'stretch' }}>✕</button>
-          </div>
-        );
-      })}
+      {/* Shared brand list — managed by admin in Tag Library → Markers */}
+      <datalist id="brand-set-options">{brandSugg.map(b => <option key={b} value={b} />)}</datalist>
+      {details.map((row: any, i: number) => (
+        <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'flex-start' }}>
+          <select value={row.medium} onChange={e => upd(i, 'medium', e.target.value)} style={{ ...fld, flex: 1, fontSize: 13, padding: '9px 10px' }}>
+            <option value="">{tRaw('เลือกสื่อ...', 'Select medium...')}</option>
+            {MEDIUM_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <input list="brand-set-options" value={row.brand} onChange={e => upd(i, 'brand', e.target.value)} placeholder={tRaw('ยี่ห้อ/ชุด (เลือกหรือพิมพ์)', 'Brand / set (pick or type)')} style={{ ...fld, flex: 1, fontSize: 13 }} />
+          <button onClick={() => remove(i)} style={{ padding: '0 11px', borderRadius: 10, border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontWeight: 700, alignSelf: 'stretch' }}>✕</button>
+        </div>
+      ))}
       {details.length < 10 && <button onClick={add} style={{ padding: '6px 14px', borderRadius: 10, border: `1.5px dashed ${p}50`, background: 'white', color: p, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: theme.fontFamily }}>+ {tRaw('เพิ่มสื่ออีก', 'Add another medium')}</button>}
     </div>
   );

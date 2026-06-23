@@ -2324,6 +2324,12 @@ function CommunityDashboardTab() {
   };
 
   const approveTag = async (id:string, name?:string) => { const r=await api.approveTag(id,name); if(r?.error)return flash('⚠️ '+r.error); flash('✓ Approved'); loadTagLib(tagLibType); };
+  // Set any tag's status (approved / pending / hidden) — works for unmanaged tags too
+  const setTagStatus = async (t:any, status:string) => {
+    const r = await api.setTagStatus(tagLibType, t.name, status);
+    if (r?.error) return flash('⚠️ '+r.error);
+    flash(status==='approved'?'✓ Approved':status==='hidden'?'✓ Hidden':'✓ Updated'); loadTagLib(tagLibType);
+  };
   const fieldFor = (type:string) => type==='medium'?'mediums':type==='marker'?'markers':type==='palette'?'palettes':'';
   // Delete works for library tags (by id) AND for tags only used on posts (by name → stripped)
   const removeTag = async (t:any) => {
@@ -2553,16 +2559,19 @@ function CommunityDashboardTab() {
         {/* Tag list — every tag in use (count) + library status; rename / approve / delete */}
         {tagLibLoading ? <div style={{color:'#9ca3af',padding:16}}>Loading…</div> : (
           <div style={{...card,padding:16,marginBottom:20}}>
-            <div style={{fontSize:11,color:'#9ca3af',marginBottom:10}}>🟢 approved · 🟡 pending · ⚪ used on posts but not in library. Number = how many posts use it.</div>
+            <div style={{fontSize:11,color:'#9ca3af',marginBottom:10}}>🟢 approved (shown as suggestion) · 🟡 pending · ⚫ hidden · ⚪ used on posts, not in library. Number = posts using it.</div>
             <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
               {tagLibItems.map((t:any)=>{
-                const dot = t.status==='approved'?'🟢':t.status==='pending'?'🟡':'⚪';
+                const dot = t.status==='approved'?'🟢':t.status==='pending'?'🟡':t.status==='hidden'?'⚫':'⚪';
+                const isApproved = t.status==='approved';
+                const isHidden = t.status==='hidden';
                 return (
-                <div key={(t.id||t.normalized||t.name)} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 10px',borderRadius:12,border:`1.5px solid ${t.status==='approved'?P:'#e5e7eb'}`,background:t.status==='approved'?P+'10':'#f9fafb'}}>
+                <div key={(t.id||t.normalized||t.name)} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 10px',borderRadius:12,border:`1.5px solid ${isApproved?P:'#e5e7eb'}`,background:isHidden?'#f3f4f6':isApproved?P+'10':'#f9fafb',opacity:isHidden?0.65:1}}>
                   <span style={{fontSize:11}}>{dot}</span>
                   <span style={{fontSize:12.5,fontWeight:700,color:'#1e293b'}}>{t.name}</span>
                   {(t.count>0||t.post_count>0)&&<span style={{fontSize:10,color:'#9ca3af'}}>({t.count ?? t.post_count})</span>}
-                  {t.status==='pending'&&t.id&&<button title="Approve" onClick={()=>approveTag(t.id)} style={{background:'#d1fae5',border:'none',borderRadius:8,cursor:'pointer',fontSize:10,fontWeight:800,color:'#065f46',padding:'2px 6px'}}>✓</button>}
+                  {!isApproved&&<button title="Approve (show as suggestion)" onClick={()=>setTagStatus(t,'approved')} style={{background:'#d1fae5',border:'none',borderRadius:8,cursor:'pointer',fontSize:10,fontWeight:800,color:'#065f46',padding:'2px 6px'}}>✓</button>}
+                  {!isHidden&&<button title="Hide (keep data, remove from suggestions)" onClick={()=>setTagStatus(t,'hidden')} style={{background:'#e5e7eb',border:'none',borderRadius:8,cursor:'pointer',fontSize:10,fontWeight:800,color:'#374151',padding:'2px 6px'}}>🙈</button>}
                   <button title="Rename" onClick={()=>renameTag(t)} style={{background:'none',border:'none',cursor:'pointer',color:'#2563eb',fontSize:12,fontWeight:700,padding:'0 2px'}}>✎</button>
                   <button title="Delete" onClick={()=>removeTag(t)} style={{background:'none',border:'none',cursor:'pointer',color:'#dc2626',fontSize:12,fontWeight:700,padding:'0 2px'}}>✕</button>
                 </div>

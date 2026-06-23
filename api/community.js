@@ -915,6 +915,26 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { success: true });
   }
 
+  // POST ?action=admin-tag-status {type, name, status} — set a tag's status
+  // (approved | pending | hidden). Creates the library row if the tag was only used
+  // on posts (unmanaged). Hidden/pending tags are NOT offered as form suggestions.
+  if (req.method === 'POST' && action === 'admin-tag-status') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { type, name, status } = req.body || {};
+    if (!['medium','marker','palette','challenge'].includes(type) || !String(name||'').trim()) return json(res, 400, { error: 'type and name required' });
+    if (!['approved','pending','hidden'].includes(status)) return json(res, 400, { error: 'invalid status' });
+    const display = String(name).trim();
+    const normalized = display.toLowerCase();
+    const { data: existing } = await supabase.from('community_tags').select('id').eq('type', type).eq('normalized', normalized).single();
+    if (existing) {
+      await supabase.from('community_tags').update({ status, reviewed_at: new Date().toISOString() }).eq('id', existing.id);
+    } else {
+      await supabase.from('community_tags').insert({ type, name: display, normalized, status });
+    }
+    return json(res, 200, { success: true });
+  }
+
   // POST ?action=admin-tag-approve&id= {name?} — approve (and optionally rename)
   if (req.method === 'POST' && action === 'admin-tag-approve') {
     const admin = await requireAuth(req, res, ['admin']);

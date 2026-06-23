@@ -176,6 +176,7 @@ export const api = {
   searchCommunity: (q: string, page = 0) => fetch(`/api/community?action=search&q=${encodeURIComponent(q)}&page=${page}&guest_id=${getGuestId()}`, { headers: h() }).then(r => r.json()),
   // Admin External Book Library
   getAdminAllTags: (type: string) => fetch(`/api/community?action=admin-all-tags&type=${type}`, { headers: h() }).then(r => r.json()),
+  setTagStatus: (type: string, name: string, status: string) => fetch('/api/community?action=admin-tag-status', { method: 'POST', headers: h(), body: JSON.stringify({ type, name, status }) }).then(r => r.json()),
   deleteTagByName: (type: string, name: string) => fetch(`/api/community?action=admin-tag-by-name&type=${type}&name=${encodeURIComponent(name)}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
   getAdminBooks: () => fetch('/api/community?action=admin-books', { headers: h() }).then(r => r.json()),
   renameAdminBook: (id: string, title: string, author: string) => fetch(`/api/community?action=admin-book-rename&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify({ title, author }) }).then(r => r.json()),
