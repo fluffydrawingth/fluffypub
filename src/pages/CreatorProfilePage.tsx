@@ -76,7 +76,7 @@ export default function CreatorProfilePage({ userId }: { userId: string }) {
 
   return (
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
-      <style>{`.cm-grid{column-count:4;column-gap:16px}@media(max-width:1100px){.cm-grid{column-count:3}}@media(max-width:760px){.cm-grid{column-count:2;column-gap:10px}}@media(max-width:420px){.cm-grid{column-count:1}}.cm-grid>div{margin-bottom:16px}`}</style>
+      <style>{`.cp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}@media(max-width:1100px){.cp-grid{grid-template-columns:repeat(4,1fr)}}@media(max-width:900px){.cp-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:640px){.cp-grid{grid-template-columns:repeat(2,1fr);gap:10px}}@media(max-width:380px){.cp-grid{grid-template-columns:1fr}}`}</style>
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 16px 60px' }}>
         <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 14, fontWeight: 600, padding: '0 0 20px' }}>← {tRaw('ชุมชน', 'Community')}</button>
 
@@ -126,7 +126,7 @@ export default function CreatorProfilePage({ userId }: { userId: string }) {
           <div style={{ textAlign: 'center', padding: '50px 24px', color: theme.textColor + '88' }}>{tRaw('ยังไม่มีผลงาน', 'No creations yet.')}</div>
         ) : (
           <>
-            <div className="cm-grid">{posts.slice(0, showCount).map((post: any) => <CommunityCard key={post.id} post={post} />)}</div>
+            <div className="cp-grid">{posts.slice(0, showCount).map((post: any) => <CommunityCard key={post.id} post={post} />)}</div>
             {showCount < posts.length && (
               <div style={{ textAlign: 'center', marginTop: 20 }}>
                 <button onClick={() => setShowCount(n => n + 6)} style={{ background: 'transparent', border: `2px solid ${p}`, color: p, cursor: 'pointer', padding: '10px 28px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily }}>{tRaw('โหลดเพิ่ม', 'Load more')}</button>
