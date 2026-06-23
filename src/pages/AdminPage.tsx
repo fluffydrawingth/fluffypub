@@ -2334,7 +2334,8 @@ function CommunityDashboardTab() {
   // Delete works for library tags (by id) AND for tags only used on posts (by name → stripped)
   const removeTag = async (t:any) => {
     if(!confirm(`Delete "${t.name}"? It will be removed from the library and from all posts that use it.`))return;
-    if (t.id) await api.deleteTag(t.id); else await api.deleteTagByName(tagLibType, t.name);
+    const r = t.id ? await api.deleteTag(t.id) : await api.deleteTagByName(tagLibType, t.name);
+    if (r?.error) return flash('⚠️ '+r.error);
     flash('✓ Deleted'); loadTagLib(tagLibType);
   };
   // Rename = rewrite the tag on all posts (canonical), and update the library entry if any

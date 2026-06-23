@@ -595,7 +595,9 @@ module.exports = async function handler(req, res) {
     return json(res, 201, post);
   }
 
-  if (req.method === 'DELETE') {
+  // Plain DELETE (no action) = delete a post. Action-specific DELETEs (admin-tag,
+  // admin-tag-by-name, admin-book, comment) are handled in their own branches.
+  if (req.method === 'DELETE' && !action) {
     const user = await requireAuth(req, res);
     if (!user) return;
     const { id } = req.query;
