@@ -857,6 +857,64 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { tags: data || [] });
   }
 
+  // GET ?action=admin-all-tags&type=medium|marker|palette — EVERY tag actually in use
+  // (aggregated from post arrays) UNIONed with the community_tags library, so the admin
+  // can clean up real data even for tags that were never formally added to the library.
+  if (req.method === 'GET' && action === 'admin-all-tags') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const type = req.query.type;
+    const field = type === 'medium' ? 'mediums' : type === 'marker' ? 'markers' : type === 'palette' ? 'palettes' : null;
+    if (!field) return json(res, 400, { error: 'type must be medium|marker|palette' });
+    // 1) Count distinct values used across published posts (case-insensitive)
+    const { data: rows } = await supabase.from('community_posts').select(field).eq('status', 'published').range(0, 9999);
+    const used = {}; // normalized -> { name, count }
+    (rows || []).forEach(r => (r[field] || []).forEach(v => {
+      const name = String(v).trim(); if (!name) return;
+      const key = name.toLowerCase();
+      if (!used[key]) used[key] = { name, count: 0 };
+      used[key].count++;
+    }));
+    // 2) Merge in the community_tags library (status + id)
+    const { data: libRows } = await supabase.from('community_tags').select('*').eq('type', type);
+    const lib = {};
+    (libRows || []).forEach(t => { lib[(t.normalized || t.name || '').toLowerCase()] = t; });
+    const keys = new Set([...Object.keys(used), ...Object.keys(lib)]);
+    const tags = [...keys].map(key => {
+      const u = used[key]; const l = lib[key];
+      return {
+        id: l ? l.id : null,
+        name: (l && l.name) || (u && u.name) || key,
+        normalized: key,
+        status: l ? l.status : 'unmanaged',   // approved | pending | unmanaged (used on posts, not in library)
+        count: u ? u.count : 0,
+      };
+    }).sort((a, b) => (b.count - a.count) || a.name.localeCompare(b.name));
+    return json(res, 200, { tags, field });
+  }
+
+  // DELETE ?action=admin-tag-by-name&type=&name= — strip a tag from posts + remove from library
+  if (req.method === 'DELETE' && action === 'admin-tag-by-name') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const type = req.query.type;
+    const name = String(req.query.name || '').trim();
+    const field = type === 'medium' ? 'mediums' : type === 'marker' ? 'markers' : type === 'palette' ? 'palettes' : null;
+    if (!field || !name) return json(res, 400, { error: 'type and name required' });
+    const norm = name.toLowerCase();
+    // Remove from library
+    await supabase.from('community_tags').delete().eq('type', type).eq('normalized', norm);
+    // Strip from posts
+    const { data: rows } = await supabase.from('community_posts').select('id,' + field).range(0, 9999);
+    for (const row of (rows || [])) {
+      const arr = row[field] || [];
+      if (arr.some(v => String(v).trim().toLowerCase() === norm)) {
+        await supabase.from('community_posts').update({ [field]: arr.filter(v => String(v).trim().toLowerCase() !== norm) }).eq('id', row.id);
+      }
+    }
+    return json(res, 200, { success: true });
+  }
+
   // POST ?action=admin-tag-approve&id= {name?} — approve (and optionally rename)
   if (req.method === 'POST' && action === 'admin-tag-approve') {
     const admin = await requireAuth(req, res, ['admin']);

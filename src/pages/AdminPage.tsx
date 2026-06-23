@@ -2261,7 +2261,9 @@ function CommunityDashboardTab() {
   const loadTagLib = useCallback((type:string) => {
     if (type === 'books') { loadBooks(); return; }
     setTagLibLoading(true);
-    api.getAdminTags(type).then((d:any)=>{ setTagLibItems(d?.tags||[]); setTagLibLoading(false); }).catch(()=>setTagLibLoading(false));
+    // Challenges live only in the library; medium/marker/palette show EVERY tag in use on posts.
+    const fetcher = type === 'challenge' ? api.getAdminTags(type) : api.getAdminAllTags(type);
+    fetcher.then((d:any)=>{ setTagLibItems(d?.tags||[]); setTagLibLoading(false); }).catch(()=>setTagLibLoading(false));
   },[loadBooks]);
 
   const renameBook = async (bk:any) => {
@@ -2322,7 +2324,22 @@ function CommunityDashboardTab() {
   };
 
   const approveTag = async (id:string, name?:string) => { const r=await api.approveTag(id,name); if(r?.error)return flash('⚠️ '+r.error); flash('✓ Approved'); loadTagLib(tagLibType); };
-  const deleteTag = async (id:string) => { if(!confirm('Delete this tag?'))return; await api.deleteTag(id); flash('✓ Deleted'); loadTagLib(tagLibType); };
+  const fieldFor = (type:string) => type==='medium'?'mediums':type==='marker'?'markers':type==='palette'?'palettes':'';
+  // Delete works for library tags (by id) AND for tags only used on posts (by name → stripped)
+  const removeTag = async (t:any) => {
+    if(!confirm(`Delete "${t.name}"? It will be removed from the library and from all posts that use it.`))return;
+    if (t.id) await api.deleteTag(t.id); else await api.deleteTagByName(tagLibType, t.name);
+    flash('✓ Deleted'); loadTagLib(tagLibType);
+  };
+  // Rename = rewrite the tag on all posts (canonical), and update the library entry if any
+  const renameTag = async (t:any) => {
+    const to = prompt(`Rename "${t.name}" to:`, t.name); if(to===null) return;
+    const nv = to.trim(); if(!nv || nv===t.name) return;
+    const field = fieldFor(tagLibType);
+    if (field) await api.mergeCommunityTags(field, [t.name], nv);
+    if (t.id) await api.approveTag(t.id, nv);
+    flash('✓ Renamed'); loadTagLib(tagLibType);
+  };
   const addApprovedTag = async () => {
     if (!newTagName.trim()) return;
     // Submit then immediately approve
@@ -2533,18 +2550,24 @@ function CommunityDashboardTab() {
           </div>
         </div>
 
-        {/* Tag list */}
+        {/* Tag list — every tag in use (count) + library status; rename / approve / delete */}
         {tagLibLoading ? <div style={{color:'#9ca3af',padding:16}}>Loading…</div> : (
           <div style={{...card,padding:16,marginBottom:20}}>
-            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-              {tagLibItems.map((t:any)=>(
-                <div key={t.id} style={{display:'inline-flex',alignItems:'center',gap:4,padding:'5px 10px 5px 12px',borderRadius:20,border:`1.5px solid ${t.status==='approved'?P:'#e5e7eb'}`,background:t.status==='approved'?P+'10':'#f9fafb'}}>
-                  <span style={{fontSize:12,fontWeight:700,color:t.status==='approved'?P:'#64748b'}}>{t.name}</span>
-                  <span style={{fontSize:10,color:'#9ca3af'}}>{t.post_count>0?`(${t.post_count})`:''}</span>
-                  {t.status==='pending'&&<button onClick={()=>approveTag(t.id)} style={{background:'#d1fae5',border:'none',borderRadius:8,cursor:'pointer',fontSize:10,fontWeight:800,color:'#065f46',padding:'2px 6px'}}>✓</button>}
-                  <button onClick={()=>deleteTag(t.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#dc2626',fontSize:12,fontWeight:700,padding:'0 2px'}}>✕</button>
+            <div style={{fontSize:11,color:'#9ca3af',marginBottom:10}}>🟢 approved · 🟡 pending · ⚪ used on posts but not in library. Number = how many posts use it.</div>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+              {tagLibItems.map((t:any)=>{
+                const dot = t.status==='approved'?'🟢':t.status==='pending'?'🟡':'⚪';
+                return (
+                <div key={(t.id||t.normalized||t.name)} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 10px',borderRadius:12,border:`1.5px solid ${t.status==='approved'?P:'#e5e7eb'}`,background:t.status==='approved'?P+'10':'#f9fafb'}}>
+                  <span style={{fontSize:11}}>{dot}</span>
+                  <span style={{fontSize:12.5,fontWeight:700,color:'#1e293b'}}>{t.name}</span>
+                  {(t.count>0||t.post_count>0)&&<span style={{fontSize:10,color:'#9ca3af'}}>({t.count ?? t.post_count})</span>}
+                  {t.status==='pending'&&t.id&&<button title="Approve" onClick={()=>approveTag(t.id)} style={{background:'#d1fae5',border:'none',borderRadius:8,cursor:'pointer',fontSize:10,fontWeight:800,color:'#065f46',padding:'2px 6px'}}>✓</button>}
+                  <button title="Rename" onClick={()=>renameTag(t)} style={{background:'none',border:'none',cursor:'pointer',color:'#2563eb',fontSize:12,fontWeight:700,padding:'0 2px'}}>✎</button>
+                  <button title="Delete" onClick={()=>removeTag(t)} style={{background:'none',border:'none',cursor:'pointer',color:'#dc2626',fontSize:12,fontWeight:700,padding:'0 2px'}}>✕</button>
                 </div>
-              ))}
+                );
+              })}
               {tagLibItems.length===0&&<span style={{fontSize:13,color:'#9ca3af'}}>No tags yet. Add some above.</span>}
             </div>
           </div>
