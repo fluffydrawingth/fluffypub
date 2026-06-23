@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
+import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
 import CommunityCard from '../components/CommunityCard';
 import BadgeIcon from '../components/BadgeIcon';
@@ -23,14 +24,36 @@ export default function CreatorProfilePage({ userId }: { userId: string }) {
   const { theme } = useTheme();
   const { navigate } = useRouter();
   const { tRaw } = useLang();
+  const { user } = useAuth();
   const p = theme.primaryColor;
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [following, setFollowing] = useState(false);
+  const [showCount, setShowCount] = useState(6);
 
   useEffect(() => {
     setLoading(true);
-    api.getCommunityCreator(userId).then((d: any) => { setData(d && !d.error ? d : null); setLoading(false); }).catch(() => setLoading(false));
-  }, [userId]);
+    setShowCount(6);
+    Promise.all([
+      api.getCommunityCreator(userId),
+      user ? api.getMyFollows() : Promise.resolve({ follows: [] }),
+    ]).then(([d, fl]) => {
+      setData(d && !d.error ? d : null);
+      setFollowing((fl?.follows || []).includes(userId));
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [userId, user]);
+
+  const toggleFollow = async () => {
+    if (!user) { navigate('/login'); return; }
+    if (following) {
+      setFollowing(false);
+      await api.unfollowCreator(userId).catch(() => setFollowing(true));
+    } else {
+      setFollowing(true);
+      await api.followCreator(userId).catch(() => setFollowing(false));
+    }
+  };
 
   if (loading) return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>⏳</div>;
   if (!data?.creator) return (
@@ -83,10 +106,18 @@ export default function CreatorProfilePage({ userId }: { userId: string }) {
             )}
             {joined && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>{tRaw('เข้าร่วมเมื่อ', 'Joined')} {joined}</div>}
           </div>
-          <div style={{ display: 'flex', gap: 20 }}>
-            {stat(tRaw('โพสต์', 'Posts'), c.stats?.posts ?? 0)}
-            {stat(tRaw('หนังสือ', 'Books'), c.stats?.booksUsed ?? 0)}
-            {stat(tRaw('พาเลตต์', 'Palettes'), c.stats?.palettes ?? 0)}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 20 }}>
+              {stat(tRaw('โพสต์', 'Posts'), c.stats?.posts ?? 0)}
+              {stat(tRaw('หนังสือ', 'Books'), c.stats?.booksUsed ?? 0)}
+              {stat(tRaw('พาเลตต์', 'Palettes'), c.stats?.palettes ?? 0)}
+            </div>
+            {userId !== user?.id && (
+              <button onClick={toggleFollow}
+                style={{ background: following ? '#f1f5f9' : p, color: following ? '#64748b' : 'white', border: following ? '1.5px solid #e2e8f0' : 'none', borderRadius: 22, padding: '8px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: theme.fontFamily, minWidth: 120, transition: 'all .15s' }}>
+                {following ? `💗 ${tRaw('ติดตามแล้ว', 'Following')}` : `+ ${tRaw('ติดตาม', 'Follow')}`}
+              </button>
+            )}
           </div>
         </div>
 
@@ -94,7 +125,14 @@ export default function CreatorProfilePage({ userId }: { userId: string }) {
         {posts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '50px 24px', color: theme.textColor + '88' }}>{tRaw('ยังไม่มีผลงาน', 'No creations yet.')}</div>
         ) : (
-          <div className="cm-grid">{posts.map((post: any) => <CommunityCard key={post.id} post={post} />)}</div>
+          <>
+            <div className="cm-grid">{posts.slice(0, showCount).map((post: any) => <CommunityCard key={post.id} post={post} />)}</div>
+            {showCount < posts.length && (
+              <div style={{ textAlign: 'center', marginTop: 20 }}>
+                <button onClick={() => setShowCount(n => n + 6)} style={{ background: 'transparent', border: `2px solid ${p}`, color: p, cursor: 'pointer', padding: '10px 28px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily }}>{tRaw('โหลดเพิ่ม', 'Load more')}</button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

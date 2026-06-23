@@ -403,20 +403,70 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { posts: out });
   }
 
-  // GET creators — top creators by published post count
+  // GET creators — top creators by published post count (community directory)
   if (req.method === 'GET' && action === 'creators') {
-    const limit = Math.min(24, Math.max(1, parseInt(req.query.limit) || 12));
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 6));
     const { data } = await supabase.from('community_posts').select('user_id').eq('status', 'published');
     const tally = {};
     (data || []).forEach(r => { if (r.user_id) tally[r.user_id] = (tally[r.user_id] || 0) + 1; });
     const topIds = Object.keys(tally).sort((a, b) => tally[b] - tally[a]).slice(0, limit);
     if (!topIds.length) return json(res, 200, { creators: [] });
-    const { data: profiles } = await supabase.from('profiles').select('id,name,username,avatar_url,role,affiliate_enabled').in('id', topIds);
+    const { data: profiles } = await supabase.from('profiles').select('id,name,username,avatar_url,role,affiliate_enabled,community_country,community_favorite_medium').in('id', topIds);
     const creators = topIds.map(id => {
       const u = (profiles || []).find(p => p.id === id);
       if (!u) return null;
-      return { id: u.id, name: u.username || u.name || 'Community Member', avatar_url: u.avatar_url || null, affiliate_enabled: !!u.affiliate_enabled, posts: tally[id] };
+      return { id: u.id, name: u.username || u.name || 'Community Member', avatar_url: u.avatar_url || null, affiliate_enabled: !!u.affiliate_enabled, posts: tally[id], community_country: u.community_country || null, community_favorite_medium: u.community_favorite_medium || null };
     }).filter(Boolean);
+    return json(res, 200, { creators });
+  }
+
+  // GET my-follows — return list of creator IDs the logged-in user follows
+  if (req.method === 'GET' && action === 'my-follows') {
+    const user = await getUser(req);
+    if (!user) return json(res, 200, { follows: [] });
+    const { data: profile } = await supabase.from('profiles').select('community_follows').eq('id', user.id).single();
+    return json(res, 200, { follows: profile?.community_follows || [] });
+  }
+
+  // POST follow — add a creator to follows
+  if (req.method === 'POST' && action === 'follow') {
+    const user = await requireAuth(req, res); if (!user) return;
+    const { creator_id } = req.body || {};
+    if (!creator_id) return json(res, 400, { error: 'creator_id required' });
+    const { data: profile } = await supabase.from('profiles').select('community_follows').eq('id', user.id).single();
+    const follows = Array.isArray(profile?.community_follows) ? profile.community_follows : [];
+    if (!follows.includes(creator_id)) {
+      const { error } = await supabase.from('profiles').update({ community_follows: [...follows, creator_id] }).eq('id', user.id);
+      if (error) return json(res, 500, { error: error.message });
+    }
+    return json(res, 200, { ok: true });
+  }
+
+  // DELETE follow — remove a creator from follows
+  if (req.method === 'DELETE' && action === 'follow') {
+    const user = await requireAuth(req, res); if (!user) return;
+    const creator_id = req.query.creator_id || (req.body || {}).creator_id;
+    if (!creator_id) return json(res, 400, { error: 'creator_id required' });
+    const { data: profile } = await supabase.from('profiles').select('community_follows').eq('id', user.id).single();
+    const follows = (Array.isArray(profile?.community_follows) ? profile.community_follows : []).filter(id => id !== creator_id);
+    const { error } = await supabase.from('profiles').update({ community_follows: follows }).eq('id', user.id);
+    if (error) return json(res, 500, { error: error.message });
+    return json(res, 200, { ok: true });
+  }
+
+  // GET followed-creators — profiles of creators the user follows (for account page)
+  if (req.method === 'GET' && action === 'followed-creators') {
+    const user = await getUser(req);
+    if (!user) return json(res, 200, { creators: [] });
+    const { data: profile } = await supabase.from('profiles').select('community_follows').eq('id', user.id).single();
+    const ids = profile?.community_follows || [];
+    if (!ids.length) return json(res, 200, { creators: [] });
+    const { data: profiles } = await supabase.from('profiles').select('id,name,username,avatar_url,role,affiliate_enabled,community_country,community_favorite_medium').in('id', ids);
+    // Also get post count for each
+    const { data: postRows } = await supabase.from('community_posts').select('user_id').eq('status', 'published').in('user_id', ids);
+    const tally = {};
+    (postRows || []).forEach(r => { tally[r.user_id] = (tally[r.user_id] || 0) + 1; });
+    const creators = (profiles || []).map(u => ({ id: u.id, name: u.username || u.name || 'Community Member', avatar_url: u.avatar_url || null, affiliate_enabled: !!u.affiliate_enabled, posts: tally[u.id] || 0, community_country: u.community_country || null, community_favorite_medium: u.community_favorite_medium || null }));
     return json(res, 200, { creators });
   }
 

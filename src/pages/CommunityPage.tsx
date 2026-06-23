@@ -52,6 +52,7 @@ export default function CommunityPage() {
   const [exploreQ, setExploreQ] = useState('');
   const [postTab, setPostTab] = useState<'all' | 'gallery' | 'tips'>('all');
   const [cozy, setCozy] = useState<any[]>([]);
+  const [discoverCreators, setDiscoverCreators] = useState<any[]>([]);
   const [curation, setCuration] = useState<{ featured_books: any[]; featured_creators: any[] }>({ featured_books: [], featured_creators: [] });
   const [facets, setFacets] = useState<{ palettes: any[]; markers: any[]; mediums: any[]; books: any[]; externalBooks: any[] }>({ palettes: [], markers: [], mediums: [], books: [], externalBooks: [] });
   const [posts, setPosts] = useState<any[]>([]);
@@ -61,6 +62,7 @@ export default function CommunityPage() {
 
   useEffect(() => {
     api.getCommunityCozyPicks().then((d: any) => setCozy(d?.posts || [])).catch(() => {});
+    api.getCommunityCreators(6).then((d: any) => setDiscoverCreators(d?.creators || [])).catch(() => {});
     api.getCommunityCuration().then((d: any) => setCuration({ featured_books: d?.featured_books || [], featured_creators: d?.featured_creators || [] })).catch(() => {});
     api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [], mediums: d?.mediums || [], books: d?.books || [], externalBooks: d?.externalBooks || [] })).catch(() => {});
   }, []);
@@ -157,7 +159,31 @@ export default function CommunityPage() {
           </div>
         )}
 
-        {/* 3. 🆕 New Creations / Search results */}
+        {/* 3. 🌷 Discover Creators — top community members */}
+        {isAll && discoverCreators.length > 0 && (
+          <div style={{ marginTop: 36 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 900, color: theme.textColor, margin: 0 }}>🌷 {tRaw('ค้นพบครีเอเตอร์', 'Discover Creators')}</h2>
+              <button onClick={() => navigate('/community/creators')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 13, fontWeight: 700, padding: 0 }}>{tRaw('ดูทั้งหมด →', 'View all →')}</button>
+            </div>
+            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6 }}>
+              {discoverCreators.map((c: any) => (
+                <button key={c.id} onClick={() => navigate(`/creator/${c.id}`)}
+                  style={{ background: 'white', border: `1.5px solid ${p}15`, borderRadius: 16, padding: '16px 14px', cursor: 'pointer', minWidth: 140, textAlign: 'center', fontFamily: theme.fontFamily, flexShrink: 0, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+                  <div style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', background: p + '20', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, border: `2px solid ${p}20` }}>
+                    {isImageUrl(c.avatar_url) ? <img src={c.avatar_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (c.avatar_url || (c.affiliate_enabled ? '🌷' : '👤'))}
+                  </div>
+                  <div style={{ fontSize: 12.5, fontWeight: 800, color: '#1e293b', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 120 }}>{c.name}</div>
+                  {c.community_country && <div style={{ fontSize: 10.5, color: '#94a3b8' }}>📍 {c.community_country}</div>}
+                  {c.community_favorite_medium && <div style={{ fontSize: 10.5, color: '#94a3b8' }}>🎨 {c.community_favorite_medium}</div>}
+                  <div style={{ fontSize: 10.5, color: p, fontWeight: 700, marginTop: 4 }}>{c.posts} {tRaw('โพสต์', 'posts')}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 4. 🆕 New Creations / Search results */}
         <SectionHead theme={theme} title={
           searching ? `🔎 ${tRaw('ผลการค้นหา', 'Results for')} “${debouncedQ.trim()}”`
             : isAll ? `🆕 ${t('new_creations')}`
@@ -209,7 +235,7 @@ export default function CommunityPage() {
           </div>
         ) : null}
 
-        {/* 4. Featured Creators (admin-curated) */}
+        {/* 5. Featured Creators (admin-curated) */}
         {isAll && curation.featured_creators.length > 0 && (
           <div style={{ marginTop: 36 }}>
             <SectionHead theme={theme} title={`🌷 ${tRaw('ครีเอเตอร์แนะนำ', 'Featured Creators')}`} />

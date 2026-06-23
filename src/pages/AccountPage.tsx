@@ -704,8 +704,51 @@ function ProfileTab({user,p,theme,refreshUser}:any) {
     </div>
     {user.role === 'customer' && <ArtistRequestCard p={p} theme={theme} />}
     {user.role === 'artist' && <ArtistStudioCard p={p} theme={theme} />}
+    <FollowingCreatorsCard p={p} theme={theme} />
     <AffiliateCard p={p} theme={theme} user={user} />
    </>
+  );
+}
+
+function FollowingCreatorsCard({p,theme}:any) {
+  const { navigate } = useRouter();
+  const { tRaw } = useLang();
+  const [creators, setCreators] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    api.getFollowedCreators().then((d:any) => { setCreators(d?.creators || []); setLoaded(true); }).catch(() => setLoaded(true));
+  }, []);
+
+  const unfollow = async (id:string) => {
+    setCreators(prev => prev.filter(c => c.id !== id));
+    await api.unfollowCreator(id).catch(() => {});
+  };
+
+  if (!loaded || creators.length === 0) return null;
+
+  return (
+    <div style={{background:'white',borderRadius:20,padding:28,boxShadow:'0 2px 10px rgba(0,0,0,0.05)',marginTop:20}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+        <h3 style={{fontSize:18,fontWeight:800,color:'#1e293b',margin:0}}>💗 {tRaw('ครีเอเตอร์ที่ติดตาม','Following Creators')}</h3>
+        <button onClick={()=>navigate('/community/creators')} style={{background:'none',border:'none',cursor:'pointer',color:p,fontSize:12.5,fontWeight:700}}>{tRaw('ค้นหาครีเอเตอร์ →','Find more →')}</button>
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        {creators.map((c:any)=>(
+          <div key={c.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 12px',borderRadius:12,border:`1.5px solid ${p}12`,background:'#fafbff'}}>
+            <div onClick={()=>navigate(`/creator/${c.id}`)} style={{width:44,height:44,borderRadius:'50%',overflow:'hidden',background:p+'20',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0,cursor:'pointer',border:`1.5px solid ${p}20`}}>
+              {isImageUrl(c.avatar_url)?<img src={c.avatar_url} alt={c.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:(c.avatar_url||'👤')}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div onClick={()=>navigate(`/creator/${c.id}`)} style={{fontSize:13.5,fontWeight:800,color:'#1e293b',cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{c.name}</div>
+              <div style={{fontSize:11,color:'#94a3b8'}}>{c.community_country||''}{c.community_country&&c.community_favorite_medium?' · ':''}{c.community_favorite_medium||''}</div>
+            </div>
+            <div style={{fontSize:11,color:p,fontWeight:700,flexShrink:0}}>{c.posts} {tRaw('โพสต์','posts')}</div>
+            <button onClick={()=>unfollow(c.id)} style={{background:'none',border:'1.5px solid #e2e8f0',borderRadius:14,padding:'4px 10px',fontSize:11,color:'#94a3b8',cursor:'pointer',fontFamily:theme.fontFamily,flexShrink:0}}>✕</button>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

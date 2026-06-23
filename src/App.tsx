@@ -30,6 +30,7 @@ import ArtistApplicationPage from './pages/ArtistApplicationPage';
 import AffiliateApplicationPage from './pages/AffiliateApplicationPage';
 import AffiliateDashboardPage from './pages/AffiliateDashboardPage';
 import CommunityPage from './pages/CommunityPage';
+import CommunityCreatorsPage from './pages/CommunityCreatorsPage';
 import CommunityPostPage from './pages/CommunityPostPage';
 import ExternalBookPage from './pages/ExternalBookPage';
 import CreatorProfilePage from './pages/CreatorProfilePage';
@@ -126,6 +127,7 @@ function AppContent() {
       case '/affiliate-dashboard': return <ProtectedRoute roles={['customer','artist','admin']}><AffiliateDashboardPage /></ProtectedRoute>;
       case '/artists': return <ArtistsPage />;
       case '/community': return <CommunityPage />;
+      case '/community/creators': return <CommunityCreatorsPage />;
       case '/community/book/:slug': return <ExternalBookPage slug={route.params?.slug || ''} />;
       case '/community/:id': return <CommunityPostPage postId={route.params?.id || ''} />;
       case '/creator/:id': return <CreatorProfilePage userId={route.params?.id || ''} />;
