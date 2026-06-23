@@ -2317,7 +2317,7 @@ function CommunityDashboardTab() {
   const doStatus = async (id:string, status:string, confirmMsg?:string) => { if(confirmMsg&&!confirm(confirmMsg))return; const r=await api.setCommunityStatus(id,status); if(r?.error)return flash('⚠️ '+r.error); flash('✓ Updated'); refresh(); };
 
   const saveCuration = async () => {
-    const cfg = { ...(themeCfg||{}), community: { featured_books: featuredBookIds.slice(0,4), featured_creators: featuredCreators.slice(0,3).map(c=>c.id) } };
+    const cfg = { ...(themeCfg||{}), community: { featured_books: featuredBookIds.slice(0,4), featured_creators: featuredCreators.slice(0,4).map(c=>c.id) } };
     const r = await api.saveTheme(cfg);
     if (r?.error) return flash('⚠️ '+r.error);
     setThemeCfg(cfg); flash('✓ Curation saved');
@@ -2483,8 +2483,8 @@ function CommunityDashboardTab() {
 
         {/* Featured Creators — autocomplete search of approved Fluffy Creators */}
         <div style={{...card,padding:20,marginBottom:20}}>
-          <h2 style={{fontSize:15,fontWeight:800,color:'#111827',margin:'0 0 4px'}}>👤 Featured Creators <span style={{fontWeight:500,color:'#9ca3af',fontSize:13}}>(max 3)</span></h2>
-          <p style={{fontSize:12,color:'#6b7280',margin:'0 0 12px'}}>Search by name, username or email and click to feature on the Community page.</p>
+          <h2 style={{fontSize:15,fontWeight:800,color:'#111827',margin:'0 0 4px'}}>🌷 Featured Creators <span style={{fontWeight:500,color:'#9ca3af',fontSize:13}}>(max 4)</span></h2>
+          <p style={{fontSize:12,color:'#6b7280',margin:'0 0 12px'}}>Search any community member and click to feature on the Community page. These appear first in Discover Creators.</p>
           <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}>
             {featuredCreators.map((cr)=>(
               <div key={cr.id} style={{display:'flex',alignItems:'center',gap:6,background:'#f8fafc',border:'1.5px solid #e5e7eb',borderRadius:10,padding:'6px 10px'}}>
@@ -2494,9 +2494,9 @@ function CommunityDashboardTab() {
             ))}
             {featuredCreators.length===0&&<span style={{fontSize:12,color:'#94a3b8'}}>No creators featured yet.</span>}
           </div>
-          {featuredCreators.length < 3 && (
+          {featuredCreators.length < 4 && (
             <div style={{position:'relative'}}>
-              <input value={creatorSearch} onChange={e=>setCreatorSearch(e.target.value)} placeholder="Search Fluffy Creators..." style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'}} />
+              <input value={creatorSearch} onChange={e=>setCreatorSearch(e.target.value)} placeholder="Search community members..." style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'}} />
               {creatorResults.length>0 && (
                 <div style={{border:'1px solid #f1f5f9',borderRadius:10,marginTop:4,overflow:'hidden'}}>
                   {creatorResults.filter((cr:any)=>!featuredCreators.some(f=>f.id===cr.id)).map((cr:any)=>(

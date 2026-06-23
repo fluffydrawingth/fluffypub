@@ -62,7 +62,7 @@ export default function CommunityPage() {
 
   useEffect(() => {
     api.getCommunityCozyPicks().then((d: any) => setCozy(d?.posts || [])).catch(() => {});
-    api.getCommunityCreators(6).then((d: any) => setDiscoverCreators(d?.creators || [])).catch(() => {});
+    api.getCommunityCreators({ sort: 'featured', limit: 4 }).then((d: any) => setDiscoverCreators(d?.creators || [])).catch(() => {});
     api.getCommunityCuration().then((d: any) => setCuration({ featured_books: d?.featured_books || [], featured_creators: d?.featured_creators || [] })).catch(() => {});
     api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [], mediums: d?.mediums || [], books: d?.books || [], externalBooks: d?.externalBooks || [] })).catch(() => {});
   }, []);
@@ -159,27 +159,36 @@ export default function CommunityPage() {
           </div>
         )}
 
-        {/* 3. 🌷 Discover Creators — top community members */}
-        {isAll && discoverCreators.length > 0 && (
+        {/* 3. 🌷 Discover Creators — featured-first, 4 desktop / 2 mobile */}
+        {isAll && (
           <div style={{ marginTop: 36 }}>
+            <style>{`.dc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.dc-grid>*:nth-child(n+3){}.dc-grid>*:nth-child(n+5){display:none}@media(max-width:600px){.dc-grid{grid-template-columns:repeat(2,1fr)}.dc-grid>*:nth-child(n+3){display:none}}`}</style>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <h2 style={{ fontSize: 18, fontWeight: 900, color: theme.textColor, margin: 0 }}>🌷 {tRaw('ค้นพบครีเอเตอร์', 'Discover Creators')}</h2>
               <button onClick={() => navigate('/community/creators')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 13, fontWeight: 700, padding: 0 }}>{tRaw('ดูทั้งหมด →', 'View all →')}</button>
             </div>
-            <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6 }}>
-              {discoverCreators.map((c: any) => (
-                <button key={c.id} onClick={() => navigate(`/creator/${c.id}`)}
-                  style={{ background: 'white', border: `1.5px solid ${p}15`, borderRadius: 16, padding: '16px 14px', cursor: 'pointer', minWidth: 140, textAlign: 'center', fontFamily: theme.fontFamily, flexShrink: 0, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
-                  <div style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', background: p + '20', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, border: `2px solid ${p}20` }}>
-                    {isImageUrl(c.avatar_url) ? <img src={c.avatar_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (c.avatar_url || (c.affiliate_enabled ? '🌷' : '👤'))}
-                  </div>
-                  <div style={{ fontSize: 12.5, fontWeight: 800, color: '#1e293b', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 120 }}>{c.name}</div>
-                  {c.community_country && <div style={{ fontSize: 10.5, color: '#94a3b8' }}>📍 {c.community_country}</div>}
-                  {c.community_favorite_medium && <div style={{ fontSize: 10.5, color: '#94a3b8' }}>🎨 {c.community_favorite_medium}</div>}
-                  <div style={{ fontSize: 10.5, color: p, fontWeight: 700, marginTop: 4 }}>{c.posts} {tRaw('โพสต์', 'posts')}</div>
+            {discoverCreators.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: '#94a3b8', fontSize: 13 }}>
+                <button onClick={() => navigate('/community/creators')} style={{ background: p + '15', border: 'none', cursor: 'pointer', color: p, fontSize: 13, fontWeight: 700, padding: '8px 18px', borderRadius: 20, fontFamily: theme.fontFamily }}>
+                  {tRaw('ดูครีเอเตอร์ทั้งหมด →', 'Browse all creators →')}
                 </button>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="dc-grid">
+                {discoverCreators.map((c: any) => (
+                  <button key={c.id} onClick={() => navigate(`/creator/${c.id}`)}
+                    style={{ background: 'white', border: `1.5px solid ${p}15`, borderRadius: 16, padding: '16px 12px', cursor: 'pointer', textAlign: 'center', fontFamily: theme.fontFamily, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+                    <div style={{ width: 54, height: 54, borderRadius: '50%', overflow: 'hidden', background: p + '20', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, border: `2px solid ${p}20` }}>
+                      {isImageUrl(c.avatar_url) ? <img src={c.avatar_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (c.avatar_url || (c.affiliate_enabled ? '🌷' : '👤'))}
+                    </div>
+                    <div style={{ fontSize: 12.5, fontWeight: 800, color: '#1e293b', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+                    {c.community_country && <div style={{ fontSize: 10.5, color: '#94a3b8' }}>📍 {c.community_country}</div>}
+                    {c.community_favorite_medium && <div style={{ fontSize: 10.5, color: '#94a3b8' }}>🎨 {c.community_favorite_medium}</div>}
+                    <div style={{ fontSize: 10.5, color: p, fontWeight: 700, marginTop: 4 }}>{c.posts} {tRaw('โพสต์', 'posts')}</div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -89,12 +89,15 @@ export default function CreatorProfilePage({ userId }: { userId: string }) {
             <h1 style={{ fontSize: 22, fontWeight: 900, color: '#1e293b', margin: '0 0 4px' }}><BadgeIcon affiliate={c.affiliate_enabled} size={20} /> {c.name}</h1>
             {c.artist_slug && <button onClick={() => navigate(`/artists/${c.artist_slug}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 12, fontWeight: 700, padding: 0, marginBottom: 4 }}>{tRaw('ดูหน้าศิลปิน →', 'View artist page →')}</button>}
             {/* Fluffy Creator bio takes priority; else customer about-me */}
-            {(c.creator_bio || c.bio) && <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, margin: '4px 0 0' }}>{c.creator_bio || c.bio}</p>}
-            {c.community_about && <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.55, margin: '6px 0 0' }}>{c.community_about}</p>}
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
+            {/* Quick info chips under name */}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6, marginBottom: 4 }}>
+              {joined && <span style={{ fontSize: 12, color: '#94a3b8' }}>📅 {tRaw('เข้าร่วม', 'Joined')} {joined}</span>}
               {c.community_country && <span style={{ fontSize: 12, color: '#64748b' }}>📍 {c.community_country}</span>}
               {c.community_favorite_medium && <span style={{ fontSize: 12, color: '#64748b' }}>🎨 {c.community_favorite_medium}</span>}
+              {c.favorite_palette && <span style={{ fontSize: 12, color: '#64748b' }}>🌷 {c.favorite_palette}</span>}
             </div>
+            {(c.creator_bio || c.bio) && <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, margin: '4px 0 0' }}>{c.creator_bio || c.bio}</p>}
+            {c.community_about && <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.55, margin: '6px 0 0' }}>{c.community_about}</p>}
             {/* Fluffy Creator social links — only for approved creators */}
             {(c.creator_tiktok || c.creator_instagram || c.creator_youtube || c.creator_website) && (
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
@@ -104,7 +107,6 @@ export default function CreatorProfilePage({ userId }: { userId: string }) {
                 {c.creator_website && <a href={socialUrl('web', c.creator_website)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, fontWeight: 700, color: p, textDecoration: 'none' }}>🌐 Website</a>}
               </div>
             )}
-            {joined && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>{tRaw('เข้าร่วมเมื่อ', 'Joined')} {joined}</div>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: 20 }}>

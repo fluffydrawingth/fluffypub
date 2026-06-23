@@ -140,7 +140,13 @@ export const api = {
   deleteCommunityPost: (id: string) => fetch(`/api/community?id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
   reactCommunity: (postId: string, type: string) => fetch('/api/community?action=react', { method: 'POST', headers: h(), body: JSON.stringify({ post_id: postId, type, guest_id: getGuestId() }) }).then(r => r.json()),
   getCommunityTrending: (limit = 8) => fetch(`/api/community?action=trending&limit=${limit}`, { headers: h() }).then(r => r.json()),
-  getCommunityCreators: (limit = 6) => fetch(`/api/community?action=creators&limit=${limit}`, { headers: h() }).then(r => r.json()),
+  getCommunityCreators: (opts: { limit?: number; sort?: string; q?: string } = {}) => {
+    const p = new URLSearchParams({ action: 'creators' });
+    if (opts.limit) p.set('limit', String(opts.limit));
+    if (opts.sort) p.set('sort', opts.sort);
+    if (opts.q) p.set('q', opts.q);
+    return fetch(`/api/community?${p}`, { headers: h() }).then(r => r.json());
+  },
   getSavedPosts: () => fetch('/api/community?action=saved-posts', { headers: h() }).then(r => r.json()),
   getMyFollows: () => fetch('/api/community?action=my-follows', { headers: h() }).then(r => r.json()),
   followCreator: (creator_id: string) => fetch('/api/community?action=follow', { method: 'POST', headers: h(), body: JSON.stringify({ creator_id }) }).then(r => r.json()),

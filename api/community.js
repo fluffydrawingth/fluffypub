@@ -403,21 +403,40 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { posts: out });
   }
 
-  // GET creators — top creators by published post count (community directory)
+  // GET creators — community directory (search + sort: featured | recent | az)
   if (req.method === 'GET' && action === 'creators') {
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 6));
-    const { data } = await supabase.from('community_posts').select('user_id').eq('status', 'published');
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 50));
+    const sort = req.query.sort || 'recent'; // featured | recent | az
+    const qStr = String(req.query.q || '').trim().toLowerCase();
+    // Tally posts and track last post date per user
+    const { data: postRows } = await supabase.from('community_posts').select('user_id,created_at').eq('status', 'published');
     const tally = {};
-    (data || []).forEach(r => { if (r.user_id) tally[r.user_id] = (tally[r.user_id] || 0) + 1; });
-    const topIds = Object.keys(tally).sort((a, b) => tally[b] - tally[a]).slice(0, limit);
-    if (!topIds.length) return json(res, 200, { creators: [] });
-    const { data: profiles } = await supabase.from('profiles').select('id,name,username,avatar_url,role,affiliate_enabled,community_country,community_favorite_medium').in('id', topIds);
-    const creators = topIds.map(id => {
-      const u = (profiles || []).find(p => p.id === id);
-      if (!u) return null;
-      return { id: u.id, name: u.username || u.name || 'Community Member', avatar_url: u.avatar_url || null, affiliate_enabled: !!u.affiliate_enabled, posts: tally[id], community_country: u.community_country || null, community_favorite_medium: u.community_favorite_medium || null };
-    }).filter(Boolean);
-    return json(res, 200, { creators });
+    (postRows || []).forEach(r => {
+      if (!r.user_id) return;
+      if (!tally[r.user_id]) tally[r.user_id] = { posts: 0, last_post_at: r.created_at };
+      tally[r.user_id].posts++;
+      if (r.created_at > tally[r.user_id].last_post_at) tally[r.user_id].last_post_at = r.created_at;
+    });
+    const allIds = Object.keys(tally);
+    if (!allIds.length) return json(res, 200, { creators: [] });
+    const { data: profiles } = await supabase.from('profiles').select('id,name,username,avatar_url,role,affiliate_enabled,community_country,community_favorite_medium').in('id', allIds);
+    let creators = (profiles || [])
+      .filter(u => !qStr || (u.username || u.name || '').toLowerCase().includes(qStr))
+      .map(u => ({ id: u.id, name: u.username || u.name || 'Community Member', avatar_url: u.avatar_url || null, affiliate_enabled: !!u.affiliate_enabled, posts: tally[u.id]?.posts || 0, last_post_at: tally[u.id]?.last_post_at || null, community_country: u.community_country || null, community_favorite_medium: u.community_favorite_medium || null }));
+    if (sort === 'az') {
+      creators.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sort === 'featured') {
+      const { data: themeRow } = await supabase.from('theme').select('config').eq('id', 1).single();
+      const featuredIds = themeRow?.config?.community?.featured_creators || [];
+      const featuredSet = new Set(featuredIds);
+      const featuredMap = Object.fromEntries(creators.filter(c => featuredSet.has(c.id)).map(c => [c.id, c]));
+      const featured = featuredIds.map(id => featuredMap[id]).filter(Boolean);
+      const rest = creators.filter(c => !featuredSet.has(c.id)).sort((a, b) => (b.last_post_at || '').localeCompare(a.last_post_at || ''));
+      creators = [...featured, ...rest];
+    } else {
+      creators.sort((a, b) => (b.last_post_at || '').localeCompare(a.last_post_at || ''));
+    }
+    return json(res, 200, { creators: creators.slice(0, limit) });
   }
 
   // GET my-follows — return list of creator IDs the logged-in user follows
@@ -589,8 +608,10 @@ module.exports = async function handler(req, res) {
       .eq('status', 'published').eq('user_id', uid).order('created_at', { ascending: false });
     const decorated = await decorate(posts || [], viewer?.id, req.query.guest_id);
     const booksUsed = new Set((posts || []).map(p => p.product_id).filter(Boolean)).size;
-    const palettes = new Set();
-    (posts || []).forEach(p => (p.palettes || []).forEach(x => palettes.add(String(x).toLowerCase())));
+    const paletteTally = {};
+    (posts || []).forEach(p => (p.palettes || []).forEach(x => { const k = String(x).trim().toLowerCase(); if (k) paletteTally[k] = (paletteTally[k] || { name: String(x).trim(), count: 0 }), paletteTally[k].count++; }));
+    const palettes = new Set(Object.keys(paletteTally));
+    const favorite_palette = Object.values(paletteTally).sort((a, b) => b.count - a.count)[0]?.name || null;
     const creator = {
       id: profile.id, name: profile.username || profile.name || 'Fluffy Creator', avatar_url: profile.avatar_url || null,
       bio: profile.bio || '', joined: profile.created_at,
@@ -599,6 +620,7 @@ module.exports = async function handler(req, res) {
       community_about: profile.community_about || null,
       community_country: profile.community_country || null,
       community_favorite_medium: profile.community_favorite_medium || null,
+      favorite_palette,
       // Fluffy Creator profile — stored in social_links.creator (only shown when affiliate_enabled)
       creator_bio: profile.affiliate_enabled ? (profile.social_links?.creator?.bio || null) : null,
       creator_tiktok: profile.affiliate_enabled ? (profile.social_links?.creator?.tiktok || null) : null,
@@ -785,12 +807,16 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { posts: pageRows, total, page, hasMore: from + pageRows.length < total });
   }
 
-  // GET ?action=admin-creators-search&q= — autocomplete approved Fluffy Creators
+
+  // GET ?action=admin-creators-search&q= — search all community members (any with posts)
   if (req.method === 'GET' && action === 'admin-creators-search') {
     const admin = await requireAuth(req, res, ['admin']);
     if (!admin) return;
     const term = String(req.query.q || '').trim();
-    let q = supabase.from('profiles').select('id,name,username,email,avatar_url').eq('affiliate_enabled', true);
+    const { data: postUsers } = await supabase.from('community_posts').select('user_id').eq('status', 'published');
+    const postUserIds = [...new Set((postUsers || []).map(r => r.user_id).filter(Boolean))];
+    if (!postUserIds.length) return json(res, 200, { creators: [] });
+    let q = supabase.from('profiles').select('id,name,username,email,avatar_url').in('id', postUserIds);
     if (term) q = q.or(`name.ilike.%${term}%,username.ilike.%${term}%,email.ilike.%${term}%`);
     const { data } = await q.order('name').range(0, 9);
     const creators = (data || []).map(u => ({ id: u.id, name: u.username || u.name || u.email || 'Creator', email: u.email || '', avatar_url: u.avatar_url || null }));
@@ -1054,10 +1080,10 @@ module.exports = async function handler(req, res) {
     const cMap = Object.fromEntries((creators||[]).map(c=>[c.id,c]));
     return json(res, 200, {
       featured_books: bookIds.map(id=>bMap[id]).filter(Boolean),
-      // Only still-active Fluffy Creators appear as Featured (revoked auto-drop)
+      // Any community member can be featured (not just Fluffy Creators)
       featured_creators: creatorIds.map(id=>{
-        const c = cMap[id]; if (!c || !c.affiliate_enabled) return null;
-        return { id:c.id, name:c.username||c.name||'Community Member', avatar_url:c.avatar_url||null, affiliate_enabled:!!c.affiliate_enabled, community_about:c.community_about||null, community_country:c.community_country||null, community_favorite_medium:c.community_favorite_medium||null };
+        const c = cMap[id]; if (!c) return null;
+        return { id:c.id, name:c.username||c.name||'Community Member', avatar_url:c.avatar_url||null, affiliate_enabled:!!c.affiliate_enabled, community_country:c.community_country||null, community_favorite_medium:c.community_favorite_medium||null };
       }).filter(Boolean),
     });
   }
