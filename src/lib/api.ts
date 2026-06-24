@@ -176,7 +176,7 @@ export const api = {
   submitCommunityTag: (type: string, name: string, medium?: string) => fetch('/api/community?action=tag-submit', { method: 'POST', headers: h(), body: JSON.stringify({ type, name, medium }) }).then(r => r.json()),
   getAdminTags: (type = '') => fetch(`/api/community?action=admin-tags&type=${type}`, { headers: h() }).then(r => r.json()),
   approveTag: (id: string, name?: string) => fetch(`/api/community?action=admin-tag-approve&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify({ name }) }).then(r => r.json()),
-  updateAdminTag: (id: string, data: { name?: string; medium?: string | null; status?: string }) => fetch(`/api/community?action=admin-tag-update&id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  updateAdminTag: (id: string, data: { name?: string; medium?: string | null; status?: string }) => fetch(`/api/community?action=admin-tag-update&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   deleteTag: (id: string) => fetch(`/api/community?action=admin-tag&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
   // Community Curation
   getCommunityCuration: () => fetch('/api/community?action=curation').then(r => r.json()),

@@ -1068,8 +1068,8 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { success: true });
   }
 
-  // PUT ?action=admin-tag-update&id= {name?,medium?,status?} — edit a library tag's fields
-  if (req.method === 'PUT' && action === 'admin-tag-update') {
+  // POST ?action=admin-tag-update&id= {name?,medium?,status?} — edit a library tag's fields
+  if (req.method === 'POST' && action === 'admin-tag-update') {
     const admin = await requireAuth(req, res, ['admin']);
     if (!admin) return;
     const { id } = req.query;
