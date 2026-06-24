@@ -129,36 +129,49 @@ export default function CommunityPage() {
 
         {showForm && user && <UploadForm theme={theme} p={p} tRaw={tRaw} onPosted={onPosted} user={user} />}
 
-        {/* ✨ What's happening — header highlight widget (optional, admin-pinned, max 3) */}
+        {/* 🩷 Little Updates — compact bulletin widget, admin-pinned, max 3 */}
         {isAll && headerHighlights.length > 0 && (
-          <div style={{ maxWidth: 680, margin: '0 auto 20px', background: `linear-gradient(135deg,${p}08,${p}04)`, borderRadius: 18, border: `1.5px solid ${p}18`, padding: '12px 14px' }}>
-            <div style={{ fontSize: 11.5, fontWeight: 800, color: p, letterSpacing: 0.5, textTransform: 'uppercase' as const, marginBottom: 8, opacity: 0.75 }}>✨ {tRaw('ตอนนี้มีอะไร', "What's happening")}</div>
-            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
-              {headerHighlights.map((h: any) => {
-                const TYPE_EMOJI: Record<string, string> = { challenge: '🏆', giveaway: '🎁', announcement: '📢', partner: '🤝', sponsored: '⭐' };
-                const emoji = TYPE_EMOJI[h.type] || '✨';
-                const dest = h.link_url || `/community/highlights#${h.id}`;
+          <div style={{ maxWidth: 600, margin: '0 auto 18px', background: 'white', borderRadius: 14, border: `1.5px solid ${p}18`, padding: '10px 12px', boxShadow: `0 1px 6px ${p}10` }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: p, letterSpacing: 0.6, textTransform: 'uppercase' as const, marginBottom: 8, opacity: 0.65 }}>
+              🩷 {tRaw('มุมประกาศ', 'Little Updates')}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
+              {headerHighlights.slice(0, 3).map((h: any) => {
                 const isExternal = h.link_url && (h.link_url.startsWith('http://') || h.link_url.startsWith('https://'));
+                const days = h.end_date ? Math.ceil((new Date(h.end_date).getTime() - Date.now()) / 86400000) : null;
+                const showDays = days !== null && days >= 0 && days <= 14;
                 return (
                   <button key={h.id}
                     onClick={() => isExternal ? window.open(h.link_url, '_blank', 'noopener') : navigate(`/community/highlights/${h.id}`)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'white', border: `1px solid ${p}15`, borderRadius: 12, padding: '8px 12px', cursor: 'pointer', textAlign: 'left' as const, fontFamily: theme.fontFamily, width: '100%', transition: 'box-shadow 0.15s' }}
-                    onMouseEnter={e => e.currentTarget.style.boxShadow = `0 2px 10px ${p}20`}
-                    onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
-                    <span style={{ fontSize: 18, flexShrink: 0 }}>{emoji}</span>
-                    <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.title}</span>
-                    {h.end_date && (() => {
-                      const days = Math.ceil((new Date(h.end_date).getTime() - Date.now()) / 86400000);
-                      return days >= 0 && days <= 14 ? (
-                        <span style={{ fontSize: 10.5, fontWeight: 700, color: days <= 3 ? '#ef4444' : '#f59e0b', background: days <= 3 ? '#fef2f2' : '#fffbeb', borderRadius: 8, padding: '2px 7px', flexShrink: 0 }}>
-                          {days === 0 ? tRaw('วันนี้!', 'Today!') : `${days}d`}
-                        </span>
-                      ) : null;
-                    })()}
-                    <span style={{ fontSize: 12, color: p, flexShrink: 0, fontWeight: 700 }}>→</span>
+                    style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'none', border: 'none', borderRadius: 9, padding: '5px 6px', cursor: 'pointer', textAlign: 'left' as const, fontFamily: theme.fontFamily, width: '100%', transition: 'background 0.12s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = `${p}08`}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                    {/* Thumbnail */}
+                    <div style={{ width: 40, height: 40, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: `${p}15`, boxShadow: '0 1px 4px rgba(0,0,0,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+                      {h.cover_image
+                        ? <img src={h.cover_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        : <span>🩷</span>
+                      }
+                    </div>
+                    {/* Title */}
+                    <span style={{ flex: 1, fontSize: 12.5, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.title}</span>
+                    {/* Countdown */}
+                    {showDays && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: days! <= 3 ? '#ef4444' : '#f59e0b', background: days! <= 3 ? '#fef2f2' : '#fffbeb', borderRadius: 6, padding: '2px 6px', flexShrink: 0 }}>
+                        {days === 0 ? tRaw('วันนี้!', 'Today!') : `${days}d`}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 11, color: p + 'aa', flexShrink: 0, fontWeight: 700 }}>→</span>
                   </button>
                 );
               })}
+              {/* +X more link */}
+              {headerHighlights.length > 3 && (
+                <button onClick={() => navigate('/community/highlights')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 11.5, fontWeight: 700, padding: '4px 6px', textAlign: 'left' as const, fontFamily: theme.fontFamily, opacity: 0.8 }}>
+                  +{headerHighlights.length - 3} {tRaw('เพิ่มเติม →', 'more →')}
+                </button>
+              )}
             </div>
           </div>
         )}

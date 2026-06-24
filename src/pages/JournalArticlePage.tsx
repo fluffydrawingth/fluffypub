@@ -147,15 +147,15 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
   return (
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
       <style>{`
-        /* intro: image left + meta right on desktop */
+        /* intro: small image left + meta right on desktop */
         .jap-intro {
           display: grid;
-          grid-template-columns: minmax(0, 460px) 1fr;
-          gap: 40px;
+          grid-template-columns: 260px 1fr;
+          gap: 32px;
           align-items: start;
         }
-        @media (max-width: 760px) {
-          .jap-intro { grid-template-columns: 1fr; gap: 20px; }
+        @media (max-width: 680px) {
+          .jap-intro { grid-template-columns: 1fr; gap: 16px; }
         }
 
         /* article body */
@@ -213,10 +213,10 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
               <img
                 src={article.cover_image}
                 alt={title}
-                style={{ width: '100%', height: 'auto', maxHeight: 500, objectFit: 'contain', borderRadius: 18, display: 'block' }}
+                style={{ width: '100%', height: 'auto', maxHeight: 320, objectFit: 'contain', borderRadius: 14, display: 'block' }}
               />
             ) : (
-              <div style={{ width: '100%', aspectRatio: '4/3', background: `linear-gradient(135deg,${p}14,${p}07)`, borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 52 }}>
+              <div style={{ width: '100%', aspectRatio: '1/1', background: `linear-gradient(135deg,${p}14,${p}07)`, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>
                 📝
               </div>
             )}
