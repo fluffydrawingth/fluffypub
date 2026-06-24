@@ -41,6 +41,7 @@ function parse(hash: string): Route {
   if (p[0]==='journal') return { path:'/journal' };
   if (p[0]==='community' && p[1]==='book' && p[2]) return { path:'/community/book/:slug', params:{ slug:p[2] } };
   if (p[0]==='community' && p[1]==='creators') return { path:'/community/creators' };
+  if (p[0]==='community' && p[1]==='highlights' && p[2]) return { path:'/community/highlights/:id', params:{ id:p[2] } };
   if (p[0]==='community' && p[1]==='highlights') return { path:'/community/highlights' };
   if (p[0]==='community' && p[1]) return { path:'/community/:id', params:{ id:p[1] } };
   if (p[0]==='community') return { path:'/community' };

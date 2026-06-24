@@ -180,6 +180,7 @@ export const api = {
   getCommunityCuration: () => fetch('/api/community?action=curation').then(r => r.json()),
   // Highlights & Events
   getCommunityHighlights: (type?: string) => fetch(`/api/community?action=highlights${type ? '&type=' + type : ''}`).then(r => r.json()),
+  getCommunityHighlight: (id: string) => fetch(`/api/community?action=highlights&id=${id}`).then(r => r.json()),
   getAdminHighlights: () => fetch('/api/community?action=admin-highlights', { headers: h() }).then(r => r.json()),
   createHighlight: (data: any) => fetch('/api/community?action=admin-highlight', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   updateHighlight: (id: string, data: any) => fetch(`/api/community?action=admin-highlight-update&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),

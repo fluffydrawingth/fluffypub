@@ -1116,6 +1116,12 @@ module.exports = async function handler(req, res) {
   // GET ?action=highlights[&type=challenge|giveaway|...] — public, active items only
   if (req.method === 'GET' && action === 'highlights') {
     const type = req.query.type;
+    const id = req.query.id;
+    if (id) {
+      const { data } = await supabase.from('community_highlights').select('*').eq('id', id).eq('status', 'active').single();
+      if (!data) return json(res, 404, { error: 'Not found' });
+      return json(res, 200, { highlight: data });
+    }
     let q = supabase.from('community_highlights').select('*').eq('status', 'active').order('sort_order').order('start_date', { ascending: false });
     if (type && ['challenge','giveaway','announcement','partner','sponsored'].includes(type)) q = q.eq('type', type);
     const { data } = await q;
