@@ -2266,7 +2266,21 @@ function CommunityDashboardTab() {
     setTagLibLoading(true);
     // Challenges live only in the library; medium/marker/palette show EVERY tag in use on posts.
     const fetcher = type === 'challenge' ? api.getAdminTags(type) : api.getAdminAllTags(type);
-    fetcher.then((d:any)=>{ setTagLibItems(d?.tags||[]); setTagLibLoading(false); }).catch(()=>setTagLibLoading(false));
+    fetcher.then((d:any)=>{
+      console.log('[TagLib] loadTagLib fetched', type, 'count:', d?.tags?.length, 'items:', d?.tags?.map((t:any)=>t.name));
+      setTagLibItems(d?.tags||[]); setTagLibLoading(false);
+    }).catch(()=>setTagLibLoading(false));
+  },[loadBooks]);
+
+  // Silent refresh — updates tagLibItems without showing the loading spinner.
+  // Used after add/approve so the optimistic item stays visible while waiting.
+  const refreshTagLibSilent = useCallback((type:string) => {
+    if (type === 'books') { loadBooks(); return; }
+    const fetcher = type === 'challenge' ? api.getAdminTags(type) : api.getAdminAllTags(type);
+    fetcher.then((d:any)=>{
+      console.log('[TagLib] silentRefresh fetched', type, 'count:', d?.tags?.length);
+      if (d?.tags) setTagLibItems(d.tags);
+    }).catch(()=>{});
   },[loadBooks]);
 
   const renameBook = async (bk:any) => {
@@ -2354,15 +2368,42 @@ function CommunityDashboardTab() {
     if (!newTagName.trim()) return;
     const name = newTagName.trim();
     const medium = tagLibType === 'marker' ? newTagMedium : undefined;
+    console.log('[addApprovedTag] submitting:', { type: tagLibType, name, medium });
+
     const r1 = await api.submitCommunityTag(tagLibType, name, medium);
-    if (r1?.tag?.id) await api.approveTag(r1.tag.id, name);
-    // Optimistic update: show the new tag immediately without waiting for the refetch
+    console.log('[addApprovedTag] submitCommunityTag response:', r1);
+
+    if (r1?.error) {
+      flash('⚠️ Failed to save tag: ' + r1.error);
+      return;
+    }
+    if (!r1?.tag?.id) {
+      flash('⚠️ Tag could not be saved (no id returned)');
+      return;
+    }
+
+    const r2 = await api.approveTag(r1.tag.id, name);
+    console.log('[addApprovedTag] approveTag response:', r2);
+    if (r2?.error) {
+      flash('⚠️ Tag saved but approval failed: ' + r2.error);
+      return;
+    }
+
+    // Optimistic update — add to list immediately with correct data
+    const newItem = { id: r1.tag.id, name, normalized: name.toLowerCase(), medium: medium || null, status: 'approved', count: 0 };
     setTagLibItems((prev: any[]) => {
       const norm = name.toLowerCase();
-      if (prev.some((t: any) => (t.normalized || t.name || '').toLowerCase() === norm)) return prev;
-      return [{ id: r1?.tag?.id || null, name, normalized: norm, medium: medium || null, status: 'approved', count: 0 }, ...prev];
+      if (prev.some((t: any) => (t.normalized || t.name || '').toLowerCase() === norm)) {
+        // Already present (e.g. was pending) — update status to approved
+        return prev.map((t: any) => (t.normalized || t.name || '').toLowerCase() === norm ? { ...t, status: 'approved', id: r1.tag.id } : t);
+      }
+      return [newItem, ...prev];
     });
-    setNewTagName(''); flash('✓ Tag added'); loadTagLib(tagLibType);
+    setNewTagName('');
+    flash('✓ Tag added');
+
+    // Silent background refresh (no loading spinner) to sync with DB truth
+    refreshTagLibSilent(tagLibType);
   };
 
   const saveTagEdit = async () => {

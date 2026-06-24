@@ -703,9 +703,14 @@ export function StructuredMediumBlock({ details, setDetails, theme, p, fld, tRaw
   const fetchSugg = (medium: string) => {
     if (!medium || medium in suggCache) return;
     setSuggCache(prev => ({ ...prev, [medium]: [] })); // mark as loading
+    console.log('[StructuredMediumBlock] fetching suggestions for medium:', medium);
     (api as any).getMarkersByMedium(medium)
-      .then((d: any) => setSuggCache(prev => ({ ...prev, [medium]: (d?.tags || []).map((t: any) => t.name) })))
-      .catch(() => {});
+      .then((d: any) => {
+        const names = (d?.tags || []).map((t: any) => t.name);
+        console.log('[StructuredMediumBlock] suggestions received for', medium, ':', names);
+        setSuggCache(prev => ({ ...prev, [medium]: names }));
+      })
+      .catch((e: any) => { console.error('[StructuredMediumBlock] fetchSugg error:', e); });
   };
 
   useEffect(() => {

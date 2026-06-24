@@ -917,9 +917,19 @@ module.exports = async function handler(req, res) {
   if (req.method === 'GET' && action === 'tags') {
     const type = req.query.type;
     if (!['medium','marker','palette','challenge'].includes(type)) return json(res, 400, { error: 'type required' });
-    let q = supabase.from('community_tags').select('id,name,post_count,medium').eq('type', type).eq('status','approved').order('post_count', { ascending: false }).order('name');
-    if (type === 'marker' && req.query.medium) q = q.eq('medium', String(req.query.medium));
-    const { data } = await q;
+    let base = supabase.from('community_tags').select('id,name,post_count').eq('type', type).eq('status','approved').order('post_count', { ascending: false }).order('name');
+    if (type === 'marker' && req.query.medium) {
+      // Filter by medium — attempt with eq(); if medium column doesn't exist yet
+      // (migration not run), fall back to returning all approved markers for this type.
+      const { data: filtered, error: filterErr } = await supabase
+        .from('community_tags').select('id,name,post_count')
+        .eq('type', type).eq('status','approved').eq('medium', String(req.query.medium))
+        .order('post_count', { ascending: false }).order('name');
+      if (!filterErr) return json(res, 200, { tags: filtered || [] });
+      console.warn('[tags] medium filter failed (migration not run?), returning all:', filterErr.message);
+      // Fall through to unfiltered query below
+    }
+    const { data } = await base;
     return json(res, 200, { tags: data || [] });
   }
 
@@ -931,13 +941,27 @@ module.exports = async function handler(req, res) {
     if (!['medium','marker','palette','challenge'].includes(type) || !String(name||'').trim()) return json(res, 400, { error: 'type and name required' });
     const normalized = String(name).trim().toLowerCase();
     const display = String(name).trim();
-    const { data: existing } = await supabase.from('community_tags').select('id,name,status,medium').eq('type', type).eq('normalized', normalized).single();
-    if (existing) return json(res, 200, { tag: existing });
-    const insertRow = { type, name: display, normalized, status: 'pending' };
-    if (medium && type === 'marker') insertRow.medium = String(medium).trim();
-    const { data, error } = await supabase.from('community_tags').insert(insertRow).select('id,name,status,medium').single();
-    if (error) return json(res, 200, { tag: { name: display, status: 'pending' } }); // ignore unique conflict
-    return json(res, 201, { tag: data });
+    // Check for existing tag — select only stable columns (no medium, it may not exist yet)
+    const { data: existing } = await supabase.from('community_tags').select('id,name,status').eq('type', type).eq('normalized', normalized).single();
+    if (existing) {
+      console.log('[tag-submit] tag already exists:', existing);
+      return json(res, 200, { tag: existing });
+    }
+    // Insert WITHOUT medium first — this always works regardless of migration state
+    const { data: inserted, error: insertErr } = await supabase
+      .from('community_tags').insert({ type, name: display, normalized, status: 'pending' })
+      .select('id,name,status').single();
+    if (insertErr) {
+      console.error('[tag-submit] insert error:', insertErr.message);
+      return json(res, 500, { error: insertErr.message });
+    }
+    console.log('[tag-submit] inserted tag:', inserted);
+    // If medium was provided, try to set it via a separate UPDATE (silently skipped if column missing)
+    if (medium && type === 'marker' && inserted?.id) {
+      const { error: medErr } = await supabase.from('community_tags').update({ medium: String(medium).trim() }).eq('id', inserted.id);
+      if (medErr) console.warn('[tag-submit] could not set medium (migration not run?):', medErr.message);
+    }
+    return json(res, 201, { tag: inserted });
   }
 
   // GET ?action=admin-tags — all tags for admin Tag Library
