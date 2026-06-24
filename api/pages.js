@@ -216,7 +216,7 @@ async function handleJournal(req, res) {
       .select('id,title_th,title_en,excerpt_th,excerpt_en,article_type,cover_image,status,slug,sort_order,created_at,updated_at')
       .order('sort_order').order('created_at', { ascending: false });
     if (!user || user.role !== 'admin') q = q.eq('status', 'published');
-    if (article_type && ['tips','tools','favorites'].includes(article_type)) q = q.eq('article_type', article_type);
+    if (article_type && ['tips','tools','favorites','journal'].includes(article_type)) q = q.eq('article_type', article_type);
     const { data, error } = await q;
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, data || []);
@@ -272,7 +272,7 @@ async function handleJournal(req, res) {
       excerpt_en: b.excerpt_en || null,
       content_th: b.content_th || null,
       content_en: b.content_en || null,
-      article_type: ['tips','tools','favorites'].includes(b.article_type) ? b.article_type : 'tips',
+      article_type: ['tips','tools','favorites','journal'].includes(b.article_type) ? b.article_type : 'tips',
       cover_image: b.cover_image || null,
       status: ['draft','published'].includes(b.status) ? b.status : 'draft',
       slug: finalSlug,

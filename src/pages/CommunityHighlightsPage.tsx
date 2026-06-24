@@ -146,7 +146,7 @@ export function HighlightCard({ h, p, theme, lang, tRaw }: any) {
       {h.cover_image && (
         <div style={{ position: 'relative', background: 'white', overflow: 'hidden', flexShrink: 0, borderBottom: '1px solid #f1f5f9' }}>
           <img src={h.cover_image} alt={h.title}
-            style={{ width: '100%', height: 110, objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
+            style={{ width: '100%', height: h.card_size === 'lg' ? 200 : h.card_size === 'sm' ? 80 : 110, objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
           {isSubtle && (
             <span style={{ position: 'absolute', top: 7, right: 7, background: 'rgba(255,255,255,0.92)', color: '#64748b', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 8 }}>
               {lang === 'th' ? tm.th : tm.en}
@@ -228,8 +228,21 @@ export default function CommunityHighlightsPage() {
             <div style={{ fontSize: 13 }}>{tRaw('ติดตามข่าวสารได้เร็วๆ นี้', 'Check back soon for upcoming events.')}</div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 12 }}>
-            {highlights.map((h: any) => <HighlightCard key={h.id} h={h} p={p} theme={theme} lang={lang} tRaw={tRaw} />)}
+          <div className="hl-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
+            <style>{`
+              @media(max-width:900px){ .hl-grid { grid-template-columns: repeat(2,1fr) !important; } }
+              @media(max-width:540px){ .hl-grid { grid-template-columns: 1fr !important; } }
+              .hl-sm { grid-column: span 1; }
+              .hl-md { grid-column: span 2; }
+              .hl-lg { grid-column: span 4; }
+              @media(max-width:900px){ .hl-lg { grid-column: span 2; } .hl-md { grid-column: span 1; } }
+              @media(max-width:540px){ .hl-sm,.hl-md,.hl-lg { grid-column: span 1; } }
+            `}</style>
+            {highlights.map((h: any) => (
+              <div key={h.id} className={`hl-${h.card_size || 'md'}`}>
+                <HighlightCard h={h} p={p} theme={theme} lang={lang} tRaw={tRaw} />
+              </div>
+            ))}
           </div>
         )}
       </div>

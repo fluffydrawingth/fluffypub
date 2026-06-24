@@ -4,13 +4,14 @@ import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
 
-type ArticleType = '' | 'tips' | 'tools' | 'favorites';
+type ArticleType = '' | 'tips' | 'tools' | 'favorites' | 'journal';
 
 const TYPE_FILTERS: { key: ArticleType; label: { th: string; en: string }; emoji: string }[] = [
   { key: '',          label: { th: 'ทั้งหมด',       en: 'All' },          emoji: '📝' },
   { key: 'tips',      label: { th: 'เทคนิคการระบาย', en: 'Coloring Tips' }, emoji: '🎨' },
   { key: 'tools',     label: { th: 'อุปกรณ์',       en: 'Tools' },        emoji: '🖍️' },
   { key: 'favorites', label: { th: 'สิ่งที่ชอบ',    en: 'My Favorites' }, emoji: '🩷' },
+  { key: 'journal',   label: { th: 'บันทึก',        en: 'Journal' },      emoji: '📔' },
 ];
 
 function readingTime(contentTh?: string, contentEn?: string): string {

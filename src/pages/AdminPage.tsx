@@ -2613,7 +2613,7 @@ const HL_TYPES = ['challenge','giveaway','announcement','partner','sponsored'] a
 type HLType = typeof HL_TYPES[number];
 const HL_STATUSES = ['draft','active','expired'] as const;
 
-const EMPTY_HL = { title:'', type:'announcement' as HLType, cover_image:'', description:'', start_date:'', end_date:'', link_url:'', status:'draft' as string, sort_order:0, content_blocks:[] as any[] };
+const EMPTY_HL = { title:'', type:'announcement' as HLType, cover_image:'', description:'', start_date:'', end_date:'', link_url:'', status:'draft' as string, sort_order:0, content_blocks:[] as any[], card_size:'md' as string };
 
 function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}) {
   const [items, setItems] = React.useState<any[]>([]);
@@ -2628,7 +2628,7 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
   React.useEffect(()=>{ load(); },[]);
 
   const openNew = () => { setEditing('new'); setForm({...EMPTY_HL, content_blocks:[]}); };
-  const openEdit = (h:any) => { setEditing(h.id); setForm({ title:h.title||'', type:h.type||'announcement', cover_image:h.cover_image||'', description:h.description||'', start_date:h.start_date||'', end_date:h.end_date||'', link_url:h.link_url||'', status:h.status||'draft', sort_order:h.sort_order||0, content_blocks:Array.isArray(h.content_blocks)?h.content_blocks:[] }); };
+  const openEdit = (h:any) => { setEditing(h.id); setForm({ title:h.title||'', type:h.type||'announcement', cover_image:h.cover_image||'', description:h.description||'', start_date:h.start_date||'', end_date:h.end_date||'', link_url:h.link_url||'', status:h.status||'draft', sort_order:h.sort_order||0, content_blocks:Array.isArray(h.content_blocks)?h.content_blocks:[], card_size:h.card_size||'md' }); };
   const cancel = () => { setEditing(null); };
 
   const save = async () => {
@@ -2776,6 +2776,23 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
           </div>
           {inp('Link URL (optional)','link_url','url','https://')}
           {inp('Sort Order (lower = first)','sort_order','number','0')}
+
+          {/* Card size picker */}
+          <div style={{marginBottom:12}}>
+            <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:8}}>Card Size (widget style)</label>
+            <div style={{display:'flex',gap:8}}>
+              {([['sm','Small','1×1',80],['md','Medium','1×2',140],['lg','Large','Full Width',200]] as const).map(([val,label,desc,w])=>(
+                <div key={val} onClick={()=>setForm((f:any)=>({...f,card_size:val}))}
+                  style={{flex:val==='lg'?2:1,border:`2px solid ${form.card_size===val?P:'#e5e7eb'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',background:form.card_size===val?P+'12':'white',transition:'all 0.15s',textAlign:'center' as const}}>
+                  <div style={{width:'100%',height:val==='sm'?40:val==='md'?60:40,background:form.card_size===val?P+'30':'#f1f5f9',borderRadius:8,marginBottom:6,display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:form.card_size===val?P:'#94a3b8'}}>
+                    {desc}
+                  </div>
+                  <div style={{fontSize:11,fontWeight:800,color:form.card_size===val?P:'#374151'}}>{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div style={{display:'flex',gap:8,marginTop:4}}>
             <button onClick={save} disabled={saving} style={{padding:'9px 22px',borderRadius:10,border:'none',background:P,color:'white',cursor:saving?'wait':'pointer',fontSize:13,fontWeight:800}}>{saving?'Saving…':'💾 Save'}</button>
             <button onClick={cancel} style={{padding:'9px 16px',borderRadius:10,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:13,fontWeight:700,color:'#374151'}}>Cancel</button>
@@ -3139,9 +3156,87 @@ function CategoriesTab() {
   );
 }
 
+// ── Rich Text Editor ─────────────────────────────────────────────────────────
+function RichEditor({ value, onChange, onImageUpload }: { value: string; onChange: (v: string) => void; onImageUpload?: (file: File) => Promise<string | null> }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [imgUploading, setImgUploading] = React.useState(false);
+  const lastHtml = React.useRef(value);
+
+  React.useEffect(() => {
+    if (ref.current && ref.current.innerHTML !== value) {
+      ref.current.innerHTML = value;
+      lastHtml.current = value;
+    }
+  }, [value]);
+
+  const exec = (cmd: string, val?: string) => { document.execCommand(cmd, false, val); ref.current?.focus(); };
+
+  const handleInput = () => {
+    if (!ref.current) return;
+    const html = ref.current.innerHTML;
+    if (html !== lastHtml.current) { lastHtml.current = html; onChange(html); }
+  };
+
+  const insertLink = () => {
+    const url = prompt('Enter URL:');
+    if (url) exec('createLink', url);
+  };
+
+  const insertImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    if (onImageUpload) {
+      setImgUploading(true);
+      const url = await onImageUpload(file);
+      setImgUploading(false);
+      if (url) exec('insertHTML', `<img src="${url}" style="max-width:100%;border-radius:8px;margin:8px 0;" />`);
+    }
+    e.target.value = '';
+  };
+
+  const btnStyle = (active?: boolean) => ({
+    padding: '4px 9px', borderRadius: 6, border: '1.5px solid #e5e7eb', background: active ? '#f3e8ff' : 'white',
+    cursor: 'pointer', fontSize: 13, fontWeight: 700, color: active ? '#7c3aed' : '#374151', lineHeight: 1,
+  });
+
+  return (
+    <div style={{ border: '1.5px solid #e5e7eb', borderRadius: 10, overflow: 'hidden' }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', gap: 4, padding: '6px 8px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', flexWrap: 'wrap' as const, alignItems: 'center' }}>
+        <button type="button" onMouseDown={e=>{e.preventDefault();exec('bold')}} style={btnStyle()}><b>B</b></button>
+        <button type="button" onMouseDown={e=>{e.preventDefault();exec('italic')}} style={btnStyle()}><i>I</i></button>
+        <button type="button" onMouseDown={e=>{e.preventDefault();exec('underline')}} style={btnStyle()}><u>U</u></button>
+        <div style={{ width: 1, background: '#e5e7eb', margin: '0 2px', alignSelf: 'stretch' }} />
+        <button type="button" onMouseDown={e=>{e.preventDefault();exec('formatBlock','<h2>')}} style={btnStyle()}>H2</button>
+        <button type="button" onMouseDown={e=>{e.preventDefault();exec('formatBlock','<h3>')}} style={btnStyle()}>H3</button>
+        <button type="button" onMouseDown={e=>{e.preventDefault();exec('formatBlock','<p>')}} style={btnStyle()}>¶</button>
+        <div style={{ width: 1, background: '#e5e7eb', margin: '0 2px', alignSelf: 'stretch' }} />
+        <button type="button" onMouseDown={e=>{e.preventDefault();exec('insertUnorderedList')}} style={btnStyle()}>• List</button>
+        <button type="button" onMouseDown={e=>{e.preventDefault();exec('insertOrderedList')}} style={btnStyle()}>1. List</button>
+        <div style={{ width: 1, background: '#e5e7eb', margin: '0 2px', alignSelf: 'stretch' }} />
+        <button type="button" onMouseDown={e=>{e.preventDefault();insertLink()}} style={btnStyle()}>🔗 Link</button>
+        {onImageUpload && (
+          <label style={{...btnStyle(), display:'inline-flex', alignItems:'center', gap:3}}>
+            {imgUploading ? '⏳' : '🖼️ Image'}
+            <input type="file" accept="image/*" onChange={insertImage} style={{display:'none'}} />
+          </label>
+        )}
+      </div>
+      {/* Editable area */}
+      <div
+        ref={ref}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        onBlur={handleInput}
+        style={{ minHeight: 220, padding: '12px 14px', fontSize: 14, lineHeight: 1.8, outline: 'none', fontFamily: 'inherit', color: '#1e293b' }}
+      />
+    </div>
+  );
+}
+
 // ── Fluffy Journal Tab ────────────────────────────────────────────────────────
-const JOURNAL_TYPES = ['tips','tools','favorites'] as const;
-const JOURNAL_TYPE_LABELS: Record<string,string> = { tips:'🎨 Coloring Tips', tools:'🖍️ Tools', favorites:'🩷 My Favorites' };
+const JOURNAL_TYPES = ['tips','tools','favorites','journal'] as const;
+const JOURNAL_TYPE_LABELS: Record<string,string> = { tips:'🎨 Coloring Tips', tools:'🖍️ Tools', favorites:'🩷 My Favorites', journal:'📔 Journal' };
 const EMPTY_ARTICLE = { title_th:'', title_en:'', excerpt_th:'', excerpt_en:'', content_th:'', content_en:'', article_type:'tips', cover_image:'', status:'draft', sort_order:0 };
 
 function JournalTab() {
@@ -3198,6 +3293,12 @@ function JournalTab() {
     setUploading(false);
     if (!r?.publicUrl) return showFlash('⚠️ Upload failed');
     setForm((f:any)=>({...f, cover_image:r.publicUrl}));
+  };
+
+  const uploadContentImg = async (file: File): Promise<string | null> => {
+    let r:any=null; try { r = await api.uploadFile(file,'community'); } catch {}
+    if (!r?.publicUrl) { showFlash('⚠️ Image upload failed'); return null; }
+    return r.publicUrl;
   };
 
   const inp = (label:string, key:string, type='text', rows=0) => (
@@ -3270,7 +3371,10 @@ function JournalTab() {
             <div style={{fontSize:12,fontWeight:800,color:'#7c3aed',marginBottom:10}}>🇹🇭 Thai (source of truth)</div>
             {inp('Title (TH) *','title_th')}
             {inp('Excerpt (TH)','excerpt_th','text',2)}
-            {inp('Content (TH)','content_th','text',10)}
+            <div style={{marginBottom:12}}>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Content (TH)</label>
+              <RichEditor key={editing+'-th'} value={form.content_th||''} onChange={v=>setForm((f:any)=>({...f,content_th:v}))} onImageUpload={uploadContentImg} />
+            </div>
           </div>
 
           {/* English fields + translate button */}
@@ -3284,7 +3388,10 @@ function JournalTab() {
             {editing==='new' && <p style={{fontSize:11,color:'#64748b',margin:'0 0 10px'}}>Save the article first, then auto-translate.</p>}
             {inp('Title (EN)','title_en')}
             {inp('Excerpt (EN)','excerpt_en','text',2)}
-            {inp('Content (EN)','content_en','text',10)}
+            <div style={{marginBottom:12}}>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Content (EN)</label>
+              <RichEditor key={editing+'-en'} value={form.content_en||''} onChange={v=>setForm((f:any)=>({...f,content_en:v}))} onImageUpload={uploadContentImg} />
+            </div>
           </div>
 
           <div style={{display:'flex',gap:8}}>

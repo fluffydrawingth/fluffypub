@@ -8,7 +8,7 @@ create table if not exists journal_articles (
   content_th text,
   content_en text,
   article_type text default 'tips'
-    check (article_type in ('tips','tools','favorites')),
+    check (article_type in ('tips','tools','favorites','journal')),
   cover_image text,
   status text default 'draft'
     check (status in ('draft','published')),

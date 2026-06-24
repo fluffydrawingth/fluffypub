@@ -8,6 +8,7 @@ const TYPE_META: Record<string, { label: { th: string; en: string }; emoji: stri
   tips:      { label: { th: 'เทคนิคการระบาย', en: 'Coloring Tips' }, emoji: '🎨' },
   tools:     { label: { th: 'อุปกรณ์',       en: 'Tools' },         emoji: '🖍️' },
   favorites: { label: { th: 'สิ่งที่ชอบ',    en: 'My Favorites' }, emoji: '🩷' },
+  journal:   { label: { th: 'บันทึก',        en: 'Journal' },       emoji: '📔' },
 };
 
 function readingTime(contentTh?: string, contentEn?: string): string {

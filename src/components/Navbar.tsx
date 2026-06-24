@@ -49,7 +49,7 @@ export default function Navbar() {
     [lang === 'th' ? '⬇️ ฟรี' : '⬇️ Free', '/free-downloads'],
     [lang === 'th' ? '🌈 ชุมชน' : '🌈 Community', '/community'],
     [tl('nav_artists', 'nav_artists_th', t('artists')), '/artists'],
-    [tl('nav_blog', 'nav_blog_th', lang === 'th' ? '📝 Journal' : '📝 Journal'), '/journal'],
+    [tl('nav_journal', 'nav_journal_th', lang === 'th' ? '📝 Journal' : '📝 Journal'), '/journal'],
   ];
 
   const handleNav = (path: string) => { navigate(path); setNavOpen(false); };
