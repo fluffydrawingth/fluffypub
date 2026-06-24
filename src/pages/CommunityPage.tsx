@@ -705,18 +705,27 @@ export function StructuredMediumBlock({ details, setDetails, theme, p, fld, tRaw
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 6 }}>🎨 {tRaw('สื่อ + ยี่ห้อ/ชุดที่ใช้', 'Medium + brand / set used')}</div>
-      {/* Shared brand list — managed by admin in Tag Library → Markers */}
-      <datalist id="brand-set-options">{brandSugg.map(b => <option key={b} value={b} />)}</datalist>
-      {details.map((row: any, i: number) => (
+      {/* Marker suggestions only shown for Alcohol Marker rows */}
+      <datalist id="brand-set-marker">{brandSugg.map(b => <option key={b} value={b} />)}</datalist>
+      {details.map((row: any, i: number) => {
+        const isMarkerMedium = row.medium === 'Alcohol Marker';
+        return (
         <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'flex-start' }}>
           <select value={row.medium} onChange={e => upd(i, 'medium', e.target.value)} style={{ ...fld, flex: 1, fontSize: 13, padding: '9px 10px' }}>
             <option value="">{tRaw('เลือกสื่อ...', 'Select medium...')}</option>
             {MEDIUM_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
-          <input list="brand-set-options" value={row.brand} onChange={e => upd(i, 'brand', e.target.value)} placeholder={tRaw('ยี่ห้อ/ชุด (เลือกหรือพิมพ์)', 'Brand / set (pick or type)')} style={{ ...fld, flex: 1, fontSize: 13 }} />
+          <input
+            list={isMarkerMedium ? 'brand-set-marker' : undefined}
+            value={row.brand}
+            onChange={e => upd(i, 'brand', e.target.value)}
+            placeholder={tRaw('ยี่ห้อ/ชุด (เลือกหรือพิมพ์)', 'Brand / set (pick or type)')}
+            style={{ ...fld, flex: 1, fontSize: 13 }}
+          />
           <button onClick={() => remove(i)} style={{ padding: '0 11px', borderRadius: 10, border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontWeight: 700, alignSelf: 'stretch' }}>✕</button>
         </div>
-      ))}
+        );
+      })}
       {details.length < 10 && <button onClick={add} style={{ padding: '6px 14px', borderRadius: 10, border: `1.5px dashed ${p}50`, background: 'white', color: p, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: theme.fontFamily }}>+ {tRaw('เพิ่มสื่ออีก', 'Add another medium')}</button>}
     </div>
   );

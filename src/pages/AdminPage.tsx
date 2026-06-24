@@ -2349,9 +2349,15 @@ function CommunityDashboardTab() {
   };
   const addApprovedTag = async () => {
     if (!newTagName.trim()) return;
-    // Submit then immediately approve
-    const r1 = await api.submitCommunityTag(tagLibType.replace('s',''), newTagName.trim());
-    if (r1?.tag?.id) await api.approveTag(r1.tag.id, newTagName.trim());
+    const name = newTagName.trim();
+    const r1 = await api.submitCommunityTag(tagLibType, name);
+    if (r1?.tag?.id) await api.approveTag(r1.tag.id, name);
+    // Optimistic update: show the new tag immediately without waiting for the refetch
+    setTagLibItems((prev: any[]) => {
+      const norm = name.toLowerCase();
+      if (prev.some((t: any) => (t.normalized || t.name || '').toLowerCase() === norm)) return prev;
+      return [{ id: r1?.tag?.id || null, name, normalized: norm, status: 'approved', count: 0 }, ...prev];
+    });
     setNewTagName(''); flash('✓ Tag added'); loadTagLib(tagLibType);
   };
   const mergeTags = async () => {
