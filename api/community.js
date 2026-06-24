@@ -1152,8 +1152,8 @@ module.exports = async function handler(req, res) {
     return json(res, 201, { highlight: data });
   }
 
-  // PUT ?action=admin-highlight&id= — admin: update
-  if (req.method === 'PUT' && action === 'admin-highlight') {
+  // POST ?action=admin-highlight-update&id= — admin: update (POST avoids PUT routing issues)
+  if (req.method === 'POST' && action === 'admin-highlight-update') {
     const admin = await requireAuth(req, res, ['admin']); if (!admin) return;
     const { id } = req.query; if (!id) return json(res, 400, { error: 'id required' });
     const b = req.body || {};
