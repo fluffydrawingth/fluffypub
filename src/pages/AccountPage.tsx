@@ -496,12 +496,14 @@ function SavedTab({p,theme,navigate}:any) {
   const { tRaw } = useLang();
   const [posts, setPosts] = useState<any[]>([]);
   const [creators, setCreators] = useState<any[]>([]);
+  const [journalSaved, setJournalSaved] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([api.getSavedPosts(), api.getFollowedCreators()]).then(([sp, fc]) => {
+    Promise.all([api.getSavedPosts(), api.getFollowedCreators(), (api as any).getSavedJournalArticles()]).then(([sp, fc, js]) => {
       setPosts(sp?.posts || []);
       setCreators(fc?.creators || []);
+      setJournalSaved(Array.isArray(js) ? js : []);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -538,6 +540,40 @@ function SavedTab({p,theme,navigate}:any) {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Saved Journal */}
+      <div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
+          <h3 style={{fontSize:17,fontWeight:900,color:'#1e293b',margin:0}}>📝 {tRaw('Journal ที่บันทึกไว้','Saved Journal')}</h3>
+          <button onClick={()=>navigate('/journal')} style={{background:'none',border:'none',cursor:'pointer',color:p,fontSize:12.5,fontWeight:700}}>{tRaw('ดู Journal →','Browse Journal →')}</button>
+        </div>
+        {journalSaved.length === 0 ? (
+          <div style={{background:'white',borderRadius:16,padding:'28px 24px',textAlign:'center',color:'#94a3b8'}}>
+            <div style={{fontSize:36,marginBottom:8}}>📝</div>
+            <div style={{fontWeight:700,color:'#1e293b',marginBottom:4}}>{tRaw('ยังไม่มี Journal ที่บันทึก','No saved articles yet')}</div>
+            <div style={{fontSize:13}}>{tRaw('กด 💾 บนบทความเพื่อบันทึก','Tap 💾 on any article to save it here.')}</div>
+          </div>
+        ) : (
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:10}}>
+            {journalSaved.map((a:any) => {
+              const title = a.title_th || a.title_en || '';
+              return (
+                <div key={a.id} onClick={()=>navigate(`/journal/${a.slug}`)} style={{cursor:'pointer',borderRadius:14,overflow:'hidden',background:'white',boxShadow:'0 1px 6px rgba(0,0,0,0.07)',border:`1.5px solid ${p}10`}}>
+                  <div style={{aspectRatio:'16/9',background:'white',overflow:'hidden',borderBottom:'1px solid #f1f5f9'}}>
+                    {a.cover_image
+                      ? <img src={a.cover_image} alt={title} style={{width:'100%',height:'100%',objectFit:'contain',objectPosition:'center',display:'block'}} />
+                      : <div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,background:`linear-gradient(135deg,${p}12,${p}06)`}}>📝</div>
+                    }
+                  </div>
+                  <div style={{padding:'8px 10px'}}>
+                    <div style={{fontSize:12,fontWeight:700,color:'#1e293b',overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical' as any,lineHeight:1.35}}>{title}</div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

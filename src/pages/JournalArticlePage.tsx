@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
+import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
 
 const TYPE_META: Record<string, { label: { th: string; en: string }; emoji: string }> = {
-  tips:      { label: { th: 'เทคนิคการระบาย', en: 'Coloring Tips' }, emoji: '🎨' },
-  tools:     { label: { th: 'อุปกรณ์',       en: 'Tools' },         emoji: '🖍️' },
-  favorites: { label: { th: 'สิ่งที่ชอบ',    en: 'My Favorites' }, emoji: '🩷' },
-  journal:   { label: { th: 'บันทึก',        en: 'Journal' },       emoji: '📔' },
+  tips:      { label: { th: 'มุมระบายสี',  en: 'Coloring Tips' }, emoji: '🎨' },
+  tools:     { label: { th: 'มุมอุปกรณ์',  en: 'Tools' },         emoji: '🖍️' },
+  favorites: { label: { th: 'มุมโปรด',     en: 'My Favorites' },  emoji: '🩷' },
+  journal:   { label: { th: 'เล่าให้ปัง',  en: 'Journal' },       emoji: '📔' },
 };
 
 function readingTime(contentTh?: string, contentEn?: string): string {
@@ -19,6 +20,86 @@ function readingTime(contentTh?: string, contentEn?: string): string {
   return Math.ceil(words / 400) + ' min read';
 }
 
+// ── Reaction bar ──────────────────────────────────────────────────────────────
+function ReactionBar({ article, p, lang, tRaw, navigate }: any) {
+  const { user } = useAuth();
+  const [counts, setCounts] = useState({ love: 0, save: 0, share: 0 });
+  const [mine, setMine] = useState({ love: false, save: false });
+  const [shared, setShared] = useState(false);
+
+  useEffect(() => {
+    if (!article?.id) return;
+    (api as any).getJournalReactions(article.id).then((d: any) => {
+      if (!d?.error) {
+        setCounts({ love: d.love || 0, save: d.save || 0, share: d.share || 0 });
+        setMine({ love: !!d.my_love, save: !!d.my_save });
+      }
+    }).catch(() => {});
+  }, [article?.id]);
+
+  const handleReact = async (type: 'love' | 'save') => {
+    if (!user) { navigate('/login'); return; }
+    const prev = mine[type];
+    setMine(m => ({ ...m, [type]: !prev }));
+    setCounts(c => ({ ...c, [type]: prev ? c[type] - 1 : c[type] + 1 }));
+    try {
+      await (api as any).reactJournalArticle(article.id, type);
+    } catch {
+      setMine(m => ({ ...m, [type]: prev }));
+      setCounts(c => ({ ...c, [type]: prev ? c[type] + 1 : c[type] - 1 }));
+    }
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    let shared = false;
+    if (navigator.share) {
+      try { await navigator.share({ title: article.title_th, url }); shared = true; } catch {}
+    }
+    if (!shared) {
+      try { await navigator.clipboard.writeText(url); } catch {}
+    }
+    setShared(true);
+    setTimeout(() => setShared(false), 2000);
+    setCounts(c => ({ ...c, share: c.share + 1 }));
+    (api as any).shareJournalArticle(article.id).catch(() => {});
+  };
+
+  const btn = (active: boolean) => ({
+    display: 'inline-flex' as const, alignItems: 'center' as const, gap: 6,
+    padding: '8px 16px', borderRadius: 20, border: `1.5px solid ${active ? p : '#e5e7eb'}`,
+    background: active ? p + '12' : 'white', color: active ? p : '#64748b',
+    cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+    transition: 'all 0.15s',
+  });
+
+  return (
+    <div style={{ margin: '48px 0 0', padding: '20px 0 0', borderTop: `1.5px solid ${p}15` }}>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' as const, alignItems: 'center' }}>
+        <button onClick={() => handleReact('love')} style={btn(mine.love)}>
+          {mine.love ? '🩷' : '🤍'} {tRaw('ชอบมาก', 'Love this')}
+          <span style={{ fontSize: 12, color: mine.love ? p : '#94a3b8', fontWeight: 600 }}>{counts.love || ''}</span>
+        </button>
+        <button onClick={() => handleReact('save')} style={btn(mine.save)}>
+          {mine.save ? '💾' : '🔖'} {tRaw('บันทึก', 'Save')}
+          <span style={{ fontSize: 12, color: mine.save ? p : '#94a3b8', fontWeight: 600 }}>{counts.save || ''}</span>
+        </button>
+        <button onClick={handleShare} style={btn(shared)}>
+          🔗 {shared ? tRaw('คัดลอกแล้ว!', 'Copied!') : tRaw('แชร์', 'Share')}
+          {counts.share > 0 && <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>{counts.share}</span>}
+        </button>
+      </div>
+      {!user && (
+        <p style={{ fontSize: 12, color: '#94a3b8', margin: '10px 0 0' }}>
+          {tRaw('เข้าสู่ระบบเพื่อบันทึกและแสดงความชอบ', 'Log in to love and save articles.')}
+          {' '}<button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', color: p, cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: 0 }}>{tRaw('เข้าสู่ระบบ →', 'Log in →')}</button>
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ── Article page ──────────────────────────────────────────────────────────────
 export default function JournalArticlePage({ slug }: { slug: string }) {
   const { theme } = useTheme();
   const { navigate } = useRouter();
@@ -36,7 +117,6 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
       if (d?.error || !d?.id) { setNotFound(true); setLoading(false); return; }
       setArticle(d);
       setLoading(false);
-      // fetch related (same type)
       api.getJournalArticles(d.article_type).then((all: any) => {
         setRelated((Array.isArray(all) ? all : []).filter((a: any) => a.id !== d.id).slice(0, 3));
       }).catch(() => {});
@@ -70,7 +150,7 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
         .journal-content h3 { font-size: 1.15em; font-weight: 700; color: #1e293b; margin: 1.4em 0 0.5em; }
         .journal-content ul, .journal-content ol { padding-left: 1.4em; margin: 0 0 1.2em; }
         .journal-content li { margin-bottom: 0.4em; }
-        .journal-content img { max-width: 100%; border-radius: 12px; margin: 1em 0; }
+        .journal-content img { max-width: 100%; border-radius: 12px; margin: 1em 0; display: block; }
         .journal-content a { color: ${p}; }
         .related-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; }
         @media(max-width:700px){ .related-grid { grid-template-columns: 1fr; } }
@@ -79,14 +159,17 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
       <div style={{ maxWidth: 850, margin: '0 auto', padding: '40px 20px 80px' }}>
 
         {/* Back */}
-        <button onClick={() => navigate('/journal')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 13, fontWeight: 600, padding: '0 0 24px', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <button onClick={() => navigate('/journal')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 13, fontWeight: 600, padding: '0 0 28px', display: 'flex', alignItems: 'center', gap: 6 }}>
           ← {tRaw('Fluffy Journal', 'Fluffy Journal')}
         </button>
 
-        {/* Cover image */}
+        {/* Cover image — 16:9, contain, white bg, max-width 900px */}
         {article.cover_image && (
-          <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 32 }}>
-            <img src={article.cover_image} alt={title} style={{ width: '100%', maxHeight: 400, objectFit: 'cover', display: 'block' }} />
+          <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 36, background: 'white', border: '1.5px solid #f1f5f9', maxWidth: 900 }}>
+            <div style={{ aspectRatio: '16/9', overflow: 'hidden' }}>
+              <img src={article.cover_image} alt={title}
+                style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
+            </div>
           </div>
         )}
 
@@ -123,6 +206,9 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
           </div>
         )}
 
+        {/* Reaction bar */}
+        <ReactionBar article={article} p={p} lang={lang} tRaw={tRaw} navigate={navigate} />
+
         {/* Related articles */}
         {related.length > 0 && (
           <div style={{ marginTop: 64 }}>
@@ -137,10 +223,11 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
                 return (
                   <div key={a.id} onClick={() => { navigate(`/journal/${a.slug}`); window.scrollTo(0, 0); }}
                     style={{ background: 'white', borderRadius: 16, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', border: `1.5px solid ${p}12` }}>
-                    <div style={{ height: 120, background: `linear-gradient(135deg,${p}18,${p}08)`, overflow: 'hidden' }}>
+                    {/* 16:9 contain */}
+                    <div style={{ aspectRatio: '16/9', background: 'white', overflow: 'hidden', borderBottom: '1px solid #f1f5f9' }}>
                       {a.cover_image
-                        ? <img src={a.cover_image} alt={rtitle} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                        : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>📝</div>
+                        ? <img src={a.cover_image} alt={rtitle} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
+                        : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, background: `linear-gradient(135deg,${p}12,${p}06)` }}>📝</div>
                       }
                     </div>
                     <div style={{ padding: '12px 14px 14px' }}>

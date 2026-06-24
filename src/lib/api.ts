@@ -258,6 +258,10 @@ export const api = {
   updateJournalArticle: (id: string, data: any) => fetch(`/api/pages?type=journal&action=update&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   deleteJournalArticle: (id: string) => fetch(`/api/pages?type=journal&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
   translateJournalArticle: (id: string) => fetch(`/api/pages?type=journal&action=translate&id=${id}`, { method: 'POST', headers: h() }).then(r => r.json()),
+  getJournalReactions: (articleId: string) => fetch(`/api/pages?type=journal&action=reactions&id=${articleId}`, { headers: h() }).then(r => r.json()),
+  reactJournalArticle: (articleId: string, type: 'love' | 'save') => fetch('/api/pages?type=journal&action=react', { method: 'POST', headers: h(), body: JSON.stringify({ article_id: articleId, type }) }).then(r => r.json()),
+  shareJournalArticle: (articleId: string) => fetch('/api/pages?type=journal&action=share', { method: 'POST', headers: h(), body: JSON.stringify({ article_id: articleId }) }).then(r => r.json()),
+  getSavedJournalArticles: () => fetch('/api/pages?type=journal&action=saved', { headers: h() }).then(r => r.json()),
 
   // Theme
   getCategories: () => fetch('/api/categories').then(r => r.json()),

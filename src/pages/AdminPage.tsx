@@ -3236,7 +3236,7 @@ function RichEditor({ value, onChange, onImageUpload }: { value: string; onChang
 
 // ── Fluffy Journal Tab ────────────────────────────────────────────────────────
 const JOURNAL_TYPES = ['tips','tools','favorites','journal'] as const;
-const JOURNAL_TYPE_LABELS: Record<string,string> = { tips:'🎨 Coloring Tips', tools:'🖍️ Tools', favorites:'🩷 My Favorites', journal:'📔 Journal' };
+const JOURNAL_TYPE_LABELS: Record<string,string> = { tips:'🎨 มุมระบายสี / Coloring Tips', tools:'🖍️ มุมอุปกรณ์ / Tools', favorites:'🩷 มุมโปรด / My Favorites', journal:'📔 เล่าให้ปัง / Journal' };
 const EMPTY_ARTICLE = { title_th:'', title_en:'', excerpt_th:'', excerpt_en:'', content_th:'', content_en:'', article_type:'tips', cover_image:'', status:'draft', sort_order:0 };
 
 function JournalTab() {

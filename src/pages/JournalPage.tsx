@@ -8,10 +8,10 @@ type ArticleType = '' | 'tips' | 'tools' | 'favorites' | 'journal';
 
 const TYPE_FILTERS: { key: ArticleType; label: { th: string; en: string }; emoji: string }[] = [
   { key: '',          label: { th: 'ทั้งหมด',       en: 'All' },          emoji: '📝' },
-  { key: 'tips',      label: { th: 'เทคนิคการระบาย', en: 'Coloring Tips' }, emoji: '🎨' },
-  { key: 'tools',     label: { th: 'อุปกรณ์',       en: 'Tools' },        emoji: '🖍️' },
-  { key: 'favorites', label: { th: 'สิ่งที่ชอบ',    en: 'My Favorites' }, emoji: '🩷' },
-  { key: 'journal',   label: { th: 'บันทึก',        en: 'Journal' },      emoji: '📔' },
+  { key: 'tips',      label: { th: 'มุมระบายสี',  en: 'Coloring Tips' }, emoji: '🎨' },
+  { key: 'tools',     label: { th: 'มุมอุปกรณ์',  en: 'Tools' },        emoji: '🖍️' },
+  { key: 'favorites', label: { th: 'มุมโปรด',     en: 'My Favorites' }, emoji: '🩷' },
+  { key: 'journal',   label: { th: 'เล่าให้ปัง',  en: 'Journal' },      emoji: '📔' },
 ];
 
 function readingTime(contentTh?: string, contentEn?: string): string {
@@ -108,11 +108,11 @@ export default function JournalPage() {
                   onClick={() => navigate(`/journal/${a.slug}`)}
                   style={{ background: 'white', borderRadius: 20, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: `1.5px solid ${p}12`, display: 'flex', flexDirection: 'column' }}>
 
-                  {/* Cover image */}
-                  <div style={{ position: 'relative', background: `linear-gradient(135deg,${p}18,${p}08)`, height: 200, overflow: 'hidden', flexShrink: 0 }}>
+                  {/* Cover image — 16:9, contain, white bg */}
+                  <div style={{ position: 'relative', background: 'white', aspectRatio: '16/9', overflow: 'hidden', flexShrink: 0, borderBottom: '1px solid #f1f5f9' }}>
                     {a.cover_image
-                      ? <img src={a.cover_image} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                      : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 52 }}>📝</div>
+                      ? <img src={a.cover_image} alt={title} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
+                      : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 52, background: `linear-gradient(135deg,${p}12,${p}06)` }}>📝</div>
                     }
                     {/* Category badge */}
                     <span style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(255,255,255,0.92)', color: p, fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 12, backdropFilter: 'blur(4px)' }}>

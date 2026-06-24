@@ -306,6 +306,72 @@ async function handleJournal(req, res) {
     return json(res, 200, { success: true });
   }
 
+  // GET ?type=journal&action=reactions&id=<article_id>
+  if (req.method === 'GET' && action === 'reactions' && id) {
+    const user = req.headers.authorization ? await getUser(req) : null;
+    const [{ data: loves }, { data: saves }, { data: art }] = await Promise.all([
+      supabase.from('journal_reactions').select('user_id').eq('article_id', id).eq('type', 'love'),
+      supabase.from('journal_reactions').select('user_id').eq('article_id', id).eq('type', 'save'),
+      supabase.from('journal_articles').select('share_count').eq('id', id).single(),
+    ]);
+    const myLove = user ? (loves || []).some(r => r.user_id === user.id) : false;
+    const mySave = user ? (saves || []).some(r => r.user_id === user.id) : false;
+    return json(res, 200, {
+      love: (loves || []).length,
+      save: (saves || []).length,
+      share: art?.share_count || 0,
+      my_love: myLove,
+      my_save: mySave,
+    });
+  }
+
+  // POST ?type=journal&action=react  body: { article_id, type: 'love'|'save' }  → toggle
+  if (req.method === 'POST' && action === 'react') {
+    const user = await requireAuth(req, res); if (!user) return;
+    const { article_id, type } = req.body || {};
+    if (!article_id || !['love','save'].includes(type)) return json(res, 400, { error: 'article_id and type required' });
+    const { data: existing } = await supabase.from('journal_reactions')
+      .select('id').eq('article_id', article_id).eq('user_id', user.id).eq('type', type).single();
+    if (existing) {
+      await supabase.from('journal_reactions').delete().eq('id', existing.id);
+      return json(res, 200, { toggled: false });
+    } else {
+      await supabase.from('journal_reactions').insert({ article_id, user_id: user.id, type });
+      return json(res, 200, { toggled: true });
+    }
+  }
+
+  // POST ?type=journal&action=share  body: { article_id }  → increment share_count
+  if (req.method === 'POST' && action === 'share') {
+    const { article_id } = req.body || {};
+    if (!article_id) return json(res, 400, { error: 'article_id required' });
+    await supabase.rpc('increment_journal_share', { art_id: article_id }).catch(() =>
+      supabase.from('journal_articles').update({ share_count: supabase.sql`share_count + 1` }).eq('id', article_id)
+    );
+    // simple fallback: just increment via raw SQL
+    await supabase.from('journal_articles')
+      .update({ share_count: 999 }).eq('id', 'noop').catch(() => {}); // warm up
+    const { data: art } = await supabase.from('journal_articles').select('share_count').eq('id', article_id).single();
+    const newCount = (art?.share_count || 0) + 1;
+    await supabase.from('journal_articles').update({ share_count: newCount }).eq('id', article_id);
+    return json(res, 200, { share: newCount });
+  }
+
+  // GET ?type=journal&action=saved (auth) → user's saved articles
+  if (req.method === 'GET' && action === 'saved') {
+    const user = await requireAuth(req, res); if (!user) return;
+    const { data: reactions } = await supabase.from('journal_reactions')
+      .select('article_id').eq('user_id', user.id).eq('type', 'save').order('created_at', { ascending: false });
+    if (!reactions || !reactions.length) return json(res, 200, []);
+    const ids = reactions.map(r => r.article_id);
+    const { data } = await supabase.from('journal_articles')
+      .select('id,title_th,title_en,excerpt_th,excerpt_en,article_type,cover_image,slug,created_at')
+      .in('id', ids).eq('status', 'published');
+    // preserve saved order
+    const map = Object.fromEntries((data || []).map(a => [a.id, a]));
+    return json(res, 200, ids.map(id => map[id]).filter(Boolean));
+  }
+
   return json(res, 405, { error: 'Method not allowed' });
 }
 
