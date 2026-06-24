@@ -2652,8 +2652,8 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
     let r: any = null;
     try { r = await api.uploadFile(file, 'community'); } catch {}
     setUploading(false);
-    if (!r?.url) return flash('⚠️ Upload failed' + (r?.error ? ': ' + r.error : ''));
-    setForm((f:any)=>({...f, cover_image: r.url}));
+    if (!r?.publicUrl) return flash('⚠️ Upload failed' + (r?.error ? ': ' + r.error : ''));
+    setForm((f:any)=>({...f, cover_image: r.publicUrl}));
   };
 
   const inp = (label:string, key:string, type='text', ph='') => (
