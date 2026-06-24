@@ -2699,7 +2699,7 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
           </div>
           <div style={{marginBottom:12}}>
             <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Cover Image</label>
-            {form.cover_image && <img src={form.cover_image} alt="" style={{width:'100%',height:120,objectFit:'cover',borderRadius:10,marginBottom:8,display:'block'}} />}
+            {form.cover_image && <img src={form.cover_image} alt="" style={{width:'100%',objectFit:'contain',borderRadius:10,marginBottom:8,display:'block'}} />}
             <div style={{display:'flex',gap:8,alignItems:'center'}}>
               <label style={{padding:'7px 14px',borderRadius:10,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:700,color:'#374151'}}>
                 {uploading?'Uploading…':'📁 Upload image'}

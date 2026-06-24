@@ -1168,9 +1168,9 @@ module.exports = async function handler(req, res) {
     if (b.link_url !== undefined) upd.link_url = b.link_url || null;
     if (b.status !== undefined && ['draft','active','expired'].includes(b.status)) upd.status = b.status;
     if (b.sort_order !== undefined) upd.sort_order = parseInt(b.sort_order) || 0;
-    const { data, error } = await supabase.from('community_highlights').update(upd).eq('id', id).select().single();
+    const { error } = await supabase.from('community_highlights').update(upd).eq('id', id);
     if (error) return json(res, 400, { error: error.message });
-    return json(res, 200, { highlight: data });
+    return json(res, 200, { success: true });
   }
 
   // DELETE ?action=admin-highlight&id= — admin: delete
