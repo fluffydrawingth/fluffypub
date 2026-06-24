@@ -2649,9 +2649,10 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
   const uploadImg = async (e:React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     setUploading(true);
-    const r = await api.uploadFile(file, 'community').catch(()=>null);
+    let r: any = null;
+    try { r = await api.uploadFile(file, 'community'); } catch {}
     setUploading(false);
-    if (!r?.url) return flash('⚠️ Upload failed');
+    if (!r?.url) return flash('⚠️ Upload failed' + (r?.error ? ': ' + r.error : ''));
     setForm((f:any)=>({...f, cover_image: r.url}));
   };
 
