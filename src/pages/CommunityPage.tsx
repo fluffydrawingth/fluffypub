@@ -697,36 +697,78 @@ const MEDIUM_OPTIONS = ['Alcohol Marker', 'Acrylic', 'Colored Pencil', 'Watercol
 // Structured coloring rows: Medium (dropdown) + Brand/set (dropdown of admin-managed
 // brands via <datalist>, with free typing). Repeatable. Brand list = approved marker tags.
 export function StructuredMediumBlock({ details, setDetails, theme, p, fld, tRaw }: any) {
-  const [brandSugg, setBrandSugg] = useState<string[]>([]);
-  useEffect(() => { api.getCommunityTags('marker').then((d: any) => setBrandSugg((d?.tags || []).map((t: any) => t.name))).catch(() => {}); }, []);
-  const upd = (i: number, k: string, v: string) => setDetails(details.map((d: any, idx: number) => idx === i ? { ...d, [k]: v } : d));
+  // Cache: medium → approved marker/set names from the admin library
+  const [suggCache, setSuggCache] = useState<Record<string, string[]>>({});
+
+  const fetchSugg = (medium: string) => {
+    if (!medium || medium in suggCache) return;
+    setSuggCache(prev => ({ ...prev, [medium]: [] })); // mark as loading
+    (api as any).getMarkersByMedium(medium)
+      .then((d: any) => setSuggCache(prev => ({ ...prev, [medium]: (d?.tags || []).map((t: any) => t.name) })))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    details.forEach((row: any) => { if (row.medium) fetchSugg(row.medium); });
+  }, []);
+
+  const upd = (i: number, k: string, v: string) => {
+    if (k === 'medium' && v) fetchSugg(v);
+    setDetails(details.map((d: any, idx: number) => idx === i ? { ...d, [k]: v } : d));
+  };
   const add = () => { if (details.length < 10) setDetails([...details, { medium: '', brand: '' }]); };
   const remove = (i: number) => setDetails(details.length > 1 ? details.filter((_: any, idx: number) => idx !== i) : [{ medium: '', brand: '' }]);
+
+  // One datalist element per unique medium that has suggestions loaded
+  const uniqueMediumsWithSugg = Object.entries(suggCache)
+    .filter(([, names]) => names.length > 0)
+    .map(([med]) => med);
+
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 6 }}>🎨 {tRaw('สื่อ + ยี่ห้อ/ชุดที่ใช้', 'Medium + brand / set used')}</div>
-      {/* Marker suggestions only shown for Alcohol Marker rows */}
-      <datalist id="brand-set-marker">{brandSugg.map(b => <option key={b} value={b} />)}</datalist>
+      {uniqueMediumsWithSugg.map(med => (
+        <datalist key={med} id={`bso-${med.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`}>
+          {(suggCache[med] || []).map(b => <option key={b} value={b} />)}
+        </datalist>
+      ))}
       {details.map((row: any, i: number) => {
-        const isMarkerMedium = row.medium === 'Alcohol Marker';
+        const listId = row.medium && suggCache[row.medium]?.length
+          ? `bso-${row.medium.replace(/[^a-z0-9]/gi, '-').toLowerCase()}`
+          : undefined;
+        const sugg = row.medium ? (suggCache[row.medium] || []) : [];
         return (
-        <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'flex-start' }}>
-          <select value={row.medium} onChange={e => upd(i, 'medium', e.target.value)} style={{ ...fld, flex: 1, fontSize: 13, padding: '9px 10px' }}>
-            <option value="">{tRaw('เลือกสื่อ...', 'Select medium...')}</option>
-            {MEDIUM_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
-          <input
-            list={isMarkerMedium ? 'brand-set-marker' : undefined}
-            value={row.brand}
-            onChange={e => upd(i, 'brand', e.target.value)}
-            placeholder={tRaw('ยี่ห้อ/ชุด (เลือกหรือพิมพ์)', 'Brand / set (pick or type)')}
-            style={{ ...fld, flex: 1, fontSize: 13 }}
-          />
-          <button onClick={() => remove(i)} style={{ padding: '0 11px', borderRadius: 10, border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontWeight: 700, alignSelf: 'stretch' }}>✕</button>
-        </div>
+          <div key={i} style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+              <select value={row.medium} onChange={e => upd(i, 'medium', e.target.value)} style={{ ...fld, flex: 1, fontSize: 13, padding: '9px 10px' }}>
+                <option value="">{tRaw('เลือกสื่อ...', 'Select medium...')}</option>
+                {MEDIUM_OPTIONS.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <input
+                list={listId}
+                value={row.brand}
+                onChange={e => upd(i, 'brand', e.target.value)}
+                placeholder={tRaw('ยี่ห้อ/ชุด (เลือกหรือพิมพ์)', 'Brand / set (pick or type)')}
+                style={{ ...fld, flex: 1, fontSize: 13 }}
+              />
+              <button onClick={() => remove(i)} style={{ padding: '0 11px', borderRadius: 10, border: '1px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontWeight: 700, alignSelf: 'stretch' }}>✕</button>
+            </div>
+            {/* Suggestion chips — visible when medium is set, brand is empty, and there are approved suggestions */}
+            {sugg.length > 0 && !row.brand && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 5, paddingLeft: 2 }}>
+                {sugg.map((s: string) => (
+                  <button key={s} onClick={() => upd(i, 'brand', s)}
+                    style={{ padding: '3px 10px', borderRadius: 14, border: `1px solid ${p}30`, background: p + '0d', color: p, fontSize: 11.5, fontWeight: 600, cursor: 'pointer', fontFamily: theme.fontFamily }}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         );
       })}
       {details.length < 10 && <button onClick={add} style={{ padding: '6px 14px', borderRadius: 10, border: `1.5px dashed ${p}50`, background: 'white', color: p, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, fontFamily: theme.fontFamily }}>+ {tRaw('เพิ่มสื่ออีก', 'Add another medium')}</button>}
+      <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 6 }}>{tRaw('ถ้าไม่พบรายการที่ต้องการ พิมพ์เองได้เลย (จะถูกส่งให้แอดมินตรวจสอบ)', 'Can\'t find your set? Type it — we\'ll review it for future suggestions.')}</div>
     </div>
   );
 }

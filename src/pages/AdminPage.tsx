@@ -2245,6 +2245,9 @@ function CommunityDashboardTab() {
   const [libBooks, setLibBooks] = useState<any[]>([]);
   const [bookMergeSel, setBookMergeSel] = useState<string[]>([]);
   const [newTagName, setNewTagName] = useState('');
+  const [newTagMedium, setNewTagMedium] = useState('Alcohol Marker');
+  const [editingTagId, setEditingTagId] = useState<string|null>(null);
+  const [editTagForm, setEditTagForm] = useState<{name:string;medium:string;status:string}>({name:'',medium:'',status:'approved'});
   const [tagFrom, setTagFrom] = useState('');
   const [tagTo, setTagTo] = useState('');
   const [tagMergeField, setTagMergeField] = useState('markers');
@@ -2350,15 +2353,31 @@ function CommunityDashboardTab() {
   const addApprovedTag = async () => {
     if (!newTagName.trim()) return;
     const name = newTagName.trim();
-    const r1 = await api.submitCommunityTag(tagLibType, name);
+    const medium = tagLibType === 'marker' ? newTagMedium : undefined;
+    const r1 = await api.submitCommunityTag(tagLibType, name, medium);
     if (r1?.tag?.id) await api.approveTag(r1.tag.id, name);
     // Optimistic update: show the new tag immediately without waiting for the refetch
     setTagLibItems((prev: any[]) => {
       const norm = name.toLowerCase();
       if (prev.some((t: any) => (t.normalized || t.name || '').toLowerCase() === norm)) return prev;
-      return [{ id: r1?.tag?.id || null, name, normalized: norm, status: 'approved', count: 0 }, ...prev];
+      return [{ id: r1?.tag?.id || null, name, normalized: norm, medium: medium || null, status: 'approved', count: 0 }, ...prev];
     });
     setNewTagName(''); flash('✓ Tag added'); loadTagLib(tagLibType);
+  };
+
+  const saveTagEdit = async () => {
+    if (!editingTagId) return;
+    const r = await (api as any).updateAdminTag(editingTagId, {
+      name: editTagForm.name.trim(),
+      medium: tagLibType === 'marker' ? (editTagForm.medium || null) : undefined,
+      status: editTagForm.status,
+    });
+    if (r?.error) return flash('⚠️ ' + r.error);
+    setTagLibItems((prev: any[]) => prev.map((t: any) => t.id === editingTagId
+      ? { ...t, name: editTagForm.name.trim(), medium: editTagForm.medium || null, status: editTagForm.status }
+      : t
+    ));
+    setEditingTagId(null); flash('✓ Saved'); loadTagLib(tagLibType);
   };
   const mergeTags = async () => {
     const from=tagFrom.split(',').map((s:string)=>s.trim()).filter(Boolean);
@@ -2561,37 +2580,109 @@ function CommunityDashboardTab() {
         {/* Add new approved tag */}
         <div style={{...card,padding:16,marginBottom:16}}>
           <div style={{fontSize:13,fontWeight:800,color:'#374151',marginBottom:8}}>Add to library</div>
-          <div style={{display:'flex',gap:8}}>
-            <input value={newTagName} onChange={e=>setNewTagName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addApprovedTag();}}} placeholder="Ohuhu Pastel 48" style={{flex:1,padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'}} />
-            <button onClick={addApprovedTag} style={{padding:'9px 18px',borderRadius:10,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:700}}>+ Add</button>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {tagLibType==='marker' && (
+              <select value={newTagMedium} onChange={e=>setNewTagMedium(e.target.value)} style={{padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',flexShrink:0}}>
+                {['Alcohol Marker','Acrylic','Colored Pencil','Watercolor','Gel Pen','Crayon','Digital','Other'].map(m=><option key={m} value={m}>{m}</option>)}
+              </select>
+            )}
+            <input value={newTagName} onChange={e=>setNewTagName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();addApprovedTag();}}} placeholder={tagLibType==='marker'?'e.g. Ohuhu Pastel 48':'Name…'} style={{flex:1,minWidth:140,padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'}} />
+            <button onClick={addApprovedTag} style={{padding:'9px 18px',borderRadius:10,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:700,flexShrink:0}}>+ Add</button>
           </div>
+          {tagLibType==='marker'&&<div style={{fontSize:11,color:'#9ca3af',marginTop:6}}>Marker/set names are linked to a medium so users see relevant suggestions in the Add Post form.</div>}
         </div>
 
-        {/* Tag list — every tag in use (count) + library status; rename / approve / delete */}
-        {tagLibLoading ? <div style={{color:'#9ca3af',padding:16}}>Loading…</div> : (
-          <div style={{...card,padding:16,marginBottom:20}}>
-            <div style={{fontSize:11,color:'#9ca3af',marginBottom:10}}>🟢 approved (shown as suggestion) · 🟡 pending · ⚫ hidden · ⚪ used on posts, not in library. Number = posts using it.</div>
-            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-              {tagLibItems.map((t:any)=>{
-                const dot = t.status==='approved'?'🟢':t.status==='pending'?'🟡':t.status==='hidden'?'⚫':'⚪';
-                const isApproved = t.status==='approved';
-                const isHidden = t.status==='hidden';
-                return (
-                <div key={(t.id||t.normalized||t.name)} style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 10px',borderRadius:12,border:`1.5px solid ${isApproved?P:'#e5e7eb'}`,background:isHidden?'#f3f4f6':isApproved?P+'10':'#f9fafb',opacity:isHidden?0.65:1}}>
-                  <span style={{fontSize:11}}>{dot}</span>
-                  <span style={{fontSize:12.5,fontWeight:700,color:'#1e293b'}}>{t.name}</span>
-                  {(t.count>0||t.post_count>0)&&<span style={{fontSize:10,color:'#9ca3af'}}>({t.count ?? t.post_count})</span>}
-                  {!isApproved&&<button title="Approve (show as suggestion)" onClick={()=>setTagStatus(t,'approved')} style={{background:'#d1fae5',border:'none',borderRadius:8,cursor:'pointer',fontSize:10,fontWeight:800,color:'#065f46',padding:'2px 6px'}}>✓</button>}
-                  {!isHidden&&<button title="Hide (keep data, remove from suggestions)" onClick={()=>setTagStatus(t,'hidden')} style={{background:'#e5e7eb',border:'none',borderRadius:8,cursor:'pointer',fontSize:10,fontWeight:800,color:'#374151',padding:'2px 6px'}}>🙈</button>}
-                  <button title="Rename" onClick={()=>renameTag(t)} style={{background:'none',border:'none',cursor:'pointer',color:'#2563eb',fontSize:12,fontWeight:700,padding:'0 2px'}}>✎</button>
-                  <button title="Delete" onClick={()=>removeTag(t)} style={{background:'none',border:'none',cursor:'pointer',color:'#dc2626',fontSize:12,fontWeight:700,padding:'0 2px'}}>✕</button>
+        {/* Inline edit panel */}
+        {editingTagId && (
+          <div style={{...card,padding:16,marginBottom:16,border:`1.5px solid ${P}40`,background:P+'06'}}>
+            <div style={{fontSize:13,fontWeight:800,color:'#374151',marginBottom:10}}>Edit tag</div>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end'}}>
+              {tagLibType==='marker'&&(
+                <div><label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>Medium</label>
+                  <select value={editTagForm.medium} onChange={e=>setEditTagForm(f=>({...f,medium:e.target.value}))} style={{padding:'8px 10px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit'}}>
+                    <option value="">— no medium —</option>
+                    {['Alcohol Marker','Acrylic','Colored Pencil','Watercolor','Gel Pen','Crayon','Digital','Other'].map(m=><option key={m} value={m}>{m}</option>)}
+                  </select>
                 </div>
-                );
-              })}
-              {tagLibItems.length===0&&<span style={{fontSize:13,color:'#9ca3af'}}>No tags yet. Add some above.</span>}
+              )}
+              <div style={{flex:1,minWidth:140}}><label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>Name</label>
+                <input value={editTagForm.name} onChange={e=>setEditTagForm(f=>({...f,name:e.target.value}))} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();saveTagEdit();}}} style={{width:'100%',padding:'8px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box'}} />
+              </div>
+              <div><label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>Status</label>
+                <select value={editTagForm.status} onChange={e=>setEditTagForm(f=>({...f,status:e.target.value}))} style={{padding:'8px 10px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit'}}>
+                  <option value="approved">🟢 approved</option>
+                  <option value="pending">🟡 pending</option>
+                  <option value="hidden">⚫ hidden</option>
+                </select>
+              </div>
+              <button onClick={saveTagEdit} style={{padding:'8px 16px',borderRadius:10,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:700}}>Save</button>
+              <button onClick={()=>setEditingTagId(null)} style={{padding:'8px 14px',borderRadius:10,border:'1.5px solid #e5e7eb',background:'white',color:'#6b7280',cursor:'pointer',fontSize:13,fontWeight:700}}>Cancel</button>
             </div>
           </div>
         )}
+
+        {/* Tag list — every tag in use (count) + library status; rename / approve / delete */}
+        {tagLibLoading ? <div style={{color:'#9ca3af',padding:16}}>Loading…</div> : (() => {
+          const isMarker = tagLibType === 'marker';
+          const legend = <div style={{fontSize:11,color:'#9ca3af',marginBottom:10}}>🟢 approved (shown as suggestion) · 🟡 pending · ⚫ hidden · ⚪ used on posts, not in library. Number = posts using it.</div>;
+
+          const TagChip = ({t}:{t:any}) => {
+            const dot = t.status==='approved'?'🟢':t.status==='pending'?'🟡':t.status==='hidden'?'⚫':'⚪';
+            const isApproved = t.status==='approved'; const isHidden = t.status==='hidden';
+            const isEditing = editingTagId === t.id;
+            return (
+              <div style={{display:'inline-flex',alignItems:'center',gap:6,padding:'6px 10px',borderRadius:12,border:`1.5px solid ${isEditing?P:isApproved?P:'#e5e7eb'}`,background:isEditing?P+'12':isHidden?'#f3f4f6':isApproved?P+'10':'#f9fafb',opacity:isHidden?0.65:1}}>
+                <span style={{fontSize:11}}>{dot}</span>
+                <span style={{fontSize:12.5,fontWeight:700,color:'#1e293b'}}>{t.name}</span>
+                {(t.count>0||t.post_count>0)&&<span style={{fontSize:10,color:'#9ca3af'}}>({t.count ?? t.post_count})</span>}
+                {!isApproved&&<button title="Approve" onClick={()=>setTagStatus(t,'approved')} style={{background:'#d1fae5',border:'none',borderRadius:8,cursor:'pointer',fontSize:10,fontWeight:800,color:'#065f46',padding:'2px 6px'}}>✓</button>}
+                {!isHidden&&<button title="Hide" onClick={()=>setTagStatus(t,'hidden')} style={{background:'#e5e7eb',border:'none',borderRadius:8,cursor:'pointer',fontSize:10,fontWeight:800,color:'#374151',padding:'2px 6px'}}>🙈</button>}
+                {t.id&&<button title="Edit" onClick={()=>{setEditingTagId(t.id);setEditTagForm({name:t.name,medium:t.medium||'',status:t.status==='unmanaged'?'approved':t.status});}} style={{background:'none',border:'none',cursor:'pointer',color:'#2563eb',fontSize:12,fontWeight:700,padding:'0 2px'}}>✎</button>}
+                {!t.id&&<button title="Rename" onClick={()=>renameTag(t)} style={{background:'none',border:'none',cursor:'pointer',color:'#2563eb',fontSize:12,fontWeight:700,padding:'0 2px'}}>✎</button>}
+                <button title="Delete" onClick={()=>removeTag(t)} style={{background:'none',border:'none',cursor:'pointer',color:'#dc2626',fontSize:12,fontWeight:700,padding:'0 2px'}}>✕</button>
+              </div>
+            );
+          };
+
+          if (isMarker) {
+            // Group by medium (null/'' = "No medium assigned")
+            const allMediums = ['Alcohol Marker','Acrylic','Colored Pencil','Watercolor','Gel Pen','Crayon','Digital','Other'];
+            const grouped: Record<string, any[]> = {};
+            tagLibItems.forEach((t: any) => {
+              const key = t.medium || '__none__';
+              if (!grouped[key]) grouped[key] = [];
+              grouped[key].push(t);
+            });
+            const orderedKeys = [
+              ...allMediums.filter(m => grouped[m]?.length),
+              ...(grouped['__none__']?.length ? ['__none__'] : []),
+              ...Object.keys(grouped).filter(k => k !== '__none__' && !allMediums.includes(k)),
+            ];
+            return (
+              <div style={{...card,padding:16,marginBottom:20}}>
+                {legend}
+                {orderedKeys.length === 0 && <span style={{fontSize:13,color:'#9ca3af'}}>No tags yet. Add some above.</span>}
+                {orderedKeys.map(key => (
+                  <div key={key} style={{marginBottom:14}}>
+                    <div style={{fontSize:11,fontWeight:800,color:P,textTransform:'uppercase',letterSpacing:0.5,marginBottom:6}}>{key==='__none__'?'— No medium assigned —':key}</div>
+                    <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                      {grouped[key].map((t: any) => <TagChip key={t.id||t.normalized||t.name} t={t} />)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          }
+          return (
+            <div style={{...card,padding:16,marginBottom:20}}>
+              {legend}
+              <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                {tagLibItems.map((t:any)=><TagChip key={t.id||t.normalized||t.name} t={t} />)}
+                {tagLibItems.length===0&&<span style={{fontSize:13,color:'#9ca3af'}}>No tags yet. Add some above.</span>}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Merge / rename */}
         <div style={{...card,padding:16}}>

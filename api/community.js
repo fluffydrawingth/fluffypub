@@ -913,11 +913,13 @@ module.exports = async function handler(req, res) {
 
   // ─────────────────── Tag Library ───────────────────
 
-  // GET ?action=tags&type=medium|marker|palette — approved tags for upload form
+  // GET ?action=tags&type=medium|marker|palette[&medium=] — approved tags for upload form
   if (req.method === 'GET' && action === 'tags') {
     const type = req.query.type;
     if (!['medium','marker','palette','challenge'].includes(type)) return json(res, 400, { error: 'type required' });
-    const { data } = await supabase.from('community_tags').select('id,name,post_count').eq('type', type).eq('status','approved').order('post_count', { ascending: false }).order('name');
+    let q = supabase.from('community_tags').select('id,name,post_count,medium').eq('type', type).eq('status','approved').order('post_count', { ascending: false }).order('name');
+    if (type === 'marker' && req.query.medium) q = q.eq('medium', String(req.query.medium));
+    const { data } = await q;
     return json(res, 200, { tags: data || [] });
   }
 
@@ -925,13 +927,15 @@ module.exports = async function handler(req, res) {
   if (req.method === 'POST' && action === 'tag-submit') {
     const user = await requireAuth(req, res);
     if (!user) return;
-    const { type, name } = req.body || {};
+    const { type, name, medium } = req.body || {};
     if (!['medium','marker','palette','challenge'].includes(type) || !String(name||'').trim()) return json(res, 400, { error: 'type and name required' });
     const normalized = String(name).trim().toLowerCase();
     const display = String(name).trim();
-    const { data: existing } = await supabase.from('community_tags').select('id,name,status').eq('type', type).eq('normalized', normalized).single();
+    const { data: existing } = await supabase.from('community_tags').select('id,name,status,medium').eq('type', type).eq('normalized', normalized).single();
     if (existing) return json(res, 200, { tag: existing });
-    const { data, error } = await supabase.from('community_tags').insert({ type, name: display, normalized, status: 'pending' }).select('id,name,status').single();
+    const insertRow = { type, name: display, normalized, status: 'pending' };
+    if (medium && type === 'marker') insertRow.medium = String(medium).trim();
+    const { data, error } = await supabase.from('community_tags').insert(insertRow).select('id,name,status,medium').single();
     if (error) return json(res, 200, { tag: { name: display, status: 'pending' } }); // ignore unique conflict
     return json(res, 201, { tag: data });
   }
@@ -976,6 +980,7 @@ module.exports = async function handler(req, res) {
         id: l ? l.id : null,
         name: (l && l.name) || (u && u.name) || key,
         normalized: key,
+        medium: l ? (l.medium || null) : null,
         status: l ? l.status : 'unmanaged',   // approved | pending | unmanaged (used on posts, not in library)
         count: u ? u.count : 0,
       };
@@ -1034,6 +1039,23 @@ module.exports = async function handler(req, res) {
     const upd = { status: 'approved', reviewed_at: new Date().toISOString() };
     const name = (req.body || {}).name;
     if (name) { upd.name = String(name).trim(); upd.normalized = String(name).trim().toLowerCase(); }
+    const { error } = await supabase.from('community_tags').update(upd).eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
+  }
+
+  // PUT ?action=admin-tag-update&id= {name?,medium?,status?} — edit a library tag's fields
+  if (req.method === 'PUT' && action === 'admin-tag-update') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { id } = req.query;
+    if (!id) return json(res, 400, { error: 'id required' });
+    const { name, medium, status } = req.body || {};
+    const upd = {};
+    if (name) { upd.name = String(name).trim(); upd.normalized = String(name).trim().toLowerCase(); }
+    if (medium !== undefined) upd.medium = medium ? String(medium).trim() : null;
+    if (status && ['approved','pending','hidden'].includes(status)) upd.status = status;
+    if (!Object.keys(upd).length) return json(res, 400, { error: 'nothing to update' });
     const { error } = await supabase.from('community_tags').update(upd).eq('id', id);
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, { success: true });
