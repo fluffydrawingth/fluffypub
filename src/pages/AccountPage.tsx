@@ -492,12 +492,49 @@ function OrdersTab({p,theme}:any) {
   );
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return isMobile;
+}
+
+function LoadMoreButton({ onClick, p, label }: { onClick: () => void; p: string; label: string }) {
+  return (
+    <div style={{ textAlign: 'center', marginTop: 12 }}>
+      <button onClick={onClick} style={{ background: 'none', border: `1.5px solid ${p}40`, borderRadius: 20, padding: '7px 22px', fontSize: 13, fontWeight: 700, color: p, cursor: 'pointer', fontFamily: 'inherit' }}>
+        {label}
+      </button>
+    </div>
+  );
+}
+
 function SavedTab({p,theme,navigate}:any) {
   const { tRaw } = useLang();
+  const isMobile = useIsMobile();
   const [posts, setPosts] = useState<any[]>([]);
   const [creators, setCreators] = useState<any[]>([]);
   const [journalSaved, setJournalSaved] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Visible counts per section
+  const postsInit     = isMobile ? 4 : 5;
+  const journalInit   = 4;
+  const creatorsInit  = 4;
+  const postsStep     = isMobile ? 4 : 5;
+  const journalStep   = 4;
+  const creatorsStep  = 4;
+
+  const [visiblePosts,    setVisiblePosts]    = useState(postsInit);
+  const [visibleJournal,  setVisibleJournal]  = useState(journalInit);
+  const [visibleCreators, setVisibleCreators] = useState(creatorsInit);
+
+  // Reset visible counts when breakpoint changes
+  useEffect(() => { setVisiblePosts(postsInit); },    [postsInit]);
+  useEffect(() => { setVisibleJournal(journalInit); }, [journalInit]);
 
   useEffect(() => {
     Promise.all([api.getSavedPosts(), api.getFollowedCreators(), (api as any).getSavedJournalArticles()]).then(([sp, fc, js]) => {
@@ -515,6 +552,10 @@ function SavedTab({p,theme,navigate}:any) {
 
   if (loading) return <div style={{textAlign:'center',padding:40,color:'#888'}}>Loading...</div>;
 
+  const shownPosts    = posts.slice(0, visiblePosts);
+  const shownJournal  = journalSaved.slice(0, visibleJournal);
+  const shownCreators = creators.slice(0, visibleCreators);
+
   return (
     <div style={{display:'flex',flexDirection:'column',gap:28}}>
       {/* Saved Posts */}
@@ -530,17 +571,22 @@ function SavedTab({p,theme,navigate}:any) {
             <div style={{fontSize:13}}>{tRaw('กดไอคอน 🔖 บนโพสต์เพื่อบันทึก','Tap 🔖 on any community post to save it here.')}</div>
           </div>
         ) : (
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:10}}>
-            {posts.map((post:any) => (
-              <div key={post.id} onClick={()=>navigate(`/community/${post.id}`)} style={{cursor:'pointer',borderRadius:14,overflow:'hidden',background:'white',boxShadow:'0 1px 6px rgba(0,0,0,0.07)',border:`1.5px solid ${p}10`}}>
-                <img src={post.thumb_url||post.artwork_url} alt="" style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}} />
-                <div style={{padding:'8px 10px'}}>
-                  <div style={{fontSize:11.5,fontWeight:700,color:'#1e293b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{post.creator?.name||'—'}</div>
-                  {post.caption&&<div style={{fontSize:11,color:'#94a3b8',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{post.caption}</div>}
+          <>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:10}}>
+              {shownPosts.map((post:any) => (
+                <div key={post.id} onClick={()=>navigate(`/community/${post.id}`)} style={{cursor:'pointer',borderRadius:14,overflow:'hidden',background:'white',boxShadow:'0 1px 6px rgba(0,0,0,0.07)',border:`1.5px solid ${p}10`}}>
+                  <img src={post.thumb_url||post.artwork_url} alt="" style={{width:'100%',aspectRatio:'1',objectFit:'cover',display:'block'}} />
+                  <div style={{padding:'8px 10px'}}>
+                    <div style={{fontSize:11.5,fontWeight:700,color:'#1e293b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{post.creator?.name||'—'}</div>
+                    {post.caption&&<div style={{fontSize:11,color:'#94a3b8',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{post.caption}</div>}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            {posts.length > visiblePosts && (
+              <LoadMoreButton p={p} label={tRaw('โหลดเพิ่มเติม','Load more')} onClick={()=>setVisiblePosts(v=>v+postsStep)} />
+            )}
+          </>
         )}
       </div>
 
@@ -557,24 +603,29 @@ function SavedTab({p,theme,navigate}:any) {
             <div style={{fontSize:13}}>{tRaw('กด 💾 บนบทความเพื่อบันทึก','Tap 💾 on any article to save it here.')}</div>
           </div>
         ) : (
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:10}}>
-            {journalSaved.map((a:any) => {
-              const title = a.title_th || a.title_en || '';
-              return (
-                <div key={a.id} onClick={()=>navigate(`/journal/${a.slug}`)} style={{cursor:'pointer',borderRadius:14,overflow:'hidden',background:'white',boxShadow:'0 1px 6px rgba(0,0,0,0.07)',border:`1.5px solid ${p}10`}}>
-                  <div style={{aspectRatio:'16/9',background:'white',overflow:'hidden',borderBottom:'1px solid #f1f5f9'}}>
-                    {a.cover_image
-                      ? <img src={a.cover_image} alt={title} style={{width:'100%',height:'100%',objectFit:'contain',objectPosition:'center',display:'block'}} />
-                      : <div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,background:`linear-gradient(135deg,${p}12,${p}06)`}}>📝</div>
-                    }
+          <>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:10}}>
+              {shownJournal.map((a:any) => {
+                const title = a.title_th || a.title_en || '';
+                return (
+                  <div key={a.id} onClick={()=>navigate(`/journal/${a.slug}`)} style={{cursor:'pointer',borderRadius:14,overflow:'hidden',background:'white',boxShadow:'0 1px 6px rgba(0,0,0,0.07)',border:`1.5px solid ${p}10`}}>
+                    <div style={{aspectRatio:'16/9',background:'white',overflow:'hidden',borderBottom:'1px solid #f1f5f9'}}>
+                      {a.cover_image
+                        ? <img src={a.cover_image} alt={title} style={{width:'100%',height:'100%',objectFit:'contain',objectPosition:'center',display:'block'}} />
+                        : <div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,background:`linear-gradient(135deg,${p}12,${p}06)`}}>📝</div>
+                      }
+                    </div>
+                    <div style={{padding:'8px 10px'}}>
+                      <div style={{fontSize:12,fontWeight:700,color:'#1e293b',overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical' as any,lineHeight:1.35}}>{title}</div>
+                    </div>
                   </div>
-                  <div style={{padding:'8px 10px'}}>
-                    <div style={{fontSize:12,fontWeight:700,color:'#1e293b',overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical' as any,lineHeight:1.35}}>{title}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+            {journalSaved.length > visibleJournal && (
+              <LoadMoreButton p={p} label={tRaw('โหลดเพิ่มเติม','Load more')} onClick={()=>setVisibleJournal(v=>v+journalStep)} />
+            )}
+          </>
         )}
       </div>
 
@@ -594,21 +645,26 @@ function SavedTab({p,theme,navigate}:any) {
             </button>
           </div>
         ) : (
-          <div style={{display:'flex',flexDirection:'column',gap:10}}>
-            {creators.map((c:any)=>(
-              <div key={c.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',borderRadius:14,background:'white',border:`1.5px solid ${p}12`,boxShadow:'0 1px 4px rgba(0,0,0,0.05)'}}>
-                <div onClick={()=>navigate(`/creator/${c.id}`)} style={{width:46,height:46,borderRadius:'50%',overflow:'hidden',background:p+'20',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0,cursor:'pointer',border:`1.5px solid ${p}20`}}>
-                  {isImageUrl(c.avatar_url)?<img src={c.avatar_url} alt={c.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:(c.avatar_url||'👤')}
+          <>
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              {shownCreators.map((c:any)=>(
+                <div key={c.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',borderRadius:14,background:'white',border:`1.5px solid ${p}12`,boxShadow:'0 1px 4px rgba(0,0,0,0.05)'}}>
+                  <div onClick={()=>navigate(`/creator/${c.id}`)} style={{width:46,height:46,borderRadius:'50%',overflow:'hidden',background:p+'20',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0,cursor:'pointer',border:`1.5px solid ${p}20`}}>
+                    {isImageUrl(c.avatar_url)?<img src={c.avatar_url} alt={c.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:(c.avatar_url||'👤')}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div onClick={()=>navigate(`/creator/${c.id}`)} style={{fontSize:14,fontWeight:800,color:'#1e293b',cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{c.name}</div>
+                    <div style={{fontSize:11.5,color:'#94a3b8'}}>{[c.community_country,c.community_favorite_medium].filter(Boolean).join(' · ')}</div>
+                  </div>
+                  <div style={{fontSize:11.5,color:p,fontWeight:700,flexShrink:0}}>{c.posts} {tRaw('โพสต์','posts')}</div>
+                  <button onClick={()=>unfollow(c.id)} title={tRaw('เลิกติดตาม','Unfollow')} style={{background:'none',border:'1.5px solid #e2e8f0',borderRadius:14,padding:'5px 11px',fontSize:12,color:'#94a3b8',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>✕</button>
                 </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div onClick={()=>navigate(`/creator/${c.id}`)} style={{fontSize:14,fontWeight:800,color:'#1e293b',cursor:'pointer',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{c.name}</div>
-                  <div style={{fontSize:11.5,color:'#94a3b8'}}>{[c.community_country,c.community_favorite_medium].filter(Boolean).join(' · ')}</div>
-                </div>
-                <div style={{fontSize:11.5,color:p,fontWeight:700,flexShrink:0}}>{c.posts} {tRaw('โพสต์','posts')}</div>
-                <button onClick={()=>unfollow(c.id)} title={tRaw('เลิกติดตาม','Unfollow')} style={{background:'none',border:'1.5px solid #e2e8f0',borderRadius:14,padding:'5px 11px',fontSize:12,color:'#94a3b8',cursor:'pointer',fontFamily:'inherit',flexShrink:0}}>✕</button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            {creators.length > visibleCreators && (
+              <LoadMoreButton p={p} label={tRaw('โหลดเพิ่มเติม','Load more')} onClick={()=>setVisibleCreators(v=>v+creatorsStep)} />
+            )}
+          </>
         )}
       </div>
     </div>

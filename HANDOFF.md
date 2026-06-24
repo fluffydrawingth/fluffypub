@@ -1,355 +1,253 @@
 # Fluffy Pub — Project Handoff
 
-_Last updated: 2026-06-22_
+## What is this?
 
-A bilingual (Thai/English) e-commerce site for adorable coloring books — physical + digital
-products, an artist marketplace, an affiliate ("Fluffy Creator") program, and a **Community**.
-This document is the single orientation point for anyone (human or AI) picking up the project.
-
-> **§0 below is the most recent work (Community + Fluffy Creator).** Sections 1–10 are the
-> stable foundation. If something "doesn't save," it's almost always an **unrun migration** —
-> see §0.2.
+**Fluffy Pub** (fluffypub.com) is an e-commerce and community platform for coloring book products by Chollathip (Fluffy_Drawing). It sells physical and digital coloring books, runs a community for colorists, and publishes a bilingual journal.
 
 ---
 
-## 0. RECENT WORK — Community + Fluffy Creator (read first)
+## Tech Stack
 
-### 0.1 Local-dev caveat
-The Vite dev server does **NOT** run `/api/*`. Backend/data flows only work on a real Vercel
-deploy. Locally, verify with: `npx tsc --noEmit` (pre-existing 25 errors are baseline; aim for
-0 *new*), `curl -s localhost:5173/src/...` (Vite transform = compile check), and preview render
-checks. Note: `api/community.js` is flagged "binary" by `grep` (emoji bytes) — use `grep -a`.
-
-### 0.2 ⚠️ MIGRATIONS — run in Supabase SQL editor, in order
-All idempotent + safe to re-run; each ends with `notify pgrst, 'reload schema';`. **Features
-silently no-op until their migration runs** — the API degrades gracefully (retry-without-column)
-so checkout/posting never break, but data won't persist.
-
-| File | Adds | Powers |
-|------|------|--------|
-| `migrate_community_v4.sql` | `community_tags`; profile `community_about/country/favorite_medium` | Tag Library, community profile |
-| `migrate_community_v5.sql` | `community_posts.artwork_urls`; `external_books` + `external_book_id` | Multi-image, External Book Library |
-| `migrate_creator_separation.sql` | profile `affiliate_approved_at` | No-retroactive commission |
-| `migrate_community_v6.sql` | `community_posts.recommended_tools` (+ unused `creator_*` profile cols) | Recommended tools |
-| `migrate_community_v8.sql` | product commission cols + `creator_commissions` ledger | Digital commission engine |
-| `migrate_community_v9.sql` | `community_posts.keywords / coloring_details / recommended_tools / post_type` | Keywords, structured medium, post types |
-
-Order: v4 → v5 → creator_separation → v6 → v8 → v9. **v5 is confirmed applied** (multi-image
-works); the rest were likely NOT applied — confirm. (`migrate_community_v7.sql` exists for an
-artist `show_on_homepage` column but is **not required** — that flag + creator profile fields
-were intentionally stored in the existing `social_links` jsonb to avoid migration dependency.)
-
-### 0.3 Community feature set
-- **Pages/files:** `src/pages/CommunityPage.tsx` (feed), `CommunityPostPage.tsx` (detail),
-  `CreatorProfilePage.tsx`, `ExternalBookPage.tsx` (`/community/book/:slug`),
-  `src/components/CommunityCard.tsx`, `ImageCarousel.tsx`, `BadgeIcon.tsx`; backend in
-  `api/community.js` (all via `?action=`).
-- **Layout order:** Hero → Share → 🔎 Search → 🌷 Cozy Picks → 🆕 New Creations →
-  🔎 Explore (collapsed, bottom) → Featured Creators.
-- **Universal search** (`?action=search`): caption, book, creator, mediums, marker brands,
-  keywords, coloring-detail brands. Debounced/live. **Explore** = separate advanced filters
-  with its own internal search field.
-- **Post types** (`post_type`): 🎨 Artwork (default) / ✨ Tip / 🛍️ Tools. Tip & Tools show
-  `✨ How to` / `🛍️ Tools` badges on cards; Artwork = no badge.
-- **Cards** = static cover (NOT interactive), `🖼️ +N` multi-image indicator, 4:5 ratio.
-  **Detail** = full carousel (swipe, counter, thumbnails for 3+), boxed layout: Caption →
-  Book used → Coloring details (structured `medium — brand` pairs) → Creator recommendations
-  → reactions → "You may also like" carousel → comments.
-- **Create/edit form:** post-type selector, multi-image upload + crop (free aspect, "use
-  original"), Fluffy Pub product OR external book (autocomplete + dedup), **structured medium
-  rows** (dropdown + optional brand autocomplete), palettes, **keywords** (max 5, ≤20 chars,
-  lowercased, search-only, never shown), caption (300), recommended tools (creators/admin only).
-- **Tag/jsonb gotcha:** `mediums/markers/palettes/keywords/coloring_details` are jsonb;
-  PostgREST `.contains/.overlaps` does NOT match jsonb → all tag filtering/search/merge is done
-  **in-memory with case-insensitive normalization**. Don't revert to `.contains`.
-
-### 0.4 Fluffy Creator & commission
-- Community (open to all logged-in users) is **separate** from Fluffy Creator (apply→admin
-  approve, or admin invite). `affiliate_enabled` = the permission flag.
-- **Physical:** customer enters creator **code** at checkout → ฿10 off / ฿20 commission;
-  counts when order `delivered`.
-- **Digital:** `?ref=creatorId` on community product links (approved creators/**admin** only)
-  → `creator_commissions` ledger. Per-product: `commission_enabled`,
-  `creator_commission_percent` (def 5), `minimum_price_thb/usd` (def **99 / 2.99**). Status
-  **pending → confirmed (delivered) → paid** / cancelled. Never retroactive (`affiliate_approved_at`).
-- **Creator Dashboard** (`AffiliateDashboardPage.tsx`): time filters (7/30/90d/Month/All),
-  reactive summary cards, monthly summary, collapsible Physical/Digital/Payout sections (5 rows
-  + Load more), status pills + tooltips, friendly empty states, profile (bio/socials in
-  `social_links`) + emoji-or-image avatar upload.
-- **Admin** (`AdminPage.tsx`): Community Dashboard (posts table w/ filters+pagination,
-  curation, Tag Library incl. External Books approve/rename/merge/delete), invite creator by
-  search, digital-commission records + mark-paid, per-product commission settings, CMS for
-  homepage "Color Your World" + community badges.
-
-### 0.5 Roles (this iteration)
-- **Admin** = full access, treated as affiliate-enabled for community links, **never** sees
-  "Apply to Become a Fluffy Creator", has creator-dashboard access. Affiliate links = Fluffy
-  Creators **or** Admin only. Blog = admin only.
-- Customer avatar = emoji picker (no upload); Creator avatar = image upload; both in
-  `avatar_url`. `src/lib/avatar.ts` `isImageUrl()` decides emoji vs `<img>`.
-- Badges (`BadgeIcon.tsx`): 🌷 creator / 👤 member — admin-configurable emoji or image.
-
-### 0.6 Bugs fixed (don't reintroduce)
-- Crop modal: was cover-scale math on a `contain` display → wrong crop. Now `Math.min` +
-  default box = full image rect.
-- jsonb `.contains` filter returned nothing → in-memory normalized matching.
-- Universal search had a client method but no backend handler (405) → added.
-- Artists vanished sitewide: a query selected a not-yet-migrated `show_on_homepage` → moved to
-  `social_links`.
-- Creator avatar upload 403 → `'avatars'` folder allowed for any logged-in user in `upload.js`.
-- Revoke left creator "active" → now sets `affiliate_enabled=false` + request `status='revoked'`;
-  revoked creators auto-drop from Featured Creators.
-- Apply-page EN/TH mixing → guidelines render from translated defaults (not the CMS legal page).
-
-### 0.7 Deferred / TODO
-- **Comment system rework (NOT done):** one-level replies (`parent_id`), soft-delete
-  ("Deleted comment", keep replies), 15-min edit window, admin-delete-any. Needs a migration
-  (`community_comments.parent_id / edited_at / deleted`) + UI rewrite. (The post `✨ How to`
-  badge from that request IS done.)
-- Digital "clicks" tracking has no infra (dashboard shows Purchases = 1/row).
-- **Deploy reminder:** the code is committed/pushed, but the **migrations in §0.2 must be run
-  in Supabase** for the features to actually persist/work. Run them, then verify (§9 below if
-  present, or §0.4/0.5 expectations).
+| Layer | Technology |
+|---|---|
+| Frontend | React 18 + TypeScript + Vite SPA |
+| Routing | Custom hash router (`src/lib/router.tsx`) — no React Router |
+| Backend | Vercel Serverless Functions (`api/*.js`) |
+| Database | Supabase (PostgreSQL + PostgREST) |
+| Auth | Supabase JWT — decoded server-side, stored as `fluffy_token` in localStorage |
+| File Storage | Supabase Storage (images) + Cloudflare R2 (digital files: PDF, ZIP) |
+| Payments | PromptPay QR (Thailand) + PayPal (international) |
+| Email | Resend API |
+| Deployment | Vercel — auto-deploys from GitHub `main` branch |
 
 ---
 
-## 1. Tech Stack & Architecture
+## CRITICAL: Vercel Hobby 12-Function Cap
 
-- **Frontend:** React + TypeScript + Vite SPA. **Hash router** (`/#/...`), custom and tiny
-  (`src/lib/router.tsx`) — no React Router.
-- **Backend:** Vercel **serverless functions** in `/api/*.js` (Node, CommonJS).
-- **Database:** Supabase (PostgreSQL). The API uses the **service role key** (bypasses RLS);
-  all access control is enforced in code, not RLS.
-- **Storage:** Supabase Storage for uploads; **Cloudflare R2** for digital product files.
-- **Payments:** Thai **PromptPay** (QR + manual slip upload + admin approval). **PayPal.me**
-  link for USD digital-only orders. No automated payment verification.
-- **Hosting:** Vercel (Hobby plan). Auto-builds from `git push` (`buildCommand: vite build`).
-- **Deploy flow:** Push via **GitHub Desktop** only (no terminal git auth on this machine).
-  Vercel rebuilds the frontend AND the API from source on every push. The committed `dist/`
-  is rebuilt by Vercel, so it doesn't strictly matter, but we rebuild + commit it anyway.
+The project is AT the 12 serverless function limit. **Never add a new `api/*.js` file.**
+All new endpoints must go into an existing file using `?action=` or `?type=` query params.
 
-### Hard constraints (do not violate)
-- **Vercel Hobby = max 12 serverless functions.** We are AT the cap. `_lib.js` is a shared
-  module (not a function). **Never add a new `api/*.js` file** — fold new endpoints into an
-  existing file via `?action=` query params.
-  Current 12: `analytics, artists, auth, categories, debug, orders, pages, products,
-  promptpay, theme, upload, users`.
-- **Bilingual everywhere:** use `useLang().tRaw(th, en)` for user-facing text.
-- **THB is the base currency.** USD is secondary. Physical products are THB-only at checkout.
+Current 12 files:
+```
+_lib.js  analytics.js  artists.js  auth.js  categories.js  community.js
+orders.js  pages.js  products.js  promptpay.js  theme.js  upload.js
+```
 
 ---
 
-## 2. Repository Map
+## Environment Variables (Vercel Dashboard)
+
+| Variable | Purpose |
+|---|---|
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Bypasses RLS — server-side only |
+| `SUPABASE_ANON_KEY` | Public key |
+| `PROMPTPAY_ID` | PromptPay phone/tax number |
+| `RESEND_API_KEY` | Transactional email |
+| `EMAIL_FROM` | From address for emails |
+| `SITE_URL` | https://fluffypub.com |
+| `ADMIN_EMAIL` | fluffydrawing.th@gmail.com |
+| `R2_ACCOUNT_ID` | Cloudflare account ID |
+| `R2_BUCKET_NAME` | R2 bucket for digital files |
+| `R2_ACCESS_KEY_ID` | R2 credentials |
+| `R2_SECRET_ACCESS_KEY` | R2 credentials |
+
+---
+
+## Database Tables (Supabase)
+
+### Core
+| Table | Purpose |
+|---|---|
+| `profiles` | All users. `role`: customer / artist / admin. Has `artist_id`, `contact_email`, `social_links` |
+| `products` | Coloring books. `option_type`: physical / digital |
+| `categories` | Product categories |
+| `orders` | All orders. `payment_method`: promptpay / paypal. `payment_status`: pending / paid / cancelled |
+| `order_email_logs` | Tracks which confirmation emails were sent |
+| `theme` | Single-row live CMS config — colors, fonts, banners, maintenance mode |
+| `pages` | CMS pages |
+| `legal_pages` | Legal documents (terms, privacy, artist/affiliate agreements) |
+| `free_downloads` | Free downloadable resources |
+
+### Artists & Affiliates
+| Table | Purpose |
+|---|---|
+| `artist_requests` | Artist applications — status: pending / approved / rejected |
+| `artist_payouts` | Admin-managed payout records |
+| `affiliate_codes` | Discount codes linked to affiliates |
+| `affiliate_requests` | Affiliate program applications |
+| `affiliate_payouts` | Affiliate payout records |
+| `creator_commissions` | Commission tracking |
+
+### Community
+| Table | Purpose |
+|---|---|
+| `community_posts` | User artwork posts. Has `mediums`, `markers`, `palettes` jsonb arrays |
+| `community_reactions` | Post reactions: love / inspiring / cozy / cute_palette / want_to_try / save |
+| `community_highlights` | Admin events/announcements. Has `content_blocks` jsonb array, `card_size` (sm/md/lg) |
+| `community_follows` | User follow relationships |
+| `external_books` | Coloring books referenced in community but not sold in shop |
+
+### Journal
+| Table | Purpose |
+|---|---|
+| `journal_articles` | Bilingual articles. `title_th/en`, `excerpt_th/en`, `content_th/en` (HTML), `article_type`, `share_count` |
+| `journal_reactions` | Love / save per article per user |
+
+### Rule for every new table
+```sql
+grant all on <table> to service_role;
+grant all on <table> to authenticated;
+grant all on <table> to anon;
+notify pgrst, 'reload schema';
+```
+
+---
+
+## API File Map
+
+| File | Handles |
+|---|---|
+| `api/_lib.js` | Shared: supabase client, `getUser()`, `requireAuth()`, `json()` |
+| `api/auth.js` | Login, register, logout, me, reset password |
+| `api/products.js` | Product CRUD, search, `?mine=1` for artist's own products |
+| `api/orders.js` | Orders, payment slip upload, artist sales, email notifications |
+| `api/artists.js` | Artist profiles, requests (apply/approve/reject/revoke), `PUT ?action=me` |
+| `api/community.js` | Community posts, reactions, highlights — all via `?action=` |
+| `api/pages.js` | CMS pages (`?type=page`), free downloads (`?type=free-download`), legal (`?type=legal`), journal (`?type=journal`) |
+| `api/upload.js` | Supabase Storage images + Cloudflare R2 presigned URLs |
+| `api/theme.js` | Live site theme and label CMS |
+| `api/categories.js` | Product categories |
+| `api/promptpay.js` | Generate PromptPay QR code |
+| `api/analytics.js` | Admin dashboard stats |
+
+---
+
+## Frontend Structure
 
 ```
-api/
-  _lib.js        Shared: supabase client, getUser/requireAuth, json() (sets no-store)
-  auth.js        login / register / me / password reset / email confirm
-  users.js       profile (me), favorites, admin user list, AFFILIATE program + payouts,
-                 payout-account (shared artist+affiliate)
-  artists.js     artist profiles, artist requests/approve/reject/revoke, ARTIST payouts
-  products.js    products CRUD, ?mine=1 (artist), ?admin=1
-  orders.js      order create/pay/slip/status, artist+admin order views, AFFILIATE code
-                 validation & commission attribution, delivered_at stamping
-  pages.js       CMS pages, free downloads (?type=free-download), legal pages (?type=legal)
-  categories.js  category CRUD
-  theme.js       theme/CMS config (single row id=1)
-  promptpay.js   PromptPay QR generation
-  upload.js      signed upload URLs
-  analytics.js   admin dashboard stats
-  community.js   "Share Your Colorful World" community posts + reactions
-
 src/
-  lib/   auth.tsx, router.tsx, theme.tsx, cart.tsx, lang.tsx, favorites.tsx, api.ts,
-         useGuidelines.ts
-  pages/ HomePage, ProductsPage, ProductDetailPage, DigitalProductsPage, CartPage,
-         CheckoutPage, AccountPage, ArtistDashboardPage, AffiliateDashboardPage,
-         ArtistApplicationPage, AffiliateApplicationPage, AdminPage, ArtistsPage,
-         ArtistProfilePage, Legal/CMS/FreeDownload pages, etc.
-  components/ Navbar, Footer, ProductCard, ImageUpload, ...
-
-scripts/  *.sql migrations (run manually in Supabase SQL editor — see §7)
+├── lib/
+│   ├── api.ts          All fetch calls — single source of truth
+│   ├── auth.tsx        AuthContext — session, login/logout
+│   ├── router.tsx      Hash router — parses window.location.hash
+│   ├── theme.tsx       ThemeContext — live theme from /api/theme
+│   ├── lang.tsx        TH/EN language switching + translations
+│   ├── cart.tsx        Cart state (localStorage)
+│   └── favorites.tsx   Favorites state
+├── components/
+│   ├── Navbar.tsx
+│   └── Footer.tsx
+└── pages/              One file per route
 ```
 
-### `profiles` table = users AND artists
-A single `profiles` row per auth user. Key columns:
-- `role`: `customer | artist | admin` (admin forced for `fluffydrawing.th@gmail.com`)
-- `artist_id`: links a promoted user to an artist profile (self = own id)
-- `affiliate_enabled`: boolean — affiliate permission (independent of role)
-- `username`: public display name (separate from real name / address)
-- `payout_account_name / payout_bank_name / payout_account_number /
-  payout_payment_method / payout_note`: shared payout details (artist + affiliate)
-- standard: `name, first_name, last_name, email, phone, delivery_email,
-  shipping_address, province, postal_code, bio, avatar_url, artist_slug, favorites`
+---
+
+## Route Map
+
+| URL | File |
+|---|---|
+| `/` | `HomePage.tsx` |
+| `/products` | `ProductsPage.tsx` |
+| `/products/:slug` | `ProductDetailPage.tsx` |
+| `/digital-products` | `DigitalProductsPage.tsx` |
+| `/cart` | `CartPage.tsx` |
+| `/checkout` | `CheckoutPage.tsx` |
+| `/artists` | `ArtistsPage.tsx` |
+| `/artists/:slug` | `ArtistProfilePage.tsx` |
+| `/free-downloads` | `FreeDownloadsPage.tsx` |
+| `/free-downloads/:slug` | `FreeDownloadDetailPage.tsx` |
+| `/journal` | `JournalPage.tsx` |
+| `/journal/:slug` | `JournalArticlePage.tsx` |
+| `/community` | `CommunityPage.tsx` |
+| `/community/highlights` | `CommunityHighlightsPage.tsx` |
+| `/community/highlights/:id` | `HighlightDetailPage` (same file) |
+| `/community/creators` | `CommunityCreatorsPage.tsx` |
+| `/community/:id` | `CommunityPostPage.tsx` |
+| `/creator/:id` | `CreatorProfilePage.tsx` |
+| `/community/book/:slug` | `ExternalBookPage.tsx` |
+| `/account` | `AccountPage.tsx` — tabs: orders, saved, profile, favorites |
+| `/admin` | `AdminPage.tsx` — admin only |
+| `/artist-dashboard` | `ArtistDashboardPage.tsx` — artist only |
+| `/login` | `LoginPage.tsx` |
+| `/about-us` etc. | `LegalPage.tsx` |
 
 ---
 
-## 3. Core Business Rules
+## User Roles
 
-### Roles & permissions (a user can hold several at once)
-- **customer + artist + affiliate** can all be true simultaneously. Affiliate is a
-  *permission flag*, not a role.
-- **Artist access** = `role === 'artist'` (and `artist_id` set). Grants Artist Studio.
-- **Affiliate access** = `affiliate_enabled === true`. Grants Affiliate Dashboard.
+| Role | Access |
+|---|---|
+| `customer` | Shop, checkout, community, apply for artist/affiliate |
+| `artist` | + Read-only dashboard (own products, sales, earnings), edit own profile |
+| `admin` | Everything — full admin panel |
 
-### Artist royalties / earnings
-- Physical: **100 THB per item** (default; admin-editable per product
-  `artist_physical_royalty_thb`).
-- Digital: **80% of sale price** to artist (default; `digital_artist_royalty_percent`),
-  20% platform.
-- THB and USD earnings tracked separately.
-- Only paid statuses count: `paid, packing, shipped, delivered`.
-
-### Affiliate program
-- Codes: **uppercase, ≤10 chars, unique**. Each code has `discount_amount` (default 10 THB)
-  and `affiliate_commission` (default 20 THB), `active` flag.
-- Codes apply to **physical products ONLY**, **THB only**, **min ฿200** physical subtotal.
-- Discount applies to physical items only; digital items never discounted.
-- **Codes are REUSABLE** — any account/email may use a code on unlimited orders. The only
-  off-switch is the admin deactivating/deleting the code. (No one-per-customer limit.)
-- One affiliate code per order. Affiliates cannot use their own code.
-- **Commission counts ONLY when order `status = 'delivered'`** and the order has physical
-  items. Pending/submitted/cancelled/digital never count.
-- **Monthly payout bucket = delivery month** (`orders.delivered_at`, stamped when an order
-  first becomes delivered; falls back to `created_at` for old orders).
-- Affiliate dashboard summary cards are **lifetime cumulative**; the monthly payout
-  section is per-month.
-
-### Payouts (artist & affiliate)
-- Manual. Admin auto-calculates per artist/affiliate + month/year, can adjust the paid
-  amount, set status pending/paid, upload proof, add a note, record paid date.
-- Payout account details live on the user's own profile and are shown to the admin near
-  the payout form. For linked artists, the admin lookup resolves the promoted user's row.
-
-### Guidelines vs Policy vs Settings (keep separate)
-- **Guidelines** = short bullet list shown before requesting artist/affiliate (CMS Legal
-  Pages `artist-guidelines` / `affiliate-guidelines`, one bullet per line; parser handles
-  plain text OR HTML lists). Loaded via `src/lib/useGuidelines.ts` with built-in fallback.
-- **Policy/Agreement** = full docs (`artist-agreement` / `affiliate-agreement`), linked
-  from inside Artist Studio / Affiliate Dashboard (post-approval).
-- **Settings** = calculation values (royalty %, commission). Never mixed with copy.
+Admin is **double-gated**: role must be `admin` AND email must be `fluffydrawing.th@gmail.com`.
 
 ---
 
-## 4. Completed Systems
+## Key Features Summary
 
-- ✅ Storefront: products (physical/digital), product detail, cart, checkout, categories.
-  Homepage category cards deep-link to `/products?cat=<name>` (pre-filters the shop).
-  Homepage hero stats are CMS-editable and hide when left blank.
-- ✅ Auth: email/password, email confirm, password reset. `/me` is the single source of
-  truth; responses are `no-store` (uncacheable). `getUser` uses `select('*')` so a
-  not-yet-migrated column can never break auth.
-- ✅ Checkout: PromptPay (QR + slip upload + admin approve), PayPal.me (USD digital-only),
-  guest checkout, order tracking, confirmation emails.
-- ✅ Artist marketplace: request → admin approve (sets role+artist_id) → Artist Studio
-  (profile, products read-only, sales, earnings, payout account). Revoke supported.
-- ✅ Affiliate program: request → admin approve (sets affiliate_enabled + creates code) →
-  Affiliate Dashboard (code, earnings, history, payout account). Checkout code field.
-  Admin Affiliates tab (dropdown selector) with codes, earnings, monthly payouts, proof
-  upload, enable/disable, revoke.
-- ✅ Admin panel: dashboard, products, orders, artists, artist requests, artist payouts,
-  affiliate requests, affiliates, categories, CMS pages, free downloads, legal pages,
-  theme & CMS, language CMS.
-- ✅ Username (display name) for customers — editable in profile, shown in account header,
-  affiliate request name, and admin artist/affiliate request + payout dropdowns.
-- ✅ Legal pages fully dynamic: any single-segment slug (e.g. `/contactus`) resolves to a
-  legal page; unknown ones show LegalPage's own "not found" (no homepage redirect).
+### Shop
+- Physical (THB only) and digital (THB or USD) products
+- PromptPay QR + PayPal checkout
+- Order confirmation emails via Resend
+- Guest checkout with order tracking
 
----
+### Artist System
+- Customer applies → admin approves/rejects in Admin → Artist Requests tab
+- Approved: `role` set to `artist`, optional `artist_id` links to existing artist profile
+- Admin can revoke back to `customer` — products/orders preserved
+- Artist dashboard is read-only (no create/delete/publish/price changes)
 
-## 5. Known Recurring Pitfalls (root causes, now fixed — keep in mind)
+### Affiliate System
+- Separate application and approval flow
+- Discount codes (`affiliate_codes`), commissions tracked in `creator_commissions`
 
-These caused repeated "approved but can't access dashboard" bugs. Root causes & fixes:
-1. **Cached `/me`** — browser served stale current-user. Fix: `json()` sends
-   `Cache-Control: no-store`; client `refreshUser()` uses `cache:'no-store'` + cache-bust.
-2. **Curated SELECT breaking on new columns** — adding a column to a hand-listed select
-   threw `42703` and dropped fields/logged users out. Fix: `getUser` uses `select('*')`.
-3. **upsert clobbering role** — a transient profile read fell through to an upsert that
-   reset role to `customer`. Fix: insert-only when truly missing; never overwrite role.
-4. **Profile page used request *status* while guards used *permission*.** Rule: request
-   status ≠ permission. Always gate on profile permission fields.
-5. **Affiliate access made server-authoritative** — the Account card and the dashboard now
-   verify via `getMyAffiliate()` (server checks `affiliate_enabled` in DB) instead of
-   trusting the possibly-stale client flag.
+### Community
+- Artwork post feed with tags, reactions, bookmarks
+- Follow creators
+- Highlights & Events: admin cards with rich text+image blocks, widget-style grid sizes (sm/md/lg)
 
-**Golden rule going forward:** run the SQL migration BEFORE pushing code that uses a new
-column (migrations are `add column if not exists`, safe to run early). This eliminates the
-"works after refresh / rerun SQL" class of bug entirely.
+### Fluffy Journal
+- Bilingual TH/EN articles written in Thai, auto-translated via Google Translate (no API key)
+- Rich text editor in admin: Bold, Italic, H2/H3, lists, links, inline image upload
+- 4 categories: มุมระบายสี / มุมอุปกรณ์ / มุมโปรด / เล่าให้ฟัง
+- Detail page: 2-column desktop (image left, info+reactions right), stacks on mobile
+- Reactions: Love / Save / Share. Saved articles appear in Account → Saved tab
+
+### Theme & CMS
+- Admin changes colors, fonts, hero text, banner, maintenance mode — live without redeploy
+- Nav labels customizable per language via Language CMS in admin
 
 ---
 
-## 6. Unresolved / Watch-list
+## Deployment
 
-- **No automated payment verification** (by design) — admin manually approves PromptPay
-  slips.
-- **Legal page content is single-language** (one `content` field). Guidelines fall back to
-  bilingual defaults until edited, but once an admin edits, it's whatever language they
-  type. True per-language legal CMS is a future enhancement.
-- **Linked-artist payout edge case:** payout account is on the user's own profile; the
-  admin Artist Payouts lookup resolves the promoted user for linked artists. Self-promoted
-  artists (the common case) are unaffected.
-- **Username not yet surfaced** in public-facing spots beyond account header / requests
-  (e.g., no public reviews/profile use yet).
-- **Pre-existing TypeScript errors** exist (theme fields, Navbar) — Vite build ignores them
-  (`vite build` doesn't typecheck). Not blocking, but `tsc --noEmit` is noisy.
-- **Bundle size** > 500kB (single chunk) — code-splitting is a future optimization.
+1. Push to `main` on GitHub (via GitHub Desktop)
+2. Vercel auto-builds and deploys (~1–2 min)
+3. Database migrations run manually in **Supabase → SQL Editor**
+
+### Pending migrations (run in order if not yet done)
+```
+scripts/migrate_journal_v1.sql      — creates journal_articles table
+scripts/migrate_highlights_v2.sql   — adds content_blocks to community_highlights
+scripts/migrate_highlights_v3.sql   — adds card_size to community_highlights
+scripts/migrate_journal_v2.sql      — creates journal_reactions + share_count column
+```
 
 ---
 
-## 7. Database Migrations (run manually in Supabase SQL editor)
+## Gotchas & Rules
 
-All are idempotent (`if not exists`). Run a migration **before** deploying code that needs
-its columns. Affiliate-related (most recent work):
-- `migrate_affiliate.sql` — affiliate_enabled, affiliate_requests, affiliate_codes,
-  affiliate_payouts, payout_* columns, grants.
-- `migrate_delivered_at.sql` — `orders.delivered_at` (+ backfill) for delivery-month payout
-  buckets. **Required.**
-- `migrate_username.sql` — `profiles.username`. **Required for username features.**
-- `seed_guidelines.sql` — creates editable Legal Pages: artist/affiliate guidelines +
-  agreements (won't overwrite existing edits).
-
-Older: earnings, currency/USD pricing, artist requests, email logs, free downloads, guest
-token, payment-submitted, R2 fields, search keywords, plus base `schema*.sql`.
-
-> If new tables ever raise "permission denied for table ...", add
-> `grant all privileges on <table> to anon, authenticated, service_role;`
-
----
-
-## 8. Future Roadmap (suggested)
-
-- Per-language legal/CMS content (TH/EN fields).
-- Surface usernames publicly (reviews, artist credits).
-- Affiliate analytics (clicks, conversion), shareable referral links.
-- Automated payout exports / accounting integration.
-- Code-splitting & performance pass.
-- Optional: stricter TypeScript (resolve pre-existing errors, add CI typecheck).
-
----
-
-## 9. Development Rules (read before changing code)
-
-1. **Never add a new `api/*.js` file** (12-function cap). Fold into existing via `?action=`.
-2. **Do not change** without explicit need: checkout flow, order creation, payment/PromptPay,
-   PayPal, digital download/R2 logic, artist payout calculation. These are load-bearing.
-3. **Run the SQL migration before pushing** code that references a new column.
-4. **All user-facing strings bilingual** via `tRaw(th, en)`.
-5. **THB behavior must stay unchanged**; physical = THB only.
-6. **Permission, not request status**, gates dashboard access. Prefer server-authoritative
-   checks for affiliate access.
-7. **API responses stay uncacheable** (`json()` already sets no-store) — don't reintroduce
-   caching on user/permission endpoints.
-8. **Use `select('*')` (or tolerant queries) for the profile** in auth paths; don't
-   hand-list columns that break when a migration lags.
-9. **Verify with a build** (`npx vite build`) and, for API, `node -e "require('./api/x.js')"`
-   to catch syntax errors. Use the preview tools to sanity-check UI where possible.
-10. Admin is `fluffydrawing.th@gmail.com` (role forced to admin client+server side).
-
----
-
-## 10. Key Accounts / Config
-
-- **Admin email:** `fluffydrawing.th@gmail.com`
-- **Env (Vercel):** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SITE_URL`, R2 creds,
-  email creds. (Not in repo.)
-- **Git author:** fluffydrawingth · default branch `main`.
+| Rule | Detail |
+|---|---|
+| No new API files | 12-function hard cap — use `?action=` or `?type=` in existing files |
+| PUT is unreliable on Vercel | All updates use `POST ?action=...-update` instead |
+| New tables need GRANTs | `grant all on <table> to service_role/authenticated/anon` + `notify pgrst, 'reload schema'` |
+| `uploadFile` returns `publicUrl` | Always use `r.publicUrl` not `r.url` |
+| Auth token key | `fluffy_token` in localStorage, sent as `Authorization: Bearer <token>` |
+| `content_blocks` format | jsonb array: `[{ type: 'text', value: '...' }, { type: 'image', url: '...' }]` |
+| Journal content is HTML | Stored as raw HTML from rich text editor, rendered with `dangerouslySetInnerHTML` |
+| Journal reactions API | `GET ?action=reactions&id=` must NOT be caught by the admin-only `GET && id` block — always guard that block with `&& !action` |
+| RichEditor init | Uses `useLayoutEffect` (not `useEffect`) so innerHTML is set synchronously before blur fires |
