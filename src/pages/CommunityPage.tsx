@@ -53,6 +53,7 @@ export default function CommunityPage() {
   const [exploreQ, setExploreQ] = useState('');
   const [postTab, setPostTab] = useState<'all' | 'gallery' | 'tips'>('all');
   const [cozy, setCozy] = useState<any[]>([]);
+  const [headerHighlights, setHeaderHighlights] = useState<any[]>([]);
   const [highlights, setHighlights] = useState<any[]>([]);
   const [discoverCreators, setDiscoverCreators] = useState<any[]>([]);
   const [curation, setCuration] = useState<{ featured_books: any[]; featured_creators: any[] }>({ featured_books: [], featured_creators: [] });
@@ -64,6 +65,7 @@ export default function CommunityPage() {
 
   useEffect(() => {
     api.getCommunityCozyPicks().then((d: any) => setCozy(d?.posts || [])).catch(() => {});
+    (api as any).getHeaderHighlights().then((d: any) => setHeaderHighlights(d?.highlights || [])).catch(() => {});
     api.getCommunityHighlights().then((d: any) => setHighlights(d?.highlights || [])).catch(() => {});
     api.getCommunityCreators({ sort: 'featured', limit: 4 }).then((d: any) => setDiscoverCreators(d?.creators || [])).catch(() => {});
     api.getCommunityCuration().then((d: any) => setCuration({ featured_books: d?.featured_books || [], featured_creators: d?.featured_creators || [] })).catch(() => {});
@@ -126,6 +128,40 @@ export default function CommunityPage() {
         </div>
 
         {showForm && user && <UploadForm theme={theme} p={p} tRaw={tRaw} onPosted={onPosted} user={user} />}
+
+        {/* ✨ What's happening — header highlight widget (optional, admin-pinned, max 3) */}
+        {isAll && headerHighlights.length > 0 && (
+          <div style={{ maxWidth: 680, margin: '0 auto 20px', background: `linear-gradient(135deg,${p}08,${p}04)`, borderRadius: 18, border: `1.5px solid ${p}18`, padding: '12px 14px' }}>
+            <div style={{ fontSize: 11.5, fontWeight: 800, color: p, letterSpacing: 0.5, textTransform: 'uppercase' as const, marginBottom: 8, opacity: 0.75 }}>✨ {tRaw('ตอนนี้มีอะไร', "What's happening")}</div>
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+              {headerHighlights.map((h: any) => {
+                const TYPE_EMOJI: Record<string, string> = { challenge: '🏆', giveaway: '🎁', announcement: '📢', partner: '🤝', sponsored: '⭐' };
+                const emoji = TYPE_EMOJI[h.type] || '✨';
+                const dest = h.link_url || `/community/highlights#${h.id}`;
+                const isExternal = h.link_url && (h.link_url.startsWith('http://') || h.link_url.startsWith('https://'));
+                return (
+                  <button key={h.id}
+                    onClick={() => isExternal ? window.open(h.link_url, '_blank', 'noopener') : navigate(`/community/highlights/${h.id}`)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'white', border: `1px solid ${p}15`, borderRadius: 12, padding: '8px 12px', cursor: 'pointer', textAlign: 'left' as const, fontFamily: theme.fontFamily, width: '100%', transition: 'box-shadow 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.boxShadow = `0 2px 10px ${p}20`}
+                    onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
+                    <span style={{ fontSize: 18, flexShrink: 0 }}>{emoji}</span>
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.title}</span>
+                    {h.end_date && (() => {
+                      const days = Math.ceil((new Date(h.end_date).getTime() - Date.now()) / 86400000);
+                      return days >= 0 && days <= 14 ? (
+                        <span style={{ fontSize: 10.5, fontWeight: 700, color: days <= 3 ? '#ef4444' : '#f59e0b', background: days <= 3 ? '#fef2f2' : '#fffbeb', borderRadius: 8, padding: '2px 7px', flexShrink: 0 }}>
+                          {days === 0 ? tRaw('วันนี้!', 'Today!') : `${days}d`}
+                        </span>
+                      ) : null;
+                    })()}
+                    <span style={{ fontSize: 12, color: p, flexShrink: 0, fontWeight: 700 }}>→</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* 🔎 Universal search — searches captions, books, creators, markers, mediums, palettes */}
         <div style={{ maxWidth: 620, margin: '0 auto 22px' }}>
@@ -215,27 +251,18 @@ export default function CommunityPage() {
           </>
         )}
 
-        {/* 5. ✨ Highlights & Events — max 3 active items */}
+        {/* 6. Highlights & Events — secondary section, less prominent */}
         {isAll && highlights.length > 0 && (
           <div style={{ marginTop: 36 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 900, color: theme.textColor, margin: 0 }}>✨ {tRaw('ไฮไลท์และกิจกรรม', 'Highlights & Events')}</h2>
-              {highlights.length > 3 && (
-                <button onClick={() => navigate('/community/highlights')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 13, fontWeight: 700, padding: 0 }}>{tRaw('ดูทั้งหมด →', 'See all →')}</button>
-              )}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: theme.textColor + 'bb' }}>✨ {tRaw('ไฮไลท์และกิจกรรม', 'Highlights & Events')}</div>
+              <button onClick={() => navigate('/community/highlights')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 12.5, fontWeight: 700, padding: 0 }}>{tRaw('ดูทั้งหมด →', 'See all →')}</button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 12 }}>
               {highlights.slice(0, 3).map((h: any) => (
                 <HighlightCard key={h.id} h={h} p={p} theme={theme} lang={lang} tRaw={tRaw} />
               ))}
             </div>
-            {highlights.length > 3 && (
-              <div style={{ textAlign: 'center', marginTop: 14 }}>
-                <button onClick={() => navigate('/community/highlights')} style={{ background: 'transparent', border: `1.5px solid ${p}40`, color: p, cursor: 'pointer', padding: '8px 24px', borderRadius: 20, fontSize: 13, fontWeight: 700, fontFamily: theme.fontFamily }}>
-                  {tRaw('ดูทั้งหมด →', 'See all →')}
-                </button>
-              </div>
-            )}
           </div>
         )}
 

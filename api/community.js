@@ -1113,6 +1113,12 @@ module.exports = async function handler(req, res) {
 
   // ─────────────────── Highlights & Events ───────────────────
 
+  // GET ?action=header-highlights — public, active items pinned to header (max 3)
+  if (req.method === 'GET' && action === 'header-highlights') {
+    const { data } = await supabase.from('community_highlights').select('*').eq('status', 'active').eq('show_in_header', true).order('sort_order').order('start_date', { ascending: false }).limit(3);
+    return json(res, 200, { highlights: data || [] });
+  }
+
   // GET ?action=highlights[&type=challenge|giveaway|...] — public, active items only
   if (req.method === 'GET' && action === 'highlights') {
     const type = req.query.type;
@@ -1154,6 +1160,7 @@ module.exports = async function handler(req, res) {
       sort_order: parseInt(b.sort_order) || 0,
       content_blocks: Array.isArray(b.content_blocks) ? b.content_blocks : [],
       card_size: ['sm','md','lg'].includes(b.card_size) ? b.card_size : 'md',
+      show_in_header: !!b.show_in_header,
     };
     const { data, error } = await supabase.from('community_highlights').insert(row).select().single();
     if (error) return json(res, 400, { error: error.message });
@@ -1178,6 +1185,7 @@ module.exports = async function handler(req, res) {
     if (b.sort_order !== undefined) upd.sort_order = parseInt(b.sort_order) || 0;
     if (b.content_blocks !== undefined) upd.content_blocks = Array.isArray(b.content_blocks) ? b.content_blocks : [];
     if (b.card_size !== undefined && ['sm','md','lg'].includes(b.card_size)) upd.card_size = b.card_size;
+    if (b.show_in_header !== undefined) upd.show_in_header = !!b.show_in_header;
     const { error } = await supabase.from('community_highlights').update(upd).eq('id', id);
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, { success: true });

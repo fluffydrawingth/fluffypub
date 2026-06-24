@@ -2613,7 +2613,7 @@ const HL_TYPES = ['challenge','giveaway','announcement','partner','sponsored'] a
 type HLType = typeof HL_TYPES[number];
 const HL_STATUSES = ['draft','active','expired'] as const;
 
-const EMPTY_HL = { title:'', type:'announcement' as HLType, cover_image:'', description:'', start_date:'', end_date:'', link_url:'', status:'draft' as string, sort_order:0, content_blocks:[] as any[], card_size:'md' as string };
+const EMPTY_HL = { title:'', type:'announcement' as HLType, cover_image:'', description:'', start_date:'', end_date:'', link_url:'', status:'draft' as string, sort_order:0, content_blocks:[] as any[], card_size:'md' as string, show_in_header:false as boolean };
 
 function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}) {
   const [items, setItems] = React.useState<any[]>([]);
@@ -2628,7 +2628,7 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
   React.useEffect(()=>{ load(); },[]);
 
   const openNew = () => { setEditing('new'); setForm({...EMPTY_HL, content_blocks:[]}); };
-  const openEdit = (h:any) => { setEditing(h.id); setForm({ title:h.title||'', type:h.type||'announcement', cover_image:h.cover_image||'', description:h.description||'', start_date:h.start_date||'', end_date:h.end_date||'', link_url:h.link_url||'', status:h.status||'draft', sort_order:h.sort_order||0, content_blocks:Array.isArray(h.content_blocks)?h.content_blocks:[], card_size:h.card_size||'md' }); };
+  const openEdit = (h:any) => { setEditing(h.id); setForm({ title:h.title||'', type:h.type||'announcement', cover_image:h.cover_image||'', description:h.description||'', start_date:h.start_date||'', end_date:h.end_date||'', link_url:h.link_url||'', status:h.status||'draft', sort_order:h.sort_order||0, content_blocks:Array.isArray(h.content_blocks)?h.content_blocks:[], card_size:h.card_size||'md', show_in_header:!!h.show_in_header }); };
   const cancel = () => { setEditing(null); };
 
   const save = async () => {
@@ -2793,6 +2793,20 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
             </div>
           </div>
 
+          {/* Show in header widget toggle */}
+          <div style={{marginBottom:16,padding:'12px 14px',borderRadius:12,border:`1.5px solid ${form.show_in_header?P+'50':'#e5e7eb'}`,background:form.show_in_header?P+'06':'#fafafa'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:800,color:'#1e293b'}}>📌 Show in "What's happening" widget</div>
+                <div style={{fontSize:11.5,color:'#6b7280',marginTop:2}}>Pin to the Community page header (max 3 active items). Good for urgent announcements or active challenges.</div>
+              </div>
+              <button type="button" onClick={()=>setForm((f:any)=>({...f,show_in_header:!f.show_in_header}))}
+                style={{flexShrink:0,padding:'7px 16px',borderRadius:20,border:'none',cursor:'pointer',fontSize:13,fontWeight:800,fontFamily:'inherit',background:form.show_in_header?P:'#e5e7eb',color:form.show_in_header?'white':'#6b7280',transition:'all 0.15s'}}>
+                {form.show_in_header ? '✓ Yes' : 'No'}
+              </button>
+            </div>
+          </div>
+
           <div style={{display:'flex',gap:8,marginTop:4}}>
             <button onClick={save} disabled={saving} style={{padding:'9px 22px',borderRadius:10,border:'none',background:P,color:'white',cursor:saving?'wait':'pointer',fontSize:13,fontWeight:800}}>{saving?'Saving…':'💾 Save'}</button>
             <button onClick={cancel} style={{padding:'9px 16px',borderRadius:10,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:13,fontWeight:700,color:'#374151'}}>Cancel</button>
@@ -2813,7 +2827,10 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
             <div key={h.id} style={{...card,padding:'12px 16px',display:'flex',gap:12,alignItems:'center'}}>
               {h.cover_image && <img src={h.cover_image} alt="" style={{width:60,height:44,objectFit:'cover',borderRadius:8,flexShrink:0}} />}
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:13,fontWeight:800,color:'#1e293b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{h.title}</div>
+                <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:1}}>
+                  <span style={{fontSize:13,fontWeight:800,color:'#1e293b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{h.title}</span>
+                  {h.show_in_header && <span style={{fontSize:10,fontWeight:800,padding:'2px 7px',borderRadius:8,background:P+'18',color:P,flexShrink:0,whiteSpace:'nowrap'}}>📌 Header</span>}
+                </div>
                 <div style={{fontSize:11.5,color:'#94a3b8'}}>{h.type} {h.end_date?`· ends ${h.end_date}`:''}</div>
               </div>
               <span style={{fontSize:11,fontWeight:700,padding:'3px 9px',borderRadius:10,background:statusColor(h.status)+'20',color:statusColor(h.status),flexShrink:0}}>{h.status}</span>

@@ -179,6 +179,7 @@ export const api = {
   // Community Curation
   getCommunityCuration: () => fetch('/api/community?action=curation').then(r => r.json()),
   // Highlights & Events
+  getHeaderHighlights: () => fetch('/api/community?action=header-highlights').then(r => r.json()),
   getCommunityHighlights: (type?: string) => fetch(`/api/community?action=highlights${type ? '&type=' + type : ''}`).then(r => r.json()),
   getCommunityHighlight: (id: string) => fetch(`/api/community?action=highlights&id=${id}`).then(r => r.json()),
   getAdminHighlights: () => fetch('/api/community?action=admin-highlights', { headers: h() }).then(r => r.json()),
