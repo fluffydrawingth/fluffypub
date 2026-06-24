@@ -232,8 +232,8 @@ async function handleJournal(req, res) {
     return json(res, 200, data);
   }
 
-  // GET single by id (admin)
-  if (req.method === 'GET' && id) {
+  // GET single by id (admin) — must check !action so reactions/saved don't fall through here
+  if (req.method === 'GET' && id && !action) {
     const user = await requireAuth(req, res, ['admin']); if (!user) return;
     const { data, error } = await supabase.from('journal_articles').select('*').eq('id', id).single();
     if (error || !data) return json(res, 404, { error: 'Not found' });
