@@ -9,7 +9,7 @@ const TYPE_META: Record<string, { label: { th: string; en: string }; emoji: stri
   tips:      { label: { th: 'มุมระบายสี',  en: 'Coloring Tips' }, emoji: '🎨' },
   tools:     { label: { th: 'มุมอุปกรณ์',  en: 'Tools' },         emoji: '🖍️' },
   favorites: { label: { th: 'มุมโปรด',     en: 'My Favorites' },  emoji: '🩷' },
-  journal:   { label: { th: 'เล่าให้ปัง',  en: 'Journal' },       emoji: '📔' },
+  journal:   { label: { th: 'เล่าให้ฟัง',  en: 'Journal' },       emoji: '📔' },
 };
 
 function readingTime(contentTh?: string, contentEn?: string): string {
@@ -163,13 +163,11 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
           ← {tRaw('Fluffy Journal', 'Fluffy Journal')}
         </button>
 
-        {/* Cover image — 16:9, contain, white bg, max-width 900px */}
+        {/* Cover image — natural ratio, centered, no forced container */}
         {article.cover_image && (
-          <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 36, background: 'white', border: '1.5px solid #f1f5f9', maxWidth: 900 }}>
-            <div style={{ aspectRatio: '16/9', overflow: 'hidden' }}>
-              <img src={article.cover_image} alt={title}
-                style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
-            </div>
+          <div style={{ marginBottom: 36, textAlign: 'center' }}>
+            <img src={article.cover_image} alt={title}
+              style={{ maxWidth: '100%', width: 'auto', maxHeight: 550, display: 'block', margin: '0 auto', borderRadius: 20, objectFit: 'contain' }} />
           </div>
         )}
 
@@ -223,11 +221,11 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
                 return (
                   <div key={a.id} onClick={() => { navigate(`/journal/${a.slug}`); window.scrollTo(0, 0); }}
                     style={{ background: 'white', borderRadius: 16, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', border: `1.5px solid ${p}12` }}>
-                    {/* 16:9 contain */}
-                    <div style={{ aspectRatio: '16/9', background: 'white', overflow: 'hidden', borderBottom: '1px solid #f1f5f9' }}>
+                    {/* 16:9 thumbnail, cover crop */}
+                    <div style={{ aspectRatio: '16/9', background: `linear-gradient(135deg,${p}18,${p}08)`, overflow: 'hidden' }}>
                       {a.cover_image
-                        ? <img src={a.cover_image} alt={rtitle} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
-                        : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, background: `linear-gradient(135deg,${p}12,${p}06)` }}>📝</div>
+                        ? <img src={a.cover_image} alt={rtitle} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
+                        : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>📝</div>
                       }
                     </div>
                     <div style={{ padding: '12px 14px 14px' }}>

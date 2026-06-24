@@ -3160,19 +3160,22 @@ function CategoriesTab() {
 function RichEditor({ value, onChange, onImageUpload }: { value: string; onChange: (v: string) => void; onImageUpload?: (file: File) => Promise<string | null> }) {
   const ref = React.useRef<HTMLDivElement>(null);
   const [imgUploading, setImgUploading] = React.useState(false);
-  const lastHtml = React.useRef(value);
+  // Track whether we've done the initial population — don't fire onChange until user actually types
+  const initialized = React.useRef(false);
+  const lastHtml = React.useRef('');
 
-  React.useEffect(() => {
-    if (ref.current && ref.current.innerHTML !== value) {
-      ref.current.innerHTML = value;
-      lastHtml.current = value;
-    }
-  }, [value]);
+  // Use layout effect so innerHTML is set synchronously before any browser events can fire
+  React.useLayoutEffect(() => {
+    if (!ref.current) return;
+    ref.current.innerHTML = value || '';
+    lastHtml.current = value || '';
+    initialized.current = true;
+  }, []); // only on mount — value is stable via key prop on parent
 
   const exec = (cmd: string, val?: string) => { document.execCommand(cmd, false, val); ref.current?.focus(); };
 
   const handleInput = () => {
-    if (!ref.current) return;
+    if (!ref.current || !initialized.current) return;
     const html = ref.current.innerHTML;
     if (html !== lastHtml.current) { lastHtml.current = html; onChange(html); }
   };
@@ -3236,7 +3239,7 @@ function RichEditor({ value, onChange, onImageUpload }: { value: string; onChang
 
 // ── Fluffy Journal Tab ────────────────────────────────────────────────────────
 const JOURNAL_TYPES = ['tips','tools','favorites','journal'] as const;
-const JOURNAL_TYPE_LABELS: Record<string,string> = { tips:'🎨 มุมระบายสี / Coloring Tips', tools:'🖍️ มุมอุปกรณ์ / Tools', favorites:'🩷 มุมโปรด / My Favorites', journal:'📔 เล่าให้ปัง / Journal' };
+const JOURNAL_TYPE_LABELS: Record<string,string> = { tips:'🎨 มุมระบายสี / Coloring Tips', tools:'🖍️ มุมอุปกรณ์ / Tools', favorites:'🩷 มุมโปรด / My Favorites', journal:'📔 เล่าให้ฟัง / Journal' };
 const EMPTY_ARTICLE = { title_th:'', title_en:'', excerpt_th:'', excerpt_en:'', content_th:'', content_en:'', article_type:'tips', cover_image:'', status:'draft', sort_order:0 };
 
 function JournalTab() {
