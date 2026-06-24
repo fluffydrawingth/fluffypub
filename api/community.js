@@ -1152,6 +1152,7 @@ module.exports = async function handler(req, res) {
       link_url: b.link_url || null,
       status: ['draft','active','expired'].includes(b.status) ? b.status : 'draft',
       sort_order: parseInt(b.sort_order) || 0,
+      content_blocks: Array.isArray(b.content_blocks) ? b.content_blocks : [],
     };
     const { data, error } = await supabase.from('community_highlights').insert(row).select().single();
     if (error) return json(res, 400, { error: error.message });
@@ -1174,6 +1175,7 @@ module.exports = async function handler(req, res) {
     if (b.link_url !== undefined) upd.link_url = b.link_url || null;
     if (b.status !== undefined && ['draft','active','expired'].includes(b.status)) upd.status = b.status;
     if (b.sort_order !== undefined) upd.sort_order = parseInt(b.sort_order) || 0;
+    if (b.content_blocks !== undefined) upd.content_blocks = Array.isArray(b.content_blocks) ? b.content_blocks : [];
     const { error } = await supabase.from('community_highlights').update(upd).eq('id', id);
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, { success: true });

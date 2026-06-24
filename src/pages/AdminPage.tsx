@@ -12,7 +12,7 @@ import ImageCropEditor from '../components/ImageCropEditor';
 import HtmlEditor from '../components/HtmlEditor';
 
 const ADMIN_EMAIL = 'fluffydrawing.th@gmail.com';
-type Tab = 'dashboard'|'products'|'orders'|'artists'|'artist-requests'|'payouts'|'affiliate-requests'|'affiliates'|'community'|'categories'|'journal'|'pages'|'free-downloads'|'legal'|'policies'|'theme'|'lang';
+type Tab = 'dashboard'|'products'|'orders'|'artists'|'artist-requests'|'payouts'|'affiliate-requests'|'affiliates'|'community'|'categories'|'journal'|'free-downloads'|'legal'|'policies'|'theme'|'lang';
 
 function NavItem({icon,label,active,onClick}:any) {
   return (
@@ -40,7 +40,7 @@ export default function AdminPage() {
   const TAB_LABELS: Record<Tab, string> = {
     dashboard:'Dashboard', products:'Products', orders:'Orders', artists:'Artists', 'artist-requests':'Artist Requests', payouts:'Artist Payouts',
     'affiliate-requests':'Fluffy Creator Requests', affiliates:'Fluffy Creators', community:'Community Dashboard',
-    categories:'Categories', journal:'Fluffy Journal', pages:'Pages', 'free-downloads':'Free Downloads', legal:'Legal Pages', policies:'Creator & Artist Policies', theme:'Theme & CMS', lang:'Language CMS',
+    categories:'Categories', journal:'Fluffy Journal', 'free-downloads':'Free Downloads', legal:'Legal Pages', policies:'Creator & Artist Policies', theme:'Theme & CMS', lang:'Language CMS',
   };
 
   const selectTab = (t: Tab) => { setTab(t); setSidebarOpen(false); };
@@ -68,7 +68,6 @@ export default function AdminPage() {
         <NavItem icon="🌈" label="Community Dashboard"  active={tab==='community'}        onClick={()=>selectTab('community')} />
         <NavItem icon="🏷️" label="Categories"   active={tab==='categories'} onClick={()=>selectTab('categories')} />
         <NavItem icon="📝" label="Fluffy Journal" active={tab==='journal'}   onClick={()=>selectTab('journal')} />
-        <NavItem icon="📄" label="Pages"          active={tab==='pages'}           onClick={()=>selectTab('pages')} />
         <NavItem icon="⬇️" label="Free Downloads" active={tab==='free-downloads'}  onClick={()=>selectTab('free-downloads')} />
         <NavItem icon="⚖️" label="Legal Pages"    active={tab==='legal'}           onClick={()=>selectTab('legal')} />
         <NavItem icon="📜" label="Creator & Artist Policies" active={tab==='policies'} onClick={()=>selectTab('policies')} />
@@ -121,7 +120,6 @@ export default function AdminPage() {
         {tab==='community'       && <CommunityDashboardTab />}
         {tab==='categories' && <CategoriesTab />}
         {tab==='journal'         && <JournalTab />}
-        {tab==='pages'           && <PagesCMSTab />}
         {tab==='free-downloads'  && <FreeDownloadsTab />}
         {tab==='legal'           && <LegalPagesTab />}
         {tab==='policies'        && <PoliciesTab />}
@@ -2615,7 +2613,7 @@ const HL_TYPES = ['challenge','giveaway','announcement','partner','sponsored'] a
 type HLType = typeof HL_TYPES[number];
 const HL_STATUSES = ['draft','active','expired'] as const;
 
-const EMPTY_HL = { title:'', type:'announcement' as HLType, cover_image:'', description:'', start_date:'', end_date:'', link_url:'', status:'draft' as string, sort_order:0 };
+const EMPTY_HL = { title:'', type:'announcement' as HLType, cover_image:'', description:'', start_date:'', end_date:'', link_url:'', status:'draft' as string, sort_order:0, content_blocks:[] as any[] };
 
 function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}) {
   const [items, setItems] = React.useState<any[]>([]);
@@ -2624,12 +2622,13 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
   const [form, setForm] = React.useState<any>(EMPTY_HL);
   const [saving, setSaving] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
+  const [blockUploading, setBlockUploading] = React.useState<number|null>(null);
 
   const load = () => { api.getAdminHighlights().then((d:any)=>{ setItems(d?.highlights||[]); setLoading(false); }).catch(()=>setLoading(false)); };
   React.useEffect(()=>{ load(); },[]);
 
-  const openNew = () => { setEditing('new'); setForm({...EMPTY_HL}); };
-  const openEdit = (h:any) => { setEditing(h.id); setForm({ title:h.title||'', type:h.type||'announcement', cover_image:h.cover_image||'', description:h.description||'', start_date:h.start_date||'', end_date:h.end_date||'', link_url:h.link_url||'', status:h.status||'draft', sort_order:h.sort_order||0 }); };
+  const openNew = () => { setEditing('new'); setForm({...EMPTY_HL, content_blocks:[]}); };
+  const openEdit = (h:any) => { setEditing(h.id); setForm({ title:h.title||'', type:h.type||'announcement', cover_image:h.cover_image||'', description:h.description||'', start_date:h.start_date||'', end_date:h.end_date||'', link_url:h.link_url||'', status:h.status||'draft', sort_order:h.sort_order||0, content_blocks:Array.isArray(h.content_blocks)?h.content_blocks:[] }); };
   const cancel = () => { setEditing(null); };
 
   const save = async () => {
@@ -2648,14 +2647,27 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
     flash('✓ Deleted'); load();
   };
 
-  const uploadImg = async (e:React.ChangeEvent<HTMLInputElement>) => {
+  const uploadCover = async (e:React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     setUploading(true);
-    let r: any = null;
-    try { r = await api.uploadFile(file, 'community'); } catch {}
+    let r:any=null; try { r = await api.uploadFile(file,'community'); } catch {}
     setUploading(false);
-    if (!r?.publicUrl) return flash('⚠️ Upload failed' + (r?.error ? ': ' + r.error : ''));
-    setForm((f:any)=>({...f, cover_image: r.publicUrl}));
+    if (!r?.publicUrl) return flash('⚠️ Upload failed'+(r?.error?': '+r.error:''));
+    setForm((f:any)=>({...f, cover_image:r.publicUrl}));
+  };
+
+  // Content blocks helpers
+  const addTextBlock = () => setForm((f:any)=>({...f, content_blocks:[...f.content_blocks,{type:'text',value:''}]}));
+  const addImageBlock = () => setForm((f:any)=>({...f, content_blocks:[...f.content_blocks,{type:'image',url:''}]}));
+  const removeBlock = (i:number) => setForm((f:any)=>({...f, content_blocks:f.content_blocks.filter((_:any,idx:number)=>idx!==i)}));
+  const updateBlock = (i:number, patch:any) => setForm((f:any)=>({...f, content_blocks:f.content_blocks.map((b:any,idx:number)=>idx===i?{...b,...patch}:b)}));
+  const uploadBlockImg = async (e:React.ChangeEvent<HTMLInputElement>, i:number) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    setBlockUploading(i);
+    let r:any=null; try { r = await api.uploadFile(file,'community'); } catch {}
+    setBlockUploading(null);
+    if (!r?.publicUrl) return flash('⚠️ Block image upload failed');
+    updateBlock(i,{url:r.publicUrl});
   };
 
   const inp = (label:string, key:string, type='text', ph='') => (
@@ -2699,22 +2711,65 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
               </select>
             </div>
           </div>
+
+          {/* Cover image */}
           <div style={{marginBottom:12}}>
-            <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Cover Image</label>
-            {form.cover_image && <img src={form.cover_image} alt="" style={{width:'100%',objectFit:'contain',borderRadius:10,marginBottom:8,display:'block'}} />}
+            <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Cover Image <span style={{fontWeight:400,color:'#9ca3af'}}>(16:9 recommended, 1600×900px)</span></label>
+            {form.cover_image && (
+              <div style={{background:'#f8fafc',borderRadius:10,border:'1.5px solid #e5e7eb',marginBottom:8,overflow:'hidden'}}>
+                <img src={form.cover_image} alt="" style={{width:'100%',objectFit:'contain',objectPosition:'center',display:'block',maxHeight:220}} />
+              </div>
+            )}
             <div style={{display:'flex',gap:8,alignItems:'center'}}>
               <label style={{padding:'7px 14px',borderRadius:10,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:700,color:'#374151'}}>
-                {uploading?'Uploading…':'📁 Upload image'}
-                <input type="file" accept="image/*" onChange={uploadImg} style={{display:'none'}} />
+                {uploading?'Uploading…':'📁 Upload Cover'}
+                <input type="file" accept="image/*" onChange={uploadCover} style={{display:'none'}} />
               </label>
               {form.cover_image && <button onClick={()=>setForm((f:any)=>({...f,cover_image:''}))} style={{background:'none',border:'none',color:'#dc2626',cursor:'pointer',fontSize:12,fontWeight:700}}>✕ Remove</button>}
             </div>
           </div>
+
+          {/* Short description */}
           <div style={{marginBottom:12}}>
-            <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Short Description</label>
-            <textarea value={form.description||''} onChange={e=>setForm((f:any)=>({...f,description:e.target.value}))} rows={3} maxLength={500} placeholder="Brief description shown on the card…"
+            <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Short Description <span style={{fontWeight:400,color:'#9ca3af'}}>(shown on card)</span></label>
+            <textarea value={form.description||''} onChange={e=>setForm((f:any)=>({...f,description:e.target.value}))} rows={2} maxLength={500} placeholder="Brief description shown on the card…"
               style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',resize:'vertical' as const,boxSizing:'border-box' as const}} />
           </div>
+
+          {/* Content blocks */}
+          <div style={{marginBottom:12}}>
+            <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:8}}>Content Body <span style={{fontWeight:400,color:'#9ca3af'}}>(detail page — text + images)</span></label>
+            {(form.content_blocks||[]).map((block:any,i:number)=>(
+              <div key={i} style={{background:'#f8fafc',borderRadius:10,border:'1.5px solid #e5e7eb',padding:'10px 12px',marginBottom:8}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                  <span style={{fontSize:11,fontWeight:700,color:'#6b7280'}}>{block.type==='text'?'📝 Text':'🖼 Image'} block {i+1}</span>
+                  <button onClick={()=>removeBlock(i)} style={{background:'none',border:'none',color:'#dc2626',cursor:'pointer',fontSize:12,fontWeight:700}}>✕ Remove</button>
+                </div>
+                {block.type==='text' ? (
+                  <textarea rows={4} value={block.value||''} onChange={e=>updateBlock(i,{value:e.target.value})} placeholder="Write your content here…"
+                    style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',resize:'vertical' as const,boxSizing:'border-box' as const}} />
+                ) : (
+                  <div>
+                    {block.url && (
+                      <div style={{background:'white',borderRadius:8,border:'1.5px solid #e5e7eb',marginBottom:6,overflow:'hidden'}}>
+                        <img src={block.url} alt="" style={{width:'100%',objectFit:'contain',objectPosition:'center',display:'block',maxHeight:160}} />
+                      </div>
+                    )}
+                    <label style={{display:'inline-block',padding:'6px 12px',borderRadius:8,border:'1.5px solid #e5e7eb',background:'white',cursor:blockUploading===i?'wait':'pointer',fontSize:12,fontWeight:700,color:'#374151'}}>
+                      {blockUploading===i?'Uploading…':'📁 Upload Image'}
+                      <input type="file" accept="image/*" onChange={e=>uploadBlockImg(e,i)} style={{display:'none'}} disabled={blockUploading!==null} />
+                    </label>
+                    {block.url && <button onClick={()=>updateBlock(i,{url:''})} style={{marginLeft:8,background:'none',border:'none',color:'#dc2626',cursor:'pointer',fontSize:12,fontWeight:700}}>✕</button>}
+                  </div>
+                )}
+              </div>
+            ))}
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={addTextBlock} style={{padding:'6px 14px',borderRadius:8,border:`1.5px dashed ${P}60`,background:'white',cursor:'pointer',fontSize:12,fontWeight:700,color:P}}>+ Text Block</button>
+              <button onClick={addImageBlock} style={{padding:'6px 14px',borderRadius:8,border:`1.5px dashed ${P}60`,background:'white',cursor:'pointer',fontSize:12,fontWeight:700,color:P}}>+ Image Block</button>
+            </div>
+          </div>
+
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
             {inp('Start Date','start_date','date')}
             {inp('End Date','end_date','date')}

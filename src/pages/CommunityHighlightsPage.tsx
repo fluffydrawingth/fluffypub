@@ -38,7 +38,9 @@ export function HighlightDetailPage({ id }: { id: string }) {
     }).catch(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>⏳</div>;
+  if (loading) return (
+    <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>⏳</div>
+  );
 
   if (!h) return (
     <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: theme.fontFamily, gap: 16 }}>
@@ -53,27 +55,26 @@ export function HighlightDetailPage({ id }: { id: string }) {
   const tm = TYPE_META[h.type] || TYPE_META.announcement;
   const isSubtle = h.type === 'partner' || h.type === 'sponsored';
   const fmtDate = (d: string) => new Date(d).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const blocks: any[] = Array.isArray(h.content_blocks) ? h.content_blocks : [];
 
   return (
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '36px 20px 72px' }}>
+
         <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 13, fontWeight: 600, padding: '0 0 24px', display: 'flex', alignItems: 'center', gap: 6 }}>
           ← {tRaw('ชุมชน', 'Community')}
         </button>
 
+        {/* Cover image — contain, white bg, max height */}
         {h.cover_image && (
-          <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 28 }}>
-            <img src={h.cover_image} alt={h.title} style={{ width: '100%', maxHeight: 360, objectFit: 'cover', display: 'block' }} />
+          <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 28, background: 'white', border: '1.5px solid #f1f5f9' }}>
+            <img src={h.cover_image} alt={h.title} style={{ width: '100%', maxHeight: 400, objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
           </div>
         )}
 
         {/* Type badge */}
         <div style={{ marginBottom: 12 }}>
-          <span style={{
-            fontSize: 12, fontWeight: 800, padding: '5px 14px', borderRadius: 20,
-            background: isSubtle ? '#f1f5f9' : tm.color + '18',
-            color: isSubtle ? '#64748b' : tm.color,
-          }}>
+          <span style={{ fontSize: 12, fontWeight: 800, padding: '5px 14px', borderRadius: 20, background: isSubtle ? '#f1f5f9' : tm.color + '18', color: isSubtle ? '#64748b' : tm.color }}>
             {tm.emoji} {lang === 'th' ? tm.th : tm.en}
           </span>
         </div>
@@ -90,60 +91,84 @@ export function HighlightDetailPage({ id }: { id: string }) {
 
         <div style={{ height: 1.5, background: p + '20', borderRadius: 2, marginBottom: 24 }} />
 
+        {/* Short description */}
         {h.description && (
           <p style={{ fontSize: 15, color: '#374151', lineHeight: 1.8, margin: '0 0 24px', whiteSpace: 'pre-wrap' }}>{h.description}</p>
         )}
 
+        {/* Content blocks */}
+        {blocks.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {blocks.map((block: any, i: number) => {
+              if (block.type === 'image' && block.url) return (
+                <div key={i} style={{ borderRadius: 16, overflow: 'hidden', background: 'white', border: '1.5px solid #f1f5f9' }}>
+                  <img src={block.url} alt="" style={{ width: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
+                </div>
+              );
+              if (block.type === 'text' && block.value) return (
+                <p key={i} style={{ fontSize: 15, color: '#374151', lineHeight: 1.8, margin: 0, whiteSpace: 'pre-wrap' }}>{block.value}</p>
+              );
+              return null;
+            })}
+          </div>
+        )}
+
+        {/* Link button */}
         {h.link_url && (
-          <a href={h.link_url} target="_blank" rel="noopener noreferrer"
-            style={{ display: 'inline-block', background: p, color: 'white', textDecoration: 'none', padding: '12px 28px', borderRadius: 24, fontSize: 14, fontWeight: 800 }}>
-            {tRaw('ดูรายละเอียดเพิ่มเติม →', 'Learn more →')}
-          </a>
+          <div style={{ marginTop: 32 }}>
+            <a href={h.link_url} target="_blank" rel="noopener noreferrer"
+              style={{ display: 'inline-block', background: p, color: 'white', textDecoration: 'none', padding: '12px 28px', borderRadius: 24, fontSize: 14, fontWeight: 800 }}>
+              {tRaw('ดูรายละเอียดเพิ่มเติม →', 'Learn more →')}
+            </a>
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-// ── Compact card (used in list + CommunityPage) ───────────────────────────────
+// ── Compact card ──────────────────────────────────────────────────────────────
 export function HighlightCard({ h, p, theme, lang, tRaw }: any) {
   const { navigate } = useRouter();
   const tm = TYPE_META[h.type] || TYPE_META.announcement;
   const isSubtle = h.type === 'partner' || h.type === 'sponsored';
-  const endDate = h.end_date ? new Date(h.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+  const endDate = h.end_date
+    ? new Date(h.end_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
 
   return (
     <div onClick={() => navigate(`/community/highlights/${h.id}`)}
-      style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 8px rgba(0,0,0,0.06)', border: `1.5px solid ${p}10`, display: 'flex', flexDirection: 'column', cursor: 'pointer', transition: 'box-shadow 0.15s, transform 0.15s' }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = `0 6px 20px ${p}20`; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 8px rgba(0,0,0,0.06)'; }}>
+      style={{ background: 'white', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 6px rgba(0,0,0,0.06)', border: `1.5px solid ${p}12`, display: 'flex', flexDirection: 'column', cursor: 'pointer', transition: 'box-shadow 0.15s, transform 0.15s' }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = `0 6px 18px ${p}22`; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 6px rgba(0,0,0,0.06)'; }}>
 
-      {/* Compact image */}
+      {/* Image — contain, white bg, compact height */}
       {h.cover_image && (
-        <div style={{ position: 'relative', height: 120, overflow: 'hidden', flexShrink: 0 }}>
-          <img src={h.cover_image} alt={h.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        <div style={{ position: 'relative', background: 'white', overflow: 'hidden', flexShrink: 0, borderBottom: '1px solid #f1f5f9' }}>
+          <img src={h.cover_image} alt={h.title}
+            style={{ width: '100%', height: 110, objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
           {isSubtle && (
-            <span style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(255,255,255,0.9)', color: '#64748b', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 8 }}>
+            <span style={{ position: 'absolute', top: 7, right: 7, background: 'rgba(255,255,255,0.92)', color: '#64748b', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 8 }}>
               {lang === 'th' ? tm.th : tm.en}
             </span>
           )}
         </div>
       )}
 
-      <div style={{ padding: '10px 12px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ padding: '9px 12px 11px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
         {!isSubtle && (
-          <span style={{ fontSize: 10.5, fontWeight: 700, color: tm.color, background: tm.color + '18', padding: '2px 8px', borderRadius: 8, alignSelf: 'flex-start' }}>
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: tm.color, background: tm.color + '15', padding: '2px 8px', borderRadius: 8, alignSelf: 'flex-start' }}>
             {tm.emoji} {lang === 'th' ? tm.th : tm.en}
           </span>
         )}
-        <div style={{ fontSize: 13.5, fontWeight: 800, color: '#1e293b', lineHeight: 1.3 }}>{h.title}</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#1e293b', lineHeight: 1.3 }}>{h.title}</div>
         {h.description && (
-          <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+          <div style={{ fontSize: 11.5, color: '#64748b', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
             {h.description}
           </div>
         )}
         {endDate && (
-          <div style={{ fontSize: 10.5, color: '#94a3b8', marginTop: 2, fontWeight: 600 }}>
+          <div style={{ fontSize: 10.5, color: '#94a3b8', fontWeight: 600 }}>
             📅 {tRaw('สิ้นสุด', 'Ends')} {endDate}
           </div>
         )}
@@ -158,7 +183,6 @@ export default function CommunityHighlightsPage() {
   const { navigate } = useRouter();
   const { lang, tRaw } = useLang();
   const p = theme.primaryColor;
-
   const [highlights, setHighlights] = useState<any[]>([]);
   const [filter, setFilter] = useState('');
   const [loading, setLoading] = useState(true);
@@ -184,7 +208,6 @@ export default function CommunityHighlightsPage() {
           {tRaw('ชาเลนจ์ กิจกรรม และข่าวสารชุมชน', 'Challenges, events & community news')}
         </p>
 
-        {/* Filter tabs */}
         <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 22 }}>
           {TYPE_TABS.map(tab => (
             <button key={tab.key} onClick={() => setFilter(tab.key)}
@@ -205,7 +228,7 @@ export default function CommunityHighlightsPage() {
             <div style={{ fontSize: 13 }}>{tRaw('ติดตามข่าวสารได้เร็วๆ นี้', 'Check back soon for upcoming events.')}</div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 12 }}>
             {highlights.map((h: any) => <HighlightCard key={h.id} h={h} p={p} theme={theme} lang={lang} tRaw={tRaw} />)}
           </div>
         )}
