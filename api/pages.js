@@ -181,11 +181,140 @@ async function handleLegalPages(req, res) {
   return json(res, 405, { error: 'Method not allowed' });
 }
 
+// ── Fluffy Journal ─────────────────────────────────────────────────────────────
+
+async function translateTH(text) {
+  if (!text) return '';
+  try {
+    const encoded = encodeURIComponent(text);
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=th&tl=en&dt=t&q=${encoded}`;
+    const https = require('https');
+    const result = await new Promise((resolve, reject) => {
+      https.get(url, res => {
+        let d = '';
+        res.on('data', c => d += c);
+        res.on('end', () => resolve(d));
+      }).on('error', reject);
+    });
+    const parsed = JSON.parse(result);
+    // parsed[0] = array of [translated, original] pairs
+    return (parsed[0] || []).map(p => p[0]).join('').trim();
+  } catch { return ''; }
+}
+
+function slugify(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9฀-๿]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || String(Date.now().toString(36));
+}
+
+async function handleJournal(req, res) {
+  const { id, slug, action, article_type } = req.query;
+
+  // GET list — public: published; admin: all; optional ?article_type= filter
+  if (req.method === 'GET' && !slug && !id) {
+    const user = req.headers.authorization ? await getUser(req) : null;
+    let q = supabase.from('journal_articles')
+      .select('id,title_th,title_en,excerpt_th,excerpt_en,article_type,cover_image,status,slug,sort_order,created_at,updated_at')
+      .order('sort_order').order('created_at', { ascending: false });
+    if (!user || user.role !== 'admin') q = q.eq('status', 'published');
+    if (article_type && ['tips','tools','favorites'].includes(article_type)) q = q.eq('article_type', article_type);
+    const { data, error } = await q;
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, data || []);
+  }
+
+  // GET single by slug
+  if (req.method === 'GET' && slug) {
+    const user = req.headers.authorization ? await getUser(req) : null;
+    let q = supabase.from('journal_articles').select('*').eq('slug', slug);
+    if (!user || user.role !== 'admin') q = q.eq('status', 'published');
+    const { data, error } = await q.single();
+    if (error || !data) return json(res, 404, { error: 'Not found' });
+    return json(res, 200, data);
+  }
+
+  // GET single by id (admin)
+  if (req.method === 'GET' && id) {
+    const user = await requireAuth(req, res, ['admin']); if (!user) return;
+    const { data, error } = await supabase.from('journal_articles').select('*').eq('id', id).single();
+    if (error || !data) return json(res, 404, { error: 'Not found' });
+    return json(res, 200, data);
+  }
+
+  // POST ?action=translate&id= — auto-translate TH → EN (admin)
+  if (req.method === 'POST' && action === 'translate' && id) {
+    const user = await requireAuth(req, res, ['admin']); if (!user) return;
+    const { data: art } = await supabase.from('journal_articles').select('title_th,excerpt_th,content_th').eq('id', id).single();
+    if (!art) return json(res, 404, { error: 'Not found' });
+    const [title_en, excerpt_en, content_en] = await Promise.all([
+      translateTH(art.title_th),
+      translateTH(art.excerpt_th),
+      translateTH(art.content_th),
+    ]);
+    const { error } = await supabase.from('journal_articles')
+      .update({ title_en: title_en || null, excerpt_en: excerpt_en || null, content_en: content_en || null, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { title_en, excerpt_en, content_en });
+  }
+
+  // POST create (admin)
+  if (req.method === 'POST' && !action) {
+    const user = await requireAuth(req, res, ['admin']); if (!user) return;
+    const b = req.body || {};
+    if (!String(b.title_th || '').trim()) return json(res, 400, { error: 'title_th required' });
+    const rawSlug = b.slug || b.title_th;
+    const baseSlug = slugify(rawSlug);
+    const finalSlug = baseSlug + '-' + Date.now().toString(36);
+    const row = {
+      title_th: String(b.title_th).trim(),
+      title_en: b.title_en || null,
+      excerpt_th: b.excerpt_th || null,
+      excerpt_en: b.excerpt_en || null,
+      content_th: b.content_th || null,
+      content_en: b.content_en || null,
+      article_type: ['tips','tools','favorites'].includes(b.article_type) ? b.article_type : 'tips',
+      cover_image: b.cover_image || null,
+      status: ['draft','published'].includes(b.status) ? b.status : 'draft',
+      slug: finalSlug,
+      sort_order: parseInt(b.sort_order) || 0,
+    };
+    const { data, error } = await supabase.from('journal_articles').insert(row).select().single();
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 201, data);
+  }
+
+  // POST ?action=update&id= — update (admin, POST to avoid PUT routing issues)
+  if (req.method === 'POST' && action === 'update' && id) {
+    const user = await requireAuth(req, res, ['admin']); if (!user) return;
+    const b = req.body || {};
+    const upd = { updated_at: new Date().toISOString() };
+    const fields = ['title_th','title_en','excerpt_th','excerpt_en','content_th','content_en','article_type','cover_image','status','sort_order'];
+    for (const k of fields) {
+      if (b[k] !== undefined) upd[k] = k === 'sort_order' ? (parseInt(b[k]) || 0) : (b[k] || null);
+    }
+    if (b.title_th !== undefined) upd.title_th = String(b.title_th).trim();
+    const { error } = await supabase.from('journal_articles').update(upd).eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
+  }
+
+  // DELETE (admin)
+  if (req.method === 'DELETE' && id) {
+    const user = await requireAuth(req, res, ['admin']); if (!user) return;
+    const { error } = await supabase.from('journal_articles').delete().eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
+  }
+
+  return json(res, 405, { error: 'Method not allowed' });
+}
+
 // ── Pages CMS ──────────────────────────────────────────────────────────────────
 
 module.exports = async function handler(req, res) {
   if (req.query.type === 'free-download') return handleFreeDownloads(req, res);
   if (req.query.type === 'legal') return handleLegalPages(req, res);
+  if (req.query.type === 'journal') return handleJournal(req, res);
 
   const { slug, id, homepage } = req.query;
 

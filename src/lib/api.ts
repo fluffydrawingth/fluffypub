@@ -249,6 +249,15 @@ export const api = {
   deleteFreeDownload: (id: string) => fetch(`/api/pages?type=free-download&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
   downloadFree: (id: string) => fetch(`/api/pages?type=free-download&action=download&id=${id}`).then(r => r.json()),
 
+  // Fluffy Journal
+  getJournalArticles: (articleType?: string) => fetch(`/api/pages?type=journal${articleType ? '&article_type='+articleType : ''}`).then(r => r.json()),
+  getJournalArticle: (slug: string) => fetch(`/api/pages?type=journal&slug=${slug}`).then(r => r.json()),
+  getAdminJournalArticles: () => fetch('/api/pages?type=journal', { headers: h() }).then(r => r.json()),
+  createJournalArticle: (data: any) => fetch('/api/pages?type=journal', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  updateJournalArticle: (id: string, data: any) => fetch(`/api/pages?type=journal&action=update&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  deleteJournalArticle: (id: string) => fetch(`/api/pages?type=journal&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
+  translateJournalArticle: (id: string) => fetch(`/api/pages?type=journal&action=translate&id=${id}`, { method: 'POST', headers: h() }).then(r => r.json()),
+
   // Theme
   getCategories: () => fetch('/api/categories').then(r => r.json()),
   getAdminCategories: () => fetch('/api/categories', { headers: h() }).then(r => r.json()),

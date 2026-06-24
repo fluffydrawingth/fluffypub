@@ -7,6 +7,10 @@ export default function PagesIndexPage() {
   const { theme } = useTheme();
   const { navigate } = useRouter();
   const { tRaw } = useLang();
+
+  // /pages is now Fluffy Journal
+  useEffect(() => { navigate('/journal'); }, []);
+
   const [pages, setPages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const p = theme.primaryColor;

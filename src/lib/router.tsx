@@ -37,6 +37,8 @@ function parse(hash: string): Route {
   if (p[0]==='checkout' && p[1]==='success') return { path:'/checkout/success', params:{ orderId:p[2]||'' } };
   if (p[0]==='artists' && p[1]) return { path:'/artists/:slug', params:{ slug:p[1] } };
   if (p[0]==='artists') return { path:'/artists' };
+  if (p[0]==='journal' && p[1]) return { path:'/journal/:slug', params:{ slug:p[1] } };
+  if (p[0]==='journal') return { path:'/journal' };
   if (p[0]==='community' && p[1]==='book' && p[2]) return { path:'/community/book/:slug', params:{ slug:p[2] } };
   if (p[0]==='community' && p[1]==='creators') return { path:'/community/creators' };
   if (p[0]==='community' && p[1]==='highlights') return { path:'/community/highlights' };

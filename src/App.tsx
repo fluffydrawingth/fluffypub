@@ -29,6 +29,8 @@ import LegalPage from './pages/LegalPage';
 import ArtistApplicationPage from './pages/ArtistApplicationPage';
 import AffiliateApplicationPage from './pages/AffiliateApplicationPage';
 import AffiliateDashboardPage from './pages/AffiliateDashboardPage';
+import JournalPage from './pages/JournalPage';
+import JournalArticlePage from './pages/JournalArticlePage';
 import CommunityPage from './pages/CommunityPage';
 import CommunityCreatorsPage from './pages/CommunityCreatorsPage';
 import CommunityHighlightsPage from './pages/CommunityHighlightsPage';
@@ -127,6 +129,8 @@ function AppContent() {
       case '/affiliate-application': return <ProtectedRoute roles={['customer','artist','admin']}><AffiliateApplicationPage /></ProtectedRoute>;
       case '/affiliate-dashboard': return <ProtectedRoute roles={['customer','artist','admin']}><AffiliateDashboardPage /></ProtectedRoute>;
       case '/artists': return <ArtistsPage />;
+      case '/journal': return <JournalPage />;
+      case '/journal/:slug': return <JournalArticlePage slug={route.params?.slug || ''} />;
       case '/community': return <CommunityPage />;
       case '/community/creators': return <CommunityCreatorsPage />;
       case '/community/highlights': return <CommunityHighlightsPage />;

@@ -8,7 +8,7 @@ export const DEFAULT_TRANSLATIONS: Record<string, { th: string; en: string }> = 
   shop:         { th: 'ร้านค้า',         en: 'Shop' },
   digital_products: { th: 'สินค้าดิจิทัล', en: 'Digital Products' },
   artists:      { th: 'ศิลปิน',           en: 'Artists' },
-  blog:         { th: 'บทความ',          en: 'Blog' },
+  blog:         { th: 'Journal',          en: 'Journal' },
   login:        { th: 'เข้าสู่ระบบ',      en: 'Login' },
   logout:       { th: 'ออกจากระบบ',       en: 'Sign Out' },
   orders:       { th: 'คำสั่งซื้อ',       en: 'Orders' },

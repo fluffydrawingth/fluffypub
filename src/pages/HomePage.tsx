@@ -382,64 +382,88 @@ function ArtistsSection() {
   );
 }
 
-// ── Blog / Pages Section ─────────────────────────────────────────────────────
+// ── Fluffy Journal Section ────────────────────────────────────────────────────
 function BlogSection() {
   const { theme } = useTheme();
   const { navigate } = useRouter();
   const { lang } = useLang();
   const tl = (en: string, th?: string) => (lang === 'th' && th) ? th : en;
-  const [pages, setPages] = React.useState<any[]>([]);
+  const [articles, setArticles] = React.useState<any[]>([]);
 
   useEffect(() => {
-    fetch('/api/pages?homepage=1')
+    fetch('/api/pages?type=journal')
       .then(r => r.json())
-      .then(d => { if (Array.isArray(d)) setPages(d); })
+      .then(d => { if (Array.isArray(d)) setArticles(d.slice(0, 3)); })
       .catch(() => {});
   }, []);
 
-  if (pages.length === 0) return null;
+  if (articles.length === 0) return null;
 
   const p = theme.primaryColor;
+  const TYPE_EMOJI: Record<string, string> = { tips: '🎨', tools: '🖍️', favorites: '🩷' };
+  const TYPE_LABEL: Record<string, { th: string; en: string }> = {
+    tips: { th: 'เทคนิคการระบาย', en: 'Coloring Tips' },
+    tools: { th: 'อุปกรณ์', en: 'Tools' },
+    favorites: { th: 'สิ่งที่ชอบ', en: 'My Favorites' },
+  };
   return (
-    <section style={{ background:'white' }}>
-      <style>{`@media(max-width:640px){.hp-blog-wrap{padding:32px 16px!important;}}`}</style>
-      <div className="hp-blog-wrap" style={{ maxWidth:1200, margin:'0 auto', padding:'64px 24px' }}>
-        <div style={{ textAlign:'center' as const, marginBottom:40 }}>
-          <span style={{ fontSize:13, fontWeight:700, color:p, letterSpacing:1, textTransform:'uppercase' as const }}>{tl(theme.labels?.blog_eyebrow || '📄 From the Blog', theme.labels?.blog_eyebrow_th)}</span>
-          <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 0', fontFamily:theme.fontFamily }}>{tl(theme.labels?.blog_title || 'Latest Updates', theme.labels?.blog_title_th)}</h2>
+    <section style={{ background: 'white' }}>
+      <style>{`@media(max-width:640px){.hp-blog-wrap{padding:32px 16px!important;} .hp-journal-grid{grid-template-columns:1fr!important;}}`}</style>
+      <div className="hp-blog-wrap" style={{ maxWidth: 1100, margin: '0 auto', padding: '64px 24px' }}>
+        <div style={{ textAlign: 'center' as const, marginBottom: 40 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: p, letterSpacing: 1, textTransform: 'uppercase' as const }}>
+            {tl(theme.labels?.blog_eyebrow || '📝 Fluffy Journal', theme.labels?.blog_eyebrow_th)}
+          </span>
+          <h2 style={{ fontSize: 32, fontWeight: 900, color: theme.textColor, margin: '8px 0 0', fontFamily: theme.fontFamily }}>
+            {tl(theme.labels?.blog_title || 'From the Journal', theme.labels?.blog_title_th)}
+          </h2>
+          <p style={{ fontSize: 14, color: '#94a3b8', margin: '10px 0 0' }}>
+            {tl('Little stories about coloring, tools and things we genuinely use.', 'เรื่องเล็กๆ เกี่ยวกับการระบาย อุปกรณ์ และสิ่งที่ใช้จริงๆ')}
+          </p>
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:24 }}>
-          {pages.map(pg => (
-            <div key={pg.id} onClick={() => navigate(`/pages/${pg.slug}`)}
-              style={{ background:'white', borderRadius:20, overflow:'hidden', cursor:'pointer', boxShadow:'0 2px 16px rgba(0,0,0,0.07)', border:`1px solid ${p}12`, transition:'all 0.18s', display:'flex', flexDirection:'column' as const }}
-              onMouseEnter={e => { e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow=`0 12px 32px ${p}22`; }}
-              onMouseLeave={e => { e.currentTarget.style.transform='none'; e.currentTarget.style.boxShadow='0 2px 16px rgba(0,0,0,0.07)'; }}
-            >
-              {pg.image_url
-                ? <img src={pg.image_url} alt={pg.title} style={{ width:'100%', height:200, objectFit:'cover', display:'block' }} />
-                : <div style={{ width:'100%', height:200, background:`linear-gradient(135deg,${p}18,${p}08)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:56 }}>
-                    📄
-                  </div>
-              }
-              <div style={{ padding:'20px 22px', flex:1, display:'flex', flexDirection:'column' as const }}>
-                <h3 style={{ fontSize:17, fontWeight:800, color:theme.textColor, margin:'0 0 8px', lineHeight:1.35 }}>{pg.title}</h3>
-                {pg.excerpt && <p style={{ fontSize:13, color:theme.textColor+'88', margin:'0 0 14px', lineHeight:1.65, flex:1 }}>{pg.excerpt}</p>}
-                <div style={{ marginTop:'auto' }}>
-                  <span style={{ display:'inline-block', fontSize:13, color:p, fontWeight:700, background:p+'12', padding:'6px 14px', borderRadius:20 }}>Read More →</span>
+        <div className="hp-journal-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 22 }}>
+          {articles.map(a => {
+            const title = (lang === 'th' ? a.title_th : a.title_en) || a.title_th;
+            const excerpt = (lang === 'th' ? a.excerpt_th : a.excerpt_en) || a.excerpt_th;
+            const tm = TYPE_META_HP[a.article_type] || { emoji: '📝', label: { th: a.article_type, en: a.article_type } };
+            return (
+              <div key={a.id} onClick={() => navigate(`/journal/${a.slug}`)}
+                style={{ background: 'white', borderRadius: 20, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: `1.5px solid ${p}12`, transition: 'all 0.18s', display: 'flex', flexDirection: 'column' as const }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = `0 12px 28px ${p}22`; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)'; }}>
+                <div style={{ height: 180, background: `linear-gradient(135deg,${p}18,${p}08)`, overflow: 'hidden', position: 'relative' }}>
+                  {a.cover_image
+                    ? <img src={a.cover_image} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>📝</div>
+                  }
+                  <span style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(255,255,255,0.92)', color: p, fontSize: 10.5, fontWeight: 800, padding: '3px 9px', borderRadius: 10 }}>
+                    {tm.emoji} {tm.label[lang as 'th' | 'en'] ?? tm.label.en}
+                  </span>
+                </div>
+                <div style={{ padding: '14px 16px 18px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#1e293b', lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>{title}</div>
+                  {excerpt && <div style={{ fontSize: 12.5, color: '#64748b', lineHeight: 1.6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>{excerpt}</div>}
+                  <span style={{ marginTop: 'auto', paddingTop: 8, display: 'inline-block', fontSize: 12, color: p, fontWeight: 700 }}>Read →</span>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-        <div style={{ textAlign:'center' as const, marginTop:32 }}>
-          <button onClick={() => navigate('/pages')} style={{ background:'transparent', border:`2px solid ${p}`, color:p, cursor:'pointer', padding:'11px 28px', borderRadius:24, fontSize:14, fontWeight:700, fontFamily:theme.fontFamily }}>
-            {tl(theme.labels?.blog_btn || 'View All Posts →', theme.labels?.blog_btn_th)}
+        <div style={{ textAlign: 'center' as const, marginTop: 32 }}>
+          <button onClick={() => navigate('/journal')} style={{ background: 'transparent', border: `2px solid ${p}`, color: p, cursor: 'pointer', padding: '11px 28px', borderRadius: 24, fontSize: 14, fontWeight: 700, fontFamily: theme.fontFamily }}>
+            {tl(theme.labels?.blog_btn || 'Read All Stories →', theme.labels?.blog_btn_th)}
           </button>
         </div>
       </div>
     </section>
   );
 }
+
+const TYPE_META_HP: Record<string, { emoji: string; label: { th: string; en: string } }> = {
+  tips:      { emoji: '🎨', label: { th: 'เทคนิคการระบาย', en: 'Coloring Tips' } },
+  tools:     { emoji: '🖍️', label: { th: 'อุปกรณ์', en: 'Tools' } },
+  favorites: { emoji: '🩷', label: { th: 'สิ่งที่ชอบ', en: 'My Favorites' } },
+};
 
 // ── Newsletter ────────────────────────────────────────────────────────────────
 function NewsletterSection() {

@@ -12,7 +12,7 @@ import ImageCropEditor from '../components/ImageCropEditor';
 import HtmlEditor from '../components/HtmlEditor';
 
 const ADMIN_EMAIL = 'fluffydrawing.th@gmail.com';
-type Tab = 'dashboard'|'products'|'orders'|'artists'|'artist-requests'|'payouts'|'affiliate-requests'|'affiliates'|'community'|'categories'|'pages'|'free-downloads'|'legal'|'policies'|'theme'|'lang';
+type Tab = 'dashboard'|'products'|'orders'|'artists'|'artist-requests'|'payouts'|'affiliate-requests'|'affiliates'|'community'|'categories'|'journal'|'pages'|'free-downloads'|'legal'|'policies'|'theme'|'lang';
 
 function NavItem({icon,label,active,onClick}:any) {
   return (
@@ -40,7 +40,7 @@ export default function AdminPage() {
   const TAB_LABELS: Record<Tab, string> = {
     dashboard:'Dashboard', products:'Products', orders:'Orders', artists:'Artists', 'artist-requests':'Artist Requests', payouts:'Artist Payouts',
     'affiliate-requests':'Fluffy Creator Requests', affiliates:'Fluffy Creators', community:'Community Dashboard',
-    categories:'Categories', pages:'Pages', 'free-downloads':'Free Downloads', legal:'Legal Pages', policies:'Creator & Artist Policies', theme:'Theme & CMS', lang:'Language CMS',
+    categories:'Categories', journal:'Fluffy Journal', pages:'Pages', 'free-downloads':'Free Downloads', legal:'Legal Pages', policies:'Creator & Artist Policies', theme:'Theme & CMS', lang:'Language CMS',
   };
 
   const selectTab = (t: Tab) => { setTab(t); setSidebarOpen(false); };
@@ -67,6 +67,7 @@ export default function AdminPage() {
         <NavItem icon="💵" label="Fluffy Creators"      active={tab==='affiliates'}       onClick={()=>selectTab('affiliates')} />
         <NavItem icon="🌈" label="Community Dashboard"  active={tab==='community'}        onClick={()=>selectTab('community')} />
         <NavItem icon="🏷️" label="Categories"   active={tab==='categories'} onClick={()=>selectTab('categories')} />
+        <NavItem icon="📝" label="Fluffy Journal" active={tab==='journal'}   onClick={()=>selectTab('journal')} />
         <NavItem icon="📄" label="Pages"          active={tab==='pages'}           onClick={()=>selectTab('pages')} />
         <NavItem icon="⬇️" label="Free Downloads" active={tab==='free-downloads'}  onClick={()=>selectTab('free-downloads')} />
         <NavItem icon="⚖️" label="Legal Pages"    active={tab==='legal'}           onClick={()=>selectTab('legal')} />
@@ -119,6 +120,7 @@ export default function AdminPage() {
         {tab==='affiliates'      && <AffiliatesTab />}
         {tab==='community'       && <CommunityDashboardTab />}
         {tab==='categories' && <CategoriesTab />}
+        {tab==='journal'         && <JournalTab />}
         {tab==='pages'           && <PagesCMSTab />}
         {tab==='free-downloads'  && <FreeDownloadsTab />}
         {tab==='legal'           && <LegalPagesTab />}
@@ -3078,6 +3080,191 @@ function CategoriesTab() {
           </table>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Fluffy Journal Tab ────────────────────────────────────────────────────────
+const JOURNAL_TYPES = ['tips','tools','favorites'] as const;
+const JOURNAL_TYPE_LABELS: Record<string,string> = { tips:'🎨 Coloring Tips', tools:'🖍️ Tools', favorites:'🩷 My Favorites' };
+const EMPTY_ARTICLE = { title_th:'', title_en:'', excerpt_th:'', excerpt_en:'', content_th:'', content_en:'', article_type:'tips', cover_image:'', status:'draft', sort_order:0 };
+
+function JournalTab() {
+  const [items, setItems] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [editing, setEditing] = React.useState<string|null>(null);
+  const [form, setForm] = React.useState<any>({...EMPTY_ARTICLE});
+  const [saving, setSaving] = React.useState(false);
+  const [translating, setTranslating] = React.useState(false);
+  const [uploading, setUploading] = React.useState(false);
+  const [flash, setFlash] = React.useState('');
+  const showFlash = (m:string) => { setFlash(m); setTimeout(()=>setFlash(''),3000); };
+
+  const load = () => {
+    api.getAdminJournalArticles().then((d:any)=>{ setItems(Array.isArray(d)?d:[]); setLoading(false); }).catch(()=>setLoading(false));
+  };
+  React.useEffect(()=>{ load(); },[]);
+
+  const openNew = () => { setEditing('new'); setForm({...EMPTY_ARTICLE}); };
+  const openEdit = (a:any) => { setEditing(a.id); setForm({ title_th:a.title_th||'', title_en:a.title_en||'', excerpt_th:a.excerpt_th||'', excerpt_en:a.excerpt_en||'', content_th:a.content_th||'', content_en:a.content_en||'', article_type:a.article_type||'tips', cover_image:a.cover_image||'', status:a.status||'draft', sort_order:a.sort_order||0 }); };
+  const cancel = () => setEditing(null);
+
+  const save = async () => {
+    if (!form.title_th.trim()) return showFlash('⚠️ Thai title is required');
+    setSaving(true);
+    const r = editing==='new' ? await api.createJournalArticle(form) : await api.updateJournalArticle(editing!, form);
+    setSaving(false);
+    if (r?.error) return showFlash('⚠️ '+r.error);
+    showFlash(editing==='new'?'✓ Article created':'✓ Saved');
+    setEditing(null); load();
+  };
+
+  const del = async (id:string) => {
+    if (!confirm('Delete this article?')) return;
+    const r = await api.deleteJournalArticle(id);
+    if (r?.error) return showFlash('⚠️ '+r.error);
+    showFlash('✓ Deleted'); load();
+  };
+
+  const translate = async () => {
+    if (!editing || editing==='new') return showFlash('⚠️ Save the article first, then translate');
+    setTranslating(true);
+    const r = await api.translateJournalArticle(editing).catch(()=>null);
+    setTranslating(false);
+    if (!r || r.error) return showFlash('⚠️ Translation failed');
+    setForm((f:any)=>({...f, title_en:r.title_en||f.title_en, excerpt_en:r.excerpt_en||f.excerpt_en, content_en:r.content_en||f.content_en}));
+    showFlash('✓ English translation generated');
+  };
+
+  const uploadImg = async (e:React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    setUploading(true);
+    let r:any=null; try { r = await api.uploadFile(file,'community'); } catch {}
+    setUploading(false);
+    if (!r?.publicUrl) return showFlash('⚠️ Upload failed');
+    setForm((f:any)=>({...f, cover_image:r.publicUrl}));
+  };
+
+  const inp = (label:string, key:string, type='text', rows=0) => (
+    <div style={{marginBottom:12}}>
+      <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>{label}</label>
+      {rows>0
+        ? <textarea rows={rows} value={form[key]||''} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))}
+            style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',resize:'vertical' as const,boxSizing:'border-box' as const}} />
+        : <input type={type} value={form[key]||''} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))}
+            style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box' as const}} />
+      }
+    </div>
+  );
+
+  if (loading) return <div style={{padding:32,textAlign:'center'}}>⏳</div>;
+
+  return (
+    <div>
+      {flash && <div style={{background:flash.startsWith('⚠️')?'#fef2f2':'#f0fdf4',border:`1px solid ${flash.startsWith('⚠️')?'#fca5a5':'#86efac'}`,borderRadius:10,padding:'10px 16px',marginBottom:16,fontSize:13,fontWeight:600,color:flash.startsWith('⚠️')?'#dc2626':'#16a34a'}}>{flash}</div>}
+
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+        <div>
+          <h2 style={{fontSize:16,fontWeight:800,color:'#111827',margin:'0 0 3px'}}>📝 Fluffy Journal</h2>
+          <p style={{fontSize:12,color:'#6b7280',margin:0}}>Write cozy journal articles in Thai — auto-translate to English.</p>
+        </div>
+        <button onClick={openNew} style={{padding:'9px 18px',borderRadius:12,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:800}}>+ New Article</button>
+      </div>
+
+      {/* Form panel */}
+      {editing && (
+        <div style={{background:'white',borderRadius:16,padding:20,marginBottom:20,border:`2px solid ${P}30`,boxShadow:'0 1px 8px rgba(0,0,0,0.06)'}}>
+          <h3 style={{fontSize:14,fontWeight:800,margin:'0 0 16px'}}>{editing==='new'?'New Article':'Edit Article'}</h3>
+
+          {/* Cover image */}
+          <div style={{marginBottom:12}}>
+            <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Cover Image</label>
+            {form.cover_image && <img src={form.cover_image} alt="" style={{width:'100%',objectFit:'contain',borderRadius:10,marginBottom:8,display:'block',maxHeight:220}} />}
+            <div style={{display:'flex',gap:8,alignItems:'center'}}>
+              <label style={{padding:'7px 14px',borderRadius:10,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:700,color:'#374151'}}>
+                {uploading?'Uploading…':'📁 Upload Image'}
+                <input type="file" accept="image/*" onChange={uploadImg} style={{display:'none'}} />
+              </label>
+              {form.cover_image && <button onClick={()=>setForm((f:any)=>({...f,cover_image:''}))} style={{background:'none',border:'none',color:'#dc2626',cursor:'pointer',fontSize:12,fontWeight:700}}>✕ Remove</button>}
+            </div>
+          </div>
+
+          {/* Type + Status */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 80px',gap:12,marginBottom:12}}>
+            <div>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Type</label>
+              <select value={form.article_type} onChange={e=>setForm((f:any)=>({...f,article_type:e.target.value}))} style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit'}}>
+                {JOURNAL_TYPES.map(t=><option key={t} value={t}>{JOURNAL_TYPE_LABELS[t]}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Status</label>
+              <select value={form.status} onChange={e=>setForm((f:any)=>({...f,status:e.target.value}))} style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit'}}>
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+              </select>
+            </div>
+            <div>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Order</label>
+              <input type="number" value={form.sort_order||0} onChange={e=>setForm((f:any)=>({...f,sort_order:parseInt(e.target.value)||0}))} style={{width:'100%',padding:'9px 10px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box' as const}} />
+            </div>
+          </div>
+
+          {/* Thai fields */}
+          <div style={{background:'#fdf9ff',borderRadius:12,padding:'14px 16px',marginBottom:12,border:'1.5px solid #f3e8ff'}}>
+            <div style={{fontSize:12,fontWeight:800,color:'#7c3aed',marginBottom:10}}>🇹🇭 Thai (source of truth)</div>
+            {inp('Title (TH) *','title_th')}
+            {inp('Excerpt (TH)','excerpt_th','text',2)}
+            {inp('Content (TH)','content_th','text',10)}
+          </div>
+
+          {/* English fields + translate button */}
+          <div style={{background:'#f0f9ff',borderRadius:12,padding:'14px 16px',marginBottom:16,border:'1.5px solid #bae6fd'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+              <div style={{fontSize:12,fontWeight:800,color:'#0369a1'}}>🇬🇧 English (auto-generated)</div>
+              <button onClick={translate} disabled={translating||editing==='new'} style={{padding:'5px 12px',borderRadius:8,border:'none',background:translating?'#e5e7eb':'#0369a1',color:'white',cursor:translating||editing==='new'?'not-allowed':'pointer',fontSize:11,fontWeight:700}}>
+                {translating?'Translating…':'🤖 Auto-translate from TH'}
+              </button>
+            </div>
+            {editing==='new' && <p style={{fontSize:11,color:'#64748b',margin:'0 0 10px'}}>Save the article first, then auto-translate.</p>}
+            {inp('Title (EN)','title_en')}
+            {inp('Excerpt (EN)','excerpt_en','text',2)}
+            {inp('Content (EN)','content_en','text',10)}
+          </div>
+
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={save} disabled={saving} style={{padding:'9px 22px',borderRadius:10,border:'none',background:P,color:'white',cursor:saving?'wait':'pointer',fontSize:13,fontWeight:800}}>{saving?'Saving…':'💾 Save'}</button>
+            <button onClick={cancel} style={{padding:'9px 16px',borderRadius:10,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:13,fontWeight:700,color:'#374151'}}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Articles list */}
+      {items.length === 0 && !editing ? (
+        <div style={{textAlign:'center',padding:'60px 24px',color:'#94a3b8'}}>
+          <div style={{fontSize:48,marginBottom:12}}>📝</div>
+          <div style={{fontWeight:700,fontSize:15,color:'#374151',marginBottom:6}}>No journal articles yet</div>
+          <div style={{fontSize:13}}>Click "+ New Article" to write your first cozy story.</div>
+        </div>
+      ) : (
+        <div style={{display:'flex',flexDirection:'column' as const,gap:10}}>
+          {items.map(a=>(
+            <div key={a.id} style={{background:'white',borderRadius:14,padding:'14px 16px',display:'flex',gap:14,alignItems:'center',border:'1.5px solid #f3f4f6',boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+              {a.cover_image && <img src={a.cover_image} alt="" style={{width:64,height:48,objectFit:'cover',borderRadius:8,flexShrink:0}} />}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:800,fontSize:14,color:'#111827',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' as const}}>{a.title_th}</div>
+                <div style={{fontSize:11,color:'#6b7280',marginTop:2}}>
+                  {JOURNAL_TYPE_LABELS[a.article_type] || a.article_type}
+                  {a.title_en && <span style={{marginLeft:8,color:'#0369a1'}}>🇬🇧 EN ✓</span>}
+                </div>
+              </div>
+              <span style={{fontSize:11,fontWeight:700,padding:'3px 9px',borderRadius:8,background:a.status==='published'?'#dcfce7':'#fef3c7',color:a.status==='published'?'#16a34a':'#d97706',flexShrink:0}}>{a.status}</span>
+              <button onClick={()=>openEdit(a)} style={{padding:'6px 12px',borderRadius:8,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:700,flexShrink:0}}>Edit</button>
+              <button onClick={()=>del(a.id)} style={{padding:'6px 10px',borderRadius:8,border:'none',background:'#fee2e2',cursor:'pointer',fontSize:12,fontWeight:700,color:'#dc2626',flexShrink:0}}>Delete</button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
