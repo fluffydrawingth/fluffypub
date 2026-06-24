@@ -20,7 +20,6 @@ function readingTime(contentTh?: string, contentEn?: string): string {
   return Math.ceil(words / 400) + ' min read';
 }
 
-// ── Inline reaction buttons (used inside the info panel) ──────────────────────
 function ReactionButtons({ article, p, lang, tRaw, navigate }: any) {
   const { user } = useAuth();
   const [counts, setCounts] = useState({ love: 0, save: 0, share: 0 });
@@ -58,10 +57,19 @@ function ReactionButtons({ article, p, lang, tRaw, navigate }: any) {
   };
 
   const btn = (active: boolean) => ({
-    display: 'inline-flex' as const, alignItems: 'center' as const, gap: 5,
-    padding: '7px 14px', borderRadius: 18, border: `1.5px solid ${active ? p : '#e5e7eb'}`,
-    background: active ? p + '12' : 'white', color: active ? p : '#64748b',
-    cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', transition: 'all 0.15s',
+    display: 'inline-flex' as const,
+    alignItems: 'center' as const,
+    gap: 5,
+    padding: '7px 14px',
+    borderRadius: 18,
+    border: `1.5px solid ${active ? p : '#e5e7eb'}`,
+    background: active ? p + '12' : 'white',
+    color: active ? p : '#64748b',
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 700,
+    fontFamily: 'inherit',
+    transition: 'all 0.15s',
   });
 
   return (
@@ -90,7 +98,6 @@ function ReactionButtons({ article, p, lang, tRaw, navigate }: any) {
   );
 }
 
-// ── Article page ──────────────────────────────────────────────────────────────
 export default function JournalArticlePage({ slug }: { slug: string }) {
   const { theme } = useTheme();
   const { navigate } = useRouter();
@@ -128,9 +135,9 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
     </div>
   );
 
-  const title   = (lang === 'th' ? article.title_th   : article.title_en)   || article.title_th;
-  const excerpt = (lang === 'th' ? article.excerpt_th : article.excerpt_en) || article.excerpt_th;
-  const content = (lang === 'th' ? article.content_th : article.content_en) || article.content_th || '';
+  const title    = (lang === 'th' ? article.title_th   : article.title_en)   || article.title_th;
+  const excerpt  = (lang === 'th' ? article.excerpt_th : article.excerpt_en) || article.excerpt_th;
+  const content  = (lang === 'th' ? article.content_th : article.content_en) || article.content_th || '';
   const rt       = readingTime(article.content_th, article.content_en);
   const typeMeta = TYPE_META[article.article_type];
   const date     = new Date(article.created_at).toLocaleDateString(
@@ -140,118 +147,174 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
   return (
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
       <style>{`
-        .jap-hero { display: grid; grid-template-columns: minmax(0, 520px) 1fr; gap: 40px; align-items: start; }
-        @media(max-width: 780px) { .jap-hero { grid-template-columns: 1fr; gap: 24px; } }
-        .journal-content { font-size: 16px; line-height: 1.9; color: #374151; }
-        .journal-content p  { margin: 0 0 1.2em; }
-        .journal-content h2 { font-size: 1.35em; font-weight: 800; color: #1e293b; margin: 1.8em 0 0.5em; }
-        .journal-content h3 { font-size: 1.12em; font-weight: 700; color: #1e293b; margin: 1.4em 0 0.4em; }
-        .journal-content ul, .journal-content ol { padding-left: 1.4em; margin: 0 0 1.2em; }
-        .journal-content li { margin-bottom: 0.35em; }
-        .journal-content img { max-width: 100%; height: auto; border-radius: 14px; margin: 1.2em 0; display: block; }
-        .journal-content a  { color: ${p}; }
-        .related-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
-        @media(max-width: 640px) { .related-grid { grid-template-columns: 1fr; } }
+        /* intro: image left + meta right on desktop */
+        .jap-intro {
+          display: grid;
+          grid-template-columns: minmax(0, 460px) 1fr;
+          gap: 40px;
+          align-items: start;
+        }
+        @media (max-width: 760px) {
+          .jap-intro { grid-template-columns: 1fr; gap: 20px; }
+        }
+
+        /* article body */
+        .jap-body {
+          font-size: 16.5px;
+          line-height: 1.95;
+          color: #374151;
+          letter-spacing: 0.01em;
+        }
+        .jap-body p  { margin: 0 0 1.3em; }
+        .jap-body h2 { font-size: 1.3em; font-weight: 800; color: #1e293b; margin: 2em 0 0.6em; }
+        .jap-body h3 { font-size: 1.1em; font-weight: 700; color: #1e293b; margin: 1.6em 0 0.5em; }
+        .jap-body ul,
+        .jap-body ol { padding-left: 1.5em; margin: 0 0 1.3em; }
+        .jap-body li { margin-bottom: 0.4em; }
+        .jap-body img {
+          max-width: 100%;
+          height: auto;
+          border-radius: 14px;
+          margin: 1.6em 0;
+          display: block;
+        }
+        .jap-body a { color: ${p}; text-decoration: underline; text-underline-offset: 3px; }
+        .jap-body blockquote {
+          border-left: 3px solid ${p}50;
+          margin: 1.4em 0;
+          padding: 0.6em 1.2em;
+          color: #64748b;
+          font-style: italic;
+        }
+
+        /* related grid */
+        .jap-related { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        @media (max-width: 640px) { .jap-related { grid-template-columns: 1fr; gap: 12px; } }
+        @media (min-width: 641px) and (max-width: 860px) { .jap-related { grid-template-columns: repeat(2, 1fr); } }
+
+        .jap-related-card { transition: transform 0.15s, box-shadow 0.15s; }
+        .jap-related-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.10) !important; }
       `}</style>
 
-      <div style={{ maxWidth: 1020, margin: '0 auto', padding: '36px 20px 80px' }}>
+      <div style={{ maxWidth: 920, margin: '0 auto', padding: '32px 20px 88px' }}>
 
         {/* Back */}
         <button onClick={() => navigate('/journal')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 13, fontWeight: 600, padding: '0 0 28px', display: 'flex', alignItems: 'center', gap: 5 }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 13, fontWeight: 600, padding: '0 0 24px', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'inherit' }}>
           ← {tRaw('Fluffy Journal', 'Fluffy Journal')}
         </button>
 
-        {/* ── Hero: image left + info right ── */}
-        <div className="jap-hero" style={{ marginBottom: 48 }}>
+        {/* ── Intro: cover (secondary) + meta (primary) ── */}
+        <div className="jap-intro" style={{ marginBottom: 44 }}>
 
-          {/* Left — cover image */}
-          {article.cover_image ? (
-            <div>
-              <img src={article.cover_image} alt={title}
-                style={{ width: '100%', height: 'auto', maxHeight: 480, objectFit: 'contain', borderRadius: 20, display: 'block' }} />
-            </div>
-          ) : (
-            <div style={{ aspectRatio: '4/3', background: `linear-gradient(135deg,${p}14,${p}07)`, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56 }}>
-              📝
-            </div>
-          )}
+          {/* Left — cover image, reduced weight */}
+          <div>
+            {article.cover_image ? (
+              <img
+                src={article.cover_image}
+                alt={title}
+                style={{ width: '100%', height: 'auto', maxHeight: 500, objectFit: 'contain', borderRadius: 18, display: 'block' }}
+              />
+            ) : (
+              <div style={{ width: '100%', aspectRatio: '4/3', background: `linear-gradient(135deg,${p}14,${p}07)`, borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 52 }}>
+                📝
+              </div>
+            )}
+          </div>
 
-          {/* Right — info panel */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 6 }}>
+          {/* Right — primary info panel */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 4 }}>
 
             {/* Category badge */}
             {typeMeta && (
-              <span style={{ alignSelf: 'flex-start', background: p + '18', color: p, fontSize: 12, fontWeight: 800, padding: '5px 14px', borderRadius: 20 }}>
+              <span style={{ alignSelf: 'flex-start', background: p + '15', color: p, fontSize: 11.5, fontWeight: 800, padding: '4px 13px', borderRadius: 20, letterSpacing: 0.3 }}>
                 {typeMeta.emoji} {typeMeta.label[lang as 'th' | 'en'] ?? typeMeta.label.en}
               </span>
             )}
 
-            {/* Title */}
-            <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1e293b', margin: 0, lineHeight: 1.35 }}>
+            {/* Title — primary heading */}
+            <h1 style={{ fontSize: 'clamp(20px, 3.2vw, 27px)', fontWeight: 900, color: '#1e293b', margin: 0, lineHeight: 1.3, letterSpacing: -0.3 }}>
               {title}
             </h1>
 
-            {/* Meta row */}
-            <div style={{ display: 'flex', gap: 10, fontSize: 12.5, color: '#94a3b8', fontWeight: 600, flexWrap: 'wrap' as const }}>
+            {/* Date + reading time */}
+            <div style={{ display: 'flex', gap: 10, fontSize: 12.5, color: '#94a3b8', fontWeight: 600, flexWrap: 'wrap' as const, alignItems: 'center' }}>
               <span>📅 {date}</span>
-              <span>·</span>
+              <span style={{ color: '#e2e8f0' }}>·</span>
               <span>⏱ {rt}</span>
             </div>
 
-            {/* Excerpt */}
+            {/* Excerpt — 3 lines max */}
             {excerpt && (
-              <p style={{ fontSize: 14.5, color: '#475569', lineHeight: 1.75, margin: 0 }}>
+              <p style={{ fontSize: 14.5, color: '#64748b', lineHeight: 1.75, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden' }}>
                 {excerpt}
               </p>
             )}
 
             {/* Divider */}
-            <div style={{ height: 1, background: p + '18', borderRadius: 2, margin: '4px 0' }} />
+            <div style={{ height: 1, background: `${p}18`, borderRadius: 1, margin: '2px 0' }} />
 
-            {/* Reaction buttons */}
+            {/* Reactions */}
             <ReactionButtons article={article} p={p} lang={lang} tRaw={tRaw} navigate={navigate} />
           </div>
         </div>
 
-        {/* ── Main content ── */}
-        {content ? (
-          <div style={{ maxWidth: 850, margin: '0 auto' }}>
-            <div style={{ height: 1.5, background: p + '15', borderRadius: 2, marginBottom: 36 }} />
-            <div className="journal-content" dangerouslySetInnerHTML={{ __html: content }} />
+        {/* ── Article content — primary focus ── */}
+        <div style={{ maxWidth: 850, margin: '0 auto' }}>
+          {/* ornamental divider before content */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 36 }}>
+            <div style={{ flex: 1, height: 1, background: `${p}15` }} />
+            <span style={{ fontSize: 15, opacity: 0.35 }}>✦</span>
+            <div style={{ flex: 1, height: 1, background: `${p}15` }} />
           </div>
-        ) : (
-          <div style={{ textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: 15, padding: '20px 0' }}>
-            {tRaw('ยังไม่มีเนื้อหา', 'No content yet.')}
-          </div>
-        )}
 
-        {/* ── Related articles ── */}
+          {content ? (
+            <div className="jap-body" dangerouslySetInnerHTML={{ __html: content }} />
+          ) : (
+            <div style={{ textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: 15, padding: '32px 0' }}>
+              {tRaw('ยังไม่มีเนื้อหา', 'No content yet.')}
+            </div>
+          )}
+        </div>
+
+        {/* ── You may also like ── */}
         {related.length > 0 && (
-          <div style={{ marginTop: 64, maxWidth: 850, margin: '64px auto 0' }}>
-            <div style={{ height: 1.5, background: p + '15', borderRadius: 2, marginBottom: 28 }} />
-            <h2 style={{ fontSize: 17, fontWeight: 900, color: '#1e293b', margin: '0 0 18px' }}>
-              ✨ {tRaw('บทความที่คุณอาจชอบ', 'You may also like')}
-            </h2>
-            <div className="related-grid">
+          <div style={{ maxWidth: 850, margin: '72px auto 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+              <div style={{ flex: 1, height: 1, background: `${p}12` }} />
+              <span style={{ fontSize: 12.5, fontWeight: 800, color: '#94a3b8', whiteSpace: 'nowrap' as const, letterSpacing: 0.5, textTransform: 'uppercase' as const }}>
+                ✨ {tRaw('บทความที่คุณอาจชอบ', 'You may also like')}
+              </span>
+              <div style={{ flex: 1, height: 1, background: `${p}12` }} />
+            </div>
+
+            <div className="jap-related">
               {related.map(a => {
                 const rtitle   = (lang === 'th' ? a.title_th   : a.title_en)   || a.title_th;
                 const rexcerpt = (lang === 'th' ? a.excerpt_th : a.excerpt_en) || a.excerpt_th;
+                const rm = TYPE_META[a.article_type];
                 return (
-                  <div key={a.id} onClick={() => { navigate(`/journal/${a.slug}`); window.scrollTo(0, 0); }}
-                    style={{ background: 'white', borderRadius: 16, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', border: `1.5px solid ${p}12` }}>
+                  <div key={a.id} className="jap-related-card"
+                    onClick={() => { navigate(`/journal/${a.slug}`); window.scrollTo(0, 0); }}
+                    style={{ background: 'white', borderRadius: 16, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 1px 8px rgba(0,0,0,0.06)', border: `1.5px solid ${p}10` }}>
+                    {/* 16:9 thumbnail — cover crop acceptable for small previews */}
                     <div style={{ aspectRatio: '16/9', background: `linear-gradient(135deg,${p}18,${p}08)`, overflow: 'hidden' }}>
                       {a.cover_image
                         ? <img src={a.cover_image} alt={rtitle} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
-                        : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>📝</div>
+                        : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>📝</div>
                       }
                     </div>
-                    <div style={{ padding: '12px 14px 14px' }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: '#1e293b', lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+                    <div style={{ padding: '11px 13px 13px' }}>
+                      {rm && (
+                        <div style={{ fontSize: 10.5, fontWeight: 800, color: p, marginBottom: 4, letterSpacing: 0.3 }}>
+                          {rm.emoji} {rm.label[lang as 'th' | 'en'] ?? rm.label.en}
+                        </div>
+                      )}
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#1e293b', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
                         {rtitle}
                       </div>
                       {rexcerpt && (
-                        <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+                        <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, lineHeight: 1.5 }}>
                           {rexcerpt}
                         </div>
                       )}
