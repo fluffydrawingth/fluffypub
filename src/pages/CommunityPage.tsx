@@ -8,6 +8,7 @@ import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
 import { makeImageVariants } from '../lib/imageThumb';
 import CommunityCard from '../components/CommunityCard';
+import { HighlightCard } from './CommunityHighlightsPage';
 
 const PAGE = 12;
 const GRID = [
@@ -40,7 +41,7 @@ export default function CommunityPage() {
   const { theme } = useTheme();
   const { navigate } = useRouter();
   const { user } = useAuth();
-  const { tRaw } = useLang();
+  const { tRaw, lang } = useLang();
   const t = useT();
   const p = theme.primaryColor;
 
@@ -52,6 +53,7 @@ export default function CommunityPage() {
   const [exploreQ, setExploreQ] = useState('');
   const [postTab, setPostTab] = useState<'all' | 'gallery' | 'tips'>('all');
   const [cozy, setCozy] = useState<any[]>([]);
+  const [highlights, setHighlights] = useState<any[]>([]);
   const [discoverCreators, setDiscoverCreators] = useState<any[]>([]);
   const [curation, setCuration] = useState<{ featured_books: any[]; featured_creators: any[] }>({ featured_books: [], featured_creators: [] });
   const [facets, setFacets] = useState<{ palettes: any[]; markers: any[]; mediums: any[]; books: any[]; externalBooks: any[] }>({ palettes: [], markers: [], mediums: [], books: [], externalBooks: [] });
@@ -62,6 +64,7 @@ export default function CommunityPage() {
 
   useEffect(() => {
     api.getCommunityCozyPicks().then((d: any) => setCozy(d?.posts || [])).catch(() => {});
+    api.getCommunityHighlights().then((d: any) => setHighlights(d?.highlights || [])).catch(() => {});
     api.getCommunityCreators({ sort: 'featured', limit: 4 }).then((d: any) => setDiscoverCreators(d?.creators || [])).catch(() => {});
     api.getCommunityCuration().then((d: any) => setCuration({ featured_books: d?.featured_books || [], featured_creators: d?.featured_creators || [] })).catch(() => {});
     api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [], mediums: d?.mediums || [], books: d?.books || [], externalBooks: d?.externalBooks || [] })).catch(() => {});
@@ -212,7 +215,31 @@ export default function CommunityPage() {
           </>
         )}
 
-        {/* 5. 🔎 Explore — advanced filters, collapsed by default, at the bottom */}
+        {/* 5. ✨ Highlights & Events — max 3 active items */}
+        {isAll && highlights.length > 0 && (
+          <div style={{ marginTop: 36 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 900, color: theme.textColor, margin: 0 }}>✨ {tRaw('ไฮไลท์และกิจกรรม', 'Highlights & Events')}</h2>
+              {highlights.length > 3 && (
+                <button onClick={() => navigate('/community/highlights')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 13, fontWeight: 700, padding: 0 }}>{tRaw('ดูทั้งหมด →', 'See all →')}</button>
+              )}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 14 }}>
+              {highlights.slice(0, 3).map((h: any) => (
+                <HighlightCard key={h.id} h={h} p={p} theme={theme} lang={lang} tRaw={tRaw} />
+              ))}
+            </div>
+            {highlights.length > 3 && (
+              <div style={{ textAlign: 'center', marginTop: 14 }}>
+                <button onClick={() => navigate('/community/highlights')} style={{ background: 'transparent', border: `1.5px solid ${p}40`, color: p, cursor: 'pointer', padding: '8px 24px', borderRadius: 20, fontSize: 13, fontWeight: 700, fontFamily: theme.fontFamily }}>
+                  {tRaw('ดูทั้งหมด →', 'See all →')}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 6. 🔎 Explore — advanced filters, collapsed by default, at the bottom */}
         {isAll && (facets.books.length || facets.externalBooks.length || facets.markers.length || facets.mediums.length || facets.palettes.length) ? (
           <div style={{ background: 'white', borderRadius: 16, padding: '12px 16px', margin: '32px 0 24px', boxShadow: '0 1px 6px rgba(0,0,0,0.05)', border: `1px solid ${p}10` }}>
             <button onClick={() => setShowFilters(s => !s)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily }}>

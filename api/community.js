@@ -1111,5 +1111,76 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { success: true, changed });
   }
 
+  // ─────────────────── Highlights & Events ───────────────────
+
+  // GET ?action=highlights[&type=challenge|giveaway|...] — public, active items only
+  if (req.method === 'GET' && action === 'highlights') {
+    const type = req.query.type;
+    let q = supabase.from('community_highlights').select('*').eq('status', 'active').order('sort_order').order('start_date', { ascending: false });
+    if (type && ['challenge','giveaway','announcement','partner','sponsored'].includes(type)) q = q.eq('type', type);
+    const { data } = await q;
+    return json(res, 200, { highlights: data || [] });
+  }
+
+  // GET ?action=admin-highlights — admin: all items (any status)
+  if (req.method === 'GET' && action === 'admin-highlights') {
+    const admin = await requireAuth(req, res, ['admin']); if (!admin) return;
+    const { data } = await supabase.from('community_highlights').select('*').order('sort_order').order('created_at', { ascending: false });
+    return json(res, 200, { highlights: data || [] });
+  }
+
+  // POST ?action=admin-highlight — admin: create
+  if (req.method === 'POST' && action === 'admin-highlight') {
+    const admin = await requireAuth(req, res, ['admin']); if (!admin) return;
+    const b = req.body || {};
+    const TYPES = ['challenge','giveaway','announcement','partner','sponsored'];
+    if (!String(b.title||'').trim()) return json(res, 400, { error: 'title required' });
+    if (!TYPES.includes(b.type)) return json(res, 400, { error: 'invalid type' });
+    const row = {
+      title: String(b.title).trim().slice(0, 120),
+      type: b.type,
+      cover_image: b.cover_image || null,
+      description: b.description ? String(b.description).slice(0, 500) : null,
+      start_date: b.start_date || null,
+      end_date: b.end_date || null,
+      link_url: b.link_url || null,
+      status: ['draft','active','expired'].includes(b.status) ? b.status : 'draft',
+      sort_order: parseInt(b.sort_order) || 0,
+    };
+    const { data, error } = await supabase.from('community_highlights').insert(row).select().single();
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 201, { highlight: data });
+  }
+
+  // PUT ?action=admin-highlight&id= — admin: update
+  if (req.method === 'PUT' && action === 'admin-highlight') {
+    const admin = await requireAuth(req, res, ['admin']); if (!admin) return;
+    const { id } = req.query; if (!id) return json(res, 400, { error: 'id required' });
+    const b = req.body || {};
+    const TYPES = ['challenge','giveaway','announcement','partner','sponsored'];
+    const upd = { updated_at: new Date().toISOString() };
+    if (b.title !== undefined) upd.title = String(b.title).trim().slice(0, 120);
+    if (b.type !== undefined && TYPES.includes(b.type)) upd.type = b.type;
+    if (b.cover_image !== undefined) upd.cover_image = b.cover_image || null;
+    if (b.description !== undefined) upd.description = b.description ? String(b.description).slice(0, 500) : null;
+    if (b.start_date !== undefined) upd.start_date = b.start_date || null;
+    if (b.end_date !== undefined) upd.end_date = b.end_date || null;
+    if (b.link_url !== undefined) upd.link_url = b.link_url || null;
+    if (b.status !== undefined && ['draft','active','expired'].includes(b.status)) upd.status = b.status;
+    if (b.sort_order !== undefined) upd.sort_order = parseInt(b.sort_order) || 0;
+    const { data, error } = await supabase.from('community_highlights').update(upd).eq('id', id).select().single();
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { highlight: data });
+  }
+
+  // DELETE ?action=admin-highlight&id= — admin: delete
+  if (req.method === 'DELETE' && action === 'admin-highlight') {
+    const admin = await requireAuth(req, res, ['admin']); if (!admin) return;
+    const { id } = req.query; if (!id) return json(res, 400, { error: 'id required' });
+    const { error } = await supabase.from('community_highlights').delete().eq('id', id);
+    if (error) return json(res, 400, { error: error.message });
+    return json(res, 200, { success: true });
+  }
+
   return json(res, 405, { error: 'Method not allowed' });
 };

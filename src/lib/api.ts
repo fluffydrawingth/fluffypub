@@ -178,6 +178,12 @@ export const api = {
   deleteTag: (id: string) => fetch(`/api/community?action=admin-tag&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
   // Community Curation
   getCommunityCuration: () => fetch('/api/community?action=curation').then(r => r.json()),
+  // Highlights & Events
+  getCommunityHighlights: (type?: string) => fetch(`/api/community?action=highlights${type ? '&type=' + type : ''}`).then(r => r.json()),
+  getAdminHighlights: () => fetch('/api/community?action=admin-highlights', { headers: h() }).then(r => r.json()),
+  createHighlight: (data: any) => fetch('/api/community?action=admin-highlight', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  updateHighlight: (id: string, data: any) => fetch(`/api/community?action=admin-highlight&id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  deleteHighlight: (id: string) => fetch(`/api/community?action=admin-highlight&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
   // External Book Library
   getExternalBooks: (q = '') => fetch(`/api/community?action=external-books&q=${encodeURIComponent(q)}`).then(r => r.json()),
   getExternalAuthors: (q = '') => fetch(`/api/community?action=external-authors&q=${encodeURIComponent(q)}`).then(r => r.json()),

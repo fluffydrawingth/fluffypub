@@ -31,6 +31,7 @@ import AffiliateApplicationPage from './pages/AffiliateApplicationPage';
 import AffiliateDashboardPage from './pages/AffiliateDashboardPage';
 import CommunityPage from './pages/CommunityPage';
 import CommunityCreatorsPage from './pages/CommunityCreatorsPage';
+import CommunityHighlightsPage from './pages/CommunityHighlightsPage';
 import CommunityPostPage from './pages/CommunityPostPage';
 import ExternalBookPage from './pages/ExternalBookPage';
 import CreatorProfilePage from './pages/CreatorProfilePage';
@@ -128,6 +129,7 @@ function AppContent() {
       case '/artists': return <ArtistsPage />;
       case '/community': return <CommunityPage />;
       case '/community/creators': return <CommunityCreatorsPage />;
+      case '/community/highlights': return <CommunityHighlightsPage />;
       case '/community/book/:slug': return <ExternalBookPage slug={route.params?.slug || ''} />;
       case '/community/:id': return <CommunityPostPage postId={route.params?.id || ''} />;
       case '/creator/:id': return <CreatorProfilePage userId={route.params?.id || ''} />;

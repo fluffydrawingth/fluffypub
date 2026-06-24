@@ -2216,7 +2216,7 @@ function AffiliatesTab() {
 // ── 🌈 Community Dashboard (admin) ────────────────────────────────────────────
 function CommunityDashboardTab() {
   const [stats, setStats] = useState<any>(null);
-  const [communityTab, setCommunityTab] = useState<'posts'|'curation'|'tags'>('posts');
+  const [communityTab, setCommunityTab] = useState<'posts'|'curation'|'tags'|'highlights'>('posts');
   const [statusTab, setStatusTab] = useState('published');
   const [posts, setPosts] = useState<any[]>([]);
   const [page, setPage] = useState(0);
@@ -2395,6 +2395,7 @@ function CommunityDashboardTab() {
       <div style={{display:'flex',gap:8,marginBottom:20}}>
         {tabBtn('posts','🖼️ Posts')}
         {tabBtn('curation','🌷 Curation')}
+        {tabBtn('highlights','✨ Highlights')}
         {tabBtn('tags','🏷️ Tag Library')}
       </div>
 
@@ -2514,6 +2515,9 @@ function CommunityDashboardTab() {
         <button onClick={saveCuration} style={{padding:'11px 28px',borderRadius:12,border:'none',background:P,color:'white',cursor:'pointer',fontSize:14,fontWeight:800}}>💾 Save Curation</button>
       </>}
 
+      {/* ── Highlights & Events ── */}
+      {communityTab==='highlights' && <HighlightsTab P={P} card={card} flash={flash} />}
+
       {/* ── Tag Library ── */}
       {communityTab==='tags' && <>
         <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
@@ -2604,6 +2608,150 @@ function CommunityDashboardTab() {
     </div>
   );
 }
+// ─── Highlights & Events admin tab ───────────────────────────────────────────
+const HL_TYPES = ['challenge','giveaway','announcement','partner','sponsored'] as const;
+type HLType = typeof HL_TYPES[number];
+const HL_STATUSES = ['draft','active','expired'] as const;
+
+const EMPTY_HL = { title:'', type:'announcement' as HLType, cover_image:'', description:'', start_date:'', end_date:'', link_url:'', status:'draft' as string, sort_order:0 };
+
+function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}) {
+  const [items, setItems] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [editing, setEditing] = React.useState<any|null>(null);
+  const [form, setForm] = React.useState<any>(EMPTY_HL);
+  const [saving, setSaving] = React.useState(false);
+  const [uploading, setUploading] = React.useState(false);
+
+  const load = () => { api.getAdminHighlights().then((d:any)=>{ setItems(d?.highlights||[]); setLoading(false); }).catch(()=>setLoading(false)); };
+  React.useEffect(()=>{ load(); },[]);
+
+  const openNew = () => { setEditing('new'); setForm({...EMPTY_HL}); };
+  const openEdit = (h:any) => { setEditing(h.id); setForm({ title:h.title||'', type:h.type||'announcement', cover_image:h.cover_image||'', description:h.description||'', start_date:h.start_date||'', end_date:h.end_date||'', link_url:h.link_url||'', status:h.status||'draft', sort_order:h.sort_order||0 }); };
+  const cancel = () => { setEditing(null); };
+
+  const save = async () => {
+    if (!form.title.trim()) return flash('⚠️ Title is required');
+    setSaving(true);
+    const r = editing==='new' ? await api.createHighlight(form) : await api.updateHighlight(editing, form);
+    setSaving(false);
+    if (r?.error) return flash('⚠️ '+r.error);
+    flash(editing==='new'?'✓ Created':'✓ Saved'); setEditing(null); load();
+  };
+
+  const del = async (id:string) => {
+    if (!confirm('Delete this highlight?')) return;
+    const r = await api.deleteHighlight(id);
+    if (r?.error) return flash('⚠️ '+r.error);
+    flash('✓ Deleted'); load();
+  };
+
+  const uploadImg = async (e:React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    setUploading(true);
+    const r = await api.uploadFile(file, 'community').catch(()=>null);
+    setUploading(false);
+    if (!r?.url) return flash('⚠️ Upload failed');
+    setForm((f:any)=>({...f, cover_image: r.url}));
+  };
+
+  const inp = (label:string, key:string, type='text', ph='') => (
+    <div style={{marginBottom:12}}>
+      <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>{label}</label>
+      <input type={type} value={form[key]||''} onChange={e=>setForm((f:any)=>({...f,[key]:e.target.value}))} placeholder={ph}
+        style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box' as const}} />
+    </div>
+  );
+
+  const statusColor = (s:string) => s==='active'?'#10b981':s==='expired'?'#94a3b8':'#f59e0b';
+
+  if (loading) return <div style={{padding:32,textAlign:'center'}}>⏳</div>;
+
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+        <div>
+          <h2 style={{fontSize:16,fontWeight:800,color:'#111827',margin:'0 0 3px'}}>✨ Highlights & Events</h2>
+          <p style={{fontSize:12,color:'#6b7280',margin:0}}>Challenges, giveaways, announcements — max 3 active shown on Community page.</p>
+        </div>
+        <button onClick={openNew} style={{padding:'9px 18px',borderRadius:12,border:'none',background:P,color:'white',cursor:'pointer',fontSize:13,fontWeight:800}}>+ New</button>
+      </div>
+
+      {/* Form panel */}
+      {editing && (
+        <div style={{...card,padding:20,marginBottom:20,border:`2px solid ${P}30`}}>
+          <h3 style={{fontSize:14,fontWeight:800,margin:'0 0 16px'}}>{editing==='new'?'New Highlight':'Edit Highlight'}</h3>
+          {inp('Title *', 'title', 'text', 'e.g. June Coloring Challenge')}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+            <div>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Type</label>
+              <select value={form.type} onChange={e=>setForm((f:any)=>({...f,type:e.target.value}))} style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit'}}>
+                {HL_TYPES.map(t=><option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Status</label>
+              <select value={form.status} onChange={e=>setForm((f:any)=>({...f,status:e.target.value}))} style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit'}}>
+                {HL_STATUSES.map(s=><option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{marginBottom:12}}>
+            <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Cover Image</label>
+            {form.cover_image && <img src={form.cover_image} alt="" style={{width:'100%',height:120,objectFit:'cover',borderRadius:10,marginBottom:8,display:'block'}} />}
+            <div style={{display:'flex',gap:8,alignItems:'center'}}>
+              <label style={{padding:'7px 14px',borderRadius:10,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:700,color:'#374151'}}>
+                {uploading?'Uploading…':'📁 Upload image'}
+                <input type="file" accept="image/*" onChange={uploadImg} style={{display:'none'}} />
+              </label>
+              {form.cover_image && <button onClick={()=>setForm((f:any)=>({...f,cover_image:''}))} style={{background:'none',border:'none',color:'#dc2626',cursor:'pointer',fontSize:12,fontWeight:700}}>✕ Remove</button>}
+            </div>
+          </div>
+          <div style={{marginBottom:12}}>
+            <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Short Description</label>
+            <textarea value={form.description||''} onChange={e=>setForm((f:any)=>({...f,description:e.target.value}))} rows={3} maxLength={500} placeholder="Brief description shown on the card…"
+              style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',resize:'vertical' as const,boxSizing:'border-box' as const}} />
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            {inp('Start Date','start_date','date')}
+            {inp('End Date','end_date','date')}
+          </div>
+          {inp('Link URL (optional)','link_url','url','https://')}
+          {inp('Sort Order (lower = first)','sort_order','number','0')}
+          <div style={{display:'flex',gap:8,marginTop:4}}>
+            <button onClick={save} disabled={saving} style={{padding:'9px 22px',borderRadius:10,border:'none',background:P,color:'white',cursor:saving?'wait':'pointer',fontSize:13,fontWeight:800}}>{saving?'Saving…':'💾 Save'}</button>
+            <button onClick={cancel} style={{padding:'9px 16px',borderRadius:10,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:13,fontWeight:700,color:'#374151'}}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* List */}
+      {items.length===0 ? (
+        <div style={{...card,padding:32,textAlign:'center',color:'#94a3b8'}}>
+          <div style={{fontSize:36,marginBottom:8}}>✨</div>
+          <div style={{fontWeight:700,color:'#374151',marginBottom:4}}>No highlights yet</div>
+          <div style={{fontSize:13}}>Click "+ New" to create your first highlight or event.</div>
+        </div>
+      ) : (
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          {items.map((h:any)=>(
+            <div key={h.id} style={{...card,padding:'12px 16px',display:'flex',gap:12,alignItems:'center'}}>
+              {h.cover_image && <img src={h.cover_image} alt="" style={{width:60,height:44,objectFit:'cover',borderRadius:8,flexShrink:0}} />}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:800,color:'#1e293b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{h.title}</div>
+                <div style={{fontSize:11.5,color:'#94a3b8'}}>{h.type} {h.end_date?`· ends ${h.end_date}`:''}</div>
+              </div>
+              <span style={{fontSize:11,fontWeight:700,padding:'3px 9px',borderRadius:10,background:statusColor(h.status)+'20',color:statusColor(h.status),flexShrink:0}}>{h.status}</span>
+              <button onClick={()=>openEdit(h)} style={{padding:'5px 12px',borderRadius:8,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:700,color:'#374151',flexShrink:0}}>Edit</button>
+              <button onClick={()=>del(h.id)} style={{padding:'5px 10px',borderRadius:8,border:'1.5px solid #fca5a5',background:'#fef2f2',cursor:'pointer',fontSize:12,fontWeight:700,color:'#dc2626',flexShrink:0}}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function btnS(bg:string,color:string){ return {padding:'4px 9px',borderRadius:8,border:'none',background:bg,color,cursor:'pointer',fontSize:11,fontWeight:700,fontFamily:'inherit' as const}; }
 
 function AffiliateCodeRow({codeRow,onSave,onDelete}:{codeRow:any,onSave:(c:any,u:any)=>void,onDelete:(id:string)=>void}) {
