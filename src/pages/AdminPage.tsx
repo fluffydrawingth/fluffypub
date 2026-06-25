@@ -3395,7 +3395,7 @@ function RichEditor({ value, onChange, onImageUpload }: { value: string; onChang
 // ── Fluffy Journal Tab ────────────────────────────────────────────────────────
 const JOURNAL_TYPES = ['tips','tools','favorites','journal'] as const;
 const JOURNAL_TYPE_LABELS: Record<string,string> = { tips:'🎨 มุมระบายสี / Coloring Tips', tools:'🖍️ มุมอุปกรณ์ / Tools', favorites:'🩷 มุมโปรด / My Favorites', journal:'📔 เล่าให้ฟัง / Journal' };
-const EMPTY_ARTICLE = { title_th:'', title_en:'', excerpt_th:'', excerpt_en:'', content_th:'', content_en:'', article_type:'tips', cover_image:'', status:'draft', sort_order:0 };
+const EMPTY_ARTICLE = { title_th:'', title_en:'', excerpt_th:'', excerpt_en:'', content_th:'', content_en:'', article_type:'tips', cover_image:'', status:'draft', sort_order:0, content_blocks:[] as any[] };
 
 function JournalTab() {
   const [items, setItems] = React.useState<any[]>([]);
@@ -3414,7 +3414,7 @@ function JournalTab() {
   React.useEffect(()=>{ load(); },[]);
 
   const openNew = () => { setEditing('new'); setForm({...EMPTY_ARTICLE}); };
-  const openEdit = (a:any) => { setEditing(a.id); setForm({ title_th:a.title_th||'', title_en:a.title_en||'', excerpt_th:a.excerpt_th||'', excerpt_en:a.excerpt_en||'', content_th:a.content_th||'', content_en:a.content_en||'', article_type:a.article_type||'tips', cover_image:a.cover_image||'', status:a.status||'draft', sort_order:a.sort_order||0 }); };
+  const openEdit = (a:any) => { setEditing(a.id); setForm({ title_th:a.title_th||'', title_en:a.title_en||'', excerpt_th:a.excerpt_th||'', excerpt_en:a.excerpt_en||'', content_th:a.content_th||'', content_en:a.content_en||'', article_type:a.article_type||'tips', cover_image:a.cover_image||'', status:a.status||'draft', sort_order:a.sort_order||0, content_blocks:Array.isArray(a.content_blocks)?a.content_blocks:[] }); };
   const cancel = () => setEditing(null);
 
   const save = async () => {

@@ -277,6 +277,7 @@ async function handleJournal(req, res) {
       status: ['draft','published'].includes(b.status) ? b.status : 'draft',
       slug: finalSlug,
       sort_order: parseInt(b.sort_order) || 0,
+      content_blocks: Array.isArray(b.content_blocks) ? b.content_blocks : [],
     };
     const { data, error } = await supabase.from('journal_articles').insert(row).select().single();
     if (error) return json(res, 400, { error: error.message });
@@ -288,9 +289,13 @@ async function handleJournal(req, res) {
     const user = await requireAuth(req, res, ['admin']); if (!user) return;
     const b = req.body || {};
     const upd = { updated_at: new Date().toISOString() };
-    const fields = ['title_th','title_en','excerpt_th','excerpt_en','content_th','content_en','article_type','cover_image','status','sort_order'];
+    const fields = ['title_th','title_en','excerpt_th','excerpt_en','content_th','content_en','article_type','cover_image','status','sort_order','content_blocks'];
     for (const k of fields) {
-      if (b[k] !== undefined) upd[k] = k === 'sort_order' ? (parseInt(b[k]) || 0) : (b[k] || null);
+      if (b[k] !== undefined) {
+        if (k === 'sort_order') upd[k] = parseInt(b[k]) || 0;
+        else if (k === 'content_blocks') upd[k] = Array.isArray(b[k]) ? b[k] : [];
+        else upd[k] = b[k] || null;
+      }
     }
     if (b.title_th !== undefined) upd.title_th = String(b.title_th).trim();
     const { error } = await supabase.from('journal_articles').update(upd).eq('id', id);
