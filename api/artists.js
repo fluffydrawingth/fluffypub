@@ -123,7 +123,14 @@ module.exports = async function handler(req, res) {
     if (!reqRow) return json(res, 404, { error: 'Request not found' });
 
     const { data: currentProfile } = await supabase.from('profiles').select('id,role,artist_id,updated_at').eq('id', reqRow.user_id).single();
-    const shouldClearArtistAccess = currentProfile?.role === 'artist';
+    const { data: otherApproved } = await supabase
+      .from('artist_requests')
+      .select('id')
+      .eq('user_id', reqRow.user_id)
+      .eq('status', 'approved')
+      .neq('id', id)
+      .limit(1);
+    const shouldClearArtistAccess = currentProfile?.role === 'artist' && !(otherApproved && otherApproved.length);
     if (shouldClearArtistAccess) {
       const { error: pErr } = await supabase.from('profiles')
         .update({ role: 'customer', artist_id: null, updated_at: new Date().toISOString() })
