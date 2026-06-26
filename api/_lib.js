@@ -17,21 +17,22 @@ async function getUser(req) {
   const token = getToken(req);
   if (!token) return null;
   try {
-    // Decode JWT manually to get user_id (avoids auth.getUser issues)
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'));
-    const userId = payload.sub;
-    if (!userId) return null;
-    
-    // Check expiry
-    if (payload.exp && Date.now() / 1000 > payload.exp) return null;
+    // Verify the bearer token with Supabase Auth before trusting any claims.
+    // This rejects forged, expired, or otherwise invalid JWTs while keeping the
+    // existing profile/role model as the source of app authorization.
+    const { data: authData, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !authData?.user?.id) {
+      if (authErr) console.error('getUser auth verification error:', authErr.message);
+      return null;
+    }
+    const authUser = authData.user;
+    const userId = authUser.id;
     
     // Get profile from DB. Use select('*') so a not-yet-migrated column can NEVER
     // break auth — every existing column is returned (affiliate_enabled, payout_*,
     // role, artist_id, …) and missing ones are simply absent. This avoids the class
     // of bug where adding a column to a curated select logs users out / drops flags.
-    const email = payload.email || '';
+    const email = authUser.email || '';
     const { data: profile, error: fetchErr } = await supabase
       .from('profiles')
       .select('*')
@@ -58,7 +59,7 @@ async function getUser(req) {
       .insert({
         id: userId,
         email: email,
-        name: payload.user_metadata?.name || email.split('@')[0] || '',
+        name: authUser.user_metadata?.name || email.split('@')[0] || '',
         role: 'customer',
       })
       .select('*')
