@@ -46,6 +46,12 @@ module.exports = async function handler(req, res) {
     const { data: reqRow } = await supabase.from('artist_requests').select('*').eq('id', id).single();
     if (!reqRow) return json(res, 404, { error: 'Request not found' });
     const linkArtistId = (req.body && req.body.artist_id) || reqRow.user_id; // self-link if none chosen
+    const { data: currentProfile, error: currentProfileErr } = await supabase.from('profiles')
+      .select('id,email,role,artist_id,affiliate_enabled,updated_at')
+      .eq('id', reqRow.user_id)
+      .single();
+    if (currentProfileErr || !currentProfile) return json(res, 400, { error: currentProfileErr?.message || 'Profile not found' });
+
     // Promote the requesting user on the SAME profile row they log in with (id = user_id).
     const { data: updatedProfile, error: pErr } = await supabase.from('profiles')
       .update({ role: 'artist', artist_id: linkArtistId, updated_at: new Date().toISOString() })
@@ -53,9 +59,58 @@ module.exports = async function handler(req, res) {
       .select('id,email,role,artist_id,affiliate_enabled')
       .single();
     if (pErr) return json(res, 400, { error: pErr.message });
-    await supabase.from('artist_requests').update({ status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: admin.id }).eq('id', id);
+    const { error: rErr } = await supabase.from('artist_requests')
+      .update({ status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: admin.id })
+      .eq('id', id)
+      .select('id,status')
+      .single();
+    if (rErr) {
+      const rollback = {
+        role: currentProfile.role,
+        artist_id: currentProfile.artist_id || null,
+        updated_at: currentProfile.updated_at || new Date().toISOString(),
+      };
+      const { error: rollbackErr } = await supabase.from('profiles').update(rollback).eq('id', reqRow.user_id);
+      return json(res, rollbackErr ? 500 : 400, {
+        error: rErr.message,
+        rollback: rollbackErr ? { success: false, error: rollbackErr.message } : { success: true },
+      });
+    }
     console.log('[artist approve] profile:', JSON.stringify(updatedProfile));
     return json(res, 200, { success: true, profile: updatedProfile });
+  }
+
+  // POST /api/artists?action=repair-approved — admin repairs legacy approved artist requests
+  // whose profile row was not promoted to artist.
+  if (req.method === 'POST' && action === 'repair-approved') {
+    const admin = await requireAuth(req, res, ['admin']);
+    if (!admin) return;
+    const { id } = req.query;
+    let q = supabase.from('artist_requests').select('id,user_id').eq('status', 'approved');
+    if (id) q = q.eq('id', id);
+    const { data: requests, error: reqErr } = await q;
+    if (reqErr) return json(res, 400, { error: reqErr.message });
+
+    const repaired = [];
+    for (const row of requests || []) {
+      const { data: profile, error: profileErr } = await supabase
+        .from('profiles')
+        .select('id,role,artist_id')
+        .eq('id', row.user_id)
+        .single();
+      if (profileErr || !profile || profile.role !== 'customer') continue;
+
+      const artistId = profile.artist_id || row.user_id;
+      const { data: updated, error: updateErr } = await supabase
+        .from('profiles')
+        .update({ role: 'artist', artist_id: artistId, updated_at: new Date().toISOString() })
+        .eq('id', row.user_id)
+        .select('id,role,artist_id')
+        .single();
+      if (!updateErr && updated) repaired.push({ request_id: row.id, profile: updated });
+    }
+
+    return json(res, 200, { success: true, repaired });
   }
 
   // POST /api/artists?action=reject&id=<requestId> — admin rejects
@@ -64,7 +119,30 @@ module.exports = async function handler(req, res) {
     if (!admin) return;
     const { id } = req.query;
     if (!id) return json(res, 400, { error: 'request id required' });
-    const { error } = await supabase.from('artist_requests').update({ status: 'rejected', reviewed_at: new Date().toISOString(), reviewed_by: admin.id }).eq('id', id);
+    const { data: reqRow } = await supabase.from('artist_requests').select('id,user_id').eq('id', id).single();
+    if (!reqRow) return json(res, 404, { error: 'Request not found' });
+
+    const { data: currentProfile } = await supabase.from('profiles').select('id,role,artist_id,updated_at').eq('id', reqRow.user_id).single();
+    const shouldClearArtistAccess = currentProfile?.role === 'artist';
+    if (shouldClearArtistAccess) {
+      const { error: pErr } = await supabase.from('profiles')
+        .update({ role: 'customer', artist_id: null, updated_at: new Date().toISOString() })
+        .eq('id', reqRow.user_id);
+      if (pErr) return json(res, 400, { error: pErr.message });
+    }
+
+    const { error } = await supabase.from('artist_requests')
+      .update({ status: 'rejected', reviewed_at: new Date().toISOString(), reviewed_by: admin.id })
+      .eq('id', id)
+      .select('id,status')
+      .single();
+    if (error && shouldClearArtistAccess) {
+      await supabase.from('profiles').update({
+        role: currentProfile.role,
+        artist_id: currentProfile.artist_id || null,
+        updated_at: currentProfile.updated_at || new Date().toISOString(),
+      }).eq('id', reqRow.user_id);
+    }
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, { success: true });
   }
@@ -75,11 +153,26 @@ module.exports = async function handler(req, res) {
     if (!admin) return;
     const { id } = req.query;
     if (!id) return json(res, 400, { error: 'user id required' });
+    const { data: currentProfile } = await supabase.from('profiles').select('id,role,artist_id,updated_at').eq('id', id).single();
     // Role back to customer + unlink. Products/orders/sales are intentionally untouched.
     const { error } = await supabase.from('profiles').update({ role: 'customer', artist_id: null, updated_at: new Date().toISOString() }).eq('id', id);
     if (error) return json(res, 400, { error: error.message });
     // So the user no longer sees the "approved" state in their profile.
-    await supabase.from('artist_requests').update({ status: 'revoked' }).eq('user_id', id).eq('status', 'approved');
+    const { error: rErr } = await supabase.from('artist_requests')
+      .update({ status: 'revoked' })
+      .eq('user_id', id)
+      .eq('status', 'approved')
+      .select('id,status');
+    if (rErr) {
+      if (currentProfile) {
+        await supabase.from('profiles').update({
+          role: currentProfile.role,
+          artist_id: currentProfile.artist_id || null,
+          updated_at: currentProfile.updated_at || new Date().toISOString(),
+        }).eq('id', id);
+      }
+      return json(res, 400, { error: rErr.message });
+    }
     return json(res, 200, { success: true });
   }
 
