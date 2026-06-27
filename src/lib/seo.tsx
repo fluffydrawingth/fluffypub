@@ -3,6 +3,15 @@ import { useEffect } from 'react';
 const SITE_NAME = 'Fluffy Pub';
 const DEFAULT_DESCRIPTION = 'Cute coloring books, cozy coloring inspiration, artists, and creative community.';
 const DEFAULT_IMAGE = '/og-default.png';
+const ASSET_VERSION = 'official-logo';
+
+const FAVICON_LINKS = [
+  { selector: 'link[rel="icon"][sizes="any"]', attrs: { rel: 'icon', href: `/favicon.ico?v=${ASSET_VERSION}`, sizes: 'any' } },
+  { selector: 'link[rel="icon"][sizes="16x16"]', attrs: { rel: 'icon', type: 'image/png', sizes: '16x16', href: `/favicon-16x16.png?v=${ASSET_VERSION}` } },
+  { selector: 'link[rel="icon"][sizes="32x32"]', attrs: { rel: 'icon', type: 'image/png', sizes: '32x32', href: `/favicon-32x32.png?v=${ASSET_VERSION}` } },
+  { selector: 'link[rel="apple-touch-icon"]', attrs: { rel: 'apple-touch-icon', sizes: '180x180', href: `/apple-touch-icon.png?v=${ASSET_VERSION}` } },
+  { selector: 'link[rel="manifest"]', attrs: { rel: 'manifest', href: `/site.webmanifest?v=${ASSET_VERSION}` } },
+];
 
 type JsonLd = Record<string, any> | Array<Record<string, any>>;
 
@@ -45,6 +54,12 @@ function setTag(selector: string, create: () => HTMLMetaElement | HTMLLinkElemen
   Object.entries(attrs).forEach(([k, v]) => el!.setAttribute(k, v));
 }
 
+function setFaviconLinks() {
+  FAVICON_LINKS.forEach(link => {
+    setTag(link.selector, () => document.createElement('link'), link.attrs);
+  });
+}
+
 export function useSEO(input: SEOInput) {
   useEffect(() => {
     const titleText = cleanText(input.title, SITE_NAME);
@@ -55,6 +70,7 @@ export function useSEO(input: SEOInput) {
     const robots = input.robots || 'index,follow';
     const type = input.type || 'website';
 
+    setFaviconLinks();
     document.title = fullTitle;
     setTag('meta[name="description"]', () => document.createElement('meta'), { name: 'description', content: description });
     setTag('link[rel="canonical"]', () => document.createElement('link'), { rel: 'canonical', href: canonical });
