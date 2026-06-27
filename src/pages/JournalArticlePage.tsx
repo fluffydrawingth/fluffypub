@@ -171,6 +171,7 @@ function LinkButton({ block, lang, p }: { block: any; lang: string; p: string })
   const outline = block.button_style === 'outline';
   return (
     <a href={block.link_url} target={block.link_new_tab === false ? undefined : '_blank'} rel={block.link_new_tab === false ? undefined : 'noopener noreferrer'}
+      className={block.type === 'cta' ? 'jap-cta-button' : undefined}
       style={{display:'inline-flex',alignItems:'center',gap:6,marginTop:12,background:outline?'white':p,color:outline?p:'white',border:`1.5px solid ${p}`,textDecoration:'none',borderRadius:18,padding:'8px 15px',fontSize:13,fontWeight:800,boxShadow:outline?'none':`0 8px 20px ${p}20`}}>
       {label} →
     </a>
@@ -417,34 +418,49 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 16px;
+          gap: 14px;
           text-align: left;
           background: rgba(255,255,255,0.78);
           border: 1.5px solid ${p}18;
-          border-radius: 18px;
-          padding: 14px 16px;
+          border-radius: 16px;
+          padding: 16px 18px;
+          max-width: 720px;
+          margin: 0 auto 18px;
+          min-height: 0;
+          box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
         }
         .jap-cta-image {
-          width: 88px;
-          height: 88px;
+          width: 68px;
+          height: 68px;
           object-fit: cover;
-          border-radius: 14px;
+          border-radius: 12px;
           flex: 0 0 auto;
-          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+          box-shadow: 0 6px 16px rgba(15, 23, 42, 0.07);
         }
-        .jap-cta-copy { min-width: 0; }
-        .jap-cta-copy p { margin-bottom: 0.65em; }
+        .jap-cta-copy { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+        .jap-cta-copy p { margin-bottom: 0.45em; line-height: 1.45; font-size: 14px; }
+        .jap-cta-button {
+          min-height: 44px;
+          margin-top: 4px !important;
+          padding: 0 18px !important;
+          border-radius: 14px !important;
+          justify-content: center;
+          width: fit-content;
+          max-width: 100%;
+        }
         @media (max-width: 680px) {
           .jap-split,
           .jap-split.text-first { grid-template-columns: 1fr; gap: 14px; }
           .jap-split .jap-split-image { order: 1 !important; }
           .jap-split .jap-split-text { order: 2 !important; }
           .jap-block { margin-bottom: 28px; }
-          .jap-cta { align-items: center; gap: 12px; padding: 12px; }
-          .jap-cta-image { width: 76px; height: 76px; }
+          .jap-cta { align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 18px; }
+          .jap-cta-image { width: 60px; height: 60px; }
+          .jap-cta-button { min-height: 42px; font-size: 12.5px !important; padding: 0 14px !important; }
         }
-        @media (max-width: 420px) {
+        @media (max-width: 360px) {
           .jap-cta { flex-direction: column; text-align: center; }
+          .jap-cta-copy { align-items: center; }
         }
 
         /* related grid */
