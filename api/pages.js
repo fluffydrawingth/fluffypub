@@ -1,5 +1,102 @@
 const { supabase, requireAuth, getUser, json } = require('./_lib');
 
+function seoOrigin(req) {
+  const proto = req.headers['x-forwarded-proto'] || 'https';
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'fluffypub.com';
+  return `${proto}://${host}`;
+}
+
+function xmlEscape(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function sitemapHashUrl(origin, path) {
+  const clean = String(path || '/').startsWith('/') ? path : `/${path}`;
+  return `${origin}/#${clean}`;
+}
+
+function sitemapUrlEntry(origin, path, lastmod, priority = '0.7') {
+  const loc = xmlEscape(sitemapHashUrl(origin, path));
+  const mod = lastmod ? `<lastmod>${xmlEscape(new Date(lastmod).toISOString())}</lastmod>` : '';
+  return `<url><loc>${loc}</loc>${mod}<priority>${priority}</priority></url>`;
+}
+
+async function sitemapSafeQuery(builder) {
+  const { data, error } = await builder;
+  if (error) {
+    console.error('sitemap query error:', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+async function handleRobots(req, res) {
+  const origin = seoOrigin(req);
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.statusCode = 200;
+  res.end(`User-agent: *
+Allow: /
+Allow: /shop
+Allow: /products
+Allow: /artists
+Allow: /journal
+Allow: /community
+Allow: /free-downloads
+Disallow: /admin
+Disallow: /cart
+Disallow: /checkout
+Disallow: /profile
+Disallow: /account
+Disallow: /login
+Disallow: /register
+Disallow: /orders
+Disallow: /payment
+
+Sitemap: ${origin}/sitemap.xml
+`);
+}
+
+async function handleSitemap(req, res) {
+  const origin = seoOrigin(req);
+  const [products, artists, articles, posts, downloads] = await Promise.all([
+    sitemapSafeQuery(supabase.from('products').select('slug,created_at').eq('active', true).eq('status', 'published').order('created_at', { ascending: false }).limit(1000)),
+    sitemapSafeQuery(supabase.from('profiles').select('id,artist_slug,role,artist_id').eq('role', 'artist').limit(1000)),
+    sitemapSafeQuery(supabase.from('journal_articles').select('slug,created_at').eq('status', 'published').order('created_at', { ascending: false }).limit(1000)),
+    sitemapSafeQuery(supabase.from('community_posts').select('id,created_at').eq('status', 'published').order('created_at', { ascending: false }).limit(1000)),
+    sitemapSafeQuery(supabase.from('free_downloads').select('slug,created_at').eq('status', 'published').order('created_at', { ascending: false }).limit(1000)),
+  ]);
+
+  const urls = [
+    sitemapUrlEntry(origin, '/', null, '1.0'),
+    sitemapUrlEntry(origin, '/products', null, '0.9'),
+    sitemapUrlEntry(origin, '/artists', null, '0.8'),
+    sitemapUrlEntry(origin, '/journal', null, '0.8'),
+    sitemapUrlEntry(origin, '/community', null, '0.8'),
+    sitemapUrlEntry(origin, '/free-downloads', null, '0.8'),
+    ...products.filter(p => p.slug).map(p => sitemapUrlEntry(origin, `/products/${p.slug}`, p.created_at, '0.8')),
+    ...artists
+      .filter(a => a.artist_slug || a.id)
+      .filter(a => !a.artist_id || a.artist_id === a.id)
+      .map(a => sitemapUrlEntry(origin, `/artists/${a.artist_slug || a.id}`, null, '0.7')),
+    ...articles.filter(a => a.slug).map(a => sitemapUrlEntry(origin, `/journal/${a.slug}`, a.created_at, '0.7')),
+    ...posts.filter(p => p.id).map(p => sitemapUrlEntry(origin, `/community/${p.id}`, p.created_at, '0.6')),
+    ...downloads.filter(d => d.slug).map(d => sitemapUrlEntry(origin, `/free-downloads/${d.slug}`, d.created_at, '0.7')),
+  ];
+
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  res.statusCode = 200;
+  res.end(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.join('\n')}
+</urlset>
+`);
+}
+
 // ── Free Downloads ─────────────────────────────────────────────────────────────
 // Routed when ?type=free-download is present on any method.
 
@@ -481,6 +578,8 @@ async function handleJournal(req, res) {
 // ── Pages CMS ──────────────────────────────────────────────────────────────────
 
 module.exports = async function handler(req, res) {
+  if (req.query.type === 'robots') return handleRobots(req, res);
+  if (req.query.type === 'sitemap') return handleSitemap(req, res);
   if (req.query.type === 'free-download') return handleFreeDownloads(req, res);
   if (req.query.type === 'legal') return handleLegalPages(req, res);
   if (req.query.type === 'journal') return handleJournal(req, res);
