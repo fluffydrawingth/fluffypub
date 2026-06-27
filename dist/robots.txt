@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Allow: /shop
+Allow: /products
+Allow: /artists
+Allow: /journal
+Allow: /community
+Allow: /free-downloads
+Disallow: /admin
+Disallow: /cart
+Disallow: /checkout
+Disallow: /profile
+Disallow: /account
+Disallow: /login
+Disallow: /register
+Disallow: /orders
+Disallow: /payment
+
+Sitemap: /sitemap.xml

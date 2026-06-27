@@ -4,6 +4,7 @@ import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
 import ProductCard from '../components/ProductCard';
+import { absoluteUrl, breadcrumbSchema, cleanText, useSEO } from '../lib/seo';
 
 export default function ArtistProfilePage({ slug }: { slug: string }) {
   const { theme } = useTheme();
@@ -16,6 +17,33 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
   const [activeTab, setActiveTab] = useState<'physical'|'digital'|'free'>('physical');
   const [search, setSearch] = useState('');
   const p = theme.primaryColor;
+
+  const artistName = artist?.name || artist?.artist_slug || 'Artist';
+  const artistBio = cleanText(artist?.bio, 'Meet a FluffyPub artist and explore their coloring books, digital products, and free downloads.');
+  const artistPath = `/artists/${artist?.artist_slug || artist?.slug || slug}`;
+  useSEO({
+    title: artistName,
+    description: artistBio,
+    path: artistPath,
+    image: artist?.avatar_url || artist?.cover_image_url,
+    type: 'website',
+    jsonLd: artist ? [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Person',
+        name: artistName,
+        description: artistBio,
+        image: artist?.avatar_url ? absoluteUrl(artist.avatar_url) : undefined,
+        url: `${window.location.origin}/#${artistPath}`,
+        sameAs: [
+          artist?.website,
+          artist?.social_links?.instagram ? `https://instagram.com/${artist.social_links.instagram}` : null,
+          artist?.social_links?.twitter ? `https://twitter.com/${artist.social_links.twitter}` : null,
+        ].filter(Boolean),
+      },
+      breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Artists', path: '/artists' }, { name: artistName, path: artistPath }]),
+    ] : [],
+  });
 
   useEffect(() => {
     // Try by slug directly, then fall back to searching the list

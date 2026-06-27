@@ -4,6 +4,7 @@ import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
 import ProductCard from '../components/ProductCard';
+import { breadcrumbSchema, cleanText, useSEO } from '../lib/seo';
 
 export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
   const { theme } = useTheme();
@@ -61,6 +62,16 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
 
   const title = item ? ((lang === 'th' && item.title_th) ? item.title_th : item.title_en) : '';
   const description = item ? ((lang === 'th' && item.description_th) ? item.description_th : item.description_en) : '';
+  const seoTitle = title || 'Free Download';
+  const seoDescription = cleanText(description || item?.highlight, 'Free coloring pages and printable downloads from FluffyPub.');
+  useSEO({
+    title: seoTitle,
+    description: seoDescription,
+    path: `/free-downloads/${item?.slug || slug}`,
+    image: item?.cover_image_url,
+    type: 'website',
+    jsonLd: item ? breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Free Downloads', path: '/free-downloads' }, { name: seoTitle, path: `/free-downloads/${item.slug}` }]) : [],
+  });
   const fileIcon  = (t: string) => t === 'pdf' ? '📄' : t === 'zip' ? '🗜️' : t === 'png' ? '🖼️' : '📁';
   const fileBg    = (t: string) => t === 'pdf' ? '#fee2e2' : t === 'png' ? '#f3e8ff' : '#dbeafe';
   const fileColor = (t: string) => t === 'pdf' ? '#dc2626' : t === 'png' ? '#7c3aed' : '#1d4ed8';

@@ -3,6 +3,7 @@ import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
+import { breadcrumbSchema, useSEO } from '../lib/seo';
 
 export default function FreeDownloadsPage() {
   const { theme } = useTheme();
@@ -14,6 +15,13 @@ export default function FreeDownloadsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [dlLoading, setDlLoading] = useState<Record<string, boolean>>({});
+  useSEO({
+    title: 'Free Downloads',
+    description: 'Free coloring pages, printable downloads, and creative resources from FluffyPub.',
+    path: '/free-downloads',
+    type: 'website',
+    jsonLd: breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Free Downloads', path: '/free-downloads' }]),
+  });
 
   useEffect(() => {
     api.getFreeDownloads().then(d => {

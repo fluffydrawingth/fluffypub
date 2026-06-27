@@ -9,6 +9,7 @@ import CommunityCard from '../components/CommunityCard';
 import BadgeIcon from '../components/BadgeIcon';
 import { isImageUrl } from '../lib/avatar';
 import { RecommendedToolsBlock, StructuredMediumBlock, KeywordsBlock } from './CommunityPage';
+import { breadcrumbSchema, cleanText, useSEO } from '../lib/seo';
 
 const REACTIONS = [
   { type: 'love', emoji: '🩷', th: 'รักเลย', en: 'Love it' },
@@ -87,6 +88,22 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
     const res = await api.reactCommunity(postId, type);
     if (res && !res.error) { setCounts(res.reactions || {}); setMine(res.myReactions || []); }
   }, [postId]);
+
+  const seoImages = post ? ((post.artwork_urls && post.artwork_urls.length ? post.artwork_urls : [post.artwork_url]).filter(Boolean)) : [];
+  const seoTitleSource = post?.caption || post?.product?.title || post?.external_book?.title || post?.external_book_title || 'Community post';
+  const seoTitle = cleanText(seoTitleSource, 'Community post').slice(0, 80);
+  const seoDescription = cleanText(
+    post?.caption || [post?.product?.title, post?.external_book?.title || post?.external_book_title, post?.creator?.name].filter(Boolean).join(' · '),
+    'Coloring artwork and creative notes from the FluffyPub community.'
+  );
+  useSEO({
+    title: seoTitle,
+    description: seoDescription,
+    path: `/community/${post?.id || postId}`,
+    image: seoImages[0],
+    type: 'website',
+    jsonLd: post ? breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Community', path: '/community' }, { name: seoTitle, path: `/community/${post.id}` }]) : [],
+  });
 
   const saved = mine.includes('save');
   const toggleSave = async () => {

@@ -8,6 +8,7 @@ import { RichDescRenderer } from '../components/RichDescEditor';
 import { useLang } from '../lib/lang';
 import { useFavorites } from '../lib/favorites';
 import { useAuth } from '../lib/auth';
+import { absoluteUrl, breadcrumbSchema, cleanText, useSEO } from '../lib/seo';
 
 export default function ProductDetailPage({ slug }: { slug: string }) {
   const { theme } = useTheme();
@@ -73,6 +74,39 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
     }
   }, [product]);
 
+  const p = theme.primaryColor;
+  const title = product ? ((lang === 'th' && product.title_th) ? product.title_th : product.title) : 'Product';
+  const description = product ? ((lang === 'th' && product.description_th) ? product.description_th : product.description) : '';
+  const priceTHB = Number(product?.price_thb) || 0;
+  const priceUSD = Number(product?.price_usd) || null;
+  const seoDescription = cleanText(description || product?.description_en || product?.description_th, 'Cozy coloring product from FluffyPub.');
+  const seoImage = product?.cover_image_url || product?.image;
+  useSEO({
+    title,
+    description: seoDescription,
+    path: `/products/${product?.slug || slug}`,
+    image: seoImage,
+    type: 'product',
+    jsonLd: product ? [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: title,
+        description: seoDescription,
+        image: seoImage ? [absoluteUrl(seoImage)] : undefined,
+        brand: product.artistName || product.artist_name ? { '@type': 'Brand', name: product.artistName || product.artist_name } : { '@type': 'Brand', name: 'FluffyPub' },
+        offers: {
+          '@type': 'Offer',
+          priceCurrency: priceUSD ? 'USD' : 'THB',
+          price: priceUSD || priceTHB || product.price || 0,
+          availability: product.status === 'published' || product.active !== false ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+          url: `${window.location.origin}/#/products/${product?.slug || slug}`,
+        },
+      },
+      breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Shop', path: '/products' }, { name: title, path: `/products/${product?.slug || slug}` }]),
+    ] : [],
+  });
+
   if (loading) return <div style={{minHeight:'60vh',display:'flex',alignItems:'center',justifyContent:'center',fontSize:32}}>⏳</div>;
   if (!product) return (
     <div style={{textAlign:'center',padding:'80px 24px',fontFamily:theme.fontFamily}}>
@@ -83,12 +117,6 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       </button>
     </div>
   );
-
-  const p = theme.primaryColor;
-  const title = (lang === 'th' && product.title_th) ? product.title_th : product.title;
-  const description = (lang === 'th' && product.description_th) ? product.description_th : product.description;
-  const priceTHB = Number(product.price_thb) || 0;
-  const priceUSD = Number(product.price_usd) || null;
 
   // Build options from product config
   const options: { id: string; name: string; type: 'physical'|'digital'; priceTHB: number; priceUSD: number|null; stock?: number|null; inStock: boolean }[] = [];

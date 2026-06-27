@@ -9,6 +9,7 @@ import { api } from '../lib/api';
 import { makeImageVariants } from '../lib/imageThumb';
 import CommunityCard from '../components/CommunityCard';
 import { HighlightCard } from './CommunityHighlightsPage';
+import { breadcrumbSchema, useSEO } from '../lib/seo';
 
 const PAGE = 12;
 const GRID = [
@@ -62,6 +63,13 @@ export default function CommunityPage() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  useSEO({
+    title: 'Community',
+    description: 'Explore coloring artwork, tips, tools, palettes, and cozy community posts from FluffyPub colorists.',
+    path: '/community',
+    type: 'website',
+    jsonLd: breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Community', path: '/community' }]),
+  });
 
   useEffect(() => {
     api.getCommunityCozyPicks().then((d: any) => setCozy(d?.posts || [])).catch(() => {});

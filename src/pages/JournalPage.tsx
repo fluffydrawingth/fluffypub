@@ -3,6 +3,7 @@ import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
+import { breadcrumbSchema, useSEO } from '../lib/seo';
 
 type ArticleType = '' | 'tips' | 'tools' | 'favorites' | 'journal';
 
@@ -31,6 +32,13 @@ export default function JournalPage() {
   const [filter, setFilter] = useState<ArticleType>('');
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  useSEO({
+    title: 'Fluffy Journal',
+    description: 'Coloring tips, favorite tools, cozy recommendations, and creative stories from FluffyPub.',
+    path: '/journal',
+    type: 'website',
+    jsonLd: breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Fluffy Journal', path: '/journal' }]),
+  });
 
   useEffect(() => {
     setLoading(true);

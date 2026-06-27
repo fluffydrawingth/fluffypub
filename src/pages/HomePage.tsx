@@ -3,12 +3,20 @@ import { api } from '../lib/api';
 import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
+import { organizationSchema, useSEO, websiteSchema } from '../lib/seo';
 import ProductCard from '../components/ProductCard';
 import BadgeIcon from '../components/BadgeIcon';
 
 export default function HomePage() {
   const { theme } = useTheme();
   const { lang } = useLang();
+  useSEO({
+    title: 'FluffyPub',
+    description: 'Cozy coloring books, printable downloads, artists, Fluffy Journal stories, and a warm coloring community.',
+    path: '/',
+    type: 'website',
+    jsonLd: [organizationSchema(), websiteSchema()],
+  });
   const tl = (en: string, th?: string) => (lang === 'th' && th) ? th : en;
   const [featured, setFeatured] = useState<any[]>([]);
   const [allProducts, setAllProducts] = useState<any[]>([]);

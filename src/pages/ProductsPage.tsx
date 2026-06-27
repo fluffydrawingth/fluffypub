@@ -4,6 +4,7 @@ import { useTheme } from '../lib/theme';
 import { useRouter } from '../lib/router';
 import ProductCard from '../components/ProductCard';
 import { useLang } from '../lib/lang';
+import { breadcrumbSchema, useSEO } from '../lib/seo';
 
 export default function ProductsPage() {
   const { theme } = useTheme();
@@ -15,6 +16,13 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('featured');
   const p = theme.primaryColor;
+  useSEO({
+    title: 'Shop Coloring Books',
+    description: 'Shop cozy coloring books and creative products from FluffyPub artists.',
+    path: '/products',
+    type: 'website',
+    jsonLd: breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Shop', path: '/products' }]),
+  });
 
   useEffect(() => {
     api.getProducts().then((d: any) => setAllProducts(Array.isArray(d) ? d : []));

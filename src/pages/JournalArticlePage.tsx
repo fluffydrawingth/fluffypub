@@ -4,6 +4,7 @@ import { useRouter } from '../lib/router';
 import { useLang } from '../lib/lang';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
+import { absoluteUrl, breadcrumbSchema, canonicalFor, cleanText, useSEO } from '../lib/seo';
 
 const TYPE_META: Record<string, { label: { th: string; en: string }; emoji: string }> = {
   tips:      { label: { th: 'มุมระบายสี',  en: 'Coloring Tips' }, emoji: '🎨' },
@@ -302,6 +303,35 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
       }).catch(() => {});
     }).catch(() => { setNotFound(true); setLoading(false); });
   }, [slug]);
+
+  const seoTitle = article ? ((lang === 'th' ? article.title_th : article.title_en) || article.title_th || article.title_en || 'Fluffy Journal') : 'Fluffy Journal';
+  const seoExcerpt = article ? cleanText((lang === 'th' ? article.excerpt_th : article.excerpt_en) || article.excerpt_th || article.excerpt_en, 'A Fluffy Journal article from FluffyPub.') : 'A Fluffy Journal article from FluffyPub.';
+  const seoPath = `/journal/${article?.slug || slug}`;
+  const seoTypeMeta = article ? TYPE_META[article.article_type] : null;
+  useSEO({
+    title: seoTitle,
+    description: seoExcerpt,
+    path: seoPath,
+    image: article?.cover_image,
+    type: 'article',
+    jsonLd: article ? [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Article',
+        headline: seoTitle,
+        description: seoExcerpt,
+        image: article.cover_image ? [absoluteUrl(article.cover_image)] : undefined,
+        author: { '@type': 'Organization', name: 'Fluffy Pub' },
+        publisher: { '@type': 'Organization', name: 'FluffyPub' },
+        datePublished: article.created_at,
+        dateModified: article.updated_at || article.created_at,
+        articleSection: seoTypeMeta?.label?.en || article.article_type,
+        inLanguage: lang === 'th' ? 'th' : 'en',
+        mainEntityOfPage: canonicalFor(seoPath),
+      },
+      breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Fluffy Journal', path: '/journal' }, { name: seoTitle, path: seoPath }]),
+    ] : [],
+  });
 
   if (loading) return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>⏳</div>

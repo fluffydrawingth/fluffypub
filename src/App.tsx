@@ -39,6 +39,7 @@ import ExternalBookPage from './pages/ExternalBookPage';
 import CreatorProfilePage from './pages/CreatorProfilePage';
 import { LangProvider } from './lib/lang';
 import { FavoritesProvider } from './lib/favorites';
+import { organizationSchema, useSEO, websiteSchema } from './lib/seo';
 
 const MAX_VERIFY_TRIES = 3;
 
@@ -100,6 +101,23 @@ function AppContent() {
 
   const isFullPage = ['/admin','/artist-dashboard','/login'].includes(route.path);
   const isCheckout = route.path === '/checkout';
+
+  const seoByPath: Record<string, { title: string; description: string; path: string; robots?: string }> = {
+    '/': { title: 'FluffyPub', description: 'Cozy coloring books, printable downloads, artists, Fluffy Journal stories, and a warm coloring community.', path: '/' },
+    '/products': { title: 'Shop Coloring Books', description: 'Shop cozy coloring books and creative products from FluffyPub artists.', path: '/products' },
+    '/digital-products': { title: 'Digital Coloring Downloads', description: 'Browse digital coloring downloads and printable creative files.', path: '/digital-products' },
+    '/artists': { title: 'Artists', description: 'Meet the artists and creators behind FluffyPub coloring books and downloads.', path: '/artists' },
+    '/journal': { title: 'Fluffy Journal', description: 'Coloring tips, favorite tools, cozy recommendations, and creative stories from FluffyPub.', path: '/journal' },
+    '/community': { title: 'Community', description: 'Explore coloring artwork, tips, tools, palettes, and cozy community posts.', path: '/community' },
+    '/free-downloads': { title: 'Free Downloads', description: 'Free coloring pages, printable downloads, and creative resources from FluffyPub.', path: '/free-downloads' },
+  };
+  const defaultSeo = seoByPath[route.path] || {
+    title: 'FluffyPub',
+    description: 'Cozy coloring books, printable downloads, artists, Fluffy Journal stories, and a warm coloring community.',
+    path: route.params?.slug ? route.path.replace(':slug', route.params.slug) : route.path,
+    robots: route.path.startsWith('/admin') || route.path.startsWith('/checkout') || route.path.startsWith('/account') || route.path.startsWith('/cart') || route.path.startsWith('/login') ? 'noindex,nofollow' : 'index,follow',
+  };
+  useSEO({ ...defaultSeo, jsonLd: [organizationSchema(), websiteSchema()] });
 
   const page = () => {
     switch (route.path) {
