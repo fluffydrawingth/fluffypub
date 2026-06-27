@@ -23,7 +23,7 @@ export default function ArtistsPage() {
     <div style={{ fontFamily: theme.fontFamily }}>
       <div style={{ background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, padding:'48px 24px 40px', textAlign:'center' }}>
         <h1 style={{ fontSize:42, fontWeight:900, color:theme.textColor, margin:'0 0 12px' }}>Our Artists 🎨</h1>
-        <p style={{ color:theme.textColor+'88', fontSize:16 }}>Talented creators bringing joy through coloring</p>
+        <p style={{ color:theme.textColor+'88', fontSize:18, lineHeight:1.6 }}>Talented creators bringing joy through coloring</p>
       </div>
 
       <div style={{ maxWidth:1200, margin:'0 auto', padding:'40px 24px' }}>
@@ -36,8 +36,8 @@ export default function ArtistsPage() {
         ) : artists.length === 0 ? (
           <div style={{ textAlign:'center', padding:'60px 24px', color:theme.textColor+'88' }}>
             <div style={{ fontSize:56, marginBottom:16 }}>🎨</div>
-            <h3 style={{ fontWeight:800, color:theme.textColor }}>No artists yet</h3>
-            <p>Artists will appear here after they are added in the admin panel.</p>
+            <h3 style={{ fontSize:20, fontWeight:800, color:theme.textColor }}>No artists yet</h3>
+            <p style={{ fontSize:16 }}>Artists will appear here after they are added in the admin panel.</p>
           </div>
         ) : (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:24 }}>
@@ -66,27 +66,27 @@ export default function ArtistsPage() {
                     }
                   </div>
 
-                  <h3 style={{ fontSize:20, fontWeight:900, color:theme.textColor, margin:'0 0 6px' }}>{a.name}</h3>
-                  {a.artist_slug && <div style={{ fontSize:12, color:'#9ca3af', marginBottom:10 }}>@{a.artist_slug}</div>}
-                  <p style={{ fontSize:13, color:theme.textColor+'88', lineHeight:1.6, marginBottom:16, margin:'0 0 16px' }}>
+                  <h3 style={{ fontSize:22, fontWeight:900, color:theme.textColor, margin:'0 0 6px' }}>{a.name}</h3>
+                  {a.artist_slug && <div style={{ fontSize:14, color:'#9ca3af', marginBottom:10 }}>@{a.artist_slug}</div>}
+                  <p style={{ fontSize:15.5, color:theme.textColor+'88', lineHeight:1.65, marginBottom:16, margin:'0 0 16px' }}>
                     {a.bio || 'Coloring book artist passionate about bringing joy through art.'}
                   </p>
 
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                     <div>
                       <span style={{ fontWeight:800, color:p, fontSize:18 }}>{a.productCount || 0}</span>
-                      <span style={{ fontSize:13, color:'#888', marginLeft:4 }}>books</span>
+                      <span style={{ fontSize:14.5, color:'#888', marginLeft:4 }}>books</span>
                     </div>
                     <div style={{ display:'flex', gap:8 }}>
                       <button
                         onClick={e => { e.stopPropagation(); goToArtist(a.artist_slug); }}
-                        style={{ background:p, color:'white', border:'none', cursor:'pointer', padding:'8px 16px', borderRadius:20, fontSize:13, fontWeight:700, fontFamily:theme.fontFamily }}
+                        style={{ background:p, color:'white', border:'none', cursor:'pointer', padding:'8px 16px', borderRadius:20, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily }}
                       >
                         View Profile
                       </button>
                       <button
                         onClick={e => { e.stopPropagation(); goToArtist(a.artist_slug); }}
-                        style={{ background:'transparent', color:p, border:`1.5px solid ${p}`, cursor:'pointer', padding:'8px 14px', borderRadius:20, fontSize:13, fontWeight:700, fontFamily:theme.fontFamily }}
+                        style={{ background:'transparent', color:p, border:`1.5px solid ${p}`, cursor:'pointer', padding:'8px 14px', borderRadius:20, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily }}
                       >
                         Products
                       </button>

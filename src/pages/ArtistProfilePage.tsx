@@ -121,18 +121,18 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
         .artist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;}
         .artist-tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid ${p}15;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
         .artist-tabs::-webkit-scrollbar{display:none;}
-        .artist-tab{display:flex;align-items:center;gap:6px;padding:10px 16px;border-radius:12px 12px 0 0;border:none;cursor:pointer;font-size:14px;font-weight:700;white-space:nowrap;flex-shrink:0;}
+        .artist-tab{display:flex;align-items:center;gap:6px;padding:10px 16px;border-radius:12px 12px 0 0;border:none;cursor:pointer;font-size:15px;font-weight:700;white-space:nowrap;flex-shrink:0;}
         @media(max-width:640px){
           .artist-header{margin-top:-40px;}
           .artist-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important;}
-          .artist-tab{padding:8px 12px;font-size:13px;}
+          .artist-tab{padding:8px 12px;font-size:14px;}
         }
       `}</style>
 
       {/* Cover */}
       <div style={{ height:220, position:'relative', background:`linear-gradient(135deg,${p}30,${theme.secondaryColor||'#c084fc'}30)`, overflow:'hidden' }}>
         {artist.cover_image_url && <img src={artist.cover_image_url} loading="eager" decoding="async" width={1200} height={220} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt="cover" />}
-        <button onClick={()=>navigate('/artists')} style={{ position:'absolute', top:16, left:16, background:'rgba(255,255,255,0.9)', border:'none', cursor:'pointer', padding:'7px 14px', borderRadius:20, fontSize:13, fontWeight:700, fontFamily:theme.fontFamily }}>← {tRaw('ศิลปิน','Artists')}</button>
+        <button onClick={()=>navigate('/artists')} style={{ position:'absolute', top:16, left:16, background:'rgba(255,255,255,0.9)', border:'none', cursor:'pointer', padding:'7px 14px', borderRadius:20, fontSize:15, fontWeight:700, fontFamily:theme.fontFamily }}>← {tRaw('ศิลปิน','Artists')}</button>
       </div>
 
       <div style={{ maxWidth:1200, margin:'0 auto', padding:'0 16px 60px', position:'relative' }}>
@@ -142,12 +142,12 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
             {artist.avatar_url ? <img src={artist.avatar_url} loading="eager" decoding="async" width={88} height={88} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={artist.name} /> : '🎨'}
           </div>
           <div style={{ flex:1, minWidth:0, paddingBottom:6 }}>
-            <h1 style={{ fontSize:22, fontWeight:900, color:theme.textColor, margin:'0 0 3px', lineHeight:1.2 }}>{artist.name}</h1>
-            <div style={{ fontSize:12, color:'#9ca3af' }}>@{artist.artist_slug} · {totalCount} {tRaw('ผลงาน', 'items')}</div>
+            <h1 style={{ fontSize:28, fontWeight:900, color:theme.textColor, margin:'0 0 3px', lineHeight:1.2 }}>{artist.name}</h1>
+            <div style={{ fontSize:14, color:'#9ca3af' }}>@{artist.artist_slug} · {totalCount} {tRaw('ผลงาน', 'items')}</div>
             <div className="artist-links">
-              {artist.website && <a href={artist.website} target="_blank" rel="noreferrer" style={{ padding:'5px 12px', borderRadius:20, background:p+'15', color:p, textDecoration:'none', fontSize:12, fontWeight:700 }}>🌐</a>}
-              {social.instagram && <a href={`https://instagram.com/${social.instagram}`} target="_blank" rel="noreferrer" style={{ padding:'5px 12px', borderRadius:20, background:'#fce7f3', color:'#be185d', textDecoration:'none', fontSize:12, fontWeight:700 }}>📷 Instagram</a>}
-              {social.twitter && <a href={`https://twitter.com/${social.twitter}`} target="_blank" rel="noreferrer" style={{ padding:'5px 12px', borderRadius:20, background:'#dbeafe', color:'#1d4ed8', textDecoration:'none', fontSize:12, fontWeight:700 }}>🐦 Twitter</a>}
+              {artist.website && <a href={artist.website} target="_blank" rel="noreferrer" style={{ padding:'5px 12px', borderRadius:20, background:p+'15', color:p, textDecoration:'none', fontSize:14, fontWeight:700 }}>🌐</a>}
+              {social.instagram && <a href={`https://instagram.com/${social.instagram}`} target="_blank" rel="noreferrer" style={{ padding:'5px 12px', borderRadius:20, background:'#fce7f3', color:'#be185d', textDecoration:'none', fontSize:14, fontWeight:700 }}>📷 Instagram</a>}
+              {social.twitter && <a href={`https://twitter.com/${social.twitter}`} target="_blank" rel="noreferrer" style={{ padding:'5px 12px', borderRadius:20, background:'#dbeafe', color:'#1d4ed8', textDecoration:'none', fontSize:14, fontWeight:700 }}>🐦 Twitter</a>}
             </div>
           </div>
         </div>
@@ -155,7 +155,7 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
         {/* Bio */}
         {artist.bio && (
           <div style={{ background:'white', borderRadius:16, padding:'16px 18px', marginBottom:20, boxShadow:'0 2px 8px rgba(0,0,0,0.05)', border:`1px solid ${p}15` }}>
-            <p style={{ fontSize:14, color:theme.textColor, lineHeight:1.7, margin:0 }}>{artist.bio}</p>
+            <p style={{ fontSize:16, color:theme.textColor, lineHeight:1.75, margin:0 }}>{artist.bio}</p>
           </div>
         )}
 
@@ -177,7 +177,7 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder={tRaw('ค้นหาผลงานของศิลปินนี้...', 'Search this artist’s items...')}
-                style={{ width:'100%', maxWidth:340, padding:'9px 14px', borderRadius:22, border:`1.5px solid ${p}30`, fontSize:13, outline:'none', fontFamily:theme.fontFamily, boxSizing:'border-box', marginBottom:16 }}
+                style={{ width:'100%', maxWidth:340, padding:'9px 14px', borderRadius:22, border:`1.5px solid ${p}30`, fontSize:16, outline:'none', fontFamily:theme.fontFamily, boxSizing:'border-box', marginBottom:16 }}
                 onFocus={e => e.target.style.borderColor = p}
                 onBlur={e => e.target.style.borderColor = p + '30'}
               />
@@ -192,7 +192,7 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
                       style={{ fontFamily:theme.fontFamily, background: active ? 'white' : 'transparent', color: active ? p : '#9ca3af', borderBottom: active ? `2px solid ${p}` : '2px solid transparent', marginBottom: active ? '-2px' : '0', boxShadow: active ? '0 -2px 8px rgba(0,0,0,0.05)' : 'none' }}>
                       <span>{tab.icon}</span>
                       <span>{lang === 'th' ? tab.labelTh : tab.label}</span>
-                      <span style={{ background: active ? tab.bg : '#f3f4f6', color: active ? tab.color : '#9ca3af', borderRadius:20, padding:'1px 7px', fontSize:11, fontWeight:800 }}>
+                      <span style={{ background: active ? tab.bg : '#f3f4f6', color: active ? tab.color : '#9ca3af', borderRadius:20, padding:'1px 7px', fontSize:12.5, fontWeight:800 }}>
                         {tab.count}
                       </span>
                     </button>
@@ -235,12 +235,12 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
                               : <span>{fileIcon(ft)}</span>
                             }
                           </div>
-                          {ft && <span style={{ position:'absolute', bottom:6, left:6, fontSize:9, fontWeight:700, background:fileBg(ft), color:fileColor(ft), borderRadius:8, padding:'2px 6px', zIndex:1 }}>{ft.toUpperCase()}</span>}
-                          <span style={{ position:'absolute', top:6, right:6, background:'#d1fae5', color:'#065f46', borderRadius:8, padding:'2px 6px', fontSize:9, fontWeight:700, zIndex:1 }}>🎁 {tRaw('ฟรี','FREE')}</span>
+                          {ft && <span style={{ position:'absolute', bottom:6, left:6, fontSize:10.5, fontWeight:700, background:fileBg(ft), color:fileColor(ft), borderRadius:8, padding:'2px 6px', zIndex:1 }}>{ft.toUpperCase()}</span>}
+                          <span style={{ position:'absolute', top:6, right:6, background:'#d1fae5', color:'#065f46', borderRadius:8, padding:'2px 6px', fontSize:10.5, fontWeight:700, zIndex:1 }}>🎁 {tRaw('ฟรี','FREE')}</span>
                         </div>
                         <div style={{ padding:'10px 12px 12px' }}>
-                          <div style={{ fontSize:13, fontWeight:800, color:'#1e293b', lineHeight:1.35, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' as any }}>{fdTitle}</div>
-                          <div style={{ fontSize:12, fontWeight:900, color:'#065f46', marginTop:4 }}>🎁 {tRaw('ฟรี','FREE')}</div>
+                          <div style={{ fontSize:15, fontWeight:800, color:'#1e293b', lineHeight:1.35, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' as any }}>{fdTitle}</div>
+                          <div style={{ fontSize:14, fontWeight:900, color:'#065f46', marginTop:4 }}>🎁 {tRaw('ฟรี','FREE')}</div>
                         </div>
                       </div>
                     );
@@ -249,14 +249,14 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
               )}
 
               {term && ((validTab==='physical'&&physicalShown.length===0)||(validTab==='digital'&&digitalShown.length===0)||(validTab==='free'&&freeShown.length===0)) && (
-                <div style={{ textAlign:'center', padding:'40px', color:'#9ca3af' }}>{tRaw('ไม่พบผลงานที่ค้นหา','No items match your search.')}</div>
+                <div style={{ textAlign:'center', padding:'40px', color:'#9ca3af', fontSize:16 }}>{tRaw('ไม่พบผลงานที่ค้นหา','No items match your search.')}</div>
               )}
             </>
           );
         })()}
 
         {totalCount === 0 && (
-          <div style={{ textAlign:'center', padding:'40px', color:'#9ca3af', background:'white', borderRadius:16 }}>
+          <div style={{ textAlign:'center', padding:'40px', color:'#9ca3af', background:'white', borderRadius:16, fontSize:16 }}>
             {tRaw('ยังไม่มีผลงาน', 'No items yet')}
           </div>
         )}

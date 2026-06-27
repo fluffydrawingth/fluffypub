@@ -32,10 +32,10 @@ export default function PagesIndexPage() {
       <div style={{ maxWidth:1200, margin:'0 auto', padding:'28px 16px' }}>
 
         <div style={{ marginBottom:24 }}>
-          <h1 style={{ fontSize:28, fontWeight:900, color:theme.textColor, margin:'0 0 6px' }}>
+          <h1 style={{ fontSize:34, fontWeight:900, color:theme.textColor, margin:'0 0 6px' }}>
             📝 {tRaw('บทความ', 'Blog & Pages')}
           </h1>
-          <p style={{ color:theme.textColor+'88', margin:0 }}>
+          <p style={{ color:theme.textColor+'88', margin:0, fontSize:17, lineHeight:1.6 }}>
             {tRaw('บทความ อัปเดต และข่าวสาร', 'Articles, updates, and more from Fluffy Pub.')}
           </p>
         </div>
@@ -43,8 +43,8 @@ export default function PagesIndexPage() {
         {pages.length === 0 ? (
           <div style={{ textAlign:'center', padding:'80px 24px', color:theme.textColor+'66' }}>
             <div style={{ fontSize:56, marginBottom:16 }}>📄</div>
-            <h3 style={{ fontWeight:800, color:theme.textColor }}>{tRaw('ยังไม่มีบทความ', 'No posts yet')}</h3>
-            <p>{tRaw('กลับมาดูใหม่ภายหลัง', 'Check back soon for updates!')}</p>
+            <h3 style={{ fontSize:20, fontWeight:800, color:theme.textColor }}>{tRaw('ยังไม่มีบทความ', 'No posts yet')}</h3>
+            <p style={{ fontSize:16 }}>{tRaw('กลับมาดูใหม่ภายหลัง', 'Check back soon for updates!')}</p>
           </div>
         ) : (
           <div className="blog-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:20 }}>
@@ -66,14 +66,14 @@ export default function PagesIndexPage() {
 
                 {/* Card body */}
                 <div style={{ padding:'12px 14px 14px' }}>
-                  <div style={{ fontSize:11, color:p+'99', fontWeight:600, marginBottom:3 }}>
+                  <div style={{ fontSize:12.5, color:p+'99', fontWeight:600, marginBottom:3 }}>
                     {new Date(pg.updated_at || pg.created_at).toLocaleDateString('th-TH', { year:'numeric', month:'short', day:'numeric' })}
                   </div>
-                  <div style={{ fontSize:14, fontWeight:800, color:theme.textColor, marginBottom:8, lineHeight:1.3, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' as any }}>
+                  <div style={{ fontSize:16, fontWeight:800, color:theme.textColor, marginBottom:8, lineHeight:1.35, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' as any }}>
                     {pg.title}
                   </div>
                   {pg.excerpt && (
-                    <div style={{ fontSize:12, color:theme.textColor+'88', lineHeight:1.5, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' as any }}>
+                    <div style={{ fontSize:14.5, color:theme.textColor+'88', lineHeight:1.55, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' as any }}>
                       {pg.excerpt}
                     </div>
                   )}

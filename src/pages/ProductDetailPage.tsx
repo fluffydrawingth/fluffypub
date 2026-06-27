@@ -188,10 +188,10 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
       `}</style>
 
       {/* Breadcrumb */}
-      <div style={{maxWidth:1200,margin:'0 auto',padding:'12px 16px',fontSize:13,color:theme.textColor+'66'}}>
-        <button onClick={()=>navigate('/')} style={{background:'none',border:'none',cursor:'pointer',color:'inherit',fontFamily:theme.fontFamily,fontSize:13}}>Home</button>
+      <div style={{maxWidth:1200,margin:'0 auto',padding:'12px 16px',fontSize:14.5,color:theme.textColor+'66'}}>
+        <button onClick={()=>navigate('/')} style={{background:'none',border:'none',cursor:'pointer',color:'inherit',fontFamily:theme.fontFamily,fontSize:14.5}}>Home</button>
         {' > '}
-        <button onClick={()=>navigate('/products')} style={{background:'none',border:'none',cursor:'pointer',color:'inherit',fontFamily:theme.fontFamily,fontSize:13}}>{t('shop')}</button>
+        <button onClick={()=>navigate('/products')} style={{background:'none',border:'none',cursor:'pointer',color:'inherit',fontFamily:theme.fontFamily,fontSize:14.5}}>{t('shop')}</button>
         {' > '}<strong style={{color:theme.textColor}}>{title}</strong>
       </div>
 
@@ -207,23 +207,23 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
           {/* Info */}
           <div className="pd-info">
-            <div style={{fontSize:12,color:p,fontWeight:700,marginBottom:8}}>
+            <div style={{fontSize:14,color:p,fontWeight:700,marginBottom:8}}>
               {(product.artistName||product.artist_name||product.artist) ? (
                 <button onClick={()=>navigate(`/artists/${product.artist_slug||product.artistSlug||''}`)}
-                  style={{background:'none',border:'none',cursor:'pointer',color:p,fontWeight:700,fontSize:12,padding:0,fontFamily:theme.fontFamily}}>
+                  style={{background:'none',border:'none',cursor:'pointer',color:p,fontWeight:700,fontSize:14,padding:0,fontFamily:theme.fontFamily}}>
                   {product.artistName||product.artist_name||product.artist}
                 </button>
               ) : null}
               {(product.artistName||product.artist_name) && product.category ? ' · ' : ''}
               {product.category}
             </div>
-            <h1 style={{fontSize:24,fontWeight:900,color:theme.textColor,margin:'0 0 12px',lineHeight:1.25}}>{title}</h1>
+            <h1 style={{fontSize:32,fontWeight:900,color:theme.textColor,margin:'0 0 12px',lineHeight:1.25}}>{title}</h1>
 
             {/* Type badges */}
             <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap' as const}}>
-              {(product.is_digital||product.type==='digital'||product.type==='both') && <span style={{background:'#dbeafe',color:'#1d4ed8',borderRadius:20,padding:'3px 10px',fontSize:11,fontWeight:700}}>⬇️ {t('digital')}</span>}
-              {(product.is_physical||product.type==='physical'||product.type==='both') && <span style={{background:'#d1fae5',color:'#065f46',borderRadius:20,padding:'3px 10px',fontSize:11,fontWeight:700}}>📦 {t('physical')}</span>}
-              {product.pages>0 && <span style={{background:p+'12',color:p,borderRadius:20,padding:'3px 10px',fontSize:11,fontWeight:700}}>📄 {product.pages} {tRaw('หน้า','pages')}</span>}
+              {(product.is_digital||product.type==='digital'||product.type==='both') && <span style={{background:'#dbeafe',color:'#1d4ed8',borderRadius:20,padding:'3px 10px',fontSize:13,fontWeight:700}}>⬇️ {t('digital')}</span>}
+              {(product.is_physical||product.type==='physical'||product.type==='both') && <span style={{background:'#d1fae5',color:'#065f46',borderRadius:20,padding:'3px 10px',fontSize:13,fontWeight:700}}>📦 {t('physical')}</span>}
+              {product.pages>0 && <span style={{background:p+'12',color:p,borderRadius:20,padding:'3px 10px',fontSize:13,fontWeight:700}}>📄 {product.pages} {tRaw('หน้า','pages')}</span>}
             </div>
 
             {/* Price */}
@@ -233,11 +233,11 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               </span>
             </div>
 
-            {description && <p style={{color:theme.textColor+'cc',fontSize:14,lineHeight:1.7,marginBottom:16,margin:'0 0 16px'}}>{description}</p>}
+            {description && <p style={{color:theme.textColor+'cc',fontSize:16.5,lineHeight:1.75,marginBottom:16,margin:'0 0 16px'}}>{description}</p>}
 
             {/* USD + physical-only product warning */}
             {isUSD && isPhysicalOnly && (
-              <div style={{background:'#fef3c7',border:'1.5px solid #fcd34d',borderRadius:12,padding:'10px 14px',marginBottom:14,fontSize:13,color:'#92400e',fontWeight:600}}>
+              <div style={{background:'#fef3c7',border:'1.5px solid #fcd34d',borderRadius:12,padding:'10px 14px',marginBottom:14,fontSize:15,color:'#92400e',fontWeight:600}}>
                 ⚠️ Physical products are available in THB only. Please switch to ฿ THB to purchase this item.
               </div>
             )}
@@ -245,7 +245,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             {/* Option selector — only if more than one option */}
             {options.length > 1 && (
               <div style={{marginBottom:16}}>
-                <label style={{display:'block',fontSize:13,fontWeight:700,color:theme.textColor,marginBottom:8}}>{tRaw('เลือกรูปแบบ','Select option')}:</label>
+                <label style={{display:'block',fontSize:15,fontWeight:700,color:theme.textColor,marginBottom:8}}>{tRaw('เลือกรูปแบบ','Select option')}:</label>
                 <div style={{display:'flex',flexDirection:'column' as const,gap:7}}>
                   {options.map(o => {
                     const optBlockedUSD = isUSD && o.type === 'physical';
@@ -256,24 +256,24 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                         disabled={!isClickable}
                         style={{padding:'11px 14px',borderRadius:12,cursor:isClickable?'pointer':'not-allowed',textAlign:'left' as const,border:`2px solid ${!isClickable?'#e5e7eb':selectedOption?.id===o.id?p:'#e5e7eb'}`,background:!isClickable?'#f9fafb':selectedOption?.id===o.id?p+'10':'white',fontFamily:theme.fontFamily,display:'flex',justifyContent:'space-between',alignItems:'center',transition:'all 0.12s',opacity:isClickable?1:0.6}}>
                         <span style={{display:'flex',flexDirection:'column' as const,alignItems:'flex-start',gap:2}}>
-                          <span style={{fontSize:14,fontWeight:selectedOption?.id===o.id?700:500,color:isClickable?theme.textColor:'#9ca3af'}}>
+                          <span style={{fontSize:16,fontWeight:selectedOption?.id===o.id?700:500,color:isClickable?theme.textColor:'#9ca3af'}}>
                             {selectedOption?.id===o.id && '✓ '}{o.name}
-                            {!o.inStock && <span style={{fontSize:11,color:'#ef4444',marginLeft:8,fontWeight:600}}>Out of stock</span>}
+                            {!o.inStock && <span style={{fontSize:12.5,color:'#ef4444',marginLeft:8,fontWeight:600}}>Out of stock</span>}
                           </span>
-                          {optBlockedUSD && <span style={{fontSize:11,color:'#f59e0b',fontWeight:700}}>฿ THB only</span>}
+                          {optBlockedUSD && <span style={{fontSize:12.5,color:'#f59e0b',fontWeight:700}}>฿ THB only</span>}
                         </span>
-                        <span style={{fontSize:14,fontWeight:800,color:isClickable?p:'#9ca3af'}}>{fmtPrice(o.priceTHB, o.priceUSD)}</span>
+                        <span style={{fontSize:16,fontWeight:800,color:isClickable?p:'#9ca3af'}}>{fmtPrice(o.priceTHB, o.priceUSD)}</span>
                       </button>
                     );
                   })}
                 </div>
-                {optionError && <div style={{marginTop:6,fontSize:12,color:'#ef4444',fontWeight:600}}>⚠️ {optionError}</div>}
+                {optionError && <div style={{marginTop:6,fontSize:14,color:'#ef4444',fontWeight:600}}>⚠️ {optionError}</div>}
               </div>
             )}
 
             {/* If only 1 option, show it as info not as a selector */}
             {options.length === 1 && (
-              <div style={{marginBottom:14,fontSize:13,color:'#6b7280'}}>
+              <div style={{marginBottom:14,fontSize:15,color:'#6b7280'}}>
                 {options[0].type === 'physical' ? '📦 ' : '⬇️ '}{options[0].name}
               </div>
             )}
@@ -281,7 +281,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
             {/* Tags */}
             {product.tags?.length>0 && (
               <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap' as const}}>
-                {product.tags.map((tg:string)=><span key={tg} style={{background:p+'12',color:p,borderRadius:20,padding:'3px 10px',fontSize:11,fontWeight:600}}>#{tg}</span>)}
+                {product.tags.map((tg:string)=><span key={tg} style={{background:p+'12',color:p,borderRadius:20,padding:'3px 10px',fontSize:12.5,fontWeight:600}}>#{tg}</span>)}
               </div>
             )}
 
@@ -296,11 +296,11 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
                 {isFav(product.id) ? '❤️' : '🤍'}
               </button>
               <button onClick={handleAddToCart} disabled={options.length===0 || (isUSD && isPhysicalOnly)}
-                style={{flex:1,minWidth:140,padding:'14px',borderRadius:20,background:options.length===0||(isUSD&&isPhysicalOnly)?'#e5e7eb':btnInCart?'#10b981':p,color:options.length===0||(isUSD&&isPhysicalOnly)?'#9ca3af':'white',border:'none',cursor:options.length===0||(isUSD&&isPhysicalOnly)?'not-allowed':'pointer',fontSize:15,fontWeight:800,fontFamily:theme.fontFamily,boxShadow:btnInCart||options.length===0||(isUSD&&isPhysicalOnly)?'none':`0 6px 20px ${p}40`,transition:'all 0.2s'}}>
+                style={{flex:1,minWidth:140,padding:'14px',borderRadius:20,background:options.length===0||(isUSD&&isPhysicalOnly)?'#e5e7eb':btnInCart?'#10b981':p,color:options.length===0||(isUSD&&isPhysicalOnly)?'#9ca3af':'white',border:'none',cursor:options.length===0||(isUSD&&isPhysicalOnly)?'not-allowed':'pointer',fontSize:17,fontWeight:800,fontFamily:theme.fontFamily,boxShadow:btnInCart||options.length===0||(isUSD&&isPhysicalOnly)?'none':`0 6px 20px ${p}40`,transition:'all 0.2s'}}>
                 {options.length===0 ? tRaw('ไม่มีสินค้า','Not available') : (isUSD&&isPhysicalOnly) ? '฿ THB only' : btnInCart ? `✓ ${tRaw('อยู่ในตะกร้า','In cart')} +` : t('add_to_cart')}
               </button>
               {items.some(i=>i.id===product.id) && (
-                <button onClick={()=>navigate('/cart')} style={{padding:'14px 18px',borderRadius:20,background:'transparent',border:`2px solid ${p}`,color:p,cursor:'pointer',fontSize:13,fontWeight:700,fontFamily:theme.fontFamily}}>
+                <button onClick={()=>navigate('/cart')} style={{padding:'14px 18px',borderRadius:20,background:'transparent',border:`2px solid ${p}`,color:p,cursor:'pointer',fontSize:15,fontWeight:700,fontFamily:theme.fontFamily}}>
                   {t('cart')} →
                 </button>
               )}
@@ -308,7 +308,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
 
             {/* Shipping note */}
             {(product.is_physical||product.type==='physical') && (
-              <div style={{marginTop:10,fontSize:12,color:'#6b7280',background:'#f9fafb',borderRadius:10,padding:'7px 11px'}}>
+              <div style={{marginTop:10,fontSize:14,color:'#6b7280',background:'#f9fafb',borderRadius:10,padding:'7px 11px'}}>
                 📦 {tRaw('ซื้อ 1 เล่ม +฿25 / 2 เล่มขึ้นไป ส่งฟรี','1 book +฿25 shipping · 2+ books free shipping')}
               </div>
             )}
@@ -318,17 +318,17 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
         {/* Details */}
         <div style={{background:'white',borderRadius:20,marginTop:16,overflow:'hidden',boxShadow:'0 4px 24px rgba(0,0,0,0.06)'}}>
           <div style={{padding:'14px 24px',borderBottom:`2px solid ${p}15`}}>
-            <span style={{fontWeight:800,fontSize:13,color:p}}>📋 {tRaw('รายละเอียด','Details')}</span>
+            <span style={{fontWeight:800,fontSize:15,color:p}}>📋 {tRaw('รายละเอียด','Details')}</span>
           </div>
           <div style={{padding:'20px 18px'}}>
             {product.rich_description && Array.isArray(product.rich_description) && product.rich_description.length > 0
               ? <RichDescRenderer blocks={product.rich_description} />
               : description
-                ? <p style={{fontSize:14,lineHeight:1.8,color:theme.textColor+'cc',margin:0}}>{description}</p>
+                ? <p style={{fontSize:16,lineHeight:1.85,color:theme.textColor+'cc',margin:0}}>{description}</p>
                 : <p style={{color:'#9ca3af',fontStyle:'italic'}}>{tRaw('ไม่มีรายละเอียดเพิ่มเติม','No additional details.')}</p>
             }
             {product.pages > 0 && (
-              <div style={{marginTop:16,padding:'12px 14px',background:'#f9fafb',borderRadius:12,fontSize:13,display:'flex',justifyContent:'space-between'}}>
+              <div style={{marginTop:16,padding:'12px 14px',background:'#f9fafb',borderRadius:12,fontSize:15,display:'flex',justifyContent:'space-between'}}>
                 <span style={{color:'#6b7280',fontWeight:600}}>{tRaw('จำนวนหน้า','Pages')}</span>
                 <span style={{fontWeight:700,color:theme.textColor}}>{product.pages}</span>
               </div>
@@ -339,7 +339,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
         {/* Artist section */}
         {(artistProfile || (product.artistName || product.artist_name)) && (
           <div style={{marginTop:36,background:'white',borderRadius:20,padding:'24px',boxShadow:'0 4px 24px rgba(0,0,0,0.06)'}}>
-            <h2 style={{fontSize:18,fontWeight:900,color:theme.textColor,margin:'0 0 18px'}}>{tRaw('ผลงานจากศิลปินคนนี้','More from this artist')}</h2>
+            <h2 style={{fontSize:24,fontWeight:900,color:theme.textColor,margin:'0 0 18px'}}>{tRaw('ผลงานจากศิลปินคนนี้','More from this artist')}</h2>
             {/* Artist card */}
             <div style={{display:'flex',gap:16,alignItems:'flex-start',marginBottom:artistProducts.length>0?24:0}}>
               <button onClick={()=>navigate(`/artists/${product.artist_slug||product.artistSlug||''}`)}
@@ -351,11 +351,11 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               <div style={{flex:1}}>
                 <button onClick={()=>navigate(`/artists/${product.artist_slug||product.artistSlug||''}`)}
                   style={{background:'none',border:'none',cursor:'pointer',padding:0,textAlign:'left' as const}}>
-                  <div style={{fontSize:16,fontWeight:800,color:theme.textColor,marginBottom:4}}>{artistProfile?.name||product.artistName||product.artist_name}</div>
+                  <div style={{fontSize:18,fontWeight:800,color:theme.textColor,marginBottom:4}}>{artistProfile?.name||product.artistName||product.artist_name}</div>
                 </button>
-                {artistProfile?.bio && <p style={{fontSize:13,color:theme.textColor+'99',margin:'0 0 10px',lineHeight:1.6}}>{artistProfile.bio}</p>}
+                {artistProfile?.bio && <p style={{fontSize:15,color:theme.textColor+'99',margin:'0 0 10px',lineHeight:1.65}}>{artistProfile.bio}</p>}
                 <button onClick={()=>navigate(`/artists/${product.artist_slug||product.artistSlug||''}`)}
-                  style={{background:'none',border:`1.5px solid ${p}`,color:p,cursor:'pointer',padding:'6px 14px',borderRadius:20,fontSize:12,fontWeight:700,fontFamily:theme.fontFamily}}>
+                  style={{background:'none',border:`1.5px solid ${p}`,color:p,cursor:'pointer',padding:'6px 14px',borderRadius:20,fontSize:14,fontWeight:700,fontFamily:theme.fontFamily}}>
                   {tRaw('ดูหน้าศิลปิน','View artist page')} →
                 </button>
               </div>
@@ -382,7 +382,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               ))}
             </div>
             <div style={{textAlign:'center',marginTop:18}}>
-              <button onClick={()=>navigate(`/community?book=${product.id}`)} style={{background:'transparent',border:`2px solid ${theme.primaryColor}`,color:theme.primaryColor,cursor:'pointer',padding:'10px 26px',borderRadius:24,fontSize:14,fontWeight:800,fontFamily:theme.fontFamily}}>
+              <button onClick={()=>navigate(`/community?book=${product.id}`)} style={{background:'transparent',border:`2px solid ${theme.primaryColor}`,color:theme.primaryColor,cursor:'pointer',padding:'10px 26px',borderRadius:24,fontSize:16,fontWeight:800,fontFamily:theme.fontFamily}}>
                 {tRaw(`ดูผลงานทั้งหมด ${communityTotal} ชิ้น`,`View all ${communityTotal} creation${communityTotal!==1?'s':''}`)}
               </button>
             </div>

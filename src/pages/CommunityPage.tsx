@@ -122,14 +122,14 @@ export default function CommunityPage() {
         {/* Header — centered */}
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
           {/* Single page header — editable in Admin → Theme & CMS → Page Sections (Color Your World) */}
-          <h1 style={{ fontSize: 'clamp(20px,3vw,28px)', fontWeight: 900, color: theme.textColor, margin: '0 0 4px' }}>{tRaw(theme.labels?.community_title_th || '🌈 แต่งแต้มโลกของคุณ', theme.labels?.community_title || '🌈 Color Your World')}</h1>
-          <p style={{ color: theme.textColor + '88', fontSize: 13, margin: '0 0 14px' }}>{tRaw(theme.labels?.community_subtitle_th || 'พื้นที่อบอุ่นสำหรับแบ่งปันผลงาน เคล็ดลับ และเครื่องมือที่ชอบ', theme.labels?.community_subtitle || 'A cozy place to share artwork, coloring tips and favorite tools.')}</p>
+          <h1 style={{ fontSize: 'clamp(28px,4vw,40px)', fontWeight: 900, color: theme.textColor, margin: '0 0 4px' }}>{tRaw(theme.labels?.community_title_th || '🌈 แต่งแต้มโลกของคุณ', theme.labels?.community_title || '🌈 Color Your World')}</h1>
+          <p style={{ color: theme.textColor + '88', fontSize: 17, lineHeight: 1.6, margin: '0 0 14px' }}>{tRaw(theme.labels?.community_subtitle_th || 'พื้นที่อบอุ่นสำหรับแบ่งปันผลงาน เคล็ดลับ และเครื่องมือที่ชอบ', theme.labels?.community_subtitle || 'A cozy place to share artwork, coloring tips and favorite tools.')}</p>
           {user ? (
-            <button onClick={() => setShowForm(s => !s)} style={{ background: p, color: 'white', border: 'none', cursor: 'pointer', padding: '9px 22px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily }}>
+            <button onClick={() => setShowForm(s => !s)} style={{ background: p, color: 'white', border: 'none', cursor: 'pointer', padding: '9px 22px', borderRadius: 22, fontSize: 15.5, fontWeight: 800, fontFamily: theme.fontFamily }}>
               {showForm ? tRaw('ปิด', 'Close') : `🎨 ${tRaw('แบ่งปันผลงาน', 'Share artwork')}`}
             </button>
           ) : (
-            <button onClick={() => navigate('/login')} style={{ background: 'none', border: `1.5px solid ${p}40`, color: p, cursor: 'pointer', padding: '8px 20px', borderRadius: 22, fontSize: 13, fontWeight: 700, fontFamily: theme.fontFamily }}>
+            <button onClick={() => navigate('/login')} style={{ background: 'none', border: `1.5px solid ${p}40`, color: p, cursor: 'pointer', padding: '8px 20px', borderRadius: 22, fontSize: 15, fontWeight: 700, fontFamily: theme.fontFamily }}>
               {tRaw('เข้าสู่ระบบเพื่อแบ่งปัน', 'Log in to share')}
             </button>
           )}
@@ -140,7 +140,7 @@ export default function CommunityPage() {
         {/* 🩷 Little Updates — compact bulletin widget, admin-pinned, max 3 */}
         {isAll && headerHighlights.length > 0 && (
           <div style={{ maxWidth: 600, margin: '0 auto 18px', background: 'white', borderRadius: 14, border: `1.5px solid ${p}18`, padding: '10px 12px', boxShadow: `0 1px 6px ${p}10` }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: p, letterSpacing: 0.6, textTransform: 'uppercase' as const, marginBottom: 8, opacity: 0.65 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 800, color: p, letterSpacing: 0.6, textTransform: 'uppercase' as const, marginBottom: 8, opacity: 0.65 }}>
               🩷 {tRaw('มุมประกาศ', 'Little Updates')}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
@@ -162,21 +162,21 @@ export default function CommunityPage() {
                       }
                     </div>
                     {/* Title */}
-                    <span style={{ flex: 1, fontSize: 12.5, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.title}</span>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.title}</span>
                     {/* Countdown */}
                     {showDays && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: days! <= 3 ? '#ef4444' : '#f59e0b', background: days! <= 3 ? '#fef2f2' : '#fffbeb', borderRadius: 6, padding: '2px 6px', flexShrink: 0 }}>
+                      <span style={{ fontSize: 11.5, fontWeight: 700, color: days! <= 3 ? '#ef4444' : '#f59e0b', background: days! <= 3 ? '#fef2f2' : '#fffbeb', borderRadius: 6, padding: '2px 6px', flexShrink: 0 }}>
                         {days === 0 ? tRaw('วันนี้!', 'Today!') : `${days}d`}
                       </span>
                     )}
-                    <span style={{ fontSize: 11, color: p + 'aa', flexShrink: 0, fontWeight: 700 }}>→</span>
+                    <span style={{ fontSize: 13, color: p + 'aa', flexShrink: 0, fontWeight: 700 }}>→</span>
                   </button>
                 );
               })}
               {/* +X more link */}
               {headerHighlights.length > 3 && (
                 <button onClick={() => navigate('/community/highlights')}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 11.5, fontWeight: 700, padding: '4px 6px', textAlign: 'left' as const, fontFamily: theme.fontFamily, opacity: 0.8 }}>
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 13, fontWeight: 700, padding: '4px 6px', textAlign: 'left' as const, fontFamily: theme.fontFamily, opacity: 0.8 }}>
                   +{headerHighlights.length - 3} {tRaw('เพิ่มเติม →', 'more →')}
                 </button>
               )}
@@ -191,7 +191,7 @@ export default function CommunityPage() {
               value={searchQ}
               onChange={e => setSearchQ(e.target.value)}
               placeholder={tRaw('🔎 ค้นหาผลงาน หนังสือ ครีเอเตอร์ ปากกา หรือคำบรรยาย…', '🔎 Search creations, books, creators, markers or captions…')}
-              style={{ width: '100%', padding: '12px 40px 12px 16px', borderRadius: 24, border: `1.5px solid ${p}30`, fontSize: 14, outline: 'none', fontFamily: theme.fontFamily, boxSizing: 'border-box', background: 'white' }}
+              style={{ width: '100%', padding: '12px 40px 12px 16px', borderRadius: 24, border: `1.5px solid ${p}30`, fontSize: 16, outline: 'none', fontFamily: theme.fontFamily, boxSizing: 'border-box', background: 'white' }}
               onFocus={e => e.currentTarget.style.borderColor = p}
               onBlur={e => e.currentTarget.style.borderColor = p + '30'}
             />
@@ -200,7 +200,7 @@ export default function CommunityPage() {
           {/* Filter tabs: All | Gallery | Tips / How to */}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
             {([['all', t('all')], ['gallery', `🎨 ${t('gallery')}`], ['tips', `✨ ${t('tips_howto')}`]] as const).map(([k, lbl]) => (
-              <button key={k} onClick={() => { setPostTab(k); setSearchQ(''); setDebouncedQ(''); setFilter({ kind: 'all' }); }} style={{ padding: '7px 16px', borderRadius: 18, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, background: postTab === k ? p : p + '15', color: postTab === k ? 'white' : p, fontFamily: theme.fontFamily }}>{lbl}</button>
+              <button key={k} onClick={() => { setPostTab(k); setSearchQ(''); setDebouncedQ(''); setFilter({ kind: 'all' }); }} style={{ padding: '7px 16px', borderRadius: 18, border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 700, background: postTab === k ? p : p + '15', color: postTab === k ? 'white' : p, fontFamily: theme.fontFamily }}>{lbl}</button>
             ))}
           </div>
         </div>
@@ -208,7 +208,7 @@ export default function CommunityPage() {
         {/* 1. 🌷 Cozy Picks — small section label (page header is the hero above, no duplication). */}
         {isAll && cozy.length > 0 && (
           <div style={{ marginBottom: 32 }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: theme.textColor, marginBottom: 12 }}>🌷 {t('cozy_picks')}</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: theme.textColor, marginBottom: 12 }}>🌷 {t('cozy_picks')}</div>
             <div className={'cozy-row' + (cozy.length > 6 ? ' many' : '')}>
               {cozy.map(post => (
                 <div key={'c' + post.id} style={{ width: 204, flexShrink: 0 }}>
@@ -223,12 +223,12 @@ export default function CommunityPage() {
         {isAll && (
           <div style={{ marginTop: 36 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 900, color: theme.textColor, margin: 0 }}>🌷 {tRaw('ค้นพบครีเอเตอร์', 'Discover Creators')}</h2>
-              <button onClick={() => navigate('/community/creators')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 13, fontWeight: 700, padding: 0, flexShrink: 0 }}>{tRaw('ดูทั้งหมด →', 'View all →')}</button>
+              <h2 style={{ fontSize: 22, fontWeight: 900, color: theme.textColor, margin: 0 }}>🌷 {tRaw('ค้นพบครีเอเตอร์', 'Discover Creators')}</h2>
+              <button onClick={() => navigate('/community/creators')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 15, fontWeight: 700, padding: 0, flexShrink: 0 }}>{tRaw('ดูทั้งหมด →', 'View all →')}</button>
             </div>
             <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 6, WebkitOverflowScrolling: 'touch' as any }}>
               {discoverCreators.length === 0 ? (
-                <button onClick={() => navigate('/community/creators')} style={{ background: p + '12', border: 'none', cursor: 'pointer', color: p, fontSize: 13, fontWeight: 700, padding: '10px 20px', borderRadius: 20, fontFamily: theme.fontFamily }}>
+                <button onClick={() => navigate('/community/creators')} style={{ background: p + '12', border: 'none', cursor: 'pointer', color: p, fontSize: 15, fontWeight: 700, padding: '10px 20px', borderRadius: 20, fontFamily: theme.fontFamily }}>
                   {tRaw('ดูครีเอเตอร์ทั้งหมด →', 'Browse all creators →')}
                 </button>
               ) : discoverCreators.map((c: any) => (
@@ -237,10 +237,10 @@ export default function CommunityPage() {
                   <div style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', background: p + '20', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, border: `2px solid ${p}20` }}>
                     {isImageUrl(c.avatar_url) ? <img src={c.avatar_url} alt={c.name} loading="lazy" decoding="async" width={56} height={56} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (c.avatar_url || (c.affiliate_enabled ? '🌷' : '👤'))}
                   </div>
-                  <div style={{ fontSize: 12.5, fontWeight: 800, color: '#1e293b', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
-                  {c.community_country && <div style={{ fontSize: 10.5, color: '#94a3b8' }}>📍 {c.community_country}</div>}
-                  {c.community_favorite_medium && <div style={{ fontSize: 10.5, color: '#94a3b8' }}>🎨 {c.community_favorite_medium}</div>}
-                  <div style={{ fontSize: 10.5, color: p, fontWeight: 700, marginTop: 4 }}>{c.posts} {tRaw('โพสต์', 'posts')}</div>
+                  <div style={{ fontSize: 14.5, fontWeight: 800, color: '#1e293b', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+                  {c.community_country && <div style={{ fontSize: 12, color: '#94a3b8' }}>📍 {c.community_country}</div>}
+                  {c.community_favorite_medium && <div style={{ fontSize: 12, color: '#94a3b8' }}>🎨 {c.community_favorite_medium}</div>}
+                  <div style={{ fontSize: 12, color: p, fontWeight: 700, marginTop: 4 }}>{c.posts} {tRaw('โพสต์', 'posts')}</div>
                 </button>
               ))}
             </div>
@@ -266,7 +266,7 @@ export default function CommunityPage() {
             {loading && <div style={{ textAlign: 'center', padding: 24, color: '#9ca3af', fontSize: 26 }}>⏳</div>}
             {hasMore && !loading && (
               <div style={{ textAlign: 'center', marginTop: 20 }}>
-                <button onClick={() => { const np = page + 1; setPage(np); loadPage(np, filter, debouncedQ, postTab); }} style={{ background: 'transparent', border: `2px solid ${p}`, color: p, cursor: 'pointer', padding: '10px 28px', borderRadius: 22, fontSize: 13.5, fontWeight: 800, fontFamily: theme.fontFamily }}>{t('load_more')}</button>
+                <button onClick={() => { const np = page + 1; setPage(np); loadPage(np, filter, debouncedQ, postTab); }} style={{ background: 'transparent', border: `2px solid ${p}`, color: p, cursor: 'pointer', padding: '10px 28px', borderRadius: 22, fontSize: 15.5, fontWeight: 800, fontFamily: theme.fontFamily }}>{t('load_more')}</button>
               </div>
             )}
           </>

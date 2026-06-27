@@ -86,7 +86,7 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
         <div style={{ fontSize: 56, marginBottom: 12 }}>🔍</div>
         <h2 style={{ color: '#1e293b', fontWeight: 900 }}>{tRaw('ไม่พบไฟล์', 'File not found')}</h2>
         <button onClick={() => navigate('/free-downloads')}
-          style={{ marginTop: 16, background: p, color: 'white', border: 'none', cursor: 'pointer', padding: '11px 24px', borderRadius: 20, fontSize: 14, fontWeight: 700, fontFamily: theme.fontFamily }}>
+          style={{ marginTop: 16, background: p, color: 'white', border: 'none', cursor: 'pointer', padding: '11px 24px', borderRadius: 20, fontSize: 16, fontWeight: 700, fontFamily: theme.fontFamily }}>
           ← {tRaw('กลับ', 'Back')}
         </button>
       </div>
@@ -108,9 +108,9 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
         }
       `}</style>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '12px 16px', fontSize: 13, color: '#64748b' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '12px 16px', fontSize: 14.5, color: '#64748b' }}>
         <button onClick={() => navigate('/free-downloads')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 13, fontWeight: 700, padding: 0, fontFamily: theme.fontFamily }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 14.5, fontWeight: 700, padding: 0, fontFamily: theme.fontFamily }}>
           ← {tRaw('ดาวน์โหลดทั้งหมด', 'All Free Downloads')}
         </button>
       </div>
@@ -129,31 +129,31 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
             {/* Badges */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
               {item.file_type && (
-                <span style={{ fontSize: 12, fontWeight: 700, background: fileBg(item.file_type), color: fileColor(item.file_type), borderRadius: 6, padding: '3px 10px' }}>
+                <span style={{ fontSize: 13.5, fontWeight: 700, background: fileBg(item.file_type), color: fileColor(item.file_type), borderRadius: 6, padding: '3px 10px' }}>
                   {fileIcon(item.file_type)} {item.file_type.toUpperCase()}
                 </span>
               )}
               {item.category && (
-                <span style={{ fontSize: 12, fontWeight: 600, background: '#f3f4f6', color: '#6b7280', borderRadius: 6, padding: '3px 10px' }}>
+                <span style={{ fontSize: 13.5, fontWeight: 600, background: '#f3f4f6', color: '#6b7280', borderRadius: 6, padding: '3px 10px' }}>
                   {item.category}
                 </span>
               )}
-              <span style={{ fontSize: 12, fontWeight: 600, background: '#d1fae5', color: '#065f46', borderRadius: 6, padding: '3px 10px' }}>
+              <span style={{ fontSize: 13.5, fontWeight: 600, background: '#d1fae5', color: '#065f46', borderRadius: 6, padding: '3px 10px' }}>
                 🎁 {tRaw('ฟรี', 'Free')}
               </span>
             </div>
 
             {/* Title */}
-            <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1e293b', margin: '0 0 8px', lineHeight: 1.3 }}>{title}</h1>
+            <h1 style={{ fontSize: 34, fontWeight: 900, color: '#1e293b', margin: '0 0 8px', lineHeight: 1.25 }}>{title}</h1>
 
             {/* Highlight */}
             {item.highlight && (
-              <p style={{ fontSize: 15, color: '#64748b', margin: '0 0 20px', lineHeight: 1.6 }}>{item.highlight}</p>
+              <p style={{ fontSize: 17, color: '#64748b', margin: '0 0 20px', lineHeight: 1.65 }}>{item.highlight}</p>
             )}
 
             {/* File info row */}
             {(item.file_size || item.r2_file_name) && (
-              <div style={{ background: '#f9fafb', borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontSize: 13, color: '#6b7280', display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+              <div style={{ background: '#f9fafb', borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontSize: 15, color: '#6b7280', display: 'flex', gap: 20, flexWrap: 'wrap' }}>
                 {item.r2_file_name && <span>📎 {item.r2_file_name}</span>}
                 {item.file_size && <span>💾 {(item.file_size / 1024 / 1024).toFixed(2)} MB</span>}
                 {item.download_count > 0 && <span>⬇️ {item.download_count} {tRaw('ดาวน์โหลด', 'downloads')}</span>}
@@ -162,23 +162,23 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
 
             {/* Download button */}
             {dlError && (
-              <div style={{ background: '#fee2e2', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 13, color: '#dc2626', fontWeight: 600 }}>{dlError}</div>
+              <div style={{ background: '#fee2e2', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 15, color: '#dc2626', fontWeight: 600 }}>{dlError}</div>
             )}
             <button
               disabled={dlLoading || !item.r2_file_name}
               onClick={handleDownload}
-              style={{ width: '100%', padding: '14px', background: !item.r2_file_name ? '#e5e7eb' : dlLoading ? '#9ca3af' : p, color: !item.r2_file_name ? '#9ca3af' : 'white', border: 'none', borderRadius: 14, fontSize: 16, fontWeight: 800, cursor: (dlLoading || !item.r2_file_name) ? 'not-allowed' : 'pointer', fontFamily: theme.fontFamily, boxShadow: item.r2_file_name ? `0 6px 16px ${p}44` : 'none', marginBottom: 8 }}>
+              style={{ width: '100%', padding: '14px', background: !item.r2_file_name ? '#e5e7eb' : dlLoading ? '#9ca3af' : p, color: !item.r2_file_name ? '#9ca3af' : 'white', border: 'none', borderRadius: 14, fontSize: 17, fontWeight: 800, cursor: (dlLoading || !item.r2_file_name) ? 'not-allowed' : 'pointer', fontFamily: theme.fontFamily, boxShadow: item.r2_file_name ? `0 6px 16px ${p}44` : 'none', marginBottom: 8 }}>
               {dlLoading ? `⏳ ${tRaw('กำลังเตรียมไฟล์…', 'Preparing file…')}` : `⬇️ ${tRaw('ดาวน์โหลดฟรี', 'Download Free')}`}
             </button>
             {!item.r2_file_name && (
-              <div style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center' }}>{tRaw('ไฟล์ยังไม่พร้อม', 'File not yet available')}</div>
+              <div style={{ fontSize: 14, color: '#9ca3af', textAlign: 'center' }}>{tRaw('ไฟล์ยังไม่พร้อม', 'File not yet available')}</div>
             )}
 
             {/* Description */}
             {description && (
               <div style={{ marginTop: 28, paddingTop: 24, borderTop: '1px solid #f3f4f6' }}>
-                <h3 style={{ fontSize: 15, fontWeight: 800, color: '#374151', marginBottom: 12 }}>{tRaw('รายละเอียด', 'Description')}</h3>
-                <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{description}</div>
+                <h3 style={{ fontSize: 17, fontWeight: 800, color: '#374151', marginBottom: 12 }}>{tRaw('รายละเอียด', 'Description')}</h3>
+                <div style={{ fontSize: 16, color: '#374151', lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>{description}</div>
               </div>
             )}
 
@@ -186,7 +186,7 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
             {item.keywords?.length > 0 && (
               <div style={{ marginTop: 20, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {item.keywords.map((kw: string) => (
-                  <span key={kw} style={{ fontSize: 11, background: `${p}12`, color: p, borderRadius: 20, padding: '3px 10px', fontWeight: 600 }}>{kw}</span>
+                  <span key={kw} style={{ fontSize: 12.5, background: `${p}12`, color: p, borderRadius: 20, padding: '3px 10px', fontWeight: 600 }}>{kw}</span>
                 ))}
               </div>
             )}
@@ -202,9 +202,9 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
               : <div style={{ width: 56, height: 56, borderRadius: '50%', background: `${p}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🎨</div>
             }
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', marginBottom: 2 }}>{tRaw('ศิลปิน', 'Artist')}</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#1e293b' }}>{artistProfile.name}</div>
-              {artistProfile.bio && <div style={{ fontSize: 13, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{artistProfile.bio}</div>}
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#9ca3af', marginBottom: 2 }}>{tRaw('ศิลปิน', 'Artist')}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#1e293b' }}>{artistProfile.name}</div>
+              {artistProfile.bio && <div style={{ fontSize: 15, color: '#64748b', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{artistProfile.bio}</div>}
             </div>
             <span style={{ color: p, fontSize: 18 }}>→</span>
           </div>
@@ -213,7 +213,7 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
         {/* More from this artist */}
         {moreFromArtist.length > 0 && (
           <div style={{ marginTop: 40 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 900, color: '#1e293b', marginBottom: 20 }}>
+            <h2 style={{ fontSize: 24, fontWeight: 900, color: '#1e293b', marginBottom: 20 }}>
               🎨 {tRaw('เพิ่มเติมจากศิลปินนี้', 'More from this artist')}
             </h2>
             <div className="fd-related-grid">
@@ -230,8 +230,8 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
                       : <div style={{ width: '100%', aspectRatio: '1/1', background: `${p}10`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>📁</div>
                     }
                     <div style={{ padding: '10px 12px' }}>
-                      {ft && <span style={{ fontSize: 10, fontWeight: 700, background: ftBg, color: ftColor, borderRadius: 5, padding: '2px 7px', marginBottom: 6, display: 'inline-block' }}>{ft.toUpperCase()}</span>}
-                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', lineHeight: 1.35 }}>{fdTitle}</div>
+                      {ft && <span style={{ fontSize: 11.5, fontWeight: 700, background: ftBg, color: ftColor, borderRadius: 5, padding: '2px 7px', marginBottom: 6, display: 'inline-block' }}>{ft.toUpperCase()}</span>}
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', lineHeight: 1.35 }}>{fdTitle}</div>
                     </div>
                   </div>
                 );
@@ -243,7 +243,7 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
         {/* Related products */}
         {related.length > 0 && (
           <div style={{ marginTop: 48 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 900, color: '#1e293b', marginBottom: 20 }}>
+            <h2 style={{ fontSize: 24, fontWeight: 900, color: '#1e293b', marginBottom: 20 }}>
               {tRaw('คุณอาจชอบ', 'You may also like')}
             </h2>
             <div className="fd-related-grid">

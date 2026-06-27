@@ -76,7 +76,7 @@ export default function CommunityCard({ post, compact = false, priority = false 
           {post.product ? (
             <button onClick={(e) => { e.stopPropagation(); navigate(`/products/${post.product.slug}${creator?.affiliate_enabled ? `?ref=${creator.id}` : ''}`); }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily, textAlign: 'left', width: '100%' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: p, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>📚 {post.product.title}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: p, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>📚 {post.product.title}</span>
             </button>
           ) : (post.external_book || post.external_book_title) ? (
             (() => {
@@ -87,10 +87,10 @@ export default function CommunityCard({ post, compact = false, priority = false 
               return slug ? (
                 <button onClick={(e) => { e.stopPropagation(); navigate(`/community/book/${slug}`); }}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily, textAlign: 'left', width: '100%' }}>
-                  <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{label}</span>
+                  <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{label}</span>
                 </button>
               ) : (
-                <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{label}</span>
+                <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{label}</span>
               );
             })()
           ) : <span />}
@@ -99,7 +99,7 @@ export default function CommunityCard({ post, compact = false, priority = false 
         {/* 📝 Caption — 2 lines */}
         <div style={{ minHeight: 36, marginBottom: 8 }}>
           {post.caption ? (
-            <p style={{ fontSize: 12, color: '#475569', lineHeight: 1.5, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+            <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.55, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
               {post.caption}
             </p>
           ) : null}
@@ -112,7 +112,7 @@ export default function CommunityCard({ post, compact = false, priority = false 
             <span style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', background: p + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, flexShrink: 0 }}>
               {isImageUrl(creator.avatar_url) ? <img src={creator.avatar_url} alt={creator.name} loading="lazy" decoding="async" width={22} height={22} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : creator.avatar_url ? <span style={{ fontSize: 12 }}>{creator.avatar_url}</span> : <BadgeIcon affiliate={creator.affiliate_enabled} size={12} />}
             </span>
-            <span style={{ fontSize: 11.5, fontWeight: 700, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><BadgeIcon affiliate={creator.affiliate_enabled} size={12} /> {creator.name}</span>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><BadgeIcon affiliate={creator.affiliate_enabled} size={13} /> {creator.name}</span>
           </button>
         )}
 
@@ -123,8 +123,8 @@ export default function CommunityCard({ post, compact = false, priority = false 
             const n = counts[r.type] || 0;
             return (
               <button key={r.type} onClick={(e) => react(e, r.type)} title={tRaw(r.th, r.en)}
-                style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '2px 5px', borderRadius: 12, border: `1.5px solid ${on ? p : '#eef2f7'}`, background: on ? p + '12' : 'white', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: on ? p : '#64748b', fontFamily: theme.fontFamily, flexShrink: 0 }}>
-                <span>{r.emoji}</span>{n > 0 && <span style={{ fontSize: 10 }}>{n}</span>}
+                style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '2px 5px', borderRadius: 12, border: `1.5px solid ${on ? p : '#eef2f7'}`, background: on ? p + '12' : 'white', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, color: on ? p : '#64748b', fontFamily: theme.fontFamily, flexShrink: 0 }}>
+                <span>{r.emoji}</span>{n > 0 && <span style={{ fontSize: 11.5 }}>{n}</span>}
               </button>
             );
           })}

@@ -62,17 +62,17 @@ export default function FreeDownloadsPage() {
 
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 900, color: theme.textColor, margin: '0 0 6px' }}>
+          <h1 style={{ fontSize: 34, fontWeight: 900, color: theme.textColor, margin: '0 0 6px' }}>
             ⬇️ {tRaw('ดาวน์โหลดฟรี', 'Free Downloads')}
           </h1>
-          <p style={{ color: theme.textColor + '88', margin: '0 0 16px' }}>
+          <p style={{ color: theme.textColor + '88', margin: '0 0 16px', fontSize: 17, lineHeight: 1.6 }}>
             {tRaw('ดาวน์โหลดไฟล์ฟรี ไม่ต้องสมัครสมาชิก', 'Free files — no sign-up required')}
           </p>
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={tRaw('ค้นหาไฟล์ฟรี...', 'Search free downloads...')}
-            style={{ width:'100%', maxWidth:360, padding:'10px 16px', borderRadius:24, border:`1.5px solid ${p}30`, fontSize:14, outline:'none', fontFamily:theme.fontFamily, boxSizing:'border-box' }}
+            style={{ width:'100%', maxWidth:360, padding:'10px 16px', borderRadius:24, border:`1.5px solid ${p}30`, fontSize:16, outline:'none', fontFamily:theme.fontFamily, boxSizing:'border-box' }}
             onFocus={e => e.target.style.borderColor = p}
             onBlur={e => e.target.style.borderColor = p + '30'}
           />
@@ -107,31 +107,31 @@ export default function FreeDownloadsPage() {
                 </div>
                 {/* File type badge */}
                 {item.file_type && (
-                  <span style={{ position: 'absolute', bottom: 8, left: 8, background: fileBg(item.file_type), color: fileColor(item.file_type), borderRadius: 10, padding: '2px 8px', fontSize: 10, fontWeight: 700, zIndex: 1 }}>
+                  <span style={{ position: 'absolute', bottom: 8, left: 8, background: fileBg(item.file_type), color: fileColor(item.file_type), borderRadius: 10, padding: '2px 8px', fontSize: 11.5, fontWeight: 700, zIndex: 1 }}>
                     {item.file_type.toUpperCase()}
                   </span>
                 )}
                 {/* Free badge */}
-                <span style={{ position: 'absolute', top: 8, right: 8, background: '#d1fae5', color: '#065f46', borderRadius: 10, padding: '2px 8px', fontSize: 10, fontWeight: 700, zIndex: 1 }}>
+                <span style={{ position: 'absolute', top: 8, right: 8, background: '#d1fae5', color: '#065f46', borderRadius: 10, padding: '2px 8px', fontSize: 11.5, fontWeight: 700, zIndex: 1 }}>
                   🎁 {tRaw('ฟรี', 'FREE')}
                 </span>
               </div>
 
               {/* Card body */}
               <div style={{ padding: '12px 14px 14px' }}>
-                <div style={{ fontSize: 11, color: p, fontWeight: 700, marginBottom: 3 }}>{item.category || ''}</div>
+                <div style={{ fontSize: 12.5, color: p, fontWeight: 700, marginBottom: 3 }}>{item.category || ''}</div>
                 <div onClick={() => navigate(`/free-downloads/${item.slug}`)}
-                  style={{ fontSize: 14, fontWeight: 800, color: theme.textColor, marginBottom: 8, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+                  style={{ fontSize: 16, fontWeight: 800, color: theme.textColor, marginBottom: 8, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
                   {title(item)}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                  <span style={{ fontSize: 15, fontWeight: 900, color: '#065f46' }}>
+                  <span style={{ fontSize: 17, fontWeight: 900, color: '#065f46' }}>
                     🎁 {tRaw('ฟรี', 'FREE')}
                   </span>
                   <button
                     disabled={!!dlLoading[item.id] || !item.r2_file_name}
                     onClick={e => { e.stopPropagation(); handleDownload(item); }}
-                    style={{ background: !item.r2_file_name ? '#e5e7eb' : dlLoading[item.id] ? '#9ca3af' : p, color: !item.r2_file_name ? '#9ca3af' : 'white', border: 'none', cursor: (!item.r2_file_name || dlLoading[item.id]) ? 'not-allowed' : 'pointer', padding: '6px 12px', borderRadius: 12, fontSize: 12, fontWeight: 700, fontFamily: theme.fontFamily, flexShrink: 0 }}>
+                    style={{ background: !item.r2_file_name ? '#e5e7eb' : dlLoading[item.id] ? '#9ca3af' : p, color: !item.r2_file_name ? '#9ca3af' : 'white', border: 'none', cursor: (!item.r2_file_name || dlLoading[item.id]) ? 'not-allowed' : 'pointer', padding: '6px 12px', borderRadius: 12, fontSize: 14, fontWeight: 700, fontFamily: theme.fontFamily, flexShrink: 0 }}>
                     {dlLoading[item.id] ? '⏳' : '⬇️'}
                   </button>
                 </div>

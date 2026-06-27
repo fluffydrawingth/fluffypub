@@ -45,8 +45,8 @@ export function HighlightDetailPage({ id }: { id: string }) {
   if (!h) return (
     <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: theme.fontFamily, gap: 16 }}>
       <div style={{ fontSize: 48 }}>✨</div>
-      <div style={{ fontWeight: 800, fontSize: 17, color: theme.textColor }}>{tRaw('ไม่พบกิจกรรม', 'Event not found')}</div>
-      <button onClick={() => navigate('/community/highlights')} style={{ background: p, color: 'white', border: 'none', cursor: 'pointer', padding: '10px 24px', borderRadius: 20, fontSize: 14, fontWeight: 700 }}>
+      <div style={{ fontWeight: 800, fontSize: 19, color: theme.textColor }}>{tRaw('ไม่พบกิจกรรม', 'Event not found')}</div>
+      <button onClick={() => navigate('/community/highlights')} style={{ background: p, color: 'white', border: 'none', cursor: 'pointer', padding: '10px 24px', borderRadius: 20, fontSize: 16, fontWeight: 700 }}>
         ← {tRaw('กลับ', 'Back')}
       </button>
     </div>
@@ -61,7 +61,7 @@ export function HighlightDetailPage({ id }: { id: string }) {
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '36px 20px 72px' }}>
 
-        <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 13, fontWeight: 600, padding: '0 0 24px', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 15, fontWeight: 600, padding: '0 0 24px', display: 'flex', alignItems: 'center', gap: 6 }}>
           ← {tRaw('ชุมชน', 'Community')}
         </button>
 
@@ -74,16 +74,16 @@ export function HighlightDetailPage({ id }: { id: string }) {
 
         {/* Type badge */}
         <div style={{ marginBottom: 12 }}>
-          <span style={{ fontSize: 12, fontWeight: 800, padding: '5px 14px', borderRadius: 20, background: isSubtle ? '#f1f5f9' : tm.color + '18', color: isSubtle ? '#64748b' : tm.color }}>
+          <span style={{ fontSize: 13.5, fontWeight: 800, padding: '5px 14px', borderRadius: 20, background: isSubtle ? '#f1f5f9' : tm.color + '18', color: isSubtle ? '#64748b' : tm.color }}>
             {tm.emoji} {lang === 'th' ? tm.th : tm.en}
           </span>
         </div>
 
-        <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1e293b', margin: '0 0 16px', lineHeight: 1.3 }}>{h.title}</h1>
+        <h1 style={{ fontSize: 34, fontWeight: 900, color: '#1e293b', margin: '0 0 16px', lineHeight: 1.25 }}>{h.title}</h1>
 
         {/* Dates */}
         {(h.start_date || h.end_date) && (
-          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 20, fontSize: 13, color: '#64748b', fontWeight: 600 }}>
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 20, fontSize: 15, color: '#64748b', fontWeight: 600 }}>
             {h.start_date && <span>📅 {tRaw('เริ่ม', 'Starts')} {fmtDate(h.start_date)}</span>}
             {h.end_date && <span>🏁 {tRaw('สิ้นสุด', 'Ends')} {fmtDate(h.end_date)}</span>}
           </div>
@@ -93,7 +93,7 @@ export function HighlightDetailPage({ id }: { id: string }) {
 
         {/* Short description */}
         {h.description && (
-          <p style={{ fontSize: 15, color: '#374151', lineHeight: 1.8, margin: '0 0 24px', whiteSpace: 'pre-wrap' }}>{h.description}</p>
+          <p style={{ fontSize: 17, color: '#374151', lineHeight: 1.85, margin: '0 0 24px', whiteSpace: 'pre-wrap' }}>{h.description}</p>
         )}
 
         {/* Content blocks */}
@@ -106,7 +106,7 @@ export function HighlightDetailPage({ id }: { id: string }) {
                 </div>
               );
               if (block.type === 'text' && block.value) return (
-                <p key={i} style={{ fontSize: 15, color: '#374151', lineHeight: 1.8, margin: 0, whiteSpace: 'pre-wrap' }}>{block.value}</p>
+                <p key={i} style={{ fontSize: 17, color: '#374151', lineHeight: 1.85, margin: 0, whiteSpace: 'pre-wrap' }}>{block.value}</p>
               );
               return null;
             })}
@@ -117,7 +117,7 @@ export function HighlightDetailPage({ id }: { id: string }) {
         {h.link_url && (
           <div style={{ marginTop: 32 }}>
             <a href={h.link_url} target="_blank" rel="noopener noreferrer"
-              style={{ display: 'inline-block', background: p, color: 'white', textDecoration: 'none', padding: '12px 28px', borderRadius: 24, fontSize: 14, fontWeight: 800 }}>
+              style={{ display: 'inline-block', background: p, color: 'white', textDecoration: 'none', padding: '12px 28px', borderRadius: 24, fontSize: 16, fontWeight: 800 }}>
               {tRaw('ดูรายละเอียดเพิ่มเติม →', 'Learn more →')}
             </a>
           </div>
@@ -148,7 +148,7 @@ export function HighlightCard({ h, p, theme, lang, tRaw }: any) {
           <img src={h.cover_image} alt={h.title}
             style={{ width: '100%', height: h.card_size === 'lg' ? 200 : h.card_size === 'sm' ? 80 : 110, objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
           {isSubtle && (
-            <span style={{ position: 'absolute', top: 7, right: 7, background: 'rgba(255,255,255,0.92)', color: '#64748b', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 8 }}>
+            <span style={{ position: 'absolute', top: 7, right: 7, background: 'rgba(255,255,255,0.92)', color: '#64748b', fontSize: 11.5, fontWeight: 700, padding: '2px 7px', borderRadius: 8 }}>
               {lang === 'th' ? tm.th : tm.en}
             </span>
           )}
@@ -157,18 +157,18 @@ export function HighlightCard({ h, p, theme, lang, tRaw }: any) {
 
       <div style={{ padding: '9px 12px 11px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
         {!isSubtle && (
-          <span style={{ fontSize: 10.5, fontWeight: 700, color: tm.color, background: tm.color + '15', padding: '2px 8px', borderRadius: 8, alignSelf: 'flex-start' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: tm.color, background: tm.color + '15', padding: '2px 8px', borderRadius: 8, alignSelf: 'flex-start' }}>
             {tm.emoji} {lang === 'th' ? tm.th : tm.en}
           </span>
         )}
-        <div style={{ fontSize: 13, fontWeight: 800, color: '#1e293b', lineHeight: 1.3 }}>{h.title}</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: '#1e293b', lineHeight: 1.35 }}>{h.title}</div>
         {h.description && (
-          <div style={{ fontSize: 11.5, color: '#64748b', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+          <div style={{ fontSize: 13.5, color: '#64748b', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
             {h.description}
           </div>
         )}
         {endDate && (
-          <div style={{ fontSize: 10.5, color: '#94a3b8', fontWeight: 600 }}>
+          <div style={{ fontSize: 12.5, color: '#94a3b8', fontWeight: 600 }}>
             📅 {tRaw('สิ้นสุด', 'Ends')} {endDate}
           </div>
         )}
@@ -198,20 +198,20 @@ export default function CommunityHighlightsPage() {
   return (
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '32px 16px 60px' }}>
-        <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 13, fontWeight: 600, padding: '0 0 20px' }}>
+        <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 15, fontWeight: 600, padding: '0 0 20px' }}>
           ← {tRaw('ชุมชน', 'Community')}
         </button>
-        <h1 style={{ fontSize: 22, fontWeight: 900, color: theme.textColor, margin: '0 0 5px' }}>
+        <h1 style={{ fontSize: 34, fontWeight: 900, color: theme.textColor, margin: '0 0 5px' }}>
           ✨ {tRaw('ไฮไลท์และกิจกรรม', 'Highlights & Events')}
         </h1>
-        <p style={{ color: '#94a3b8', fontSize: 13, margin: '0 0 20px' }}>
+        <p style={{ color: '#94a3b8', fontSize: 17, lineHeight: 1.6, margin: '0 0 20px' }}>
           {tRaw('ชาเลนจ์ กิจกรรม และข่าวสารชุมชน', 'Challenges, events & community news')}
         </p>
 
         <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 22 }}>
           {TYPE_TABS.map(tab => (
             <button key={tab.key} onClick={() => setFilter(tab.key)}
-              style={{ padding: '7px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, background: filter === tab.key ? p : p + '15', color: filter === tab.key ? 'white' : p, fontFamily: theme.fontFamily }}>
+              style={{ padding: '7px 14px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, background: filter === tab.key ? p : p + '15', color: filter === tab.key ? 'white' : p, fontFamily: theme.fontFamily }}>
               {tab.label[lang as 'en' | 'th'] ?? tab.label.en}
             </button>
           ))}
@@ -222,10 +222,10 @@ export default function CommunityHighlightsPage() {
         ) : highlights.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 24px', color: '#94a3b8' }}>
             <div style={{ fontSize: 40, marginBottom: 10 }}>✨</div>
-            <div style={{ fontWeight: 700, fontSize: 15, color: theme.textColor, marginBottom: 5 }}>
+            <div style={{ fontWeight: 700, fontSize: 17, color: theme.textColor, marginBottom: 5 }}>
               {tRaw('ยังไม่มีกิจกรรมในตอนนี้', 'Nothing here yet')}
             </div>
-            <div style={{ fontSize: 13 }}>{tRaw('ติดตามข่าวสารได้เร็วๆ นี้', 'Check back soon for upcoming events.')}</div>
+            <div style={{ fontSize: 15 }}>{tRaw('ติดตามข่าวสารได้เร็วๆ นี้', 'Check back soon for upcoming events.')}</div>
           </div>
         ) : (
           <div className="hl-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>

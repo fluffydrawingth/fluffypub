@@ -188,7 +188,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
       <style>{`@media(max-width:760px){.cp-grid{grid-template-columns:1fr!important}}`}</style>
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 16px 60px' }}>
-        <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 14, fontWeight: 600, padding: '0 0 16px' }}>← {tRaw('ชุมชน', 'Community')}</button>
+        <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 15, fontWeight: 600, padding: '0 0 16px' }}>← {tRaw('ชุมชน', 'Community')}</button>
 
         <div className="cp-grid" style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 24, alignItems: 'start' }}>
           {/* Artwork — full original ratio carousel, no cropping on detail page */}
@@ -196,7 +196,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
             <div style={{ filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.08))' }}>
               <ImageCarousel images={images} fit="contain" rounded={18} onImageClick={() => setLightbox(true)} thumbnails priority />
             </div>
-            <div style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 6 }}>🔍 {tRaw('แตะที่ภาพเพื่อขยาย', 'Tap to zoom')}</div>
+            <div style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', marginTop: 6 }}>🔍 {tRaw('แตะที่ภาพเพื่อขยาย', 'Tap to zoom')}</div>
           </div>
 
           {/* Details */}
@@ -208,10 +208,10 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
                   {isImageUrl(c.avatar_url) ? <img src={c.avatar_url} alt={c.name} loading="lazy" decoding="async" width={44} height={44} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : c.avatar_url ? <span style={{ fontSize: 22 }}>{c.avatar_url}</span> : <BadgeIcon affiliate={c.affiliate_enabled} size={20} />}
                 </button>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <button onClick={() => navigate(`/creator/${c.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 14, fontWeight: 800, color: '#1e293b', textAlign: 'left' }}><BadgeIcon affiliate={c.affiliate_enabled} size={14} /> {c.name}</button>
-                  {created && <div style={{ fontSize: 11, color: '#94a3b8' }}>{created}</div>}
+                  <button onClick={() => navigate(`/creator/${c.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 16, fontWeight: 800, color: '#1e293b', textAlign: 'left' }}><BadgeIcon affiliate={c.affiliate_enabled} size={15} /> {c.name}</button>
+                  {created && <div style={{ fontSize: 13, color: '#94a3b8' }}>{created}</div>}
                 </div>
-                <button onClick={toggleSave} style={{ padding: '7px 12px', borderRadius: 20, border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', color: saved ? p : '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: theme.fontFamily }}>
+                <button onClick={toggleSave} style={{ padding: '7px 12px', borderRadius: 20, border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', color: saved ? p : '#64748b', cursor: 'pointer', fontSize: 14, fontWeight: 800, fontFamily: theme.fontFamily }}>
                   {saved ? `🔖 ${tRaw('บันทึกแล้ว', 'Saved')}` : `🔖 ${tRaw('บันทึก', 'Save')}`}
                 </button>
                 <ShareButton post={post} p={p} theme={theme} tRaw={tRaw} />
@@ -221,8 +221,8 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
             {/* Owner actions */}
             {(isOwner || isAdmin) && !editing && (
               <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-                <button onClick={startEdit} style={{ padding: '7px 14px', borderRadius: 20, border: `1.5px solid ${p}40`, background: 'white', color: p, cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: theme.fontFamily }}>✏️ {tRaw('แก้ไข', 'Edit')}</button>
-                <button onClick={() => setShowDeleteConfirm(true)} style={{ padding: '7px 14px', borderRadius: 20, border: '1.5px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: theme.fontFamily }}>🗑️ {tRaw('ลบโพสต์', 'Delete')}</button>
+                <button onClick={startEdit} style={{ padding: '7px 14px', borderRadius: 20, border: `1.5px solid ${p}40`, background: 'white', color: p, cursor: 'pointer', fontSize: 14, fontWeight: 800, fontFamily: theme.fontFamily }}>✏️ {tRaw('แก้ไข', 'Edit')}</button>
+                <button onClick={() => setShowDeleteConfirm(true)} style={{ padding: '7px 14px', borderRadius: 20, border: '1.5px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: 14, fontWeight: 800, fontFamily: theme.fontFamily }}>🗑️ {tRaw('ลบโพสต์', 'Delete')}</button>
               </div>
             )}
 
@@ -247,18 +247,18 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
                 {/* 1. Caption box — prominent, at top */}
                 {post.caption && (
                   <div style={{ background: p + '0c', border: `1.5px solid ${p}20`, borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
-                    <p style={{ fontSize: 16, color: '#334155', lineHeight: 1.6, margin: 0, fontWeight: 600 }}>{post.caption}</p>
+                    <p style={{ fontSize: 18, color: '#334155', lineHeight: 1.65, margin: 0, fontWeight: 600 }}>{post.caption}</p>
                   </div>
                 )}
 
                 {/* 2. Book used box */}
                 <div style={{ background: 'white', border: '1.5px solid #f1f5f9', borderRadius: 14, padding: '12px 16px', marginBottom: 14 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', marginBottom: 8 }}>📚 {tRaw('หนังสือที่ใช้', 'Book used')}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#94a3b8', marginBottom: 8 }}>📚 {tRaw('หนังสือที่ใช้', 'Book used')}</div>
                   {post.product ? (
-                    <button onClick={() => navigate(`/products/${post.product.slug}${c?.affiliate_enabled ? `?ref=${c.id}` : ''}`)} style={{ background: p + '12', color: p, border: 'none', cursor: 'pointer', borderRadius: 12, padding: '8px 14px', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>📚 {post.product.title} →</button>
+                    <button onClick={() => navigate(`/products/${post.product.slug}${c?.affiliate_enabled ? `?ref=${c.id}` : ''}`)} style={{ background: p + '12', color: p, border: 'none', cursor: 'pointer', borderRadius: 12, padding: '8px 14px', fontSize: 15, fontWeight: 800, fontFamily: theme.fontFamily }}>📚 {post.product.title} →</button>
                   ) : (post.external_book?.title || post.external_book_title) ? (
-                    <div style={{ fontSize: 14, color: '#475569', fontWeight: 600 }}>📖 {post.external_book?.title || post.external_book_title}{(post.external_book?.author || post.external_book_author) ? <span style={{ fontWeight: 400 }}> by {post.external_book?.author || post.external_book_author}</span> : ''}</div>
-                  ) : <div style={{ fontSize: 13, color: '#cbd5e1' }}>—</div>}
+                    <div style={{ fontSize: 16, color: '#475569', fontWeight: 600 }}>📖 {post.external_book?.title || post.external_book_title}{(post.external_book?.author || post.external_book_author) ? <span style={{ fontWeight: 400 }}> by {post.external_book?.author || post.external_book_author}</span> : ''}</div>
+                  ) : <div style={{ fontSize: 15, color: '#cbd5e1' }}>—</div>}
                 </div>
 
                 {/* 3. Coloring details box — structured medium — brand pairs */}
@@ -268,16 +268,16 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
                   if (!hasAny) return null;
                   return (
                     <div style={{ background: 'white', border: '1.5px solid #f1f5f9', borderRadius: 14, padding: '12px 16px', marginBottom: 14 }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', marginBottom: 8 }}>🎨 {tRaw('รายละเอียดการลงสี', 'Coloring details')}</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#94a3b8', marginBottom: 8 }}>🎨 {tRaw('รายละเอียดการลงสี', 'Coloring details')}</div>
                       {pairs.length ? (
-                        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, color: '#334155', lineHeight: 1.8 }}>
+                        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 16, color: '#334155', lineHeight: 1.85 }}>
                           {pairs.map((d: any, i: number) => <li key={i}><b>{d.medium}</b>{d.brand ? ` — ${d.brand}` : <span style={{ color: '#94a3b8' }}> — {tRaw('ไม่ระบุยี่ห้อ', 'unknown brand')}</span>}</li>)}
                         </ul>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {post.mediums?.length > 0 && <div style={{ fontSize: 13.5, color: '#334155' }}><span style={{ color: '#7c3aed', fontWeight: 700 }}>🎨 {tRaw('เทคนิค', 'Mediums')}:</span> {post.mediums.join(', ')}</div>}
-                          {post.markers?.length > 0 && <div style={{ fontSize: 13.5, color: '#334155' }}><span style={{ color: '#1d4ed8', fontWeight: 700 }}>🖍️ {tRaw('ปากกา/ชุดสี', 'Markers / sets')}:</span> {post.markers.join(', ')}</div>}
-                          {post.palettes?.length > 0 && <div style={{ fontSize: 13.5, color: '#334155' }}><span style={{ color: '#be185d', fontWeight: 700 }}>🌷 {tRaw('พาเลตต์', 'Palettes')}:</span> {post.palettes.join(', ')}</div>}
+                          {post.mediums?.length > 0 && <div style={{ fontSize: 15.5, color: '#334155' }}><span style={{ color: '#7c3aed', fontWeight: 700 }}>🎨 {tRaw('เทคนิค', 'Mediums')}:</span> {post.mediums.join(', ')}</div>}
+                          {post.markers?.length > 0 && <div style={{ fontSize: 15.5, color: '#334155' }}><span style={{ color: '#1d4ed8', fontWeight: 700 }}>🖍️ {tRaw('ปากกา/ชุดสี', 'Markers / sets')}:</span> {post.markers.join(', ')}</div>}
+                          {post.palettes?.length > 0 && <div style={{ fontSize: 15.5, color: '#334155' }}><span style={{ color: '#be185d', fontWeight: 700 }}>🌷 {tRaw('พาเลตต์', 'Palettes')}:</span> {post.palettes.join(', ')}</div>}
                         </div>
                       )}
                     </div>
@@ -287,12 +287,12 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
                 {/* 4. Creator recommendations box — Fluffy Creator picks (detail page only) */}
                 {post.recommended_tools?.length > 0 && (
                   <div style={{ background: p + '08', border: `1.5px solid ${p}20`, borderRadius: 14, padding: '12px 16px', marginBottom: 14 }}>
-                    <div style={{ fontSize: 12, fontWeight: 800, color: p, marginBottom: 8 }}>🖍 {tRaw('เครื่องมือที่ครีเอเตอร์แนะนำ', 'Creator recommendations')}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: p, marginBottom: 8 }}>🖍 {tRaw('เครื่องมือที่ครีเอเตอร์แนะนำ', 'Creator recommendations')}</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {post.recommended_tools.map((t: any, i: number) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>{t.name}</span>
-                          {t.url && <a href={t.url} target="_blank" rel="noopener noreferrer sponsored" style={{ fontSize: 13, fontWeight: 800, color: p, textDecoration: 'none', whiteSpace: 'nowrap' }}>{tRaw('ดูลิงก์', 'View link')} →</a>}
+                          <span style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>{t.name}</span>
+                          {t.url && <a href={t.url} target="_blank" rel="noopener noreferrer sponsored" style={{ fontSize: 15, fontWeight: 800, color: p, textDecoration: 'none', whiteSpace: 'nowrap' }}>{tRaw('ดูลิงก์', 'View link')} →</a>}
                         </div>
                       ))}
                     </div>
@@ -308,8 +308,8 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
                 const n = counts[r.type] || 0;
                 return (
                   <button key={r.type} onClick={() => react(r.type)} title={tRaw(r.th, r.en)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '7px 12px', borderRadius: 20, border: `1.5px solid ${on ? p : '#eef2f7'}`, background: on ? p + '12' : 'white', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: on ? p : '#64748b', fontFamily: theme.fontFamily }}>
-                    <span>{r.emoji}</span><span style={{ fontSize: 12 }}>{lang === 'th' ? r.th : r.en}</span>{n > 0 && <span style={{ fontSize: 12 }}>· {n}</span>}
+                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '7px 12px', borderRadius: 20, border: `1.5px solid ${on ? p : '#eef2f7'}`, background: on ? p + '12' : 'white', cursor: 'pointer', fontSize: 15, fontWeight: 700, color: on ? p : '#64748b', fontFamily: theme.fontFamily }}>
+                    <span>{r.emoji}</span><span style={{ fontSize: 13 }}>{lang === 'th' ? r.th : r.en}</span>{n > 0 && <span style={{ fontSize: 13 }}>· {n}</span>}
                   </button>
                 );
               })}
@@ -320,7 +320,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
         {/* You may also like — horizontal carousel, no wrapping */}
         {related.length > 0 && (
           <div style={{ marginTop: 40 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 900, color: theme.textColor, marginBottom: 14 }}>✨ {tRaw('คุณอาจชอบสิ่งนี้', 'You may also like')}</h2>
+            <h2 style={{ fontSize: 22, fontWeight: 900, color: theme.textColor, marginBottom: 14 }}>✨ {tRaw('คุณอาจชอบสิ่งนี้', 'You may also like')}</h2>
             <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 8, scrollSnapType: 'x mandatory' }}>
               {related.map((rp: any) => (
                 <div key={rp.id} style={{ width: 180, flexShrink: 0, scrollSnapAlign: 'start' }}>
@@ -333,20 +333,20 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
 
         {/* Comments */}
         <div style={{ marginTop: 36, maxWidth: 680 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 900, color: theme.textColor, marginBottom: 14 }}>💬 {tRaw('ความคิดเห็น', 'Comments')} ({comments.length})</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 900, color: theme.textColor, marginBottom: 14 }}>💬 {tRaw('ความคิดเห็น', 'Comments')} ({comments.length})</h2>
           {user ? (
             <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
               <input value={commentBody} maxLength={500} onChange={e => setCommentBody(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') submitComment(); }}
-                placeholder={tRaw('เขียนความคิดเห็น...', 'Write a comment...')} style={{ flex: 1, padding: '11px 14px', borderRadius: 14, border: `1.5px solid ${p}30`, fontSize: 14, outline: 'none', fontFamily: theme.fontFamily }} />
-              <button onClick={submitComment} disabled={commenting || !commentBody.trim()} style={{ padding: '0 20px', borderRadius: 14, border: 'none', background: commenting || !commentBody.trim() ? '#e2e8f0' : p, color: commenting || !commentBody.trim() ? '#94a3b8' : 'white', cursor: 'pointer', fontSize: 14, fontWeight: 800, fontFamily: theme.fontFamily }}>{tRaw('ส่ง', 'Post')}</button>
+                placeholder={tRaw('เขียนความคิดเห็น...', 'Write a comment...')} style={{ flex: 1, padding: '11px 14px', borderRadius: 14, border: `1.5px solid ${p}30`, fontSize: 16, outline: 'none', fontFamily: theme.fontFamily }} />
+              <button onClick={submitComment} disabled={commenting || !commentBody.trim()} style={{ padding: '0 20px', borderRadius: 14, border: 'none', background: commenting || !commentBody.trim() ? '#e2e8f0' : p, color: commenting || !commentBody.trim() ? '#94a3b8' : 'white', cursor: 'pointer', fontSize: 16, fontWeight: 800, fontFamily: theme.fontFamily }}>{tRaw('ส่ง', 'Post')}</button>
             </div>
           ) : (
-            <button onClick={() => navigate('/login')} style={{ background: 'none', border: `1.5px solid ${p}40`, color: p, cursor: 'pointer', padding: '10px 18px', borderRadius: 14, fontSize: 13, fontWeight: 700, marginBottom: 18, fontFamily: theme.fontFamily }}>
+            <button onClick={() => navigate('/login')} style={{ background: 'none', border: `1.5px solid ${p}40`, color: p, cursor: 'pointer', padding: '10px 18px', borderRadius: 14, fontSize: 15, fontWeight: 700, marginBottom: 18, fontFamily: theme.fontFamily }}>
               {tRaw('เข้าสู่ระบบเพื่อแสดงความคิดเห็น', 'Log in to comment')}
             </button>
           )}
           {comments.length === 0 ? (
-            <div style={{ color: '#94a3b8', fontSize: 14 }}>{tRaw('ยังไม่มีความคิดเห็น เป็นคนแรกสิ!', 'No comments yet — be the first!')}</div>
+            <div style={{ color: '#94a3b8', fontSize: 16 }}>{tRaw('ยังไม่มีความคิดเห็น เป็นคนแรกสิ!', 'No comments yet — be the first!')}</div>
           ) : comments.map(cm => {
             return (
               <div key={cm.id} style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
@@ -354,8 +354,8 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
                   {isImageUrl(cm.author?.avatar_url) ? <img src={cm.author.avatar_url} alt="" loading="lazy" decoding="async" width={34} height={34} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : cm.author?.avatar_url ? <span style={{ fontSize: 16 }}>{cm.author.avatar_url}</span> : <BadgeIcon affiliate={cm.author?.affiliate_enabled} size={16} />}
                 </span>
                 <div style={{ background: 'white', borderRadius: 14, padding: '10px 14px', flex: 1, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#1e293b', marginBottom: 2 }}><BadgeIcon affiliate={cm.author?.affiliate_enabled} size={13} /> {cm.author?.name || 'Community Member'}</div>
-                  <div style={{ fontSize: 14, color: '#334155', lineHeight: 1.5 }}>{cm.body}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#1e293b', marginBottom: 2 }}><BadgeIcon affiliate={cm.author?.affiliate_enabled} size={14} /> {cm.author?.name || 'Community Member'}</div>
+                  <div style={{ fontSize: 16, color: '#334155', lineHeight: 1.55 }}>{cm.body}</div>
                 </div>
               </div>
             );

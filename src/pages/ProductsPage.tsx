@@ -84,7 +84,7 @@ export default function ProductsPage() {
   const selStyle = (active: boolean) => ({
     padding: '8px 18px', borderRadius: 20, border: `1.5px solid ${active ? p : p + '30'}`,
     background: active ? p : 'transparent', color: active ? 'white' : theme.textColor,
-    cursor: 'pointer', fontSize: 13, fontWeight: active ? 700 : 500, fontFamily: theme.fontFamily,
+    cursor: 'pointer', fontSize: 15, fontWeight: 700, fontFamily: theme.fontFamily,
     display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' as const,
   });
 
@@ -94,10 +94,10 @@ export default function ProductsPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 16px' }}>
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 900, color: theme.textColor, margin: '0 0 6px', fontFamily: theme.fontFamily }}>
+          <h1 style={{ fontSize: 34, fontWeight: 900, color: theme.textColor, margin: '0 0 6px', fontFamily: theme.fontFamily }}>
             {tRaw('สินค้าทั้งหมด','All Books')} 📚
           </h1>
-          <p style={{ color: theme.textColor + '88', margin: 0 }}>
+          <p style={{ color: theme.textColor + '88', margin: 0, fontSize: 17, lineHeight: 1.6 }}>
             {tRaw('ค้นพบสมุดระบายสีที่คุณชอบ','Discover your perfect coloring book')}
           </p>
         </div>
@@ -106,10 +106,10 @@ export default function ProductsPage() {
         <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' as const }}>
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder={tRaw('ค้นหาสินค้า...','Search books...')}
-            style={{ flex: 1, minWidth: 200, padding: '10px 16px', borderRadius: 20, border: `1.5px solid ${p}30`, outline: 'none', fontSize: 14, fontFamily: theme.fontFamily, background: 'white' }}
+            style={{ flex: 1, minWidth: 200, padding: '10px 16px', borderRadius: 20, border: `1.5px solid ${p}30`, outline: 'none', fontSize: 16, fontFamily: theme.fontFamily, background: 'white' }}
             onFocus={e => e.target.style.borderColor = p} onBlur={e => e.target.style.borderColor = p + '30'} />
           <select value={sort} onChange={e => setSort(e.target.value)}
-            style={{ padding: '10px 16px', borderRadius: 20, border: `1.5px solid ${p}30`, outline: 'none', fontSize: 13, fontFamily: theme.fontFamily, background: 'white', cursor: 'pointer', color: theme.textColor }}>
+            style={{ padding: '10px 16px', borderRadius: 20, border: `1.5px solid ${p}30`, outline: 'none', fontSize: 16, fontFamily: theme.fontFamily, background: 'white', cursor: 'pointer', color: theme.textColor }}>
             <option value="featured">{tRaw('แนะนำ','Featured')}</option>
             <option value="newest">{tRaw('ใหม่ล่าสุด','Newest')}</option>
             <option value="price_asc">{tRaw('ราคา ต่ำ-สูง','Price: Low–High')}</option>
@@ -136,7 +136,7 @@ export default function ProductsPage() {
         </div>
 
         {/* Results count */}
-        <p style={{ color: theme.textColor + '88', fontSize: 13, marginBottom: 16 }}>
+        <p style={{ color: theme.textColor + '88', fontSize: 15, marginBottom: 16 }}>
           {tRaw(`แสดง ${filtered.length} รายการ`, `Showing ${filtered.length} book${filtered.length !== 1 ? 's' : ''}`)}
           {category !== 'All' ? ` ${tRaw('ใน','in')} "${category}"` : ''}
         </p>
@@ -145,8 +145,8 @@ export default function ProductsPage() {
         {filtered.length === 0 ? (
           <div style={{ textAlign: 'center' as const, padding: '60px 24px', color: theme.textColor + '66' }}>
             <div style={{ fontSize: 56, marginBottom: 14 }}>🔍</div>
-            <h3 style={{ fontWeight: 800, color: theme.textColor }}>{tRaw('ไม่พบสินค้า','No books found')}</h3>
-            <p>{tRaw('ลองค้นหาหรือเลือกหมวดหมู่อื่น','Try a different search or category')}</p>
+            <h3 style={{ fontSize: 20, fontWeight: 800, color: theme.textColor }}>{tRaw('ไม่พบสินค้า','No books found')}</h3>
+            <p style={{ fontSize: 16 }}>{tRaw('ลองค้นหาหรือเลือกหมวดหมู่อื่น','Try a different search or category')}</p>
           </div>
         ) : (
           <div className="prod-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 20 }}>

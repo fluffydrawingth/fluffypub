@@ -22,10 +22,10 @@ export default function CmsPage({ slug }: { slug: string }) {
   if (!page) return (
     <div style={{ fontFamily: theme.fontFamily, textAlign: 'center', padding: '80px 24px' }}>
       <div style={{ fontSize: 64, marginBottom: 16 }}>😢</div>
-      <h1 style={{ color: theme.textColor, fontSize: 28, fontWeight: 900 }}>404 — Page not found</h1>
-      <p style={{ color: theme.textColor + '88', marginBottom: 24 }}>This page doesn't exist or isn't published.</p>
+      <h1 style={{ color: theme.textColor, fontSize: 34, fontWeight: 900 }}>404 — Page not found</h1>
+      <p style={{ color: theme.textColor + '88', marginBottom: 24, fontSize: 16 }}>This page doesn't exist or isn't published.</p>
       <button onClick={() => navigate('/')}
-        style={{ background: theme.primaryColor, color: 'white', border: 'none', cursor: 'pointer', padding: '12px 28px', borderRadius: 24, fontSize: 15, fontWeight: 700, fontFamily: theme.fontFamily }}>
+        style={{ background: theme.primaryColor, color: 'white', border: 'none', cursor: 'pointer', padding: '12px 28px', borderRadius: 24, fontSize: 16, fontWeight: 700, fontFamily: theme.fontFamily }}>
         Go Home
       </button>
     </div>
@@ -38,20 +38,20 @@ export default function CmsPage({ slug }: { slug: string }) {
           <img src={page.image_url} alt={page.title} loading="eager" decoding="async" width={760} height={360}
             style={{ width: '100%', maxHeight: 360, objectFit: 'cover', borderRadius: 16, marginBottom: 32 }} />
         )}
-        <h1 style={{ fontSize: 32, fontWeight: 900, color: theme.textColor, margin: '0 0 8px' }}>{page.title}</h1>
-        <div style={{ fontSize: 12, color: theme.textColor + '55', marginBottom: 32 }}>
+        <h1 style={{ fontSize: 40, fontWeight: 900, color: theme.textColor, margin: '0 0 8px' }}>{page.title}</h1>
+        <div style={{ fontSize: 14, color: theme.textColor + '55', marginBottom: 32 }}>
           {new Date(page.updated_at || page.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
         </div>
         <div
           className="cms-body"
-          style={{ fontSize: 16, lineHeight: 1.9, color: theme.textColor + 'dd' }}
+          style={{ fontSize: 18, lineHeight: 1.9, color: theme.textColor + 'dd' }}
           dangerouslySetInnerHTML={{ __html: page.content || '' }}
         />
         <style>{`
           .cms-body img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
-          .cms-body h1 { font-size: 28px; font-weight: 900; margin: 24px 0 12px; }
-          .cms-body h2 { font-size: 22px; font-weight: 800; margin: 20px 0 10px; }
-          .cms-body h3 { font-size: 18px; font-weight: 700; margin: 16px 0 8px; }
+          .cms-body h1 { font-size: 34px; font-weight: 900; margin: 24px 0 12px; }
+          .cms-body h2 { font-size: 26px; font-weight: 800; margin: 20px 0 10px; }
+          .cms-body h3 { font-size: 21px; font-weight: 700; margin: 16px 0 8px; }
           .cms-body ul, .cms-body ol { padding-left: 24px; margin: 10px 0; }
           .cms-body li { margin: 4px 0; }
           .cms-body a { color: ${theme.primaryColor}; }

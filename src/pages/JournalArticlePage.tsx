@@ -75,7 +75,7 @@ function ReactionButtons({ article, p, lang, tRaw, navigate }: any) {
     background: active ? p + '12' : 'white',
     color: active ? p : '#64748b',
     cursor: 'pointer',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 700,
     fontFamily: 'inherit',
     transition: 'all 0.15s',
@@ -86,21 +86,21 @@ function ReactionButtons({ article, p, lang, tRaw, navigate }: any) {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
         <button onClick={() => handleReact('love')} style={btn(mine.love)}>
           {mine.love ? '🩷' : '🤍'} {tRaw('ชอบมาก', 'Love this')}
-          {counts.love > 0 && <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{counts.love}</span>}
+          {counts.love > 0 && <span style={{ fontSize: 12.5, color: '#94a3b8', fontWeight: 600 }}>{counts.love}</span>}
         </button>
         <button onClick={() => handleReact('save')} style={btn(mine.save)}>
           {mine.save ? '💾' : '🔖'} {tRaw('บันทึก', 'Save')}
-          {counts.save > 0 && <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{counts.save}</span>}
+          {counts.save > 0 && <span style={{ fontSize: 12.5, color: '#94a3b8', fontWeight: 600 }}>{counts.save}</span>}
         </button>
         <button onClick={handleShare} style={btn(shared)}>
           🔗 {shared ? tRaw('คัดลอกแล้ว!', 'Copied!') : tRaw('แชร์', 'Share')}
-          {counts.share > 0 && <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{counts.share}</span>}
+          {counts.share > 0 && <span style={{ fontSize: 12.5, color: '#94a3b8', fontWeight: 600 }}>{counts.share}</span>}
         </button>
       </div>
       {!user && (
-        <p style={{ fontSize: 11.5, color: '#94a3b8', margin: '8px 0 0', lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, color: '#94a3b8', margin: '8px 0 0', lineHeight: 1.5 }}>
           {tRaw('เข้าสู่ระบบเพื่อบันทึกและแสดงความชอบ', 'Log in to love and save.')}
-          {' '}<button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', color: p, cursor: 'pointer', fontSize: 11.5, fontWeight: 700, padding: 0 }}>{tRaw('เข้าสู่ระบบ →', 'Log in →')}</button>
+          {' '}<button onClick={() => navigate('/login')} style={{ background: 'none', border: 'none', color: p, cursor: 'pointer', fontSize: 13, fontWeight: 700, padding: 0 }}>{tRaw('เข้าสู่ระบบ →', 'Log in →')}</button>
         </p>
       )}
     </div>
@@ -173,7 +173,7 @@ function LinkButton({ block, lang, p }: { block: any; lang: string; p: string })
   return (
     <a href={block.link_url} target={block.link_new_tab === false ? undefined : '_blank'} rel={block.link_new_tab === false ? undefined : 'noopener noreferrer'}
       className={block.type === 'cta' ? 'jap-cta-button' : undefined}
-      style={{display:'inline-flex',alignItems:'center',gap:6,marginTop:12,background:outline?'white':p,color:outline?p:'white',border:`1.5px solid ${p}`,textDecoration:'none',borderRadius:18,padding:'8px 15px',fontSize:13,fontWeight:800,boxShadow:outline?'none':`0 8px 20px ${p}20`}}>
+      style={{display:'inline-flex',alignItems:'center',gap:6,marginTop:12,background:outline?'white':p,color:outline?p:'white',border:`1.5px solid ${p}`,textDecoration:'none',borderRadius:18,padding:'8px 15px',fontSize:15,fontWeight:800,boxShadow:outline?'none':`0 8px 20px ${p}20`}}>
       {label} →
     </a>
   );
@@ -196,7 +196,7 @@ function JournalImage({ block, alt, p }: { block: any; alt: string; p: string })
           <a href={block.link_url} target={block.link_new_tab === false ? undefined : '_blank'} rel={block.link_new_tab === false ? undefined : 'noopener noreferrer'} style={{width:'100%',maxWidth,display:'block'}}>{img}</a>
         ) : img}
       </div>
-      {block.caption && <figcaption style={{ maxWidth, marginTop: 8, fontSize: 12.5, color: '#94a3b8', lineHeight: 1.5, textAlign: block.align || 'center' }}>{block.caption}</figcaption>}
+      {block.caption && <figcaption style={{ maxWidth, marginTop: 8, fontSize: 14, color: '#94a3b8', lineHeight: 1.5, textAlign: block.align || 'center' }}>{block.caption}</figcaption>}
     </figure>
   );
 }
@@ -379,7 +379,7 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
 
         /* article body */
         .jap-body {
-          font-size: 16.5px;
+          font-size: 18px;
           line-height: 1.82;
           color: #374151;
           letter-spacing: 0;
@@ -513,7 +513,7 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
 
         {/* Back */}
         <button onClick={() => navigate('/journal')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 13, fontWeight: 600, padding: '0 0 24px', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'inherit' }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 15, fontWeight: 600, padding: '0 0 24px', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'inherit' }}>
           ← {tRaw('Fluffy Journal', 'Fluffy Journal')}
         </button>
 
@@ -548,18 +548,18 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
 
             {/* Category badge */}
             {typeMeta && (
-              <span style={{ background: p + '15', color: p, fontSize: 11.5, fontWeight: 800, padding: '4px 13px', borderRadius: 20, letterSpacing: 0.3 }}>
+              <span style={{ background: p + '15', color: p, fontSize: 13, fontWeight: 800, padding: '4px 13px', borderRadius: 20, letterSpacing: 0.3 }}>
                 {typeMeta.emoji} {typeMeta.label[lang as 'th' | 'en'] ?? typeMeta.label.en}
               </span>
             )}
 
             {/* Title — primary heading */}
-            <h1 style={{ fontSize: 'clamp(21px, 3vw, 30px)', fontWeight: 900, color: '#1e293b', margin: 0, lineHeight: 1.28, letterSpacing: 0 }}>
+            <h1 style={{ fontSize: 'clamp(28px, 4vw, 38px)', fontWeight: 900, color: '#1e293b', margin: 0, lineHeight: 1.25, letterSpacing: 0 }}>
               {title}
             </h1>
 
             {/* Date + reading time */}
-            <div style={{ display: 'flex', gap: 10, fontSize: 12.5, color: '#94a3b8', fontWeight: 600, flexWrap: 'wrap' as const, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 10, fontSize: 14, color: '#94a3b8', fontWeight: 600, flexWrap: 'wrap' as const, alignItems: 'center' }}>
               <span>📅 {date}</span>
               <span style={{ color: '#e2e8f0' }}>·</span>
               <span>⏱ {rt}</span>
@@ -567,7 +567,7 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
 
             {/* Excerpt — 3 lines max */}
             {excerpt && (
-              <p style={{ fontSize: 14.5, color: '#64748b', lineHeight: 1.75, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden' }}>
+              <p style={{ fontSize: 16.5, color: '#64748b', lineHeight: 1.75, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden' }}>
                 {excerpt}
               </p>
             )}
@@ -585,7 +585,7 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
               {blocks.map((block: any, idx: number) => <JournalBlock key={block.id || idx} block={block} lang={lang} p={p} />)}
             </div>
           ) : (
-            <div style={{ textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: 15, padding: '32px 0' }}>
+            <div style={{ textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: 16.5, padding: '32px 0' }}>
               {tRaw('ยังไม่มีเนื้อหา', 'No content yet.')}
             </div>
           )}
@@ -596,7 +596,7 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
           <div style={{ maxWidth: 850, margin: '72px auto 0' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
               <div style={{ flex: 1, height: 1, background: `${p}12` }} />
-              <span style={{ fontSize: 12.5, fontWeight: 800, color: '#94a3b8', whiteSpace: 'nowrap' as const, letterSpacing: 0.5, textTransform: 'uppercase' as const }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#94a3b8', whiteSpace: 'nowrap' as const, letterSpacing: 0.5, textTransform: 'uppercase' as const }}>
                 ✨ {tRaw('บทความที่คุณอาจชอบ', 'You may also like')}
               </span>
               <div style={{ flex: 1, height: 1, background: `${p}12` }} />
@@ -622,15 +622,15 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
                     </div>
                     <div style={{ padding: '11px 13px 13px' }}>
                       {rm && (
-                        <div style={{ fontSize: 10.5, fontWeight: 800, color: p, marginBottom: 4, letterSpacing: 0.3 }}>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: p, marginBottom: 4, letterSpacing: 0.3 }}>
                           {rm.emoji} {rm.label[lang as 'th' | 'en'] ?? rm.label.en}
                         </div>
                       )}
-                      <div style={{ fontSize: 13, fontWeight: 800, color: '#1e293b', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: '#1e293b', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
                         {rtitle}
                       </div>
                       {rexcerpt && (
-                        <div style={{ fontSize: 11.5, color: '#94a3b8', marginTop: 5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, lineHeight: 1.5 }}>
+                        <div style={{ fontSize: 13.5, color: '#94a3b8', marginTop: 5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, lineHeight: 1.5 }}>
                           {rexcerpt}
                         </div>
                       )}

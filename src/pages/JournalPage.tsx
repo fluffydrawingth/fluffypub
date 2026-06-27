@@ -68,10 +68,10 @@ export default function JournalPage() {
 
         {/* Hero */}
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <h1 style={{ fontSize: 32, fontWeight: 900, color: theme.textColor, margin: '0 0 10px' }}>
+          <h1 style={{ fontSize: 40, fontWeight: 900, color: theme.textColor, margin: '0 0 10px' }}>
             📝 {tRaw('Fluffy Journal', 'Fluffy Journal')}
           </h1>
-          <p style={{ fontSize: 15, color: '#94a3b8', margin: 0, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 17, color: '#94a3b8', margin: 0, lineHeight: 1.65 }}>
             {tRaw(
               'เรื่องเล็กๆ เกี่ยวกับการระบาย อุปกรณ์ ไอเดีย และสิ่งที่ใช้จริงๆ',
               'Little stories about coloring, tools, ideas and things we genuinely use.'
@@ -85,7 +85,7 @@ export default function JournalPage() {
             <button key={tab.key} onClick={() => setFilter(tab.key)}
               style={{
                 padding: '9px 20px', borderRadius: 24, border: 'none', cursor: 'pointer',
-                fontSize: 13, fontWeight: 700, fontFamily: theme.fontFamily,
+                fontSize: 15, fontWeight: 700, fontFamily: theme.fontFamily,
                 background: filter === tab.key ? p : p + '15',
                 color: filter === tab.key ? 'white' : p,
               }}>
@@ -99,10 +99,10 @@ export default function JournalPage() {
         ) : articles.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 24px', color: '#94a3b8' }}>
             <div style={{ fontSize: 52, marginBottom: 14 }}>📝</div>
-            <div style={{ fontWeight: 800, fontSize: 17, color: theme.textColor, marginBottom: 8 }}>
+            <div style={{ fontWeight: 800, fontSize: 19, color: theme.textColor, marginBottom: 8 }}>
               {tRaw('ยังไม่มีบทความ', 'Nothing here yet')}
             </div>
-            <div style={{ fontSize: 13 }}>{tRaw('กลับมาดูใหม่เร็วๆ นี้', 'Check back soon for new stories.')}</div>
+            <div style={{ fontSize: 15 }}>{tRaw('กลับมาดูใหม่เร็วๆ นี้', 'Check back soon for new stories.')}</div>
           </div>
         ) : (
           <div className="journal-grid">
@@ -125,22 +125,22 @@ export default function JournalPage() {
                       : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 52 }}>📝</div>
                     }
                     {/* Category badge */}
-                    <span style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(255,255,255,0.92)', color: p, fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 12, backdropFilter: 'blur(4px)' }}>
+                    <span style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(255,255,255,0.92)', color: p, fontSize: 12.5, fontWeight: 800, padding: '4px 10px', borderRadius: 12, backdropFilter: 'blur(4px)' }}>
                       {typeLabel(a.article_type)}
                     </span>
                   </div>
 
                   {/* Body */}
                   <div style={{ padding: '16px 18px 20px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: '#1e293b', lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#1e293b', lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
                       {title}
                     </div>
                     {excerpt && (
-                      <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+                      <div style={{ fontSize: 15, color: '#64748b', lineHeight: 1.6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
                         {excerpt}
                       </div>
                     )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 'auto', paddingTop: 10, fontSize: 11.5, color: '#94a3b8', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 'auto', paddingTop: 10, fontSize: 13.5, color: '#94a3b8', fontWeight: 600 }}>
                       <span>📅 {date}</span>
                       <span>·</span>
                       <span>⏱ {rt}</span>

@@ -60,10 +60,10 @@ export default function CommunityCreatorsPage() {
   return (
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 16px 60px' }}>
-        <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 14, fontWeight: 600, padding: '0 0 20px' }}>
+        <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 15, fontWeight: 600, padding: '0 0 20px' }}>
           ← {tRaw('ชุมชน', 'Community')}
         </button>
-        <h1 style={{ fontSize: 24, fontWeight: 900, color: theme.textColor, margin: '0 0 20px' }}>
+        <h1 style={{ fontSize: 34, fontWeight: 900, color: theme.textColor, margin: '0 0 20px' }}>
           🌷 {tRaw('ค้นพบครีเอเตอร์', 'Discover Creators')}
         </h1>
 
@@ -73,14 +73,14 @@ export default function CommunityCreatorsPage() {
             value={q}
             onChange={e => handleSearch(e.target.value)}
             placeholder={tRaw('🔎 ค้นหาชื่อ...', '🔎 Search by name...')}
-            style={{ flex: 1, minWidth: 200, padding: '10px 14px', borderRadius: 12, border: `1.5px solid ${p}25`, fontSize: 14, outline: 'none', fontFamily: theme.fontFamily }}
+            style={{ flex: 1, minWidth: 200, padding: '10px 14px', borderRadius: 12, border: `1.5px solid ${p}25`, fontSize: 16, outline: 'none', fontFamily: theme.fontFamily }}
             onFocus={e => e.target.style.borderColor = p}
             onBlur={e => e.target.style.borderColor = p + '25'}
           />
           <div style={{ display: 'flex', gap: 6 }}>
             {(['featured', 'recent', 'az'] as Sort[]).map(s => (
               <button key={s} onClick={() => setSort(s)}
-                style={{ padding: '10px 16px', borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, background: sort === s ? p : p + '15', color: sort === s ? 'white' : p, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
+                style={{ padding: '10px 16px', borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 700, background: sort === s ? p : p + '15', color: sort === s ? 'white' : p, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
                 {sortLabel(s)}
               </button>
             ))}
@@ -92,7 +92,7 @@ export default function CommunityCreatorsPage() {
         ) : creators.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 60, color: '#94a3b8' }}>
             <div style={{ fontSize: 40, marginBottom: 10 }}>🔍</div>
-            <div style={{ fontWeight: 700 }}>{q ? tRaw('ไม่พบครีเอเตอร์', 'No creators found') : tRaw('ยังไม่มีครีเอเตอร์', 'No creators yet.')}</div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>{q ? tRaw('ไม่พบครีเอเตอร์', 'No creators found') : tRaw('ยังไม่มีครีเอเตอร์', 'No creators yet.')}</div>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}>
@@ -104,14 +104,14 @@ export default function CommunityCreatorsPage() {
                 <div style={{ width: 64, height: 64, borderRadius: '50%', overflow: 'hidden', background: p + '20', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, border: `2px solid ${p}25` }}>
                   {isImageUrl(c.avatar_url) ? <img src={c.avatar_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (c.avatar_url ? <span>{c.avatar_url}</span> : <BadgeIcon affiliate={c.affiliate_enabled} size={28} />)}
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 800, color: '#1e293b', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  <BadgeIcon affiliate={c.affiliate_enabled} size={13} /> {c.name}
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#1e293b', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <BadgeIcon affiliate={c.affiliate_enabled} size={14} /> {c.name}
                 </div>
-                {c.community_country && <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 1 }}>📍 {c.community_country}</div>}
-                {c.community_favorite_medium && <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>🎨 {c.community_favorite_medium}</div>}
-                <div style={{ fontSize: 11, color: p, fontWeight: 700, marginBottom: 10 }}>{c.posts} {tRaw('โพสต์', 'posts')}</div>
+                {c.community_country && <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 1 }}>📍 {c.community_country}</div>}
+                {c.community_favorite_medium && <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>🎨 {c.community_favorite_medium}</div>}
+                <div style={{ fontSize: 13, color: p, fontWeight: 700, marginBottom: 10 }}>{c.posts} {tRaw('โพสต์', 'posts')}</div>
                 <button onClick={e => toggleFollow(e, c.id)}
-                  style={{ background: follows.has(c.id) ? '#f1f5f9' : p, color: follows.has(c.id) ? '#64748b' : 'white', border: follows.has(c.id) ? '1.5px solid #e2e8f0' : 'none', borderRadius: 20, padding: '5px 14px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', fontFamily: theme.fontFamily, width: '100%' }}>
+                  style={{ background: follows.has(c.id) ? '#f1f5f9' : p, color: follows.has(c.id) ? '#64748b' : 'white', border: follows.has(c.id) ? '1.5px solid #e2e8f0' : 'none', borderRadius: 20, padding: '5px 14px', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: theme.fontFamily, width: '100%' }}>
                   {follows.has(c.id) ? `💗 ${tRaw('ติดตามแล้ว', 'Following')}` : `+ ${tRaw('ติดตาม', 'Follow')}`}
                 </button>
               </div>
