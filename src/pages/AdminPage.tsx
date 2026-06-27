@@ -3432,7 +3432,15 @@ function JournalTab() {
   const showFlash = (m:string) => { setFlash(m); setTimeout(()=>setFlash(''),3000); };
 
   const load = () => {
-    api.getAdminJournalArticles().then((d:any)=>{ setItems(Array.isArray(d)?d:[]); setLoading(false); }).catch(()=>setLoading(false));
+    api.getAdminJournalArticles().then((d:any)=>{
+      if (d?.error) {
+        setItems([]);
+        showFlash('⚠️ '+d.error);
+      } else {
+        setItems(Array.isArray(d)?d:[]);
+      }
+      setLoading(false);
+    }).catch(()=>setLoading(false));
   };
   React.useEffect(()=>{ load(); },[]);
 
@@ -3442,6 +3450,7 @@ function JournalTab() {
 
   const save = async () => {
     if (!form.title_th.trim()) return showFlash('⚠️ Thai title is required');
+    if (!localStorage.getItem('fluffy_token')) return showFlash('⚠️ Not authenticated. Please log in again.');
     setSaving(true);
     const r = editing==='new' ? await api.createJournalArticle(form) : await api.updateJournalArticle(editing!, form);
     setSaving(false);
@@ -3463,7 +3472,7 @@ function JournalTab() {
     const r = await api.translateJournalArticle(editing).catch(()=>null);
     setTranslating(false);
     if (!r || r.error) return showFlash('⚠️ Translation failed');
-    setForm((f:any)=>({...f, title_en:r.title_en||f.title_en, excerpt_en:r.excerpt_en||f.excerpt_en, content_en:r.content_en||f.content_en}));
+    setForm((f:any)=>({...f, title_en:r.title_en||f.title_en, excerpt_en:r.excerpt_en||f.excerpt_en, content_en:r.content_en||f.content_en, content_blocks:Array.isArray(r.content_blocks)?r.content_blocks:f.content_blocks}));
     showFlash('✓ English translation generated');
   };
 
@@ -3472,13 +3481,13 @@ function JournalTab() {
     setUploading(true);
     let r:any=null; try { r = await api.uploadFile(file,'community'); } catch {}
     setUploading(false);
-    if (!r?.publicUrl) return showFlash('⚠️ Upload failed');
+    if (!r?.publicUrl) return showFlash('⚠️ '+(r?.error || 'Upload failed'));
     setForm((f:any)=>({...f, cover_image:r.publicUrl}));
   };
 
   const uploadContentImg = async (file: File): Promise<string | null> => {
     let r:any=null; try { r = await api.uploadFile(file,'community'); } catch {}
-    if (!r?.publicUrl) { showFlash('⚠️ Image upload failed'); return null; }
+    if (!r?.publicUrl) { showFlash('⚠️ '+(r?.error || 'Image upload failed')); return null; }
     return r.publicUrl;
   };
 
@@ -3650,7 +3659,7 @@ function JournalTab() {
             {inp('Excerpt (TH)','excerpt_th','text',2)}
             <div style={{marginBottom:12}}>
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Content (TH)</label>
-              <RichEditor key={editing+'-th'} value={form.content_th||''} onChange={v=>setForm((f:any)=>({...f,content_th:v}))} onImageUpload={uploadContentImg} />
+              <RichEditor key={editing+'-th'} value={form.content_th||''} onChange={v=>setForm((f:any)=>({...f,content_th:v}))} />
             </div>
           </div>
 
@@ -3667,7 +3676,7 @@ function JournalTab() {
             {inp('Excerpt (EN)','excerpt_en','text',2)}
             <div style={{marginBottom:12}}>
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Content (EN)</label>
-              <RichEditor key={editing+'-en'} value={form.content_en||''} onChange={v=>setForm((f:any)=>({...f,content_en:v}))} onImageUpload={uploadContentImg} />
+              <RichEditor key={editing+'-en'} value={form.content_en||''} onChange={v=>setForm((f:any)=>({...f,content_en:v}))} />
             </div>
           </div>
 
