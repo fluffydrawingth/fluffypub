@@ -85,7 +85,7 @@ export default function ArtistApplicationPage() {
         <p style={{ fontSize:14, color:'#64748b', lineHeight:1.7, marginBottom:24 }}>
           {tRaw('เปิด Artist Studio เพื่อจัดการผลงานและยอดขายของคุณ', 'Open your Artist Studio to manage your products and sales.')}
         </p>
-        <button onClick={async () => { await refreshUser(); navigate('/artist-dashboard'); }} style={{ background:p, color:'white', border:'none', cursor:'pointer', padding:'11px 28px', borderRadius:14, fontSize:14, fontWeight:800, fontFamily:theme.fontFamily }}>
+        <button onClick={async () => { const fresh = await refreshUser({ force: true }); if (fresh?.role === 'artist') navigate('/artist-dashboard'); }} style={{ background:p, color:'white', border:'none', cursor:'pointer', padding:'11px 28px', borderRadius:14, fontSize:14, fontWeight:800, fontFamily:theme.fontFamily }}>
           {tRaw('เปิด Artist Studio →', 'Open Artist Studio →')}
         </button>
       </div>

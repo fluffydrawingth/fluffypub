@@ -22,7 +22,7 @@ interface AuthCtx {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   register: (name: string, email: string, password: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  refreshUser: (options?: { force?: boolean }) => Promise<AuthUser | null>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
 }
@@ -32,7 +32,7 @@ const AuthContext = createContext<AuthCtx>({
   login: async () => ({ success: false }),
   register: async () => ({ success: false }),
   logout: async () => {},
-  refreshUser: async () => {},
+  refreshUser: async () => null,
   resetPassword: async () => ({ success: false }),
   updatePassword: async () => ({ success: false }),
 });
@@ -58,9 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [loading, setLoading] = useState(true);
 
-  const refreshUser = async () => {
+  const refreshUser = async (_options?: { force?: boolean }): Promise<AuthUser | null> => {
     const t = localStorage.getItem(TOKEN_KEY);
-    if (!t) { setUser(null); setLoading(false); return; }
+    if (!t) { setUser(null); setLoading(false); return null; }
 
     // Always fetch fresh from API (never return stale localStorage cache)
     // This ensures profile saves persist immediately
@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(USER_KEY, JSON.stringify(u));
         setUser(u);
         setLoading(false);
-        return;
+        return u;
       }
     } catch {}
 
@@ -107,6 +107,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (u.email === ADMIN_EMAIL) u.role = 'admin';
       localStorage.setItem(USER_KEY, JSON.stringify(u));
       setUser(u);
+      setLoading(false);
+      return u;
     } else {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
@@ -114,6 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
     }
     setLoading(false);
+    return null;
   };
 
   useEffect(() => { refreshUser(); }, []);

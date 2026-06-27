@@ -1029,7 +1029,7 @@ function ArtistRequestCard({p,theme}:any) {
           <div style={{background:'#d1fae5',border:'1.5px solid #6ee7b7',borderRadius:12,padding:'12px 16px',fontSize:13,color:'#065f46',fontWeight:700,marginBottom:14}}>
             ✅ {tRaw('คุณได้รับการอนุมัติเป็นศิลปินแล้ว! เปิด Artist Studio เพื่อจัดการผลงาน','You\'re an approved artist! Open your studio to manage products and sales.')}
           </div>
-          <button onClick={async()=>{ await refreshUser(); navigate('/artist-dashboard'); }} style={{background:p,color:'white',border:'none',cursor:'pointer',padding:'11px 24px',borderRadius:14,fontSize:14,fontWeight:800,fontFamily:theme.fontFamily}}>
+          <button onClick={async()=>{ const fresh = await refreshUser({ force: true }); if (fresh?.role === 'artist') navigate('/artist-dashboard'); }} style={{background:p,color:'white',border:'none',cursor:'pointer',padding:'11px 24px',borderRadius:14,fontSize:14,fontWeight:800,fontFamily:theme.fontFamily}}>
             {tRaw('เปิด Artist Studio →','Go to Artist Studio →')}
           </button>
         </div>
