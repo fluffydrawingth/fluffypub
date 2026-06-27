@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
-const SITE_NAME = 'FluffyPub';
-const DEFAULT_DESCRIPTION = 'Cozy coloring books, printable downloads, artists, Fluffy Journal stories, and a warm coloring community.';
+const SITE_NAME = 'Fluffy Pub';
+const DEFAULT_DESCRIPTION = 'Cute coloring books, cozy coloring inspiration, artists, and creative community.';
 const DEFAULT_IMAGE = '/og-default.png';
 
 type JsonLd = Record<string, any> | Array<Record<string, any>>;
