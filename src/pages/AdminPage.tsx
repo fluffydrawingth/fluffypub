@@ -3322,6 +3322,7 @@ function RichEditor({ value, onChange, onImageUpload }: { value: string; onChang
   // Use layout effect so innerHTML is set synchronously before any browser events can fire
   React.useLayoutEffect(() => {
     if (!ref.current) return;
+    try { document.execCommand('styleWithCSS', false, 'false'); } catch {}
     ref.current.innerHTML = value || '';
     lastHtml.current = value || '';
     initialized.current = true;
@@ -3334,6 +3335,7 @@ function RichEditor({ value, onChange, onImageUpload }: { value: string; onChang
   };
 
   const exec = (cmd: string, val?: string) => {
+    try { document.execCommand('styleWithCSS', false, 'false'); } catch {}
     document.execCommand(cmd, false, val);
     ref.current?.focus();
     setTimeout(syncHtml, 0);
@@ -3434,6 +3436,9 @@ const newJournalBlock = (type:string) => ({
   button_style:'pink',
   note_th:'',
   note_en:'',
+  image_url:'',
+  image_alt_th:'',
+  image_alt_en:'',
 });
 
 const plainFromHtml = (html:string) => String(html || '')
@@ -3460,6 +3465,44 @@ const defaultJournalCoverCrop = (url:string) => ({
   focalPointY:0.5,
   zoom:1,
   useOriginal:false,
+});
+
+const normalizeJournalHtml = (html:string) => {
+  if (!html || typeof window === 'undefined') return html || '';
+  const doc = new DOMParser().parseFromString(String(html), 'text/html');
+  doc.querySelectorAll('script,style,iframe,object,embed,form,input,button').forEach(el => el.remove());
+  doc.body.querySelectorAll('*').forEach(el => {
+    const style = (el.getAttribute('style') || '').toLowerCase();
+    const tag = el.tagName.toLowerCase();
+    const wrap = (name:string) => {
+      const wrapper = doc.createElement(name);
+      while (el.firstChild) wrapper.appendChild(el.firstChild);
+      el.appendChild(wrapper);
+    };
+    if (style.includes('font-weight') && /(bold|700|800|900)/.test(style)) wrap('strong');
+    if (style.includes('font-style') && style.includes('italic')) wrap('em');
+    if (style.includes('text-decoration') && style.includes('underline')) wrap('u');
+    [...el.attributes].forEach(attr => {
+      const name = attr.name.toLowerCase();
+      const value = attr.value || '';
+      if (name.startsWith('on') || name === 'style') el.removeAttribute(attr.name);
+      if ((name === 'href' || name === 'src') && !/^(https?:|mailto:|tel:|\/|#)/i.test(value)) el.removeAttribute(attr.name);
+    });
+    if (tag === 'a') {
+      el.setAttribute('rel', 'noopener noreferrer');
+      if (!el.getAttribute('target')) el.setAttribute('target', '_blank');
+    }
+  });
+  return doc.body.innerHTML;
+};
+
+const normalizeJournalBlocksForSave = (blocks:any[]) => (Array.isArray(blocks) ? blocks : []).map(block => {
+  const next = { ...(block || {}) };
+  if (next.type === 'text' || next.type === 'imageText') {
+    next.text_th = normalizeJournalHtml(next.text_th || '');
+    next.text_en = normalizeJournalHtml(next.text_en || '');
+  }
+  return next;
 });
 
 function JournalTab() {
@@ -3512,7 +3555,8 @@ function JournalTab() {
     if (!form.title_th.trim()) return showFlash('⚠️ Thai title is required');
     if (!localStorage.getItem('fluffy_token')) return showFlash('⚠️ Not authenticated. Please log in again.');
     setSaving(true);
-    const r = editing==='new' ? await api.createJournalArticle(form) : await api.updateJournalArticle(editing!, form);
+    const payload = {...form, content_blocks:normalizeJournalBlocksForSave(form.content_blocks)};
+    const r = editing==='new' ? await api.createJournalArticle(payload) : await api.updateJournalArticle(editing!, payload);
     setSaving(false);
     if (r?.error) return showFlash('⚠️ '+r.error);
     showFlash(editing==='new'?'✓ Article created':'✓ Saved');
@@ -3622,6 +3666,21 @@ function JournalTab() {
         {blockTextInput(idx, block, 'button_label_en', 'Button text (EN)')}
       </div>
       {blockTextInput(idx, block, 'link_url', 'URL')}
+      <div style={{background:'#fff',border:'1.5px solid #fce7f3',borderRadius:10,padding:10,marginBottom:10}}>
+        {block.image_url && <img src={block.image_url} alt="" style={{width:88,height:88,objectFit:'cover',borderRadius:10,display:'block',marginBottom:8}} />}
+        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap' as const,marginBottom:10}}>
+          <label style={{padding:'7px 12px',borderRadius:9,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:700,color:'#374151'}}>
+            📁 Upload CTA image
+            <input type="file" accept="image/*" onChange={async e=>{ const file=e.target.files?.[0]; e.target.value=''; if (!file) return; const url=await uploadContentImg(file); if (url) updateBlock(idx,{image_url:url}); }} style={{display:'none'}} />
+          </label>
+          {block.image_url && <button onClick={()=>updateBlock(idx,{image_url:''})} style={{background:'none',border:'none',color:'#dc2626',cursor:'pointer',fontSize:12,fontWeight:700}}>Remove image</button>}
+        </div>
+        {blockTextInput(idx, block, 'image_url', 'Image URL')}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+          {blockTextInput(idx, block, 'image_alt_th', 'Image alt (TH)')}
+          {blockTextInput(idx, block, 'image_alt_en', 'Image alt (EN)')}
+        </div>
+      </div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
         <div>
           <label style={{display:'block',fontSize:11,fontWeight:800,color:'#64748b',marginBottom:4}}>Button style</label>

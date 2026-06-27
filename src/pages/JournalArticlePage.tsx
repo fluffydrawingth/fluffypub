@@ -23,7 +23,7 @@ function readingTime(contentTh?: string, contentEn?: string): string {
 function readingTimeForArticle(article: any): string {
   const blocks = Array.isArray(article?.content_blocks) ? article.content_blocks : [];
   const blockText = blocks.map((b: any) => [
-    b.heading_th, b.heading_en, b.text_th, b.text_en, b.caption_th, b.caption_en, b.button_label_th, b.button_label_en, b.note_th, b.note_en,
+    b.heading_th, b.heading_en, b.text_th, b.text_en, b.caption_th, b.caption_en, b.button_label_th, b.button_label_en, b.note_th, b.note_en, b.image_alt_th, b.image_alt_en,
   ].filter(Boolean).join(' ')).join(' ');
   return readingTime(`${article?.content_th || ''} ${blockText}`, article?.content_en || '');
 }
@@ -126,6 +126,22 @@ function sanitizeHtml(html: string): string {
     [...el.attributes].forEach(attr => {
       const name = attr.name.toLowerCase();
       const value = attr.value || '';
+      const style = name === 'style' ? value.toLowerCase() : '';
+      if (style.includes('font-weight') && /(bold|700|800|900)/.test(style)) {
+        const wrapper = doc.createElement('strong');
+        while (el.firstChild) wrapper.appendChild(el.firstChild);
+        el.appendChild(wrapper);
+      }
+      if (style.includes('font-style') && style.includes('italic')) {
+        const wrapper = doc.createElement('em');
+        while (el.firstChild) wrapper.appendChild(el.firstChild);
+        el.appendChild(wrapper);
+      }
+      if (style.includes('text-decoration') && style.includes('underline')) {
+        const wrapper = doc.createElement('u');
+        while (el.firstChild) wrapper.appendChild(el.firstChild);
+        el.appendChild(wrapper);
+      }
       if (name.startsWith('on') || name === 'style') el.removeAttribute(attr.name);
       if ((name === 'href' || name === 'src') && !/^(https?:|mailto:|tel:|\/|#)/i.test(value)) el.removeAttribute(attr.name);
     });
@@ -189,13 +205,17 @@ function JournalBlock({ block, lang, p }: { block: any; lang: string; p: string 
   const legacyHtml = lang === 'th' ? (block.legacy_html_th || block.legacy_html_en) : (block.legacy_html_en || block.legacy_html_th);
   const caption = blockText(block, 'caption', lang);
   const note = blockText(block, 'note', lang);
+  const imageAlt = blockText(block, 'image_alt', lang);
   const imageBlock = { ...block, caption };
 
   if (block.type === 'cta') {
     return (
       <section className="jap-block jap-cta">
-        {note && <ParagraphText text={note} />}
-        <LinkButton block={block} lang={lang} p={p} />
+        {block.image_url && <img src={block.image_url} alt={imageAlt || ''} className="jap-cta-image" />}
+        <div className="jap-cta-copy">
+          {note && <ParagraphText text={note} />}
+          <LinkButton block={block} lang={lang} p={p} />
+        </div>
       </section>
     );
   }
@@ -394,18 +414,37 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
           box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
         }
         .jap-cta {
-          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 16px;
+          text-align: left;
           background: rgba(255,255,255,0.78);
           border: 1.5px solid ${p}18;
           border-radius: 18px;
-          padding: 20px;
+          padding: 14px 16px;
         }
+        .jap-cta-image {
+          width: 88px;
+          height: 88px;
+          object-fit: cover;
+          border-radius: 14px;
+          flex: 0 0 auto;
+          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+        }
+        .jap-cta-copy { min-width: 0; }
+        .jap-cta-copy p { margin-bottom: 0.65em; }
         @media (max-width: 680px) {
           .jap-split,
           .jap-split.text-first { grid-template-columns: 1fr; gap: 14px; }
           .jap-split .jap-split-image { order: 1 !important; }
           .jap-split .jap-split-text { order: 2 !important; }
           .jap-block { margin-bottom: 28px; }
+          .jap-cta { align-items: center; gap: 12px; padding: 12px; }
+          .jap-cta-image { width: 76px; height: 76px; }
+        }
+        @media (max-width: 420px) {
+          .jap-cta { flex-direction: column; text-align: center; }
         }
 
         /* related grid */

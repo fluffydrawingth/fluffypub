@@ -224,6 +224,7 @@ async function translateJournalBlocks(blocks) {
     if (!blank(next.caption_th)) next.caption_en = await translateOrFallback(next.caption_th);
     if (!blank(next.button_label_th)) next.button_label_en = await translateOrFallback(next.button_label_th);
     if (!blank(next.note_th)) next.note_en = await translateOrFallback(next.note_th);
+    if (!blank(next.image_alt_th)) next.image_alt_en = await translateOrFallback(next.image_alt_th);
     return next;
   }));
 }
