@@ -59,69 +59,157 @@ export function HighlightDetailPage({ id }: { id: string }) {
 
   return (
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '36px 20px 72px' }}>
+      <style>{`
+        .highlight-detail-wrap {
+          max-width: 960px;
+          margin: 0 auto;
+          padding: 36px 20px 72px;
+        }
+        .highlight-detail-card {
+          background: rgba(255,255,255,0.72);
+          border: 1px solid rgba(255,255,255,0.78);
+          border-radius: 24px;
+          box-shadow: 0 16px 44px rgba(15, 23, 42, 0.08);
+          padding: 22px;
+          backdrop-filter: blur(10px);
+        }
+        .highlight-cover {
+          border-radius: 20px;
+          overflow: hidden;
+          background: white;
+          border: 1.5px solid #f1f5f9;
+          margin-bottom: 24px;
+        }
+        .highlight-cover img {
+          width: 100%;
+          max-height: 520px;
+          object-fit: contain;
+          object-position: center;
+          display: block;
+        }
+        .highlight-detail-body {
+          background: rgba(255,255,255,0.82);
+          border: 1.5px solid ${p}12;
+          border-radius: 18px;
+          padding: 26px 28px 28px;
+        }
+        .highlight-date-row {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin: 18px 0 0;
+          font-size: 15px;
+          color: #64748b;
+          font-weight: 650;
+        }
+        .highlight-date-row span {
+          background: #f8fafc;
+          border: 1px solid #eef2f7;
+          border-radius: 12px;
+          padding: 7px 11px;
+        }
+        .highlight-divider {
+          height: 1.5px;
+          background: ${p}20;
+          border-radius: 2px;
+          margin: 24px 0;
+        }
+        @media (max-width: 640px) {
+          .highlight-detail-wrap {
+            padding: 24px 12px 56px;
+          }
+          .highlight-detail-card {
+            border-radius: 20px;
+            padding: 14px;
+          }
+          .highlight-cover {
+            border-radius: 16px;
+            margin-bottom: 16px;
+          }
+          .highlight-cover img {
+            max-height: 360px;
+          }
+          .highlight-detail-body {
+            border-radius: 16px;
+            padding: 20px 16px 22px;
+          }
+          .highlight-date-row {
+            gap: 8px;
+            font-size: 14px;
+          }
+          .highlight-date-row span {
+            width: 100%;
+            box-sizing: border-box;
+          }
+        }
+      `}</style>
+      <div className="highlight-detail-wrap">
 
         <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 15, fontWeight: 600, padding: '0 0 24px', display: 'flex', alignItems: 'center', gap: 6 }}>
           ← {tRaw('ชุมชน', 'Community')}
         </button>
 
-        {/* Cover image — contain, white bg, max height */}
-        {h.cover_image && (
-          <div style={{ borderRadius: 20, overflow: 'hidden', marginBottom: 28, background: 'white', border: '1.5px solid #f1f5f9' }}>
-            <img src={h.cover_image} alt={h.title} style={{ width: '100%', maxHeight: 400, objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
-          </div>
-        )}
+        <div className="highlight-detail-card">
+          {/* Cover image — contain, white bg, max height */}
+          {h.cover_image && (
+            <div className="highlight-cover">
+              <img src={h.cover_image} alt={h.title} />
+            </div>
+          )}
 
-        {/* Type badge */}
-        <div style={{ marginBottom: 12 }}>
-          <span style={{ fontSize: 13.5, fontWeight: 800, padding: '5px 14px', borderRadius: 20, background: isSubtle ? '#f1f5f9' : tm.color + '18', color: isSubtle ? '#64748b' : tm.color }}>
-            {tm.emoji} {lang === 'th' ? tm.th : tm.en}
-          </span>
+          <div className="highlight-detail-body">
+            {/* Type badge */}
+            <div style={{ marginBottom: 14 }}>
+              <span style={{ fontSize: 13.5, fontWeight: 800, padding: '5px 14px', borderRadius: 20, background: isSubtle ? '#f1f5f9' : tm.color + '18', color: isSubtle ? '#64748b' : tm.color }}>
+                {tm.emoji} {lang === 'th' ? tm.th : tm.en}
+              </span>
+            </div>
+
+            <h1 style={{ fontSize: 'clamp(30px, 4vw, 42px)', fontWeight: 900, color: '#1e293b', margin: '0', lineHeight: 1.22 }}>{h.title}</h1>
+
+            {/* Dates */}
+            {(h.start_date || h.end_date) && (
+              <div className="highlight-date-row">
+                {h.start_date && <span>📅 {tRaw('เริ่ม', 'Starts')} {fmtDate(h.start_date)}</span>}
+                {h.end_date && <span>🏁 {tRaw('สิ้นสุด', 'Ends')} {fmtDate(h.end_date)}</span>}
+              </div>
+            )}
+
+            {(h.description || blocks.length > 0 || h.link_url) && <div className="highlight-divider" />}
+
+            {/* Short description */}
+            {h.description && (
+              <p style={{ fontSize: 17, color: '#374151', lineHeight: 1.85, margin: blocks.length > 0 ? '0 0 24px' : 0, whiteSpace: 'pre-wrap' }}>{h.description}</p>
+            )}
+
+            {/* Content blocks */}
+            {blocks.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {blocks.map((block: any, i: number) => {
+                  if (block.type === 'image' && block.url) return (
+                    <div key={i} style={{ borderRadius: 16, overflow: 'hidden', background: 'white', border: '1.5px solid #f1f5f9' }}>
+                      <img src={block.url} alt="" style={{ width: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
+                    </div>
+                  );
+                  if (block.type === 'text' && block.value) return (
+                    <p key={i} style={{ fontSize: 17, color: '#374151', lineHeight: 1.85, margin: 0, whiteSpace: 'pre-wrap' }}>{block.value}</p>
+                  );
+                  return null;
+                })}
+              </div>
+            )}
+
+            {/* Link button */}
+            {h.link_url && (
+              <div style={{ marginTop: 32 }}>
+                <a href={h.link_url} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-block', background: p, color: 'white', textDecoration: 'none', padding: '12px 28px', borderRadius: 24, fontSize: 16, fontWeight: 800 }}>
+                  {tRaw('ดูรายละเอียดเพิ่มเติม →', 'Learn more →')}
+                </a>
+              </div>
+            )}
+          </div>
         </div>
-
-        <h1 style={{ fontSize: 34, fontWeight: 900, color: '#1e293b', margin: '0 0 16px', lineHeight: 1.25 }}>{h.title}</h1>
-
-        {/* Dates */}
-        {(h.start_date || h.end_date) && (
-          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginBottom: 20, fontSize: 15, color: '#64748b', fontWeight: 600 }}>
-            {h.start_date && <span>📅 {tRaw('เริ่ม', 'Starts')} {fmtDate(h.start_date)}</span>}
-            {h.end_date && <span>🏁 {tRaw('สิ้นสุด', 'Ends')} {fmtDate(h.end_date)}</span>}
-          </div>
-        )}
-
-        <div style={{ height: 1.5, background: p + '20', borderRadius: 2, marginBottom: 24 }} />
-
-        {/* Short description */}
-        {h.description && (
-          <p style={{ fontSize: 17, color: '#374151', lineHeight: 1.85, margin: '0 0 24px', whiteSpace: 'pre-wrap' }}>{h.description}</p>
-        )}
-
-        {/* Content blocks */}
-        {blocks.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {blocks.map((block: any, i: number) => {
-              if (block.type === 'image' && block.url) return (
-                <div key={i} style={{ borderRadius: 16, overflow: 'hidden', background: 'white', border: '1.5px solid #f1f5f9' }}>
-                  <img src={block.url} alt="" style={{ width: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
-                </div>
-              );
-              if (block.type === 'text' && block.value) return (
-                <p key={i} style={{ fontSize: 17, color: '#374151', lineHeight: 1.85, margin: 0, whiteSpace: 'pre-wrap' }}>{block.value}</p>
-              );
-              return null;
-            })}
-          </div>
-        )}
-
-        {/* Link button */}
-        {h.link_url && (
-          <div style={{ marginTop: 32 }}>
-            <a href={h.link_url} target="_blank" rel="noopener noreferrer"
-              style={{ display: 'inline-block', background: p, color: 'white', textDecoration: 'none', padding: '12px 28px', borderRadius: 24, fontSize: 16, fontWeight: 800 }}>
-              {tRaw('ดูรายละเอียดเพิ่มเติม →', 'Learn more →')}
-            </a>
-          </div>
-        )}
       </div>
     </div>
   );
