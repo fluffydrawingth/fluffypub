@@ -55,9 +55,9 @@ export default function Footer() {
               {theme.logoImageCrop?.croppedDataUrl
                 ? <img src={theme.logoImageCrop.croppedDataUrl} style={{ width:36, height:36, borderRadius:'50%', objectFit:'cover' }} alt="logo" />
                 : <span style={{ fontSize:26 }}>{theme.logoEmoji}</span>}
-              <span style={{ fontSize:20, fontWeight:800, color:p }}>{theme.logoText}</span>
+              <span style={{ fontSize:22, fontWeight:900, color:p }}>{theme.logoText}</span>
             </div>
-            <p style={{ color:theme.textColor+'88', fontSize:13, lineHeight:1.7, maxWidth:260, margin:0 }}>
+            <p style={{ color:theme.textColor+'88', fontSize:15.5, lineHeight:1.75, maxWidth:300, margin:0 }}>
               {tl(footer.description, footer.description_th)}
             </p>
           </div>
@@ -68,7 +68,7 @@ export default function Footer() {
             return (
               <div key={col.id} className="ft-col">
                 <div className="ft-col-header" onClick={() => toggleCol(col.id)}>
-                  <h4 style={{ fontSize:12, fontWeight:800, color:theme.textColor, textTransform:'uppercase' as const, letterSpacing:0.5, margin:'0 0 14px' }}>
+                  <h4 style={{ fontSize:14, fontWeight:900, color:theme.textColor, textTransform:'uppercase' as const, letterSpacing:0.5, margin:'0 0 14px' }}>
                     {tl(col.title, col.title_th)}
                   </h4>
                   <span className={`ft-col-arrow${isOpen ? ' open' : ''}`}>▾</span>
@@ -78,7 +78,7 @@ export default function Footer() {
                     <li key={link.id}>
                       <button
                         onClick={() => handleLink(link.url, link.newTab)}
-                        style={{ background:'none', border:'none', cursor:'pointer', color:theme.textColor+'88', fontSize:13, fontFamily:theme.fontFamily, padding:0, textAlign:'left' as const }}
+                        style={{ background:'none', border:'none', cursor:'pointer', color:theme.textColor+'88', fontSize:15, fontFamily:theme.fontFamily, padding:0, textAlign:'left' as const, lineHeight:1.5 }}
                         onMouseEnter={e => (e.currentTarget.style.color = p)}
                         onMouseLeave={e => (e.currentTarget.style.color = theme.textColor+'88')}
                       >
@@ -93,10 +93,10 @@ export default function Footer() {
         </div>
 
         <div style={{ borderTop:`1px solid ${p}15`, paddingTop:16, display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap' as const, gap:8 }}>
-          <span style={{ fontSize:12, color:theme.textColor+'66' }}>
+          <span style={{ fontSize:13.5, color:theme.textColor+'66' }}>
             {tl(footer.copyright, footer.copyright_th).replace('{year}', new Date().getFullYear().toString()).replace('{logoText}', theme.logoText)}
           </span>
-          <span style={{ fontSize:12, color:theme.textColor+'66' }}>{tl(footer.trustBadges, footer.trustBadges_th)}</span>
+          <span style={{ fontSize:13.5, color:theme.textColor+'66' }}>{tl(footer.trustBadges, footer.trustBadges_th)}</span>
         </div>
       </div>
     </footer>

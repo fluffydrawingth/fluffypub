@@ -110,17 +110,17 @@ export default function ProductCard({ product, priority = false }: { product: an
           </button>
         </div>
         <div style={{ padding: '12px 14px 14px' }}>
-          <div style={{ fontSize: 11, color: p, fontWeight: 700, marginBottom: 3 }}>{artist}{artist && product.category ? ' · ' : ''}{product.category}</div>
-          <div onClick={() => navigate(`/products/${product.slug}`)} style={{ fontSize: 14, fontWeight: 800, color: theme.textColor, marginBottom: 8, lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+          <div style={{ fontSize: 12.5, color: p, fontWeight: 800, marginBottom: 4 }}>{artist}{artist && product.category ? ' · ' : ''}{product.category}</div>
+          <div onClick={() => navigate(`/products/${product.slug}`)} style={{ fontSize: 16, fontWeight: 900, color: theme.textColor, marginBottom: 9, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
             {title}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
             <div>
-              <span style={{ fontSize: 16, fontWeight: 900, color: theme.textColor }}>{displayPrice}</span>
-              {blockedByUSD && <div style={{ fontSize: 10, color: '#f59e0b', fontWeight: 700, marginTop: 2 }}>฿ THB only</div>}
+              <span style={{ fontSize: 17.5, fontWeight: 900, color: theme.textColor }}>{displayPrice}</span>
+              {blockedByUSD && <div style={{ fontSize: 11.5, color: '#f59e0b', fontWeight: 800, marginTop: 2 }}>฿ THB only</div>}
             </div>
             <button onClick={handleCartBtn} disabled={isDisabled}
-              style={{ background: inCartAny ? '#10b981' : isDisabled ? '#e5e7eb' : p, color: isDisabled ? '#9ca3af' : 'white', border: 'none', cursor: isDisabled ? 'not-allowed' : 'pointer', padding: '6px 12px', borderRadius: 12, fontSize: 12, fontWeight: 700, fontFamily: theme.fontFamily, flexShrink: 0 }}>
+              style={{ background: inCartAny ? '#10b981' : isDisabled ? '#e5e7eb' : p, color: isDisabled ? '#9ca3af' : 'white', border: 'none', cursor: isDisabled ? 'not-allowed' : 'pointer', padding: '6px 12px', borderRadius: 12, fontSize: 14, fontWeight: 800, fontFamily: theme.fontFamily, flexShrink: 0 }}>
               {btnLabel}
             </button>
           </div>

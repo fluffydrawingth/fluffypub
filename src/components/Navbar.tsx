@@ -62,13 +62,13 @@ export default function Navbar() {
         .nb-links { display:flex; gap:4; align-items:center; }
         .nb-hamburger { display:none !important; }
         .nb-mobile-menu { display:none; }
-        @media(max-width:768px){
+        @media(max-width:980px){
           .nb-links { display:none !important; }
           .nb-hamburger { display:flex !important; }
           .nb-mobile-menu { display:block; }
         }
       `}</style>
-      <div style={{ background:theme.bannerBg, color:'white', textAlign:'center', padding:'6px 16px', fontSize:'12px', fontWeight:600 }}>
+      <div style={{ background:theme.bannerBg, color:'white', textAlign:'center', padding:'6px 16px', fontSize:'13px', fontWeight:700 }}>
         {(lang === 'th' && theme.bannerText_th) ? theme.bannerText_th : theme.bannerText}
       </div>
       <div style={{ maxWidth:1200, margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 16px', height:60 }}>
@@ -83,49 +83,49 @@ export default function Navbar() {
         {/* Desktop nav */}
         <div className="nb-links" style={{ display:'flex', gap:4, alignItems:'center', flexWrap:'nowrap' }}>
           {navLinks.map(([label,path])=>(
-            <button key={path} onClick={()=>navigate(path)} style={{ background:'none', border:'none', cursor:'pointer', padding:'7px 12px', borderRadius:18, fontSize:13, fontWeight:600, color:isActive(path)?p:theme.textColor, backgroundColor:isActive(path)?p+'15':'transparent', fontFamily:theme.fontFamily, whiteSpace:'nowrap' }}>
+            <button key={path} onClick={()=>navigate(path)} style={{ background:'none', border:'none', cursor:'pointer', padding:'7px 12px', borderRadius:18, fontSize:14.5, fontWeight:700, color:isActive(path)?p:theme.textColor, backgroundColor:isActive(path)?p+'15':'transparent', fontFamily:theme.fontFamily, whiteSpace:'nowrap' }}>
               {label}
             </button>
           ))}
-          <button onClick={()=>setLang(lang==='th'?'en':'th')} style={{ background:p+'12', border:`1.5px solid ${p}30`, cursor:'pointer', padding:'5px 10px', borderRadius:14, fontSize:11, fontWeight:700, color:p, fontFamily:theme.fontFamily, flexShrink:0 }}>
+          <button onClick={()=>setLang(lang==='th'?'en':'th')} style={{ background:p+'12', border:`1.5px solid ${p}30`, cursor:'pointer', padding:'5px 10px', borderRadius:14, fontSize:12.5, fontWeight:800, color:p, fontFamily:theme.fontFamily, flexShrink:0 }}>
             {lang==='th'?'EN':'TH'}
           </button>
           {showCurrencySwitcher && (
-          <button onClick={()=>handleSwitchCurrency(currency==='THB'?'USD':'THB')} style={{ background:'#f0fdf4', border:'1.5px solid #86efac', cursor:'pointer', padding:'5px 10px', borderRadius:14, fontSize:11, fontWeight:700, color:'#16a34a', fontFamily:theme.fontFamily, flexShrink:0 }}>
+          <button onClick={()=>handleSwitchCurrency(currency==='THB'?'USD':'THB')} style={{ background:'#f0fdf4', border:'1.5px solid #86efac', cursor:'pointer', padding:'5px 10px', borderRadius:14, fontSize:12.5, fontWeight:800, color:'#16a34a', fontFamily:theme.fontFamily, flexShrink:0 }}>
             {currency==='THB'?'$ USD':'฿ THB'}
           </button>
           )}
           {user ? (
             <div style={{ position:'relative' }}>
-              <button onClick={()=>setMenuOpen(x=>!x)} style={{ background:p+'15', border:`1.5px solid ${p}30`, cursor:'pointer', padding:'6px 12px', borderRadius:18, fontSize:13, fontWeight:700, color:p, fontFamily:theme.fontFamily, display:'flex', alignItems:'center', gap:5 }}>
+              <button onClick={()=>setMenuOpen(x=>!x)} style={{ background:p+'15', border:`1.5px solid ${p}30`, cursor:'pointer', padding:'6px 12px', borderRadius:18, fontSize:14.5, fontWeight:800, color:p, fontFamily:theme.fontFamily, display:'flex', alignItems:'center', gap:5 }}>
                 👤 {(user.first_name || user.name || '').split(' ')[0]} ▾
               </button>
               {menuOpen && (
                 <div style={{ position:'absolute', right:0, top:'calc(100% + 8px)', background:'white', borderRadius:16, boxShadow:'0 8px 32px rgba(0,0,0,0.12)', border:`1.5px solid ${p}15`, minWidth:180, zIndex:200, overflow:'hidden' }}>
-                  <div style={{ padding:'10px 16px', borderBottom:`1px solid ${p}10`, fontSize:11, color:'#888' }}>{user.email}</div>
-                  <button onClick={()=>{navigate(dashPath);setMenuOpen(false);}} style={{ width:'100%', padding:'10px 16px', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
+                  <div style={{ padding:'10px 16px', borderBottom:`1px solid ${p}10`, fontSize:12.5, color:'#888' }}>{user.email}</div>
+                  <button onClick={()=>{navigate(dashPath);setMenuOpen(false);}} style={{ width:'100%', padding:'10px 16px', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontSize:14.5, fontWeight:700, color:theme.textColor, fontFamily:theme.fontFamily }}>
                     {isAdmin ? '⚙️ Admin Panel' : isArtist ? '🎨 Artist Dashboard' : `👤 ${t('profile')}`}
                   </button>
                   {isAffiliate && (
-                    <button onClick={()=>{navigate('/affiliate-dashboard');setMenuOpen(false);}} style={{ width:'100%', padding:'10px 16px', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
+                    <button onClick={()=>{navigate('/affiliate-dashboard');setMenuOpen(false);}} style={{ width:'100%', padding:'10px 16px', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontSize:14.5, fontWeight:700, color:theme.textColor, fontFamily:theme.fontFamily }}>
                       🤝 Fluffy Creator Dashboard
                     </button>
                   )}
-                  <button onClick={()=>{navigate('/account/orders');setMenuOpen(false);}} style={{ width:'100%', padding:'10px 16px', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
+                  <button onClick={()=>{navigate('/account/orders');setMenuOpen(false);}} style={{ width:'100%', padding:'10px 16px', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontSize:14.5, fontWeight:700, color:theme.textColor, fontFamily:theme.fontFamily }}>
                     📦 {t('orders')}
                   </button>
-                  <button onClick={()=>{handleLogout();setMenuOpen(false);}} style={{ width:'100%', padding:'10px 16px', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontSize:13, fontWeight:600, color:'#ef4444', fontFamily:theme.fontFamily }}>
+                  <button onClick={()=>{handleLogout();setMenuOpen(false);}} style={{ width:'100%', padding:'10px 16px', textAlign:'left', background:'none', border:'none', cursor:'pointer', fontSize:14.5, fontWeight:700, color:'#ef4444', fontFamily:theme.fontFamily }}>
                     🚪 {t('logout')}
                   </button>
                 </div>
               )}
             </div>
           ) : (
-            <button onClick={()=>navigate('/login')} style={{ background:'none', border:`1.5px solid ${p}40`, cursor:'pointer', padding:'6px 14px', borderRadius:18, fontSize:13, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
+            <button onClick={()=>navigate('/login')} style={{ background:'none', border:`1.5px solid ${p}40`, cursor:'pointer', padding:'6px 14px', borderRadius:18, fontSize:14.5, fontWeight:700, color:theme.textColor, fontFamily:theme.fontFamily }}>
               {t('login')}
             </button>
           )}
-          <button onClick={()=>navigate('/cart')} style={{ background:p, border:'none', cursor:'pointer', padding:'7px 14px', borderRadius:20, display:'flex', alignItems:'center', gap:5, fontSize:13, fontWeight:700, color:'white', fontFamily:theme.fontFamily, boxShadow:`0 4px 12px ${p}44`, flexShrink:0 }}>
+          <button onClick={()=>navigate('/cart')} style={{ background:p, border:'none', cursor:'pointer', padding:'7px 14px', borderRadius:20, display:'flex', alignItems:'center', gap:5, fontSize:14.5, fontWeight:800, color:'white', fontFamily:theme.fontFamily, boxShadow:`0 4px 12px ${p}44`, flexShrink:0 }}>
             🛒{count>0&&<span style={{ background:'white', color:p, borderRadius:'50%', width:18, height:18, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:800 }}>{count}</span>}
           </button>
         </div>
@@ -154,30 +154,30 @@ export default function Navbar() {
         <div className="nb-mobile-menu" style={{ background:'white', borderTop:`1px solid ${p}15`, padding:'8px 16px 16px' }}>
           {navLinks.map(([label, path]) => (
             <button key={path} onClick={()=>handleNav(path)}
-              style={{ display:'block', width:'100%', textAlign:'left', background:isActive(path)?p+'12':'none', border:'none', cursor:'pointer', padding:'12px 14px', borderRadius:12, fontSize:15, fontWeight:isActive(path)?700:600, color:isActive(path)?p:theme.textColor, fontFamily:theme.fontFamily, marginBottom:2 }}>
+              style={{ display:'block', width:'100%', textAlign:'left', background:isActive(path)?p+'12':'none', border:'none', cursor:'pointer', padding:'12px 14px', borderRadius:12, fontSize:16.5, fontWeight:isActive(path)?800:700, color:isActive(path)?p:theme.textColor, fontFamily:theme.fontFamily, marginBottom:2 }}>
               {label}
             </button>
           ))}
           <div style={{ borderTop:`1px solid ${p}15`, marginTop:8, paddingTop:8 }}>
             {user ? (
               <>
-                <button onClick={()=>handleNav(dashPath)} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'11px 14px', borderRadius:12, fontSize:14, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
+                <button onClick={()=>handleNav(dashPath)} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'11px 14px', borderRadius:12, fontSize:15.5, fontWeight:700, color:theme.textColor, fontFamily:theme.fontFamily }}>
                   {isAdmin ? '⚙️ Admin Panel' : isArtist ? '🎨 Artist Dashboard' : `👤 ${t('profile')}`}
                 </button>
                 {isAffiliate && (
-                  <button onClick={()=>handleNav('/affiliate-dashboard')} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'11px 14px', borderRadius:12, fontSize:14, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
+                  <button onClick={()=>handleNav('/affiliate-dashboard')} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'11px 14px', borderRadius:12, fontSize:15.5, fontWeight:700, color:theme.textColor, fontFamily:theme.fontFamily }}>
                     🤝 Fluffy Creator Dashboard
                   </button>
                 )}
-                <button onClick={()=>handleNav('/account/orders')} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'11px 14px', borderRadius:12, fontSize:14, fontWeight:600, color:theme.textColor, fontFamily:theme.fontFamily }}>
+                <button onClick={()=>handleNav('/account/orders')} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'11px 14px', borderRadius:12, fontSize:15.5, fontWeight:700, color:theme.textColor, fontFamily:theme.fontFamily }}>
                   📦 {t('orders')}
                 </button>
-                <button onClick={()=>{handleLogout();setNavOpen(false);}} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'11px 14px', borderRadius:12, fontSize:14, fontWeight:600, color:'#ef4444', fontFamily:theme.fontFamily }}>
+                <button onClick={()=>{handleLogout();setNavOpen(false);}} style={{ display:'block', width:'100%', textAlign:'left', background:'none', border:'none', cursor:'pointer', padding:'11px 14px', borderRadius:12, fontSize:15.5, fontWeight:700, color:'#ef4444', fontFamily:theme.fontFamily }}>
                   🚪 {t('logout')}
                 </button>
               </>
             ) : (
-              <button onClick={()=>handleNav('/login')} style={{ display:'block', width:'100%', textAlign:'left', background:p+'12', border:'none', cursor:'pointer', padding:'11px 14px', borderRadius:12, fontSize:14, fontWeight:700, color:p, fontFamily:theme.fontFamily }}>
+              <button onClick={()=>handleNav('/login')} style={{ display:'block', width:'100%', textAlign:'left', background:p+'12', border:'none', cursor:'pointer', padding:'11px 14px', borderRadius:12, fontSize:15.5, fontWeight:800, color:p, fontFamily:theme.fontFamily }}>
                 👤 {t('login')}
               </button>
             )}
