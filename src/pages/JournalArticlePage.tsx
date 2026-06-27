@@ -188,7 +188,7 @@ function JournalImage({ block, alt, p }: { block: any; alt: string; p: string })
   if (!block.image) return null;
   const maxWidth = BLOCK_IMAGE_MAX[block.size || 'medium'] || BLOCK_IMAGE_MAX.medium;
   const justifyContent = block.align === 'left' ? 'flex-start' : block.align === 'right' ? 'flex-end' : 'center';
-  const img = <img src={block.image} alt={alt} style={{ width: '100%', maxWidth, borderRadius: 16, objectFit: 'cover', display: 'block', boxShadow: `0 10px 28px ${p}10` }} />;
+  const img = <img src={block.image} alt={alt} loading="lazy" decoding="async" style={{ width: '100%', maxWidth, borderRadius: 16, objectFit: 'cover', display: 'block', boxShadow: `0 10px 28px ${p}10` }} />;
   return (
     <figure style={{ margin: '0', display: 'flex', flexDirection: 'column', alignItems: block.align === 'left' ? 'flex-start' : block.align === 'right' ? 'flex-end' : 'center' }}>
       <div style={{ width: '100%', display: 'flex', justifyContent }}>
@@ -213,7 +213,7 @@ function JournalBlock({ block, lang, p }: { block: any; lang: string; p: string 
   if (block.type === 'cta') {
     return (
       <section className="jap-block jap-cta">
-        {block.image_url && <img src={block.image_url} alt={imageAlt || ''} className="jap-cta-image" />}
+        {block.image_url && <img src={block.image_url} alt={imageAlt || ''} loading="lazy" decoding="async" width={72} height={72} className="jap-cta-image" />}
         <div className="jap-cta-copy">
           {note && <ParagraphText text={note} />}
           <LinkButton block={block} lang={lang} p={p} />
@@ -525,6 +525,10 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
                 <img
                   src={article.cover_image}
                   alt={title}
+                  loading="eager"
+                  decoding="async"
+                  width={640}
+                  height={480}
                   style={{
                     width: '100%',
                     height:'100%',
@@ -612,7 +616,7 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
                     {/* 16:9 thumbnail — cover crop acceptable for small previews */}
                     <div style={{ aspectRatio: '16/9', background: `linear-gradient(135deg,${p}18,${p}08)`, overflow: 'hidden' }}>
                       {a.cover_image
-                        ? <img src={a.cover_image} alt={rtitle} style={{ width: '100%', height: '100%', objectFit: rcrop.useOriginal ? 'contain' : 'cover', objectPosition: rcoverPosition, transform: rcrop.useOriginal ? 'none' : `scale(${rcrop.zoom || 1})`, display: 'block' }} />
+                        ? <img src={a.cover_image} alt={rtitle} loading="lazy" decoding="async" width={300} height={169} style={{ width: '100%', height: '100%', objectFit: rcrop.useOriginal ? 'contain' : 'cover', objectPosition: rcoverPosition, transform: rcrop.useOriginal ? 'none' : `scale(${rcrop.zoom || 1})`, display: 'block' }} />
                         : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>📝</div>
                       }
                     </div>

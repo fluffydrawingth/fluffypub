@@ -131,7 +131,7 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
 
       {/* Cover */}
       <div style={{ height:220, position:'relative', background:`linear-gradient(135deg,${p}30,${theme.secondaryColor||'#c084fc'}30)`, overflow:'hidden' }}>
-        {artist.cover_image_url && <img src={artist.cover_image_url} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt="cover" />}
+        {artist.cover_image_url && <img src={artist.cover_image_url} loading="eager" decoding="async" width={1200} height={220} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt="cover" />}
         <button onClick={()=>navigate('/artists')} style={{ position:'absolute', top:16, left:16, background:'rgba(255,255,255,0.9)', border:'none', cursor:'pointer', padding:'7px 14px', borderRadius:20, fontSize:13, fontWeight:700, fontFamily:theme.fontFamily }}>← {tRaw('ศิลปิน','Artists')}</button>
       </div>
 
@@ -139,7 +139,7 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
         {/* Avatar + name */}
         <div className="artist-header">
           <div style={{ width:88, height:88, borderRadius:'50%', border:'4px solid white', boxShadow:`0 4px 20px ${p}30`, background:'white', overflow:'hidden', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:44 }}>
-            {artist.avatar_url ? <img src={artist.avatar_url} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={artist.name} /> : '🎨'}
+            {artist.avatar_url ? <img src={artist.avatar_url} loading="eager" decoding="async" width={88} height={88} style={{ width:'100%', height:'100%', objectFit:'cover' }} alt={artist.name} /> : '🎨'}
           </div>
           <div style={{ flex:1, minWidth:0, paddingBottom:6 }}>
             <h1 style={{ fontSize:22, fontWeight:900, color:theme.textColor, margin:'0 0 3px', lineHeight:1.2 }}>{artist.name}</h1>
@@ -203,16 +203,16 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
               {/* Tab content */}
               {validTab === 'physical' && (
                 <div className="artist-grid">
-                  {physicalShown.map((pr:any) => (
-                    <ProductCard key={pr.id} product={{ ...pr, artistName: artist.name }} />
+                  {physicalShown.map((pr:any, idx:number) => (
+                    <ProductCard key={pr.id} product={{ ...pr, artistName: artist.name }} priority={idx === 0} />
                   ))}
                 </div>
               )}
 
               {validTab === 'digital' && (
                 <div className="artist-grid">
-                  {digitalShown.map((pr:any) => (
-                    <ProductCard key={pr.id} product={{ ...pr, artistName: artist.name }} />
+                  {digitalShown.map((pr:any, idx:number) => (
+                    <ProductCard key={pr.id} product={{ ...pr, artistName: artist.name }} priority={idx === 0} />
                   ))}
                 </div>
               )}
@@ -231,7 +231,7 @@ export default function ArtistProfilePage({ slug }: { slug: string }) {
                         <div style={{ position:'relative', width:'100%', paddingBottom:'100%', background:`${p}10`, overflow:'hidden' }}>
                           <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:40 }}>
                             {fd.cover_image_url
-                              ? <img src={fd.cover_image_url} alt={fdTitle} style={{ width:'100%', height:'100%', objectFit:'cover', position:'absolute', inset:0 }} />
+                              ? <img src={fd.cover_image_url} alt={fdTitle} loading="lazy" decoding="async" width={300} height={300} style={{ width:'100%', height:'100%', objectFit:'cover', position:'absolute', inset:0 }} />
                               : <span>{fileIcon(ft)}</span>
                             }
                           </div>

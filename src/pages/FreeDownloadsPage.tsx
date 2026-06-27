@@ -90,7 +90,7 @@ export default function FreeDownloadsPage() {
         )}
 
         <div className="fd-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 20 }}>
-          {filtered.map(item => (
+          {filtered.map((item, idx) => (
             <div key={item.id}
               style={{ background: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: `1.5px solid ${p}15`, cursor: 'pointer', fontFamily: theme.fontFamily }}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${p}20`; }}
@@ -101,7 +101,7 @@ export default function FreeDownloadsPage() {
                 style={{ position: 'relative', width: '100%', paddingBottom: '100%', background: `linear-gradient(135deg,${p}12,${p}06)`, overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 56 }}>
                   {item.cover_image_url
-                    ? <img src={item.cover_image_url} alt={title(item)} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
+                    ? <img src={item.cover_image_url} alt={title(item)} loading={idx === 0 ? 'eager' : 'lazy'} decoding="async" width={400} height={400} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
                     : <span>{fileIcon(item.file_type)}</span>
                   }
                 </div>

@@ -157,7 +157,7 @@ export default function CommunityPage() {
                     {/* Thumbnail */}
                     <div style={{ width: 40, height: 40, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: `${p}15`, boxShadow: '0 1px 4px rgba(0,0,0,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
                       {h.cover_image
-                        ? <img src={h.cover_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        ? <img src={h.cover_image} alt="" loading="lazy" decoding="async" width={40} height={40} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                         : <span>🩷</span>
                       }
                     </div>
@@ -235,7 +235,7 @@ export default function CommunityPage() {
                 <button key={c.id} onClick={() => navigate(`/creator/${c.id}`)}
                   style={{ background: 'white', border: `1.5px solid ${p}15`, borderRadius: 16, padding: '16px 14px', cursor: 'pointer', minWidth: 130, maxWidth: 130, textAlign: 'center', fontFamily: theme.fontFamily, flexShrink: 0, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
                   <div style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', background: p + '20', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, border: `2px solid ${p}20` }}>
-                    {isImageUrl(c.avatar_url) ? <img src={c.avatar_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (c.avatar_url || (c.affiliate_enabled ? '🌷' : '👤'))}
+                    {isImageUrl(c.avatar_url) ? <img src={c.avatar_url} alt={c.name} loading="lazy" decoding="async" width={56} height={56} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (c.avatar_url || (c.affiliate_enabled ? '🌷' : '👤'))}
                   </div>
                   <div style={{ fontSize: 12.5, fontWeight: 800, color: '#1e293b', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
                   {c.community_country && <div style={{ fontSize: 10.5, color: '#94a3b8' }}>📍 {c.community_country}</div>}
@@ -262,7 +262,7 @@ export default function CommunityPage() {
           <Empty theme={theme} tRaw={tRaw} isAll={isAll} />
         ) : (
           <>
-            <div className="cm-grid">{posts.map(post => <div key={post.id}><CommunityCard post={post} /></div>)}</div>
+            <div className="cm-grid">{posts.map((post, idx) => <div key={post.id}><CommunityCard post={post} priority={idx === 0} /></div>)}</div>
             {loading && <div style={{ textAlign: 'center', padding: 24, color: '#9ca3af', fontSize: 26 }}>⏳</div>}
             {hasMore && !loading && (
               <div style={{ textAlign: 'center', marginTop: 20 }}>
@@ -323,7 +323,7 @@ export default function CommunityPage() {
                 <button key={c.id} onClick={() => navigate(`/creator/${c.id}`)}
                   style={{ background: 'white', border: `1.5px solid ${p}15`, borderRadius: 16, padding: '16px 14px', cursor: 'pointer', minWidth: 130, textAlign: 'center', fontFamily: theme.fontFamily, flexShrink: 0 }}>
                   <div style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', background: p + '20', margin: '0 auto 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>
-                    {isImageUrl(c.avatar_url) ? <img src={c.avatar_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (c.avatar_url || (c.affiliate_enabled ? '🌷' : '👤'))}
+                    {isImageUrl(c.avatar_url) ? <img src={c.avatar_url} alt={c.name} loading="lazy" decoding="async" width={56} height={56} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (c.avatar_url || (c.affiliate_enabled ? '🌷' : '👤'))}
                   </div>
                   <div style={{ fontSize: 12.5, fontWeight: 800, color: '#1e293b', marginBottom: 2 }}>{c.affiliate_enabled ? '🌷' : '👤'} {c.name}</div>
                   {c.community_country && <div style={{ fontSize: 10.5, color: '#94a3b8' }}>📍 {c.community_country}</div>}

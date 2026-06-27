@@ -9,6 +9,7 @@ export default function ImageCarousel({
   onImageClick,
   stopPropagation = false,
   thumbnails = false,
+  priority = false,
 }: {
   images: string[];
   fit?: 'cover' | 'contain';
@@ -17,6 +18,7 @@ export default function ImageCarousel({
   onImageClick?: () => void;
   stopPropagation?: boolean;
   thumbnails?: boolean;
+  priority?: boolean;
 }) {
   const [idx, setIdx] = useState(0);
   const touchX = useRef<number | null>(null);
@@ -59,7 +61,7 @@ export default function ImageCarousel({
       <div>
         <div style={{ position: 'relative', width: '100%', borderRadius: rounded, overflow: 'hidden', background: '#0000000a' }}
           onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-          <img src={list[idx]} alt="" onClick={onImageClick} style={{ width: '100%', display: 'block', cursor: onImageClick ? 'zoom-in' : 'default' }} />
+          <img src={list[idx]} alt="" loading={priority ? 'eager' : 'lazy'} decoding="async" onClick={onImageClick} style={{ width: '100%', display: 'block', cursor: onImageClick ? 'zoom-in' : 'default' }} />
           {!single && <>
             {arrowBtn('left', -1)}
             {arrowBtn('right', 1)}
@@ -72,7 +74,7 @@ export default function ImageCarousel({
             {list.map((src, i) => (
               <button key={i} onClick={() => setIdx(i)} aria-label={`Image ${i + 1}`}
                 style={{ flexShrink: 0, width: 56, height: 56, borderRadius: 8, overflow: 'hidden', border: i === idx ? '2.5px solid #ec4899' : '1.5px solid #e5e7eb', cursor: 'pointer', padding: 0, background: 'none' }}>
-                <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: i === idx ? 1 : 0.7 }} />
+                <img src={src} alt="" loading="lazy" decoding="async" width={56} height={56} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', opacity: i === idx ? 1 : 0.7 }} />
               </button>
             ))}
           </div>
@@ -85,7 +87,7 @@ export default function ImageCarousel({
   return (
     <div style={{ position: 'relative', width: '100%', paddingBottom: ratio, borderRadius: rounded, overflow: 'hidden' }}
       onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-      <img src={list[idx]} alt="" loading="lazy" onClick={onImageClick} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      <img src={list[idx]} alt="" loading={priority ? 'eager' : 'lazy'} decoding="async" onClick={onImageClick} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
       {!single && <>
         {arrowBtn('left', -1)}
         {arrowBtn('right', 1)}

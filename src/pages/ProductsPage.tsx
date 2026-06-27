@@ -125,7 +125,7 @@ export default function ProductsPage() {
           {categories.map(cat => {
             const count = catCounts[cat.name] || 0;
             const icon = cat.icon_type === 'image' && cat.icon
-              ? <img src={cat.icon} alt={cat.name} style={{ width: 16, height: 16, borderRadius: 3, objectFit: 'cover' }} />
+              ? <img src={cat.icon} alt={cat.name} loading="lazy" decoding="async" width={16} height={16} style={{ width: 16, height: 16, borderRadius: 3, objectFit: 'cover' }} />
               : <span>{cat.icon}</span>;
             return (
               <button key={cat.name} style={selStyle(category === cat.name)} onClick={() => setCategory(cat.name)}>
@@ -150,7 +150,7 @@ export default function ProductsPage() {
           </div>
         ) : (
           <div className="prod-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 20 }}>
-            {filtered.map((prod: any) => <ProductCard key={prod.id} product={prod} />)}
+            {filtered.map((prod: any, idx: number) => <ProductCard key={prod.id} product={prod} priority={idx === 0} />)}
           </div>
         )}
       </div>

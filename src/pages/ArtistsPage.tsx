@@ -41,7 +41,7 @@ export default function ArtistsPage() {
           </div>
         ) : (
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:24 }}>
-            {artists.map(a => (
+            {artists.map((a, idx) => (
               <div
                 key={a.id}
                 onClick={() => goToArtist(a.artist_slug)}
@@ -52,7 +52,7 @@ export default function ArtistsPage() {
                 {/* Cover image */}
                 <div style={{ height:120, background:`linear-gradient(135deg,${p}20,${theme.secondaryColor||'#c084fc'}20)`, overflow:'hidden', position:'relative' }}>
                   {a.cover_image_url
-                    ? <img src={a.cover_image_url} alt={`${a.name} cover`} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                    ? <img src={a.cover_image_url} alt={`${a.name} cover`} loading={idx === 0 ? 'eager' : 'lazy'} decoding="async" width={400} height={120} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                     : <div style={{ width:'100%', height:'100%', background:`linear-gradient(135deg,${p}25,${theme.secondaryColor||'#c084fc'}25)` }} />
                   }
                 </div>
@@ -61,7 +61,7 @@ export default function ArtistsPage() {
                   {/* Avatar */}
                   <div style={{ width:72, height:72, borderRadius:'50%', background:'white', border:`3px solid white`, boxShadow:`0 4px 16px ${p}25`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, marginTop:-36, marginBottom:14, overflow:'hidden', flexShrink:0 }}>
                     {a.avatar_url
-                      ? <img src={a.avatar_url} alt={a.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                      ? <img src={a.avatar_url} alt={a.name} loading="lazy" decoding="async" width={72} height={72} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                       : '🎨'
                     }
                   </div>

@@ -94,7 +94,7 @@ function CommunitySection() {
             <button key={post.id} onClick={() => navigate(`/community/${post.id}`)}
               style={{ scrollSnapAlign: 'start', flexShrink: 0, width: 210, background: 'white', border: `1.5px solid ${p}15`, borderRadius: 16, overflow: 'hidden', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily, textAlign: 'left', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
               <div style={{ position: 'relative', width: '100%', paddingBottom: '125%', background: `linear-gradient(135deg,${p}10,${p}05)` }}>
-                <img src={cover} alt={post.caption || 'coloring'} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={cover} alt={post.caption || 'coloring'} loading="lazy" decoding="async" width={240} height={300} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                 {(post.artwork_urls?.length || 0) > 1 && <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: 'white', fontSize: 10.5, fontWeight: 700, padding: '3px 7px', borderRadius: 12 }}>🖼️ +{post.artwork_urls.length - 1}</div>}
               </div>
               <div style={{ padding: '10px 12px 12px' }}>
@@ -212,9 +212,9 @@ function FeaturedSection({ products }: { products: any[] }) {
           <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 12px', fontFamily:theme.fontFamily }}>{tl(theme.labels?.featured_title || 'Featured Collections', theme.labels?.featured_title_th)}</h2>
         </div>
         <div className="hp-feat-scroll" style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
-          {products.map(p => (
+          {products.map((p, idx) => (
             <div key={p.id} className="hp-feat-card" style={{ width: 'min(100%, 260px)', flexShrink: 0, flexGrow: 0 }}>
-              <ProductCard product={p} />
+              <ProductCard product={p} priority={idx === 0} />
             </div>
           ))}
         </div>
@@ -248,9 +248,9 @@ function DigitalProductsSection({ products }: { products: any[] }) {
           <h2 style={{ fontSize:36, fontWeight:900, color:theme.textColor, margin:'8px 0 12px', fontFamily:theme.fontFamily }}>Digital Products</h2>
         </div>
         <div className="hp-dig-scroll" style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
-          {shown.map(p => (
+          {shown.map((p, idx) => (
             <div key={p.id} className="hp-dig-card" style={{ width:'min(100%, 260px)', flexShrink:0, flexGrow:0 }}>
-              <ProductCard product={p} />
+              <ProductCard product={p} priority={idx === 0} />
             </div>
           ))}
         </div>
@@ -313,7 +313,7 @@ function CategoriesSection({ allProducts }: { allProducts: any[] }) {
               >
                 <div className="hp-cat-icon" style={{ fontSize:40, marginBottom:10, display:'flex', justifyContent:'center', alignItems:'center' }}>
                   {cat.icon_type === 'image' && cat.icon
-                    ? <img src={cat.icon} alt={cat.name} style={{ width:48, height:48, objectFit:'cover', borderRadius:10 }} />
+                    ? <img src={cat.icon} alt={cat.name} loading="lazy" decoding="async" width={48} height={48} style={{ width:48, height:48, objectFit:'cover', borderRadius:10 }} />
                     : <span>{cat.icon || '🎨'}</span>}
                 </div>
                 <div style={{ fontSize:15, fontWeight:800, color:theme.textColor }}>{cat.name}</div>
@@ -367,7 +367,7 @@ function ArtistsSection() {
             >
               <div className="hp-art-avatar" style={{ width:72, height:72, borderRadius:'50%', background:'white', margin:'0 auto 16px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, boxShadow:`0 4px 16px ${theme.primaryColor}25`, overflow:'hidden' }}>
                 {a.avatar_url
-                  ? <img src={a.avatar_url} alt={a.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                  ? <img src={a.avatar_url} alt={a.name} loading="lazy" decoding="async" width={72} height={72} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                   : AVATARS[idx % AVATARS.length]}
               </div>
               <div style={{ fontSize:17, fontWeight:800, color:theme.textColor, fontFamily:theme.fontFamily }}>
@@ -441,7 +441,7 @@ function BlogSection() {
                 onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)'; }}>
                 <div style={{ height: 180, background: `linear-gradient(135deg,${p}18,${p}08)`, overflow: 'hidden', position: 'relative' }}>
                   {a.cover_image
-                    ? <img src={a.cover_image} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    ? <img src={a.cover_image} alt={title} loading="lazy" decoding="async" width={360} height={203} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                     : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>📝</div>
                   }
                   <span style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(255,255,255,0.92)', color: p, fontSize: 10.5, fontWeight: 800, padding: '3px 9px', borderRadius: 10 }}>

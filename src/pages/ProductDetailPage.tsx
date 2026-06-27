@@ -201,7 +201,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
           {/* Image */}
           <div className="pd-img" style={{background:`linear-gradient(135deg,${theme.bgColor},white)`,position:'relative',overflow:'hidden',display:'flex',alignItems:'center',justifyContent:'center',fontSize:90,padding:8}}>
             {product.cover_image_url
-              ? <img src={product.cover_image_url} alt={title} style={{width:'100%',height:'100%',objectFit:'contain',position:'absolute',inset:0}} />
+              ? <img src={product.cover_image_url} alt={title} loading="eager" decoding="async" width={720} height={720} style={{width:'100%',height:'100%',objectFit:'contain',position:'absolute',inset:0}} />
               : <span>{product.image}</span>}
           </div>
 
@@ -345,7 +345,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               <button onClick={()=>navigate(`/artists/${product.artist_slug||product.artistSlug||''}`)}
                 style={{background:'none',border:'none',cursor:'pointer',padding:0,flexShrink:0}}>
                 {(artistProfile?.cover_image_url||artistProfile?.avatar_url)
-                  ? <img src={artistProfile.cover_image_url||artistProfile.avatar_url} alt={artistProfile.name} style={{width:64,height:64,borderRadius:'50%',objectFit:'cover',border:`2px solid ${p}30`}} />
+                  ? <img src={artistProfile.cover_image_url||artistProfile.avatar_url} alt={artistProfile.name} loading="lazy" decoding="async" width={64} height={64} style={{width:64,height:64,borderRadius:'50%',objectFit:'cover',border:`2px solid ${p}30`}} />
                   : <div style={{width:64,height:64,borderRadius:'50%',background:`linear-gradient(135deg,${p}30,${p}60)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,border:`2px solid ${p}30`}}>🎨</div>}
               </button>
               <div style={{flex:1}}>
@@ -377,7 +377,7 @@ export default function ProductDetailPage({ slug }: { slug: string }) {
               {communityPosts.map((post:any)=>(
                 <button key={post.id} onClick={()=>navigate(`/community?book=${product.id}`)}
                   style={{padding:0,border:'none',borderRadius:14,overflow:'hidden',cursor:'pointer',aspectRatio:'1',background:theme.primaryColor+'10'}}>
-                  <img src={post.thumb_url||post.artwork_url} alt="community art" loading="lazy" style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
+                  <img src={post.thumb_url||post.artwork_url} alt="community art" loading="lazy" decoding="async" width={240} height={240} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
                 </button>
               ))}
             </div>

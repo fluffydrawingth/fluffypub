@@ -106,7 +106,7 @@ export default function JournalPage() {
           </div>
         ) : (
           <div className="journal-grid">
-            {articles.map(a => {
+            {articles.map((a, idx) => {
               const title = (lang === 'th' ? a.title_th : a.title_en) || a.title_th;
               const excerpt = (lang === 'th' ? a.excerpt_th : a.excerpt_en) || a.excerpt_th;
               const rt = readingTime(a.content_th, a.content_en);
@@ -121,7 +121,7 @@ export default function JournalPage() {
                   {/* Cover image — 16:9 thumbnail, cover crop */}
                   <div style={{ position: 'relative', background: `linear-gradient(135deg,${p}18,${p}08)`, aspectRatio: '16/9', overflow: 'hidden', flexShrink: 0 }}>
                     {a.cover_image
-                      ? <img src={a.cover_image} alt={title} style={{ width: '100%', height: '100%', objectFit: crop.useOriginal ? 'contain' : 'cover', objectPosition: coverPosition, transform: crop.useOriginal ? 'none' : `scale(${crop.zoom || 1})`, display: 'block' }} />
+                      ? <img src={a.cover_image} alt={title} loading={idx === 0 ? 'eager' : 'lazy'} decoding="async" width={480} height={270} style={{ width: '100%', height: '100%', objectFit: crop.useOriginal ? 'contain' : 'cover', objectPosition: coverPosition, transform: crop.useOriginal ? 'none' : `scale(${crop.zoom || 1})`, display: 'block' }} />
                       : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 52 }}>📝</div>
                     }
                     {/* Category badge */}

@@ -48,7 +48,7 @@ export default function PagesIndexPage() {
           </div>
         ) : (
           <div className="blog-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:20 }}>
-            {pages.map(pg => (
+            {pages.map((pg, idx) => (
               <div key={pg.id} onClick={() => navigate(`/pages/${pg.slug}`)}
                 style={{ background:'white', borderRadius:16, overflow:'hidden', cursor:'pointer', boxShadow:'0 2px 12px rgba(0,0,0,0.07)', border:`1.5px solid ${p}15`, fontFamily:theme.fontFamily }}
                 onMouseEnter={e => { e.currentTarget.style.transform='translateY(-3px)'; e.currentTarget.style.boxShadow=`0 8px 24px ${p}20`; }}
@@ -58,7 +58,7 @@ export default function PagesIndexPage() {
                 <div style={{ position:'relative', width:'100%', paddingBottom:'100%', background:`linear-gradient(135deg,${p}12,${p}06)`, overflow:'hidden' }}>
                   <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:56 }}>
                     {pg.image_url
-                      ? <img src={pg.image_url} alt={pg.title} style={{ width:'100%', height:'100%', objectFit:'cover', position:'absolute', inset:0 }} />
+                      ? <img src={pg.image_url} alt={pg.title} loading={idx === 0 ? 'eager' : 'lazy'} decoding="async" width={400} height={400} style={{ width:'100%', height:'100%', objectFit:'cover', position:'absolute', inset:0 }} />
                       : <span>📄</span>
                     }
                   </div>

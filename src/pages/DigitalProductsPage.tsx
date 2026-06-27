@@ -112,7 +112,7 @@ export default function DigitalProductsPage() {
           </div>
         ) : (
           <div className="prod-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 20 }}>
-            {filtered.map((prod: any) => <ProductCard key={prod.id} product={prod} />)}
+            {filtered.map((prod: any, idx: number) => <ProductCard key={prod.id} product={prod} priority={idx === 0} />)}
           </div>
         )}
       </div>

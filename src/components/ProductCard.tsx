@@ -6,7 +6,7 @@ import { useLang } from '../lib/lang';
 import { useFavorites } from '../lib/favorites';
 import { useAuth } from '../lib/auth';
 
-export default function ProductCard({ product }: { product: any }) {
+export default function ProductCard({ product, priority = false }: { product: any; priority?: boolean }) {
   const { theme } = useTheme();
   const { add, items, increment } = useCart();
   const { navigate } = useRouter();
@@ -87,7 +87,7 @@ export default function ProductCard({ product }: { product: any }) {
         <div onClick={() => navigate(`/products/${product.slug}`)} style={{ position: 'relative', width: '100%', paddingBottom: '100%', background: `linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, overflow: 'hidden' }}>
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 60 }}>
             {product.cover_image_url
-              ? <img src={product.cover_image_url} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
+              ? <img src={product.cover_image_url} alt={title} loading={priority ? 'eager' : 'lazy'} decoding="async" width={600} height={600} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
               : <span>{product.image}</span>}
           </div>
           <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', zIndex: 1 }}>

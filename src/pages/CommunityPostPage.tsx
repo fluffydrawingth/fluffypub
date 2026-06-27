@@ -194,7 +194,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
           {/* Artwork — full original ratio carousel, no cropping on detail page */}
           <div>
             <div style={{ filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.08))' }}>
-              <ImageCarousel images={images} fit="contain" rounded={18} onImageClick={() => setLightbox(true)} thumbnails />
+              <ImageCarousel images={images} fit="contain" rounded={18} onImageClick={() => setLightbox(true)} thumbnails priority />
             </div>
             <div style={{ fontSize: 11, color: '#94a3b8', textAlign: 'center', marginTop: 6 }}>🔍 {tRaw('แตะที่ภาพเพื่อขยาย', 'Tap to zoom')}</div>
           </div>
@@ -205,7 +205,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
             {c && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
                 <button onClick={() => navigate(`/creator/${c.id}`)} style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', background: p + '20', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-                  {isImageUrl(c.avatar_url) ? <img src={c.avatar_url} alt={c.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : c.avatar_url ? <span style={{ fontSize: 22 }}>{c.avatar_url}</span> : <BadgeIcon affiliate={c.affiliate_enabled} size={20} />}
+                  {isImageUrl(c.avatar_url) ? <img src={c.avatar_url} alt={c.name} loading="lazy" decoding="async" width={44} height={44} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : c.avatar_url ? <span style={{ fontSize: 22 }}>{c.avatar_url}</span> : <BadgeIcon affiliate={c.affiliate_enabled} size={20} />}
                 </button>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <button onClick={() => navigate(`/creator/${c.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 14, fontWeight: 800, color: '#1e293b', textAlign: 'left' }}><BadgeIcon affiliate={c.affiliate_enabled} size={14} /> {c.name}</button>
@@ -351,7 +351,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
             return (
               <div key={cm.id} style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
                 <span style={{ width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', background: p + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
-                  {isImageUrl(cm.author?.avatar_url) ? <img src={cm.author.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : cm.author?.avatar_url ? <span style={{ fontSize: 16 }}>{cm.author.avatar_url}</span> : <BadgeIcon affiliate={cm.author?.affiliate_enabled} size={16} />}
+                  {isImageUrl(cm.author?.avatar_url) ? <img src={cm.author.avatar_url} alt="" loading="lazy" decoding="async" width={34} height={34} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : cm.author?.avatar_url ? <span style={{ fontSize: 16 }}>{cm.author.avatar_url}</span> : <BadgeIcon affiliate={cm.author?.affiliate_enabled} size={16} />}
                 </span>
                 <div style={{ background: 'white', borderRadius: 14, padding: '10px 14px', flex: 1, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
                   <div style={{ fontSize: 13, fontWeight: 800, color: '#1e293b', marginBottom: 2 }}><BadgeIcon affiliate={cm.author?.affiliate_enabled} size={13} /> {cm.author?.name || 'Community Member'}</div>

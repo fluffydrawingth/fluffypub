@@ -120,7 +120,7 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
           {/* Cover image — square, full fill */}
           <div className="fd-img" style={{ background: `${p}10`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 80 }}>
             {item.cover_image_url
-              ? <img src={item.cover_image_url} alt={title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+              ? <img src={item.cover_image_url} alt={title} loading="eager" decoding="async" width={600} height={600} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
               : <span>{fileIcon(item.file_type)}</span>
             }
           </div>
@@ -198,7 +198,7 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
           <div style={{ marginTop: 32, background: 'white', borderRadius: 16, padding: '20px 24px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer' }}
             onClick={() => navigate(`/artists/${artistProfile.artist_slug || artistProfile.slug}`)}>
             {artistProfile.avatar_url
-              ? <img src={artistProfile.avatar_url} alt={artistProfile.name} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+              ? <img src={artistProfile.avatar_url} alt={artistProfile.name} loading="lazy" decoding="async" width={56} height={56} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
               : <div style={{ width: 56, height: 56, borderRadius: '50%', background: `${p}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>🎨</div>
             }
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -226,7 +226,7 @@ export default function FreeDownloadDetailPage({ slug }: { slug: string }) {
                   <div key={fd.id} onClick={() => navigate(`/free-downloads/${fd.slug}`)}
                     style={{ background: 'white', borderRadius: 16, overflow: 'hidden', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1.5px solid #f3f4f6' }}>
                     {fd.cover_image_url
-                      ? <img src={fd.cover_image_url} alt={fdTitle} style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', display: 'block' }} />
+                      ? <img src={fd.cover_image_url} alt={fdTitle} loading="lazy" decoding="async" width={300} height={300} style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', display: 'block' }} />
                       : <div style={{ width: '100%', aspectRatio: '1/1', background: `${p}10`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>📁</div>
                     }
                     <div style={{ padding: '10px 12px' }}>

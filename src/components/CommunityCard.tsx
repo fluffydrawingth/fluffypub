@@ -16,7 +16,7 @@ const REACTIONS: { type: string; emoji: string; th: string; en: string }[] = [
   { type: 'want_to_try', emoji: '✨', th: 'อยากลองบ้าง',        en: 'Want to try' },
 ];
 
-export default function CommunityCard({ post, compact = false }: { post: any; compact?: boolean }) {
+export default function CommunityCard({ post, compact = false, priority = false }: { post: any; compact?: boolean; priority?: boolean }) {
   const { theme } = useTheme();
   const { navigate } = useRouter();
   const { tRaw } = useLang();
@@ -56,7 +56,7 @@ export default function CommunityCard({ post, compact = false }: { post: any; co
         const extra = imgs.length;
         return (
           <div style={{ position: 'relative', width: '100%', paddingBottom: '125%', background: `linear-gradient(135deg,${p}10,${p}05)`, flexShrink: 0 }}>
-            <img src={cover} alt={post.caption || 'coloring'} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={cover} alt={post.caption || 'coloring'} loading={priority ? 'eager' : 'lazy'} decoding="async" width={800} height={1000} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
             {post.post_type === 'tip' && (
               <div style={{ position: 'absolute', top: 8, left: 8, background: 'rgba(124,58,237,0.92)', color: 'white', fontSize: 10.5, fontWeight: 800, padding: '3px 8px', borderRadius: 12 }}>✨ {t('how_to')}</div>
             )}
@@ -110,7 +110,7 @@ export default function CommunityCard({ post, compact = false }: { post: any; co
           <button onClick={(e) => { e.stopPropagation(); navigate(`/creator/${creator.id}`); }}
             style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: theme.fontFamily, marginBottom: 10, overflow: 'hidden' }}>
             <span style={{ width: 22, height: 22, borderRadius: '50%', overflow: 'hidden', background: p + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, flexShrink: 0 }}>
-              {isImageUrl(creator.avatar_url) ? <img src={creator.avatar_url} alt={creator.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : creator.avatar_url ? <span style={{ fontSize: 12 }}>{creator.avatar_url}</span> : <BadgeIcon affiliate={creator.affiliate_enabled} size={12} />}
+              {isImageUrl(creator.avatar_url) ? <img src={creator.avatar_url} alt={creator.name} loading="lazy" decoding="async" width={22} height={22} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : creator.avatar_url ? <span style={{ fontSize: 12 }}>{creator.avatar_url}</span> : <BadgeIcon affiliate={creator.affiliate_enabled} size={12} />}
             </span>
             <span style={{ fontSize: 11.5, fontWeight: 700, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><BadgeIcon affiliate={creator.affiliate_enabled} size={12} /> {creator.name}</span>
           </button>

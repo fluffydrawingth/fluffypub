@@ -35,7 +35,7 @@ export default function CmsPage({ slug }: { slug: string }) {
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 20px 60px' }}>
         {page.image_url && (
-          <img src={page.image_url} alt={page.title}
+          <img src={page.image_url} alt={page.title} loading="eager" decoding="async" width={760} height={360}
             style={{ width: '100%', maxHeight: 360, objectFit: 'cover', borderRadius: 16, marginBottom: 32 }} />
         )}
         <h1 style={{ fontSize: 32, fontWeight: 900, color: theme.textColor, margin: '0 0 8px' }}>{page.title}</h1>
