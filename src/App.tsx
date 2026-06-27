@@ -40,6 +40,7 @@ import CreatorProfilePage from './pages/CreatorProfilePage';
 import { LangProvider } from './lib/lang';
 import { FavoritesProvider } from './lib/favorites';
 import { organizationSchema, useSEO, websiteSchema } from './lib/seo';
+import { trackPageView } from './lib/analytics';
 
 const MAX_VERIFY_TRIES = 3;
 
@@ -95,6 +96,10 @@ function AppContent() {
   const { route } = useRouter();
   const { theme } = useTheme();
   const { user } = useAuth();
+
+  React.useEffect(() => {
+    trackPageView(window.location.hash.slice(1) || '/');
+  }, [route.path, route.params]);
 
   const isAdmin = user?.role === 'admin';
   const inMaintenance = theme.maintenance_mode && isMaintBlocked(route.path) && !isAdmin;
