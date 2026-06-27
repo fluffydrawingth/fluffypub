@@ -3327,12 +3327,20 @@ function RichEditor({ value, onChange, onImageUpload }: { value: string; onChang
     initialized.current = true;
   }, []); // only on mount — value is stable via key prop on parent
 
-  const exec = (cmd: string, val?: string) => { document.execCommand(cmd, false, val); ref.current?.focus(); };
-
-  const handleInput = () => {
+  const syncHtml = () => {
     if (!ref.current || !initialized.current) return;
     const html = ref.current.innerHTML;
     if (html !== lastHtml.current) { lastHtml.current = html; onChange(html); }
+  };
+
+  const exec = (cmd: string, val?: string) => {
+    document.execCommand(cmd, false, val);
+    ref.current?.focus();
+    setTimeout(syncHtml, 0);
+  };
+
+  const handleInput = () => {
+    syncHtml();
   };
 
   const insertLink = () => {
@@ -3401,6 +3409,7 @@ const JOURNAL_BLOCK_TYPES = [
   { type:'image', label:'Image' },
   { type:'imageText', label:'Image + Text' },
   { type:'quote', label:'Quote / Note' },
+  { type:'cta', label:'CTA Button' },
 ] as const;
 const JOURNAL_IMAGE_SIZES = ['small','medium','large','full'] as const;
 const JOURNAL_IMAGE_ALIGNS = ['left','center','right'] as const;
@@ -3422,6 +3431,9 @@ const newJournalBlock = (type:string) => ({
   link_new_tab:true,
   button_label_th:'',
   button_label_en:'',
+  button_style:'pink',
+  note_th:'',
+  note_en:'',
 });
 
 const plainFromHtml = (html:string) => String(html || '')
@@ -3603,6 +3615,31 @@ function JournalTab() {
     </div>
   );
 
+  const renderCtaEditor = (block:any, idx:number) => (
+    <div style={{background:'#fff7fb',borderRadius:10,padding:12}}>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+        {blockTextInput(idx, block, 'button_label_th', 'Button text (TH)')}
+        {blockTextInput(idx, block, 'button_label_en', 'Button text (EN)')}
+      </div>
+      {blockTextInput(idx, block, 'link_url', 'URL')}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+        <div>
+          <label style={{display:'block',fontSize:11,fontWeight:800,color:'#64748b',marginBottom:4}}>Button style</label>
+          <select value={block.button_style||'pink'} onChange={e=>updateBlock(idx,{button_style:e.target.value})} style={{width:'100%',padding:'8px 10px',borderRadius:9,border:'1.5px solid #e5e7eb',fontSize:12.5,fontFamily:'inherit'}}>
+            <option value="pink">Pink</option>
+            <option value="outline">Outline</option>
+          </select>
+        </div>
+        <label style={{display:'flex',alignItems:'center',gap:8,fontSize:12,fontWeight:700,color:'#64748b',paddingTop:22}}>
+          <input type="checkbox" checked={block.link_new_tab !== false} onChange={e=>updateBlock(idx,{link_new_tab:e.target.checked})} />
+          Open in new tab
+        </label>
+      </div>
+      {blockTextInput(idx, block, 'note_th', 'Optional note (TH)', 3)}
+      {blockTextInput(idx, block, 'note_en', 'Optional note (EN)', 3)}
+    </div>
+  );
+
   const coverCrop = form.cover_crop || (form.cover_image ? defaultJournalCoverCrop(form.cover_image) : null);
   const updateCoverCrop = (patch:any) => setForm((f:any)=>({...f,cover_crop:{...(f.cover_crop || defaultJournalCoverCrop(f.cover_image)),...patch}}));
 
@@ -3619,6 +3656,8 @@ function JournalTab() {
             <button onClick={()=>removeBlock(idx)} style={{padding:'4px 8px',borderRadius:8,border:'none',background:'#fee2e2',color:'#dc2626',cursor:'pointer',fontSize:11,fontWeight:700}}>Remove</button>
           </div>
         </div>
+
+        {block.type === 'cta' && renderCtaEditor(block, idx)}
 
         {block.type === 'imageText' && (
           <div style={{marginBottom:10}}>
@@ -3769,8 +3808,6 @@ function JournalTab() {
             {inp('Title (TH) *','title_th')}
             {inp('Slug','slug')}
             {inp('Excerpt (TH)','excerpt_th','text',2)}
-            {inp('External Link URL','external_link_url')}
-            {inp('Button Text (TH)','external_link_label')}
           </div>
 
           {/* English fields + translate button */}
@@ -3784,7 +3821,6 @@ function JournalTab() {
             {editing==='new' && <p style={{fontSize:11,color:'#64748b',margin:'0 0 10px'}}>Save the article first, then auto-translate.</p>}
             {inp('Title (EN)','title_en')}
             {inp('Excerpt (EN)','excerpt_en','text',2)}
-            {inp('Button Text (EN)','external_link_label_en')}
           </div>
 
           {/* Flexible content blocks */}

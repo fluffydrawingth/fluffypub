@@ -23,7 +23,7 @@ function readingTime(contentTh?: string, contentEn?: string): string {
 function readingTimeForArticle(article: any): string {
   const blocks = Array.isArray(article?.content_blocks) ? article.content_blocks : [];
   const blockText = blocks.map((b: any) => [
-    b.heading_th, b.heading_en, b.text_th, b.text_en, b.caption_th, b.caption_en,
+    b.heading_th, b.heading_en, b.text_th, b.text_en, b.caption_th, b.caption_en, b.button_label_th, b.button_label_en, b.note_th, b.note_en,
   ].filter(Boolean).join(' ')).join(' ');
   return readingTime(`${article?.content_th || ''} ${blockText}`, article?.content_en || '');
 }
@@ -118,8 +118,27 @@ function blockText(block: any, key: string, lang: string): string {
   return block[`${key}_en`] || block[key] || block[`${key}_th`] || '';
 }
 
+function sanitizeHtml(html: string): string {
+  if (typeof window === 'undefined' || !html) return html || '';
+  const doc = new DOMParser().parseFromString(String(html), 'text/html');
+  doc.querySelectorAll('script,style,iframe,object,embed,form,input,button').forEach(el => el.remove());
+  doc.body.querySelectorAll('*').forEach(el => {
+    [...el.attributes].forEach(attr => {
+      const name = attr.name.toLowerCase();
+      const value = attr.value || '';
+      if (name.startsWith('on') || name === 'style') el.removeAttribute(attr.name);
+      if ((name === 'href' || name === 'src') && !/^(https?:|mailto:|tel:|\/|#)/i.test(value)) el.removeAttribute(attr.name);
+    });
+    if (el.tagName.toLowerCase() === 'a') {
+      el.setAttribute('rel', 'noopener noreferrer');
+      if (!el.getAttribute('target')) el.setAttribute('target', '_blank');
+    }
+  });
+  return doc.body.innerHTML;
+}
+
 function ParagraphText({ text }: { text: string }) {
-  if (/<[a-z][\s\S]*>/i.test(String(text || ''))) return <div dangerouslySetInnerHTML={{ __html: text }} />;
+  if (/<[a-z][\s\S]*>/i.test(String(text || ''))) return <div className="jap-rich" dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }} />;
   return (
     <>
       {String(text || '').split(/\n{2,}/).filter(Boolean).map((part, idx) => (
@@ -133,9 +152,10 @@ function LinkButton({ block, lang, p }: { block: any; lang: string; p: string })
   if (!block.link_url) return null;
   const label = blockText(block, 'button_label', lang);
   if (!label) return null;
+  const outline = block.button_style === 'outline';
   return (
     <a href={block.link_url} target={block.link_new_tab === false ? undefined : '_blank'} rel={block.link_new_tab === false ? undefined : 'noopener noreferrer'}
-      style={{display:'inline-flex',alignItems:'center',gap:6,marginTop:12,background:p,color:'white',textDecoration:'none',borderRadius:18,padding:'8px 15px',fontSize:13,fontWeight:800,boxShadow:`0 8px 20px ${p}20`}}>
+      style={{display:'inline-flex',alignItems:'center',gap:6,marginTop:12,background:outline?'white':p,color:outline?p:'white',border:`1.5px solid ${p}`,textDecoration:'none',borderRadius:18,padding:'8px 15px',fontSize:13,fontWeight:800,boxShadow:outline?'none':`0 8px 20px ${p}20`}}>
       {label} →
     </a>
   );
@@ -143,7 +163,7 @@ function LinkButton({ block, lang, p }: { block: any; lang: string; p: string })
 
 function LegacyHtml({ html }: { html: string }) {
   if (!html) return null;
-  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+  return <div className="jap-rich" dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />;
 }
 
 function JournalImage({ block, alt, p }: { block: any; alt: string; p: string }) {
@@ -168,7 +188,17 @@ function JournalBlock({ block, lang, p }: { block: any; lang: string; p: string 
   const text = blockText(block, 'text', lang);
   const legacyHtml = lang === 'th' ? (block.legacy_html_th || block.legacy_html_en) : (block.legacy_html_en || block.legacy_html_th);
   const caption = blockText(block, 'caption', lang);
+  const note = blockText(block, 'note', lang);
   const imageBlock = { ...block, caption };
+
+  if (block.type === 'cta') {
+    return (
+      <section className="jap-block jap-cta">
+        {note && <ParagraphText text={note} />}
+        <LinkButton block={block} lang={lang} p={p} />
+      </section>
+    );
+  }
 
   if (block.type === 'image') {
     return (
@@ -271,7 +301,6 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
   const blocks   = articleBlocks(article);
   const rt       = readingTimeForArticle(article);
   const typeMeta = TYPE_META[article.article_type];
-  const externalLabel = (lang === 'th' ? article.external_link_label : article.external_link_label_en) || article.external_link_label;
   const coverCrop = article.cover_crop || {};
   const coverPosition = `${((coverCrop.focalPointX ?? 0.5) * 100).toFixed(0)}% ${((coverCrop.focalPointY ?? 0.5) * 100).toFixed(0)}%`;
   const date     = new Date(article.created_at).toLocaleDateString(
@@ -281,29 +310,48 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
   return (
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
       <style>{`
-        /* compact article header */
-        .jap-intro {
-          display: flex;
-          flex-direction: column;
+        .jap-header-card {
+          display: grid;
+          grid-template-columns: minmax(280px, 340px) 1fr;
           gap: 22px;
           align-items: center;
+          background: rgba(255,255,255,0.68);
+          border: 1px solid rgba(255,255,255,0.72);
+          border-radius: 22px;
+          padding: 18px;
+          box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+          backdrop-filter: blur(10px);
         }
         @media (max-width: 760px) {
-          .jap-cover-wrap { max-width: 100% !important; }
+          .jap-header-card { grid-template-columns: 1fr; padding: 14px; gap: 14px; }
         }
 
         /* article body */
         .jap-body {
           font-size: 16.5px;
-          line-height: 1.95;
+          line-height: 1.82;
           color: #374151;
-          letter-spacing: 0.01em;
+          letter-spacing: 0;
+          background: rgba(255,255,255,0.66);
+          border: 1px solid rgba(255,255,255,0.74);
+          border-radius: 22px;
+          padding: clamp(22px, 4vw, 38px);
+          box-shadow: 0 12px 36px rgba(15, 23, 42, 0.06);
+          backdrop-filter: blur(8px);
         }
-        .jap-body p  { margin: 0 0 1.3em; }
-        .jap-body h2 { font-size: 1.3em; font-weight: 800; color: #1e293b; margin: 2em 0 0.6em; }
-        .jap-body h3 { font-size: 1.1em; font-weight: 700; color: #1e293b; margin: 1.6em 0 0.5em; }
+        .jap-body p,
+        .jap-rich p { margin: 0 0 1.15em; }
+        .jap-body h2,
+        .jap-rich h2 { font-size: 1.28em; font-weight: 850; color: #1e293b; margin: 1.6em 0 0.65em; line-height: 1.35; }
+        .jap-body h3,
+        .jap-rich h3 { font-size: 1.08em; font-weight: 800; color: #1e293b; margin: 1.25em 0 0.5em; line-height: 1.4; }
+        .jap-rich b,
+        .jap-rich strong { font-weight: 850; color: #1e293b; }
+        .jap-rich u { text-underline-offset: 3px; }
         .jap-body div > ul,
         .jap-body div > ol,
+        .jap-rich ul,
+        .jap-rich ol,
         .jap-body ul,
         .jap-body ol { padding-left: 1.5em; margin: 0 0 1.3em; }
         .jap-body li { margin-bottom: 0.4em; }
@@ -345,6 +393,13 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
           padding: 18px 20px;
           box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
         }
+        .jap-cta {
+          text-align: center;
+          background: rgba(255,255,255,0.78);
+          border: 1.5px solid ${p}18;
+          border-radius: 18px;
+          padding: 20px;
+        }
         @media (max-width: 680px) {
           .jap-split,
           .jap-split.text-first { grid-template-columns: 1fr; gap: 14px; }
@@ -370,56 +425,11 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
           ← {tRaw('Fluffy Journal', 'Fluffy Journal')}
         </button>
 
-        {/* ── Intro: cover (secondary) + meta (primary) ── */}
-        <div className="jap-intro" style={{ marginBottom: 32 }}>
-
-          {/* Primary info */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems:'center', textAlign:'center', maxWidth:760 }}>
-
-            {/* Category badge */}
-            {typeMeta && (
-              <span style={{ alignSelf: 'flex-start', background: p + '15', color: p, fontSize: 11.5, fontWeight: 800, padding: '4px 13px', borderRadius: 20, letterSpacing: 0.3 }}>
-                {typeMeta.emoji} {typeMeta.label[lang as 'th' | 'en'] ?? typeMeta.label.en}
-              </span>
-            )}
-
-            {/* Title — primary heading */}
-            <h1 style={{ fontSize: 'clamp(20px, 3.2vw, 27px)', fontWeight: 900, color: '#1e293b', margin: 0, lineHeight: 1.3, letterSpacing: -0.3 }}>
-              {title}
-            </h1>
-
-            {/* Date + reading time */}
-            <div style={{ display: 'flex', gap: 10, fontSize: 12.5, color: '#94a3b8', fontWeight: 600, flexWrap: 'wrap' as const, alignItems: 'center', justifyContent:'center' }}>
-              <span>📅 {date}</span>
-              <span style={{ color: '#e2e8f0' }}>·</span>
-              <span>⏱ {rt}</span>
-            </div>
-
-            {/* Excerpt — 3 lines max */}
-            {excerpt && (
-              <p style={{ fontSize: 14.5, color: '#64748b', lineHeight: 1.75, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden' }}>
-                {excerpt}
-              </p>
-            )}
-
-            {/* Divider */}
-            <div style={{ height: 1, background: `${p}18`, borderRadius: 1, margin: '2px 0' }} />
-
-            {/* Reactions */}
-            <ReactionButtons article={article} p={p} lang={lang} tRaw={tRaw} navigate={navigate} />
-
-            {article.external_link_url && externalLabel && (
-              <a href={article.external_link_url} target="_blank" rel="noopener noreferrer"
-                style={{ alignSelf:'flex-start', display:'inline-flex', alignItems:'center', gap:6, background:p, color:'white', textDecoration:'none', borderRadius:18, padding:'9px 17px', fontSize:13, fontWeight:800, boxShadow:`0 8px 20px ${p}24` }}>
-                {externalLabel} →
-              </a>
-            )}
-          </div>
-
-          {/* Cover image */}
-          <div className="jap-cover-wrap" style={{ width:'100%', maxWidth: 620 }}>
+        {/* ── Compact article header ── */}
+        <div className="jap-header-card" style={{ marginBottom: 28 }}>
+          <div style={{ width:'100%' }}>
             {article.cover_image ? (
-              <div style={{width:'100%',aspectRatio:'16/9',overflow:'hidden',borderRadius:16,background:'white',boxShadow:'0 10px 30px rgba(15,23,42,0.06)'}}>
+              <div style={{width:'100%',aspectRatio:'4/3',overflow:'hidden',borderRadius:16,background:'white'}}>
                 <img
                   src={article.cover_image}
                   alt={title}
@@ -433,19 +443,47 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
                   }}
                 />
               </div>
-            ) : null}
+            ) : (
+              <div style={{width:'100%',aspectRatio:'4/3',borderRadius:16,background:`linear-gradient(135deg,${p}14,${p}06)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:34}}>📝</div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems:'flex-start', minWidth:0 }}>
+
+            {/* Category badge */}
+            {typeMeta && (
+              <span style={{ background: p + '15', color: p, fontSize: 11.5, fontWeight: 800, padding: '4px 13px', borderRadius: 20, letterSpacing: 0.3 }}>
+                {typeMeta.emoji} {typeMeta.label[lang as 'th' | 'en'] ?? typeMeta.label.en}
+              </span>
+            )}
+
+            {/* Title — primary heading */}
+            <h1 style={{ fontSize: 'clamp(21px, 3vw, 30px)', fontWeight: 900, color: '#1e293b', margin: 0, lineHeight: 1.28, letterSpacing: 0 }}>
+              {title}
+            </h1>
+
+            {/* Date + reading time */}
+            <div style={{ display: 'flex', gap: 10, fontSize: 12.5, color: '#94a3b8', fontWeight: 600, flexWrap: 'wrap' as const, alignItems: 'center' }}>
+              <span>📅 {date}</span>
+              <span style={{ color: '#e2e8f0' }}>·</span>
+              <span>⏱ {rt}</span>
+            </div>
+
+            {/* Excerpt — 3 lines max */}
+            {excerpt && (
+              <p style={{ fontSize: 14.5, color: '#64748b', lineHeight: 1.75, margin: 0, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden' }}>
+                {excerpt}
+              </p>
+            )}
+
+            {/* Divider */}
+            {/* Reactions */}
+            <ReactionButtons article={article} p={p} lang={lang} tRaw={tRaw} navigate={navigate} />
           </div>
         </div>
 
         {/* ── Article content — primary focus ── */}
-        <div style={{ maxWidth: 850, margin: '0 auto' }}>
-          {/* ornamental divider before content */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 36 }}>
-            <div style={{ flex: 1, height: 1, background: `${p}15` }} />
-            <span style={{ fontSize: 15, opacity: 0.35 }}>✦</span>
-            <div style={{ flex: 1, height: 1, background: `${p}15` }} />
-          </div>
-
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
           {blocks.length > 0 ? (
             <div className="jap-body">
               {blocks.map((block: any, idx: number) => <JournalBlock key={block.id || idx} block={block} lang={lang} p={p} />)}
