@@ -329,11 +329,13 @@ Subject: ${l}`)){g(!0),b("");try{const v=localStorage.getItem("fluffy_token"),m=
           background: rgba(255,255,255,0.78);
           border: 1.5px solid ${l}18;
           border-radius: 16px;
-          padding: 14px 16px;
+          padding: 12px 18px;
           max-width: 660px;
           margin: 0 auto 16px;
           height: auto;
-          min-height: 0;
+          min-height: unset;
+          max-height: none;
+          box-sizing: border-box;
           box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
         }
         .jap-cta-image {
@@ -362,7 +364,7 @@ Subject: ${l}`)){g(!0),b("");try{const v=localStorage.getItem("fluffy_token"),m=
           .jap-split .jap-split-image { order: 1 !important; }
           .jap-split .jap-split-text { order: 2 !important; }
           .jap-block { margin-bottom: 28px; }
-          .jap-cta { align-items: center; gap: 10px; padding: 12px 14px; margin-bottom: 16px; }
+          .jap-cta { align-items: center; gap: 10px; padding: 12px 14px; margin-bottom: 16px; min-height: unset; height: auto; }
           .jap-cta-image { width: 56px; height: 56px; }
           .jap-cta-button { height: 42px; min-height: 0 !important; font-size: 12.5px !important; padding: 0 14px !important; }
         }
