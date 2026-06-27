@@ -20,6 +20,14 @@ function readingTime(contentTh?: string, contentEn?: string): string {
   return Math.ceil(words / 400) + ' min read';
 }
 
+function readingTimeForArticle(article: any): string {
+  const blocks = Array.isArray(article?.content_blocks) ? article.content_blocks : [];
+  const blockText = blocks.map((b: any) => [
+    b.heading_th, b.heading_en, b.text_th, b.text_en, b.caption_th, b.caption_en,
+  ].filter(Boolean).join(' ')).join(' ');
+  return readingTime(`${article?.content_th || ''} ${blockText}`, article?.content_en || '');
+}
+
 function ReactionButtons({ article, p, lang, tRaw, navigate }: any) {
   const { user } = useAuth();
   const [counts, setCounts] = useState({ love: 0, save: 0, share: 0 });
@@ -120,6 +128,11 @@ function ParagraphText({ text }: { text: string }) {
   );
 }
 
+function LegacyHtml({ html }: { html: string }) {
+  if (!html) return null;
+  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
 function JournalImage({ block, alt, p }: { block: any; alt: string; p: string }) {
   if (!block.image) return null;
   const maxWidth = BLOCK_IMAGE_MAX[block.size || 'medium'] || BLOCK_IMAGE_MAX.medium;
@@ -137,6 +150,7 @@ function JournalImage({ block, alt, p }: { block: any; alt: string; p: string })
 function JournalBlock({ block, lang, p }: { block: any; lang: string; p: string }) {
   const heading = blockText(block, 'heading', lang);
   const text = blockText(block, 'text', lang);
+  const legacyHtml = lang === 'th' ? (block.legacy_html_th || block.legacy_html_en) : (block.legacy_html_en || block.legacy_html_th);
   const caption = blockText(block, 'caption', lang);
   const imageBlock = { ...block, caption };
 
@@ -167,7 +181,7 @@ function JournalBlock({ block, lang, p }: { block: any; lang: string; p: string 
     return (
       <section className="jap-block jap-note">
         {heading && <h3>{heading}</h3>}
-        {text && <ParagraphText text={text} />}
+        {text ? <ParagraphText text={text} /> : <LegacyHtml html={legacyHtml} />}
       </section>
     );
   }
@@ -175,9 +189,25 @@ function JournalBlock({ block, lang, p }: { block: any; lang: string; p: string 
   return (
     <section className="jap-block">
       {heading && <h2>{heading}</h2>}
-      {text && <ParagraphText text={text} />}
+      {text ? <ParagraphText text={text} /> : <LegacyHtml html={legacyHtml} />}
     </section>
   );
+}
+
+function articleBlocks(article: any) {
+  const blocks = Array.isArray(article?.content_blocks) ? article.content_blocks : [];
+  if (blocks.length > 0) return blocks;
+  if (!article?.content_th && !article?.content_en) return [];
+  return [{
+    id: `legacy-${article.id}`,
+    type: 'text',
+    heading_th: '',
+    heading_en: '',
+    text_th: '',
+    text_en: '',
+    legacy_html_th: article.content_th || '',
+    legacy_html_en: article.content_en || '',
+  }];
 }
 
 export default function JournalArticlePage({ slug }: { slug: string }) {
@@ -219,10 +249,10 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
 
   const title    = (lang === 'th' ? article.title_th   : article.title_en)   || article.title_th;
   const excerpt  = (lang === 'th' ? article.excerpt_th : article.excerpt_en) || article.excerpt_th;
-  const content  = (lang === 'th' ? article.content_th : article.content_en) || article.content_th || '';
-  const blocks   = Array.isArray(article.content_blocks) ? article.content_blocks : [];
-  const rt       = readingTime(article.content_th, article.content_en);
+  const blocks   = articleBlocks(article);
+  const rt       = readingTimeForArticle(article);
   const typeMeta = TYPE_META[article.article_type];
+  const externalLabel = (lang === 'th' ? article.external_link_label : article.external_link_label_en) || article.external_link_label;
   const date     = new Date(article.created_at).toLocaleDateString(
     lang === 'th' ? 'th-TH' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' }
   );
@@ -370,6 +400,13 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
 
             {/* Reactions */}
             <ReactionButtons article={article} p={p} lang={lang} tRaw={tRaw} navigate={navigate} />
+
+            {article.external_link_url && externalLabel && (
+              <a href={article.external_link_url} target="_blank" rel="noopener noreferrer"
+                style={{ alignSelf:'flex-start', display:'inline-flex', alignItems:'center', gap:6, background:p, color:'white', textDecoration:'none', borderRadius:18, padding:'9px 17px', fontSize:13, fontWeight:800, boxShadow:`0 8px 20px ${p}24` }}>
+                {externalLabel} →
+              </a>
+            )}
           </div>
         </div>
 
@@ -386,8 +423,6 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
             <div className="jap-body">
               {blocks.map((block: any, idx: number) => <JournalBlock key={block.id || idx} block={block} lang={lang} p={p} />)}
             </div>
-          ) : content ? (
-            <div className="jap-body" dangerouslySetInnerHTML={{ __html: content }} />
           ) : (
             <div style={{ textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: 15, padding: '32px 0' }}>
               {tRaw('ยังไม่มีเนื้อหา', 'No content yet.')}

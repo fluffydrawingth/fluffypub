@@ -3395,7 +3395,7 @@ function RichEditor({ value, onChange, onImageUpload }: { value: string; onChang
 // ── Fluffy Journal Tab ────────────────────────────────────────────────────────
 const JOURNAL_TYPES = ['tips','tools','favorites','journal'] as const;
 const JOURNAL_TYPE_LABELS: Record<string,string> = { tips:'🎨 มุมระบายสี / Coloring Tips', tools:'🖍️ มุมอุปกรณ์ / Tools', favorites:'🩷 มุมโปรด / My Favorites', journal:'📔 เล่าให้ฟัง / Journal' };
-const EMPTY_ARTICLE = { title_th:'', title_en:'', excerpt_th:'', excerpt_en:'', content_th:'', content_en:'', article_type:'tips', cover_image:'', status:'draft', sort_order:0, content_blocks:[] as any[] };
+const EMPTY_ARTICLE = { title_th:'', title_en:'', slug:'', excerpt_th:'', excerpt_en:'', article_type:'tips', cover_image:'', status:'draft', sort_order:0, external_link_url:'', external_link_label:'', external_link_label_en:'', content_blocks:[] as any[] };
 const JOURNAL_BLOCK_TYPES = [
   { type:'text', label:'Text' },
   { type:'image', label:'Image' },
@@ -3419,6 +3419,24 @@ const newJournalBlock = (type:string) => ({
   caption_en:'',
   layout:'image-left',
 });
+
+const plainFromHtml = (html:string) => String(html || '')
+  .replace(/<br\s*\/?>/gi, '\n')
+  .replace(/<\/p>/gi, '\n\n')
+  .replace(/<[^>]+>/g, '')
+  .replace(/&nbsp;/g, ' ')
+  .replace(/&amp;/g, '&')
+  .replace(/&lt;/g, '<')
+  .replace(/&gt;/g, '>')
+  .trim();
+
+const recoverJournalBlocks = (article:any) => {
+  if (Array.isArray(article.content_blocks) && article.content_blocks.length > 0) return article.content_blocks;
+  const text_th = plainFromHtml(article.content_th || '');
+  const text_en = plainFromHtml(article.content_en || '');
+  if (!text_th && !text_en) return [];
+  return [{ ...newJournalBlock('text'), id:`legacy-${article.id || Date.now()}`, text_th, text_en }];
+};
 
 function JournalTab() {
   const [items, setItems] = React.useState<any[]>([]);
@@ -3445,7 +3463,24 @@ function JournalTab() {
   React.useEffect(()=>{ load(); },[]);
 
   const openNew = () => { setEditing('new'); setForm({...EMPTY_ARTICLE}); };
-  const openEdit = (a:any) => { setEditing(a.id); setForm({ title_th:a.title_th||'', title_en:a.title_en||'', excerpt_th:a.excerpt_th||'', excerpt_en:a.excerpt_en||'', content_th:a.content_th||'', content_en:a.content_en||'', article_type:a.article_type||'tips', cover_image:a.cover_image||'', status:a.status||'draft', sort_order:a.sort_order||0, content_blocks:Array.isArray(a.content_blocks)?a.content_blocks:[] }); };
+  const openEdit = (a:any) => {
+    setEditing(a.id);
+    setForm({
+      title_th:a.title_th||'',
+      title_en:a.title_en||'',
+      slug:a.slug||'',
+      excerpt_th:a.excerpt_th||'',
+      excerpt_en:a.excerpt_en||'',
+      article_type:a.article_type||'tips',
+      cover_image:a.cover_image||'',
+      status:a.status||'draft',
+      sort_order:a.sort_order||0,
+      external_link_url:a.external_link_url||'',
+      external_link_label:a.external_link_label||'',
+      external_link_label_en:a.external_link_label_en||'',
+      content_blocks:recoverJournalBlocks(a),
+    });
+  };
   const cancel = () => setEditing(null);
 
   const save = async () => {
@@ -3472,7 +3507,7 @@ function JournalTab() {
     const r = await api.translateJournalArticle(editing).catch(()=>null);
     setTranslating(false);
     if (!r || r.error) return showFlash('⚠️ Translation failed');
-    setForm((f:any)=>({...f, title_en:r.title_en||f.title_en, excerpt_en:r.excerpt_en||f.excerpt_en, content_en:r.content_en||f.content_en, content_blocks:Array.isArray(r.content_blocks)?r.content_blocks:f.content_blocks}));
+    setForm((f:any)=>({...f, title_en:r.title_en||f.title_en, excerpt_en:r.excerpt_en||f.excerpt_en, external_link_label_en:r.external_link_label_en||f.external_link_label_en, content_blocks:Array.isArray(r.content_blocks)?r.content_blocks:f.content_blocks}));
     showFlash('✓ English translation generated');
   };
 
@@ -3656,11 +3691,10 @@ function JournalTab() {
           <div style={{background:'#fdf9ff',borderRadius:12,padding:'14px 16px',marginBottom:12,border:'1.5px solid #f3e8ff'}}>
             <div style={{fontSize:12,fontWeight:800,color:'#7c3aed',marginBottom:10}}>🇹🇭 Thai (source of truth)</div>
             {inp('Title (TH) *','title_th')}
+            {inp('Slug','slug')}
             {inp('Excerpt (TH)','excerpt_th','text',2)}
-            <div style={{marginBottom:12}}>
-              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Content (TH)</label>
-              <RichEditor key={editing+'-th'} value={form.content_th||''} onChange={v=>setForm((f:any)=>({...f,content_th:v}))} />
-            </div>
+            {inp('External Link URL','external_link_url')}
+            {inp('Button Text (TH)','external_link_label')}
           </div>
 
           {/* English fields + translate button */}
@@ -3668,16 +3702,13 @@ function JournalTab() {
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
               <div style={{fontSize:12,fontWeight:800,color:'#0369a1'}}>🇬🇧 English (auto-generated)</div>
               <button onClick={translate} disabled={translating||editing==='new'} style={{padding:'5px 12px',borderRadius:8,border:'none',background:translating?'#e5e7eb':'#0369a1',color:'white',cursor:translating||editing==='new'?'not-allowed':'pointer',fontSize:11,fontWeight:700}}>
-                {translating?'Translating…':'🤖 Auto-translate from TH'}
+                {translating?'Translating…':'✨ Auto-translate from Thai'}
               </button>
             </div>
             {editing==='new' && <p style={{fontSize:11,color:'#64748b',margin:'0 0 10px'}}>Save the article first, then auto-translate.</p>}
             {inp('Title (EN)','title_en')}
             {inp('Excerpt (EN)','excerpt_en','text',2)}
-            <div style={{marginBottom:12}}>
-              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Content (EN)</label>
-              <RichEditor key={editing+'-en'} value={form.content_en||''} onChange={v=>setForm((f:any)=>({...f,content_en:v}))} />
-            </div>
+            {inp('Button Text (EN)','external_link_label_en')}
           </div>
 
           {/* Flexible content blocks */}

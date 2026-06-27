@@ -215,25 +215,15 @@ async function translateOrFallback(text) {
   return translated || source;
 }
 
-async function normalizeJournalBlocks(blocks) {
+async function translateJournalBlocks(blocks) {
   if (!Array.isArray(blocks)) return [];
   return Promise.all(blocks.map(async block => {
     const next = { ...(block || {}) };
-    if (blank(next.heading_en) && !blank(next.heading_th)) next.heading_en = await translateOrFallback(next.heading_th);
-    if (blank(next.text_en) && !blank(next.text_th)) next.text_en = await translateOrFallback(next.text_th);
-    if (blank(next.caption_en) && !blank(next.caption_th)) next.caption_en = await translateOrFallback(next.caption_th);
+    if (!blank(next.heading_th)) next.heading_en = await translateOrFallback(next.heading_th);
+    if (!blank(next.text_th)) next.text_en = await translateOrFallback(next.text_th);
+    if (!blank(next.caption_th)) next.caption_en = await translateOrFallback(next.caption_th);
     return next;
   }));
-}
-
-async function normalizeJournalPayload(body) {
-  const b = body || {};
-  const next = { ...b };
-  if (blank(next.title_en) && !blank(next.title_th)) next.title_en = await translateOrFallback(next.title_th);
-  if (blank(next.excerpt_en) && !blank(next.excerpt_th)) next.excerpt_en = await translateOrFallback(next.excerpt_th);
-  if (blank(next.content_en) && !blank(next.content_th)) next.content_en = await translateOrFallback(next.content_th);
-  if (Array.isArray(next.content_blocks)) next.content_blocks = await normalizeJournalBlocks(next.content_blocks);
-  return next;
 }
 
 async function handleJournal(req, res) {
@@ -245,7 +235,7 @@ async function handleJournal(req, res) {
     const user = adminList ? await requireAuth(req, res, ['admin']) : (req.headers.authorization ? await getUser(req) : null);
     if (adminList && !user) return;
     let q = supabase.from('journal_articles')
-      .select('id,title_th,title_en,excerpt_th,excerpt_en,content_th,content_en,article_type,cover_image,status,slug,sort_order,content_blocks,created_at,updated_at')
+      .select('id,title_th,title_en,excerpt_th,excerpt_en,content_th,content_en,article_type,cover_image,status,slug,sort_order,content_blocks,external_link_url,external_link_label,external_link_label_en,created_at,updated_at')
       .order('sort_order').order('created_at', { ascending: false });
     if (!user || user.role !== 'admin') q = q.eq('status', 'published');
     if (article_type && ['tips','tools','favorites','journal'].includes(article_type)) q = q.eq('article_type', article_type);
@@ -275,25 +265,25 @@ async function handleJournal(req, res) {
   // POST ?action=translate&id= — auto-translate TH → EN (admin)
   if (req.method === 'POST' && action === 'translate' && id) {
     const user = await requireAuth(req, res, ['admin']); if (!user) return;
-    const { data: art } = await supabase.from('journal_articles').select('title_th,excerpt_th,content_th,content_blocks').eq('id', id).single();
+    const { data: art } = await supabase.from('journal_articles').select('title_th,excerpt_th,content_blocks,external_link_label').eq('id', id).single();
     if (!art) return json(res, 404, { error: 'Not found' });
-    const [title_en, excerpt_en, content_en, content_blocks] = await Promise.all([
+    const [title_en, excerpt_en, content_blocks, external_link_label_en] = await Promise.all([
       translateOrFallback(art.title_th),
       translateOrFallback(art.excerpt_th),
-      translateOrFallback(art.content_th),
-      normalizeJournalBlocks(art.content_blocks),
+      translateJournalBlocks(art.content_blocks),
+      translateOrFallback(art.external_link_label),
     ]);
     const { error } = await supabase.from('journal_articles')
-      .update({ title_en: title_en || null, excerpt_en: excerpt_en || null, content_en: content_en || null, content_blocks, updated_at: new Date().toISOString() })
+      .update({ title_en: title_en || null, excerpt_en: excerpt_en || null, content_blocks, external_link_label_en: external_link_label_en || null, updated_at: new Date().toISOString() })
       .eq('id', id);
     if (error) return json(res, 400, { error: error.message });
-    return json(res, 200, { title_en, excerpt_en, content_en, content_blocks });
+    return json(res, 200, { title_en, excerpt_en, content_blocks, external_link_label_en });
   }
 
   // POST create (admin)
   if (req.method === 'POST' && !action) {
     const user = await requireAuth(req, res, ['admin']); if (!user) return;
-    const b = await normalizeJournalPayload(req.body || {});
+    const b = req.body || {};
     if (!String(b.title_th || '').trim()) return json(res, 400, { error: 'title_th required' });
     const rawSlug = b.slug || b.title_th;
     const baseSlug = slugify(rawSlug);
@@ -303,14 +293,15 @@ async function handleJournal(req, res) {
       title_en: b.title_en || null,
       excerpt_th: b.excerpt_th || null,
       excerpt_en: b.excerpt_en || null,
-      content_th: b.content_th || null,
-      content_en: b.content_en || null,
       article_type: ['tips','tools','favorites','journal'].includes(b.article_type) ? b.article_type : 'tips',
       cover_image: b.cover_image || null,
       status: ['draft','published'].includes(b.status) ? b.status : 'draft',
       slug: finalSlug,
       sort_order: parseInt(b.sort_order) || 0,
       content_blocks: Array.isArray(b.content_blocks) ? b.content_blocks : [],
+      external_link_url: b.external_link_url || null,
+      external_link_label: b.external_link_label || null,
+      external_link_label_en: b.external_link_label_en || null,
     };
     const { data, error } = await supabase.from('journal_articles').insert(row).select().single();
     if (error) return json(res, 400, { error: error.message });
@@ -320,9 +311,9 @@ async function handleJournal(req, res) {
   // POST ?action=update&id= — update (admin, POST to avoid PUT routing issues)
   if (req.method === 'POST' && action === 'update' && id) {
     const user = await requireAuth(req, res, ['admin']); if (!user) return;
-    const b = await normalizeJournalPayload(req.body || {});
+    const b = req.body || {};
     const upd = { updated_at: new Date().toISOString() };
-    const fields = ['title_th','title_en','excerpt_th','excerpt_en','content_th','content_en','article_type','cover_image','status','sort_order','content_blocks'];
+    const fields = ['title_th','title_en','excerpt_th','excerpt_en','article_type','cover_image','status','sort_order','content_blocks','external_link_url','external_link_label','external_link_label_en'];
     for (const k of fields) {
       if (b[k] !== undefined) {
         if (k === 'sort_order') upd[k] = parseInt(b[k]) || 0;
@@ -331,6 +322,7 @@ async function handleJournal(req, res) {
       }
     }
     if (b.title_th !== undefined) upd.title_th = String(b.title_th).trim();
+    if (b.slug !== undefined && String(b.slug || '').trim()) upd.slug = slugify(b.slug);
     const { error } = await supabase.from('journal_articles').update(upd).eq('id', id);
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, { success: true });
