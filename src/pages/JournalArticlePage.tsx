@@ -424,7 +424,7 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
           background: rgba(255,255,255,0.78);
           border: 1.5px solid ${p}18;
           border-radius: 16px;
-          padding: 6px 18px;
+          padding: 3px 18px;
           max-width: 660px;
           margin: 0 auto 16px;
           height: auto;
@@ -439,6 +439,8 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
           object-fit: cover;
           border-radius: 12px;
           flex: 0 0 auto;
+          margin: 0 !important;
+          display: block;
           box-shadow: 0 6px 16px rgba(15, 23, 42, 0.07);
         }
         .jap-cta-copy { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
@@ -459,8 +461,8 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
           .jap-split .jap-split-image { order: 1 !important; }
           .jap-split .jap-split-text { order: 2 !important; }
           .jap-block { margin-bottom: 28px; }
-          .jap-cta { align-items: center; gap: 10px; padding: 6px 14px; margin-bottom: 16px; min-height: unset; height: auto; }
-          .jap-cta-image { width: 56px; height: 56px; }
+          .jap-cta { align-items: center; gap: 10px; padding: 3px 14px; margin-bottom: 16px; min-height: unset; height: auto; }
+          .jap-cta-image { width: 56px; height: 56px; margin: 0 !important; }
           .jap-cta-button { height: 42px; min-height: 0 !important; font-size: 12.5px !important; padding: 0 14px !important; }
         }
         @media (max-width: 360px) {
