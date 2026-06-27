@@ -222,6 +222,7 @@ async function translateJournalBlocks(blocks) {
     if (!blank(next.heading_th)) next.heading_en = await translateOrFallback(next.heading_th);
     if (!blank(next.text_th)) next.text_en = await translateOrFallback(next.text_th);
     if (!blank(next.caption_th)) next.caption_en = await translateOrFallback(next.caption_th);
+    if (!blank(next.button_label_th)) next.button_label_en = await translateOrFallback(next.button_label_th);
     return next;
   }));
 }
@@ -235,7 +236,7 @@ async function handleJournal(req, res) {
     const user = adminList ? await requireAuth(req, res, ['admin']) : (req.headers.authorization ? await getUser(req) : null);
     if (adminList && !user) return;
     let q = supabase.from('journal_articles')
-      .select('id,title_th,title_en,excerpt_th,excerpt_en,content_th,content_en,article_type,cover_image,status,slug,sort_order,content_blocks,external_link_url,external_link_label,external_link_label_en,created_at,updated_at')
+      .select('id,title_th,title_en,excerpt_th,excerpt_en,content_th,content_en,article_type,cover_image,cover_crop,status,slug,sort_order,content_blocks,external_link_url,external_link_label,external_link_label_en,created_at,updated_at')
       .order('sort_order').order('created_at', { ascending: false });
     if (!user || user.role !== 'admin') q = q.eq('status', 'published');
     if (article_type && ['tips','tools','favorites','journal'].includes(article_type)) q = q.eq('article_type', article_type);
@@ -295,6 +296,7 @@ async function handleJournal(req, res) {
       excerpt_en: b.excerpt_en || null,
       article_type: ['tips','tools','favorites','journal'].includes(b.article_type) ? b.article_type : 'tips',
       cover_image: b.cover_image || null,
+      cover_crop: b.cover_crop && typeof b.cover_crop === 'object' ? b.cover_crop : null,
       status: ['draft','published'].includes(b.status) ? b.status : 'draft',
       slug: finalSlug,
       sort_order: parseInt(b.sort_order) || 0,
@@ -313,11 +315,12 @@ async function handleJournal(req, res) {
     const user = await requireAuth(req, res, ['admin']); if (!user) return;
     const b = req.body || {};
     const upd = { updated_at: new Date().toISOString() };
-    const fields = ['title_th','title_en','excerpt_th','excerpt_en','article_type','cover_image','status','sort_order','content_blocks','external_link_url','external_link_label','external_link_label_en'];
+    const fields = ['title_th','title_en','excerpt_th','excerpt_en','article_type','cover_image','cover_crop','status','sort_order','content_blocks','external_link_url','external_link_label','external_link_label_en'];
     for (const k of fields) {
       if (b[k] !== undefined) {
         if (k === 'sort_order') upd[k] = parseInt(b[k]) || 0;
         else if (k === 'content_blocks') upd[k] = Array.isArray(b[k]) ? b[k] : [];
+        else if (k === 'cover_crop') upd[k] = b[k] && typeof b[k] === 'object' ? b[k] : null;
         else upd[k] = b[k] || null;
       }
     }

@@ -3395,7 +3395,7 @@ function RichEditor({ value, onChange, onImageUpload }: { value: string; onChang
 // ── Fluffy Journal Tab ────────────────────────────────────────────────────────
 const JOURNAL_TYPES = ['tips','tools','favorites','journal'] as const;
 const JOURNAL_TYPE_LABELS: Record<string,string> = { tips:'🎨 มุมระบายสี / Coloring Tips', tools:'🖍️ มุมอุปกรณ์ / Tools', favorites:'🩷 มุมโปรด / My Favorites', journal:'📔 เล่าให้ฟัง / Journal' };
-const EMPTY_ARTICLE = { title_th:'', title_en:'', slug:'', excerpt_th:'', excerpt_en:'', article_type:'tips', cover_image:'', status:'draft', sort_order:0, external_link_url:'', external_link_label:'', external_link_label_en:'', content_blocks:[] as any[] };
+const EMPTY_ARTICLE = { title_th:'', title_en:'', slug:'', excerpt_th:'', excerpt_en:'', article_type:'tips', cover_image:'', cover_crop:null as any, status:'draft', sort_order:0, external_link_url:'', external_link_label:'', external_link_label_en:'', content_blocks:[] as any[] };
 const JOURNAL_BLOCK_TYPES = [
   { type:'text', label:'Text' },
   { type:'image', label:'Image' },
@@ -3418,6 +3418,10 @@ const newJournalBlock = (type:string) => ({
   caption_th:'',
   caption_en:'',
   layout:'image-left',
+  link_url:'',
+  link_new_tab:true,
+  button_label_th:'',
+  button_label_en:'',
 });
 
 const plainFromHtml = (html:string) => String(html || '')
@@ -3437,6 +3441,14 @@ const recoverJournalBlocks = (article:any) => {
   if (!text_th && !text_en) return [];
   return [{ ...newJournalBlock('text'), id:`legacy-${article.id || Date.now()}`, text_th, text_en }];
 };
+
+const defaultJournalCoverCrop = (url:string) => ({
+  imageUrl:url,
+  focalPointX:0.5,
+  focalPointY:0.5,
+  zoom:1,
+  useOriginal:false,
+});
 
 function JournalTab() {
   const [items, setItems] = React.useState<any[]>([]);
@@ -3473,6 +3485,7 @@ function JournalTab() {
       excerpt_en:a.excerpt_en||'',
       article_type:a.article_type||'tips',
       cover_image:a.cover_image||'',
+      cover_crop:a.cover_crop||null,
       status:a.status||'draft',
       sort_order:a.sort_order||0,
       external_link_url:a.external_link_url||'',
@@ -3517,7 +3530,7 @@ function JournalTab() {
     let r:any=null; try { r = await api.uploadFile(file,'community'); } catch {}
     setUploading(false);
     if (!r?.publicUrl) return showFlash('⚠️ '+(r?.error || 'Upload failed'));
-    setForm((f:any)=>({...f, cover_image:r.publicUrl}));
+    setForm((f:any)=>({...f, cover_image:r.publicUrl, cover_crop:defaultJournalCoverCrop(r.publicUrl)}));
   };
 
   const uploadContentImg = async (file: File): Promise<string | null> => {
@@ -3569,6 +3582,30 @@ function JournalTab() {
     </div>
   );
 
+  const blockRichInput = (idx:number, block:any, key:string, label:string) => (
+    <div style={{marginBottom:10}}>
+      <label style={{display:'block',fontSize:11,fontWeight:800,color:'#64748b',marginBottom:4}}>{label}</label>
+      <RichEditor key={`${block.id || idx}-${key}`} value={block[key]||''} onChange={v=>updateBlock(idx,{[key]:v})} />
+    </div>
+  );
+
+  const blockLinkControls = (idx:number, block:any) => (
+    <div style={{background:'#f8fafc',borderRadius:10,padding:12,marginTop:10}}>
+      {blockTextInput(idx, block, 'link_url', 'Link URL')}
+      <label style={{display:'flex',alignItems:'center',gap:8,fontSize:12,fontWeight:700,color:'#64748b',marginBottom:10}}>
+        <input type="checkbox" checked={block.link_new_tab !== false} onChange={e=>updateBlock(idx,{link_new_tab:e.target.checked})} />
+        Open in new tab
+      </label>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+        {blockTextInput(idx, block, 'button_label_th', 'Button label (TH)')}
+        {blockTextInput(idx, block, 'button_label_en', 'Button label (EN)')}
+      </div>
+    </div>
+  );
+
+  const coverCrop = form.cover_crop || (form.cover_image ? defaultJournalCoverCrop(form.cover_image) : null);
+  const updateCoverCrop = (patch:any) => setForm((f:any)=>({...f,cover_crop:{...(f.cover_crop || defaultJournalCoverCrop(f.cover_image)),...patch}}));
+
   const renderBlockEditor = (block:any, idx:number) => {
     const isText = block.type === 'text' || block.type === 'quote' || block.type === 'imageText';
     const isImage = block.type === 'image' || block.type === 'imageText';
@@ -3619,6 +3656,7 @@ function JournalTab() {
             </div>
             {blockTextInput(idx, block, 'caption_th', 'Caption (TH)', 2)}
             {blockTextInput(idx, block, 'caption_en', 'Caption (EN)', 2)}
+            {blockLinkControls(idx, block)}
           </div>
         )}
 
@@ -3626,8 +3664,17 @@ function JournalTab() {
           <div style={{background:block.type==='quote'?'#fffbeb':'#fdf9ff',borderRadius:10,padding:12}}>
             {blockTextInput(idx, block, 'heading_th', 'Heading (TH)')}
             {blockTextInput(idx, block, 'heading_en', 'Heading (EN)')}
-            {blockTextInput(idx, block, 'text_th', 'Text (TH)', 5)}
-            {blockTextInput(idx, block, 'text_en', 'Text (EN)', 5)}
+            {block.type === 'quote' ? (
+              <>
+                {blockTextInput(idx, block, 'text_th', 'Text (TH)', 5)}
+                {blockTextInput(idx, block, 'text_en', 'Text (EN)', 5)}
+              </>
+            ) : (
+              <>
+                {blockRichInput(idx, block, 'text_th', 'Body (TH)')}
+                {blockRichInput(idx, block, 'text_en', 'Body (EN)')}
+              </>
+            )}
           </div>
         )}
       </div>
@@ -3656,13 +3703,42 @@ function JournalTab() {
           {/* Cover image */}
           <div style={{marginBottom:12}}>
             <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Cover Image</label>
-            {form.cover_image && <img src={form.cover_image} alt="" style={{width:'100%',objectFit:'contain',borderRadius:10,marginBottom:8,display:'block',maxHeight:220}} />}
+            {form.cover_image && (
+              <div style={{background:'#f8fafc',border:'1.5px solid #e5e7eb',borderRadius:12,padding:12,marginBottom:8}}>
+                <div style={{width:'100%',maxWidth:420,aspectRatio:'16/9',overflow:'hidden',borderRadius:10,background:'#fff',marginBottom:10}}>
+                  <img src={form.cover_image} alt="" style={{
+                    width:'100%',
+                    height:'100%',
+                    objectFit:coverCrop?.useOriginal?'contain':'cover',
+                    objectPosition:`${((coverCrop?.focalPointX ?? 0.5) * 100).toFixed(0)}% ${((coverCrop?.focalPointY ?? 0.5) * 100).toFixed(0)}%`,
+                    transform:coverCrop?.useOriginal?'none':`scale(${coverCrop?.zoom || 1})`,
+                    display:'block',
+                  }} />
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:800,color:'#64748b',marginBottom:4}}>Horizontal position</label>
+                    <input type="range" min="0" max="1" step="0.01" value={coverCrop?.focalPointX ?? 0.5} onChange={e=>updateCoverCrop({focalPointX:parseFloat(e.target.value),useOriginal:false})} style={{width:'100%'}} />
+                  </div>
+                  <div>
+                    <label style={{display:'block',fontSize:11,fontWeight:800,color:'#64748b',marginBottom:4}}>Vertical position</label>
+                    <input type="range" min="0" max="1" step="0.01" value={coverCrop?.focalPointY ?? 0.5} onChange={e=>updateCoverCrop({focalPointY:parseFloat(e.target.value),useOriginal:false})} style={{width:'100%'}} />
+                  </div>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap' as const}}>
+                  <label style={{fontSize:11,fontWeight:800,color:'#64748b'}}>Zoom</label>
+                  <input type="range" min="1" max="2.4" step="0.05" value={coverCrop?.zoom || 1} onChange={e=>updateCoverCrop({zoom:parseFloat(e.target.value),useOriginal:false})} style={{width:180}} />
+                  <button onClick={()=>updateCoverCrop({zoom:1,focalPointX:0.5,focalPointY:0.5,useOriginal:true})} style={{padding:'6px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:coverCrop?.useOriginal?'#f0fdf4':'white',color:coverCrop?.useOriginal?'#16a34a':'#374151',cursor:'pointer',fontSize:11.5,fontWeight:800}}>Use original image</button>
+                  <button onClick={()=>updateCoverCrop({zoom:1,focalPointX:0.5,focalPointY:0.5,useOriginal:false})} style={{padding:'6px 10px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',color:'#374151',cursor:'pointer',fontSize:11.5,fontWeight:800}}>Reset crop</button>
+                </div>
+              </div>
+            )}
             <div style={{display:'flex',gap:8,alignItems:'center'}}>
               <label style={{padding:'7px 14px',borderRadius:10,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:700,color:'#374151'}}>
                 {uploading?'Uploading…':'📁 Upload Image'}
                 <input type="file" accept="image/*" onChange={uploadImg} style={{display:'none'}} />
               </label>
-              {form.cover_image && <button onClick={()=>setForm((f:any)=>({...f,cover_image:''}))} style={{background:'none',border:'none',color:'#dc2626',cursor:'pointer',fontSize:12,fontWeight:700}}>✕ Remove</button>}
+              {form.cover_image && <button onClick={()=>setForm((f:any)=>({...f,cover_image:'',cover_crop:null}))} style={{background:'none',border:'none',color:'#dc2626',cursor:'pointer',fontSize:12,fontWeight:700}}>✕ Remove</button>}
             </div>
           </div>
 

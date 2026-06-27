@@ -15,6 +15,7 @@ create table if not exists journal_articles (
   slug text unique,
   sort_order int default 0,
   content_blocks jsonb default '[]'::jsonb,
+  cover_crop jsonb,
   external_link_url text,
   external_link_label text,
   external_link_label_en text,

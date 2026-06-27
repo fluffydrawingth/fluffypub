@@ -103,6 +103,8 @@ export default function JournalPage() {
               const excerpt = (lang === 'th' ? a.excerpt_th : a.excerpt_en) || a.excerpt_th;
               const rt = readingTime(a.content_th, a.content_en);
               const date = new Date(a.created_at).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+              const crop = a.cover_crop || {};
+              const coverPosition = `${((crop.focalPointX ?? 0.5) * 100).toFixed(0)}% ${((crop.focalPointY ?? 0.5) * 100).toFixed(0)}%`;
               return (
                 <div key={a.id} className="journal-card"
                   onClick={() => navigate(`/journal/${a.slug}`)}
@@ -111,7 +113,7 @@ export default function JournalPage() {
                   {/* Cover image — 16:9 thumbnail, cover crop */}
                   <div style={{ position: 'relative', background: `linear-gradient(135deg,${p}18,${p}08)`, aspectRatio: '16/9', overflow: 'hidden', flexShrink: 0 }}>
                     {a.cover_image
-                      ? <img src={a.cover_image} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
+                      ? <img src={a.cover_image} alt={title} style={{ width: '100%', height: '100%', objectFit: crop.useOriginal ? 'contain' : 'cover', objectPosition: coverPosition, transform: crop.useOriginal ? 'none' : `scale(${crop.zoom || 1})`, display: 'block' }} />
                       : <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 52 }}>📝</div>
                     }
                     {/* Category badge */}
