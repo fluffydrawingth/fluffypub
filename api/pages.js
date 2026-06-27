@@ -227,6 +227,73 @@ async function translateJournalBlocks(blocks) {
   }));
 }
 
+const JOURNAL_BASE_SELECT = 'id,title_th,title_en,excerpt_th,excerpt_en,content_th,content_en,article_type,cover_image,status,slug,sort_order,content_blocks,created_at,updated_at';
+const JOURNAL_FULL_SELECT = 'id,title_th,title_en,excerpt_th,excerpt_en,content_th,content_en,article_type,cover_image,cover_crop,status,slug,sort_order,content_blocks,external_link_url,external_link_label,external_link_label_en,created_at,updated_at';
+const JOURNAL_LEGACY_SELECT = 'id,title_th,title_en,excerpt_th,excerpt_en,content_th,content_en,article_type,cover_image,status,slug,sort_order,created_at,updated_at';
+const JOURNAL_OPTIONAL_COLUMNS = ['cover_crop', 'external_link_url', 'external_link_label', 'external_link_label_en'];
+
+function missingColumnName(error) {
+  const msg = String(error?.message || '');
+  const match = msg.match(/'([^']+)' column/);
+  return match?.[1] || '';
+}
+
+async function selectJournalList(q, allowLegacyFallback = false) {
+  let result = await q(JOURNAL_FULL_SELECT);
+  if (!result.error) return result;
+
+  const missing = missingColumnName(result.error);
+  if (JOURNAL_OPTIONAL_COLUMNS.includes(missing)) {
+    result = await q(JOURNAL_BASE_SELECT);
+    if (!result.error) return result;
+  }
+
+  if (allowLegacyFallback && missingColumnName(result.error) === 'content_blocks') {
+    return q(JOURNAL_LEGACY_SELECT);
+  }
+  return result;
+}
+
+async function selectJournalForTranslate(id) {
+  let result = await supabase.from('journal_articles').select('title_th,excerpt_th,content_blocks,external_link_label').eq('id', id).single();
+  if (!result.error) return result;
+  const missing = missingColumnName(result.error);
+  if (JOURNAL_OPTIONAL_COLUMNS.includes(missing)) {
+    result = await supabase.from('journal_articles').select('title_th,excerpt_th,content_blocks').eq('id', id).single();
+  }
+  return result;
+}
+
+function withoutMissingOptionalColumn(row, error) {
+  const missing = missingColumnName(error);
+  if (!JOURNAL_OPTIONAL_COLUMNS.includes(missing) || !(missing in row)) return null;
+  const next = { ...row };
+  delete next[missing];
+  return next;
+}
+
+async function insertJournalRow(row) {
+  let payload = { ...row };
+  for (let i = 0; i <= JOURNAL_OPTIONAL_COLUMNS.length; i++) {
+    const result = await supabase.from('journal_articles').insert(payload).select().single();
+    if (!result.error) return result;
+    const next = withoutMissingOptionalColumn(payload, result.error);
+    if (!next) return result;
+    payload = next;
+  }
+}
+
+async function updateJournalRow(id, updates) {
+  let payload = { ...updates };
+  for (let i = 0; i <= JOURNAL_OPTIONAL_COLUMNS.length; i++) {
+    const result = await supabase.from('journal_articles').update(payload).eq('id', id);
+    if (!result.error) return result;
+    const next = withoutMissingOptionalColumn(payload, result.error);
+    if (!next) return result;
+    payload = next;
+  }
+}
+
 async function handleJournal(req, res) {
   const { id, slug, action, article_type, admin } = req.query;
 
@@ -235,12 +302,15 @@ async function handleJournal(req, res) {
     const adminList = admin === '1' || admin === 'true';
     const user = adminList ? await requireAuth(req, res, ['admin']) : (req.headers.authorization ? await getUser(req) : null);
     if (adminList && !user) return;
-    let q = supabase.from('journal_articles')
-      .select('id,title_th,title_en,excerpt_th,excerpt_en,content_th,content_en,article_type,cover_image,cover_crop,status,slug,sort_order,content_blocks,external_link_url,external_link_label,external_link_label_en,created_at,updated_at')
-      .order('sort_order').order('created_at', { ascending: false });
-    if (!user || user.role !== 'admin') q = q.eq('status', 'published');
-    if (article_type && ['tips','tools','favorites','journal'].includes(article_type)) q = q.eq('article_type', article_type);
-    const { data, error } = await q;
+    const applyFilters = select => {
+      let q = supabase.from('journal_articles')
+        .select(select)
+        .order('sort_order').order('created_at', { ascending: false });
+      if (!user || user.role !== 'admin') q = q.eq('status', 'published');
+      if (article_type && ['tips','tools','favorites','journal'].includes(article_type)) q = q.eq('article_type', article_type);
+      return q;
+    };
+    const { data, error } = await selectJournalList(applyFilters, true);
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, data || []);
   }
@@ -266,17 +336,15 @@ async function handleJournal(req, res) {
   // POST ?action=translate&id= — auto-translate TH → EN (admin)
   if (req.method === 'POST' && action === 'translate' && id) {
     const user = await requireAuth(req, res, ['admin']); if (!user) return;
-    const { data: art } = await supabase.from('journal_articles').select('title_th,excerpt_th,content_blocks,external_link_label').eq('id', id).single();
-    if (!art) return json(res, 404, { error: 'Not found' });
+    const { data: art, error: artError } = await selectJournalForTranslate(id);
+    if (artError || !art) return json(res, 404, { error: 'Not found' });
     const [title_en, excerpt_en, content_blocks, external_link_label_en] = await Promise.all([
       translateOrFallback(art.title_th),
       translateOrFallback(art.excerpt_th),
       translateJournalBlocks(art.content_blocks),
       translateOrFallback(art.external_link_label),
     ]);
-    const { error } = await supabase.from('journal_articles')
-      .update({ title_en: title_en || null, excerpt_en: excerpt_en || null, content_blocks, external_link_label_en: external_link_label_en || null, updated_at: new Date().toISOString() })
-      .eq('id', id);
+    const { error } = await updateJournalRow(id, { title_en: title_en || null, excerpt_en: excerpt_en || null, content_blocks, external_link_label_en: external_link_label_en || null, updated_at: new Date().toISOString() });
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, { title_en, excerpt_en, content_blocks, external_link_label_en });
   }
@@ -305,7 +373,7 @@ async function handleJournal(req, res) {
       external_link_label: b.external_link_label || null,
       external_link_label_en: b.external_link_label_en || null,
     };
-    const { data, error } = await supabase.from('journal_articles').insert(row).select().single();
+    const { data, error } = await insertJournalRow(row);
     if (error) return json(res, 400, { error: error.message });
     return json(res, 201, data);
   }
@@ -326,7 +394,7 @@ async function handleJournal(req, res) {
     }
     if (b.title_th !== undefined) upd.title_th = String(b.title_th).trim();
     if (b.slug !== undefined && String(b.slug || '').trim()) upd.slug = slugify(b.slug);
-    const { error } = await supabase.from('journal_articles').update(upd).eq('id', id);
+    const { error } = await updateJournalRow(id, upd);
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, { success: true });
   }
