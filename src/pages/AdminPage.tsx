@@ -3396,6 +3396,29 @@ function RichEditor({ value, onChange, onImageUpload }: { value: string; onChang
 const JOURNAL_TYPES = ['tips','tools','favorites','journal'] as const;
 const JOURNAL_TYPE_LABELS: Record<string,string> = { tips:'🎨 มุมระบายสี / Coloring Tips', tools:'🖍️ มุมอุปกรณ์ / Tools', favorites:'🩷 มุมโปรด / My Favorites', journal:'📔 เล่าให้ฟัง / Journal' };
 const EMPTY_ARTICLE = { title_th:'', title_en:'', excerpt_th:'', excerpt_en:'', content_th:'', content_en:'', article_type:'tips', cover_image:'', status:'draft', sort_order:0, content_blocks:[] as any[] };
+const JOURNAL_BLOCK_TYPES = [
+  { type:'text', label:'Text' },
+  { type:'image', label:'Image' },
+  { type:'imageText', label:'Image + Text' },
+  { type:'quote', label:'Quote / Note' },
+] as const;
+const JOURNAL_IMAGE_SIZES = ['small','medium','large','full'] as const;
+const JOURNAL_IMAGE_ALIGNS = ['left','center','right'] as const;
+
+const newJournalBlock = (type:string) => ({
+  id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+  type,
+  heading_th:'',
+  heading_en:'',
+  text_th:'',
+  text_en:'',
+  image:'',
+  size:'medium',
+  align:'center',
+  caption_th:'',
+  caption_en:'',
+  layout:'image-left',
+});
 
 function JournalTab() {
   const [items, setItems] = React.useState<any[]>([]);
@@ -3459,6 +3482,25 @@ function JournalTab() {
     return r.publicUrl;
   };
 
+  const blocks = Array.isArray(form.content_blocks) ? form.content_blocks : [];
+  const setBlocks = (next:any[]) => setForm((f:any)=>({...f,content_blocks:next}));
+  const addBlock = (type:string) => setBlocks([...blocks, newJournalBlock(type)]);
+  const updateBlock = (idx:number, patch:any) => setBlocks(blocks.map((b:any,i:number)=>i===idx?{...b,...patch}:b));
+  const removeBlock = (idx:number) => setBlocks(blocks.filter((_:any,i:number)=>i!==idx));
+  const moveBlock = (idx:number, dir:-1|1) => {
+    const next = [...blocks];
+    const target = idx + dir;
+    if (target < 0 || target >= next.length) return;
+    [next[idx], next[target]] = [next[target], next[idx]];
+    setBlocks(next);
+  };
+  const uploadBlockImage = async (idx:number, e:React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; e.target.value = '';
+    if (!file) return;
+    const url = await uploadContentImg(file);
+    if (url) updateBlock(idx, { image:url });
+  };
+
   const inp = (label:string, key:string, type='text', rows=0) => (
     <div style={{marginBottom:12}}>
       <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>{label}</label>
@@ -3470,6 +3512,83 @@ function JournalTab() {
       }
     </div>
   );
+
+  const blockTextInput = (idx:number, block:any, key:string, label:string, rows=0) => (
+    <div style={{marginBottom:10}}>
+      <label style={{display:'block',fontSize:11,fontWeight:800,color:'#64748b',marginBottom:4}}>{label}</label>
+      {rows > 0
+        ? <textarea rows={rows} value={block[key]||''} onChange={e=>updateBlock(idx,{[key]:e.target.value})}
+            style={{width:'100%',padding:'8px 10px',borderRadius:9,border:'1.5px solid #e5e7eb',fontSize:12.5,fontFamily:'inherit',resize:'vertical' as const,boxSizing:'border-box' as const}} />
+        : <input value={block[key]||''} onChange={e=>updateBlock(idx,{[key]:e.target.value})}
+            style={{width:'100%',padding:'8px 10px',borderRadius:9,border:'1.5px solid #e5e7eb',fontSize:12.5,fontFamily:'inherit',boxSizing:'border-box' as const}} />
+      }
+    </div>
+  );
+
+  const renderBlockEditor = (block:any, idx:number) => {
+    const isText = block.type === 'text' || block.type === 'quote' || block.type === 'imageText';
+    const isImage = block.type === 'image' || block.type === 'imageText';
+    return (
+      <div key={block.id || idx} style={{background:'white',border:'1.5px solid #e5e7eb',borderRadius:12,padding:14,marginBottom:10}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:12}}>
+          <div style={{fontSize:12,fontWeight:900,color:'#374151'}}>Block {idx+1}: {JOURNAL_BLOCK_TYPES.find(x=>x.type===block.type)?.label || block.type}</div>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap' as const}}>
+            <button onClick={()=>moveBlock(idx,-1)} disabled={idx===0} style={{padding:'4px 8px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:idx===0?'not-allowed':'pointer',fontSize:11}}>↑</button>
+            <button onClick={()=>moveBlock(idx,1)} disabled={idx===blocks.length-1} style={{padding:'4px 8px',borderRadius:8,border:'1px solid #e5e7eb',background:'white',cursor:idx===blocks.length-1?'not-allowed':'pointer',fontSize:11}}>↓</button>
+            <button onClick={()=>removeBlock(idx)} style={{padding:'4px 8px',borderRadius:8,border:'none',background:'#fee2e2',color:'#dc2626',cursor:'pointer',fontSize:11,fontWeight:700}}>Remove</button>
+          </div>
+        </div>
+
+        {block.type === 'imageText' && (
+          <div style={{marginBottom:10}}>
+            <label style={{display:'block',fontSize:11,fontWeight:800,color:'#64748b',marginBottom:4}}>Layout</label>
+            <select value={block.layout||'image-left'} onChange={e=>updateBlock(idx,{layout:e.target.value})} style={{width:'100%',padding:'8px 10px',borderRadius:9,border:'1.5px solid #e5e7eb',fontSize:12.5,fontFamily:'inherit'}}>
+              <option value="image-left">Image left / text right</option>
+              <option value="text-left">Text left / image right</option>
+            </select>
+          </div>
+        )}
+
+        {isImage && (
+          <div style={{background:'#f8fafc',borderRadius:10,padding:12,marginBottom:10}}>
+            {block.image && <img src={block.image} alt="" style={{width:'100%',maxWidth:260,height:150,objectFit:'cover',borderRadius:10,display:'block',marginBottom:8}} />}
+            <div style={{display:'flex',gap:8,flexWrap:'wrap' as const,alignItems:'center',marginBottom:10}}>
+              <label style={{padding:'7px 12px',borderRadius:9,border:'1.5px solid #e5e7eb',background:'white',cursor:'pointer',fontSize:12,fontWeight:700,color:'#374151'}}>
+                📁 Upload image
+                <input type="file" accept="image/*" onChange={e=>uploadBlockImage(idx,e)} style={{display:'none'}} />
+              </label>
+              {block.image && <button onClick={()=>updateBlock(idx,{image:''})} style={{background:'none',border:'none',color:'#dc2626',cursor:'pointer',fontSize:12,fontWeight:700}}>Remove image</button>}
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              <div>
+                <label style={{display:'block',fontSize:11,fontWeight:800,color:'#64748b',marginBottom:4}}>Image size</label>
+                <select value={block.size||'medium'} onChange={e=>updateBlock(idx,{size:e.target.value})} style={{width:'100%',padding:'8px 10px',borderRadius:9,border:'1.5px solid #e5e7eb',fontSize:12.5,fontFamily:'inherit'}}>
+                  {JOURNAL_IMAGE_SIZES.map(s=><option key={s} value={s}>{s[0].toUpperCase()+s.slice(1)}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{display:'block',fontSize:11,fontWeight:800,color:'#64748b',marginBottom:4}}>Alignment</label>
+                <select value={block.align||'center'} onChange={e=>updateBlock(idx,{align:e.target.value})} style={{width:'100%',padding:'8px 10px',borderRadius:9,border:'1.5px solid #e5e7eb',fontSize:12.5,fontFamily:'inherit'}}>
+                  {JOURNAL_IMAGE_ALIGNS.map(a=><option key={a} value={a}>{a[0].toUpperCase()+a.slice(1)}</option>)}
+                </select>
+              </div>
+            </div>
+            {blockTextInput(idx, block, 'caption_th', 'Caption (TH)', 2)}
+            {blockTextInput(idx, block, 'caption_en', 'Caption (EN)', 2)}
+          </div>
+        )}
+
+        {isText && (
+          <div style={{background:block.type==='quote'?'#fffbeb':'#fdf9ff',borderRadius:10,padding:12}}>
+            {blockTextInput(idx, block, 'heading_th', 'Heading (TH)')}
+            {blockTextInput(idx, block, 'heading_en', 'Heading (EN)')}
+            {blockTextInput(idx, block, 'text_th', 'Text (TH)', 5)}
+            {blockTextInput(idx, block, 'text_en', 'Text (EN)', 5)}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   if (loading) return <div style={{padding:32,textAlign:'center'}}>⏳</div>;
 
@@ -3550,6 +3669,28 @@ function JournalTab() {
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Content (EN)</label>
               <RichEditor key={editing+'-en'} value={form.content_en||''} onChange={v=>setForm((f:any)=>({...f,content_en:v}))} onImageUpload={uploadContentImg} />
             </div>
+          </div>
+
+          {/* Flexible content blocks */}
+          <div style={{background:'#f8fafc',borderRadius:12,padding:'14px 16px',marginBottom:16,border:'1.5px solid #e2e8f0'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:10,marginBottom:12,flexWrap:'wrap' as const}}>
+              <div>
+                <div style={{fontSize:12,fontWeight:900,color:'#334155'}}>Story content blocks</div>
+                <div style={{fontSize:11,color:'#94a3b8',marginTop:2}}>Use these for article layouts, image sizes, captions and A+ style sections.</div>
+              </div>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap' as const}}>
+                {JOURNAL_BLOCK_TYPES.map(b=>(
+                  <button key={b.type} onClick={()=>addBlock(b.type)} style={{padding:'6px 10px',borderRadius:9,border:`1.5px solid ${P}25`,background:'white',color:P,cursor:'pointer',fontSize:11.5,fontWeight:800}}>
+                    + {b.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {blocks.length === 0 ? (
+              <div style={{textAlign:'center',padding:'22px 12px',fontSize:12.5,color:'#94a3b8',border:'1.5px dashed #cbd5e1',borderRadius:10}}>
+                No blocks yet. Legacy rich content will render until blocks are added.
+              </div>
+            ) : blocks.map((block:any, idx:number)=>renderBlockEditor(block, idx))}
           </div>
 
           <div style={{display:'flex',gap:8}}>

@@ -98,6 +98,88 @@ function ReactionButtons({ article, p, lang, tRaw, navigate }: any) {
   );
 }
 
+const BLOCK_IMAGE_MAX: Record<string, number | string> = {
+  small: 280,
+  medium: 420,
+  large: 640,
+  full: '100%',
+};
+
+function blockText(block: any, key: string, lang: string): string {
+  if (lang === 'th') return block[`${key}_th`] || block[key] || block[`${key}_en`] || '';
+  return block[`${key}_en`] || block[key] || block[`${key}_th`] || '';
+}
+
+function ParagraphText({ text }: { text: string }) {
+  return (
+    <>
+      {String(text || '').split(/\n{2,}/).filter(Boolean).map((part, idx) => (
+        <p key={idx}>{part.split('\n').map((line, i) => <React.Fragment key={i}>{i > 0 && <br />}{line}</React.Fragment>)}</p>
+      ))}
+    </>
+  );
+}
+
+function JournalImage({ block, alt, p }: { block: any; alt: string; p: string }) {
+  if (!block.image) return null;
+  const maxWidth = BLOCK_IMAGE_MAX[block.size || 'medium'] || BLOCK_IMAGE_MAX.medium;
+  const justifyContent = block.align === 'left' ? 'flex-start' : block.align === 'right' ? 'flex-end' : 'center';
+  return (
+    <figure style={{ margin: '0', display: 'flex', flexDirection: 'column', alignItems: block.align === 'left' ? 'flex-start' : block.align === 'right' ? 'flex-end' : 'center' }}>
+      <div style={{ width: '100%', display: 'flex', justifyContent }}>
+        <img src={block.image} alt={alt} style={{ width: '100%', maxWidth, borderRadius: 16, objectFit: 'cover', display: 'block', boxShadow: `0 10px 28px ${p}10` }} />
+      </div>
+      {block.caption && <figcaption style={{ maxWidth, marginTop: 8, fontSize: 12.5, color: '#94a3b8', lineHeight: 1.5, textAlign: block.align || 'center' }}>{block.caption}</figcaption>}
+    </figure>
+  );
+}
+
+function JournalBlock({ block, lang, p }: { block: any; lang: string; p: string }) {
+  const heading = blockText(block, 'heading', lang);
+  const text = blockText(block, 'text', lang);
+  const caption = blockText(block, 'caption', lang);
+  const imageBlock = { ...block, caption };
+
+  if (block.type === 'image') {
+    return (
+      <section className="jap-block">
+        <JournalImage block={imageBlock} alt={caption || heading || 'Journal image'} p={p} />
+      </section>
+    );
+  }
+
+  if (block.type === 'imageText') {
+    const textFirst = block.layout === 'text-left';
+    return (
+      <section className={`jap-block jap-split ${textFirst ? 'text-first' : 'image-first'}`}>
+        <div className="jap-split-image">
+          <JournalImage block={{ ...imageBlock, size: 'full', align: 'center' }} alt={caption || heading || 'Journal image'} p={p} />
+        </div>
+        <div className="jap-split-text">
+          {heading && <h2>{heading}</h2>}
+          {text && <ParagraphText text={text} />}
+        </div>
+      </section>
+    );
+  }
+
+  if (block.type === 'quote') {
+    return (
+      <section className="jap-block jap-note">
+        {heading && <h3>{heading}</h3>}
+        {text && <ParagraphText text={text} />}
+      </section>
+    );
+  }
+
+  return (
+    <section className="jap-block">
+      {heading && <h2>{heading}</h2>}
+      {text && <ParagraphText text={text} />}
+    </section>
+  );
+}
+
 export default function JournalArticlePage({ slug }: { slug: string }) {
   const { theme } = useTheme();
   const { navigate } = useRouter();
@@ -138,6 +220,7 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
   const title    = (lang === 'th' ? article.title_th   : article.title_en)   || article.title_th;
   const excerpt  = (lang === 'th' ? article.excerpt_th : article.excerpt_en) || article.excerpt_th;
   const content  = (lang === 'th' ? article.content_th : article.content_en) || article.content_th || '';
+  const blocks   = Array.isArray(article.content_blocks) ? article.content_blocks : [];
   const rt       = readingTime(article.content_th, article.content_en);
   const typeMeta = TYPE_META[article.article_type];
   const date     = new Date(article.created_at).toLocaleDateString(
@@ -150,12 +233,13 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
         /* intro: small image left + meta right on desktop */
         .jap-intro {
           display: grid;
-          grid-template-columns: 260px 1fr;
+          grid-template-columns: minmax(360px, 400px) 1fr;
           gap: 32px;
           align-items: start;
         }
-        @media (max-width: 680px) {
+        @media (max-width: 760px) {
           .jap-intro { grid-template-columns: 1fr; gap: 16px; }
+          .jap-cover-wrap { max-width: 100% !important; }
         }
 
         /* article body */
@@ -186,6 +270,36 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
           color: #64748b;
           font-style: italic;
         }
+        .jap-block { margin: 0 0 32px; }
+        .jap-block h2 { font-size: 1.28em; font-weight: 850; color: #1e293b; line-height: 1.35; margin: 0 0 0.65em; }
+        .jap-block h3 { font-size: 1.05em; font-weight: 800; color: #1e293b; line-height: 1.4; margin: 0 0 0.45em; }
+        .jap-block p { margin: 0 0 1em; }
+        .jap-split {
+          display: grid;
+          grid-template-columns: minmax(220px, 0.9fr) 1.1fr;
+          gap: 26px;
+          align-items: center;
+        }
+        .jap-split.text-first { grid-template-columns: 1.1fr minmax(220px, 0.9fr); }
+        .jap-split.text-first .jap-split-text { order: 1; }
+        .jap-split.text-first .jap-split-image { order: 2; }
+        .jap-split.image-first .jap-split-image { order: 1; }
+        .jap-split.image-first .jap-split-text { order: 2; }
+        .jap-note {
+          background: white;
+          border: 1.5px solid ${p}18;
+          border-left: 4px solid ${p};
+          border-radius: 16px;
+          padding: 18px 20px;
+          box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+        }
+        @media (max-width: 680px) {
+          .jap-split,
+          .jap-split.text-first { grid-template-columns: 1fr; gap: 14px; }
+          .jap-split .jap-split-image { order: 1 !important; }
+          .jap-split .jap-split-text { order: 2 !important; }
+          .jap-block { margin-bottom: 28px; }
+        }
 
         /* related grid */
         .jap-related { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -208,12 +322,12 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
         <div className="jap-intro" style={{ marginBottom: 44 }}>
 
           {/* Left — cover image, reduced weight */}
-          <div>
+          <div className="jap-cover-wrap" style={{ maxWidth: 400 }}>
             {article.cover_image ? (
               <img
                 src={article.cover_image}
                 alt={title}
-                style={{ width: '100%', height: 'auto', maxHeight: 320, objectFit: 'contain', borderRadius: 14, display: 'block' }}
+                style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', objectPosition: 'center', borderRadius: 14, display: 'block' }}
               />
             ) : (
               <div style={{ width: '100%', aspectRatio: '1/1', background: `linear-gradient(135deg,${p}14,${p}07)`, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>
@@ -268,7 +382,11 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
             <div style={{ flex: 1, height: 1, background: `${p}15` }} />
           </div>
 
-          {content ? (
+          {blocks.length > 0 ? (
+            <div className="jap-body">
+              {blocks.map((block: any, idx: number) => <JournalBlock key={block.id || idx} block={block} lang={lang} p={p} />)}
+            </div>
+          ) : content ? (
             <div className="jap-body" dangerouslySetInnerHTML={{ __html: content }} />
           ) : (
             <div style={{ textAlign: 'center', color: '#94a3b8', fontStyle: 'italic', fontSize: 15, padding: '32px 0' }}>

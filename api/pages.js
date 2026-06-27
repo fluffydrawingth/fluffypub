@@ -213,7 +213,7 @@ async function handleJournal(req, res) {
   if (req.method === 'GET' && !slug && !id) {
     const user = req.headers.authorization ? await getUser(req) : null;
     let q = supabase.from('journal_articles')
-      .select('id,title_th,title_en,excerpt_th,excerpt_en,article_type,cover_image,status,slug,sort_order,created_at,updated_at')
+      .select('id,title_th,title_en,excerpt_th,excerpt_en,content_th,content_en,article_type,cover_image,status,slug,sort_order,content_blocks,created_at,updated_at')
       .order('sort_order').order('created_at', { ascending: false });
     if (!user || user.role !== 'admin') q = q.eq('status', 'published');
     if (article_type && ['tips','tools','favorites','journal'].includes(article_type)) q = q.eq('article_type', article_type);
