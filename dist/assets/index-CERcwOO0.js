@@ -318,6 +318,7 @@ Subject: ${l}`)){g(!0),b("");try{const v=localStorage.getItem("fluffy_token"),m=
           border-radius: 16px;
           padding: 18px 20px;
           box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+          text-align: center;
         }
         .jap-cta {
           display: flex;
@@ -328,25 +329,27 @@ Subject: ${l}`)){g(!0),b("");try{const v=localStorage.getItem("fluffy_token"),m=
           background: rgba(255,255,255,0.78);
           border: 1.5px solid ${l}18;
           border-radius: 16px;
-          padding: 16px 18px;
-          max-width: 720px;
-          margin: 0 auto 18px;
+          padding: 14px 16px;
+          max-width: 660px;
+          margin: 0 auto 16px;
+          height: auto;
           min-height: 0;
           box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
         }
         .jap-cta-image {
-          width: 68px;
-          height: 68px;
+          width: 60px;
+          height: 60px;
           object-fit: cover;
           border-radius: 12px;
           flex: 0 0 auto;
           box-shadow: 0 6px 16px rgba(15, 23, 42, 0.07);
         }
         .jap-cta-copy { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-        .jap-cta-copy p { margin-bottom: 0.45em; line-height: 1.45; font-size: 14px; }
+        .jap-cta-copy p { margin-bottom: 0.35em; line-height: 1.4; font-size: 14px; }
         .jap-cta-button {
-          min-height: 44px;
-          margin-top: 4px !important;
+          min-height: 0 !important;
+          height: 44px;
+          margin-top: 2px !important;
           padding: 0 18px !important;
           border-radius: 14px !important;
           justify-content: center;
@@ -359,9 +362,9 @@ Subject: ${l}`)){g(!0),b("");try{const v=localStorage.getItem("fluffy_token"),m=
           .jap-split .jap-split-image { order: 1 !important; }
           .jap-split .jap-split-text { order: 2 !important; }
           .jap-block { margin-bottom: 28px; }
-          .jap-cta { align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 18px; }
-          .jap-cta-image { width: 60px; height: 60px; }
-          .jap-cta-button { min-height: 42px; font-size: 12.5px !important; padding: 0 14px !important; }
+          .jap-cta { align-items: center; gap: 10px; padding: 12px 14px; margin-bottom: 16px; }
+          .jap-cta-image { width: 56px; height: 56px; }
+          .jap-cta-button { height: 42px; min-height: 0 !important; font-size: 12.5px !important; padding: 0 14px !important; }
         }
         @media (max-width: 360px) {
           .jap-cta { flex-direction: column; text-align: center; }
