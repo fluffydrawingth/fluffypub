@@ -3803,7 +3803,7 @@ function JournalTab() {
             <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Cover Image</label>
             {form.cover_image && (
               <div style={{background:'#f8fafc',border:'1.5px solid #e5e7eb',borderRadius:12,padding:12,marginBottom:8}}>
-                <div style={{width:'100%',maxWidth:420,aspectRatio:'16/9',overflow:'hidden',borderRadius:10,background:'#fff',marginBottom:10}}>
+                <div style={{width:'100%',maxWidth:280,aspectRatio:'1/1',overflow:'hidden',borderRadius:10,background:'#fff',marginBottom:10}}>
                   <img src={form.cover_image} alt="" style={{
                     width:'100%',
                     height:'100%',
@@ -3922,7 +3922,7 @@ function JournalTab() {
         <div style={{display:'flex',flexDirection:'column' as const,gap:10}}>
           {items.map(a=>(
             <div key={a.id} style={{background:'white',borderRadius:14,padding:'14px 16px',display:'flex',gap:14,alignItems:'center',border:'1.5px solid #f3f4f6',boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
-              {a.cover_image && <img src={a.cover_image} alt="" style={{width:64,height:48,objectFit:'cover',borderRadius:8,flexShrink:0}} />}
+              {a.cover_image && <img src={a.cover_image} alt="" style={{width:52,height:52,objectFit:'cover',borderRadius:8,flexShrink:0}} />}
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontWeight:800,fontSize:14,color:'#111827',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' as const}}>{a.title_th}</div>
                 <div style={{fontSize:11,color:'#6b7280',marginTop:2}}>

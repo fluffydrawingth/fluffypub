@@ -521,14 +521,14 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
         <div className="jap-header-card" style={{ marginBottom: 28 }}>
           <div style={{ width:'100%' }}>
             {article.cover_image ? (
-              <div style={{width:'100%',aspectRatio:'4/3',overflow:'hidden',borderRadius:16,background:'white'}}>
+              <div style={{width:'100%',aspectRatio:'1/1',overflow:'hidden',borderRadius:16,background:'white'}}>
                 <img
                   src={article.cover_image}
                   alt={title}
                   loading="eager"
                   decoding="async"
                   width={640}
-                  height={480}
+                  height={640}
                   style={{
                     width: '100%',
                     height:'100%',
@@ -540,7 +540,7 @@ export default function JournalArticlePage({ slug }: { slug: string }) {
                 />
               </div>
             ) : (
-              <div style={{width:'100%',aspectRatio:'4/3',borderRadius:16,background:`linear-gradient(135deg,${p}14,${p}06)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:34}}>📝</div>
+              <div style={{width:'100%',aspectRatio:'1/1',borderRadius:16,background:`linear-gradient(135deg,${p}14,${p}06)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:34}}>📝</div>
             )}
           </div>
 
