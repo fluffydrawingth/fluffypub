@@ -3,6 +3,31 @@ import { getGuestId } from './ref';
 const getToken = () => localStorage.getItem('fluffy_token') || '';
 const h = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` });
 
+// ─── Lightweight SWR cache ────────────────────────────────────────────────────
+// Only for public, unauthenticated GET requests. Mutations call bust() to clear.
+const _cache = new Map<string, { data: any; ts: number }>();
+const TTL_SHORT  = 30_000;   // 30 s  — products, journal, artists
+const TTL_LONG   = 300_000;  // 5 min — theme, categories, legal (rarely change)
+
+function cfetch(url: string, ttl = TTL_SHORT): Promise<any> {
+  const entry = _cache.get(url);
+  const now   = Date.now();
+  if (entry && now - entry.ts < ttl) {
+    // Cache hit — serve instantly, background-revalidate once past 50% of TTL
+    if (now - entry.ts > ttl * 0.5) {
+      fetch(url).then(r => r.json()).then(data => _cache.set(url, { data, ts: Date.now() })).catch(() => {});
+    }
+    return Promise.resolve(entry.data);
+  }
+  // Cache miss / expired — fetch fresh and store
+  return fetch(url).then(r => r.json()).then(data => { _cache.set(url, { data, ts: Date.now() }); return data; });
+}
+
+function bust(prefix: string) {
+  for (const k of _cache.keys()) if (k.startsWith(prefix)) _cache.delete(k);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function normalize(p: any) {
   if (!p) return p;
   // Clean artist name: never show slug format (hyphens/underscores) as display name
@@ -27,11 +52,11 @@ export const api = {
   me: () => fetch('/api/auth?action=me', { headers: h() }).then(r => r.json()),
 
   // Products
-  getProducts: () => fetch('/api/products').then(r => r.json()).then((d: any) => Array.isArray(d) ? d.map(normalize) : d),
-  getProduct: (slug: string) => fetch(`/api/products?id=${slug}`).then(r => r.json()).then(normalize),
-  createProduct: (data: any) => fetch('/api/products', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
-  updateProduct: (id: string, data: any) => fetch(`/api/products?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
-  deleteProduct: (id: string) => fetch(`/api/products?id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
+  getProducts: () => cfetch('/api/products').then((d: any) => Array.isArray(d) ? d.map(normalize) : d),
+  getProduct: (slug: string) => cfetch(`/api/products?id=${slug}`).then(normalize),
+  createProduct: (data: any) => fetch('/api/products', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()).then(d => { bust('/api/products'); return d; }),
+  updateProduct: (id: string, data: any) => fetch(`/api/products?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()).then(d => { bust('/api/products'); return d; }),
+  deleteProduct: (id: string) => fetch(`/api/products?id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()).then(d => { bust('/api/products'); return d; }),
 
   // Orders
   createOrder: (data: any) => fetch('/api/orders', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()).then(normalizeOrder),
@@ -64,9 +89,9 @@ export const api = {
   removeFavorite: (id: string) => fetch(`/api/users?action=favorites&productId=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 
   // Artists
-  getArtists: () => fetch('/api/artists').then(r => r.json()),
+  getArtists: () => cfetch('/api/artists', TTL_SHORT),
   getArtist: (id: string) => fetch(`/api/artists?id=${id}`).then(r => r.json()),
-  getArtistBySlug: (slug: string) => fetch(`/api/artists?slug=${slug}`).then(r => r.json()),
+  getArtistBySlug: (slug: string) => cfetch(`/api/artists?slug=${slug}`, TTL_SHORT),
   createArtist: (data: any) => fetch('/api/artists', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
 
   // Artist requests / role management
@@ -171,26 +196,26 @@ export const api = {
   featureCommunityPost: (id: string, on: boolean) => fetch(`/api/community?action=admin-feature&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify({ on }) }).then(r => r.json()),
   mergeCommunityTags: (field: string, from: string[], to: string) => fetch('/api/community?action=admin-merge-tags', { method: 'POST', headers: h(), body: JSON.stringify({ field, from, to }) }).then(r => r.json()),
   // Tag Library
-  getCommunityTags: (type: string) => fetch(`/api/community?action=tags&type=${type}`).then(r => r.json()),
-  getMarkersByMedium: (medium: string) => fetch(`/api/community?action=tags&type=marker&medium=${encodeURIComponent(medium)}`).then(r => r.json()),
+  getCommunityTags: (type: string) => cfetch(`/api/community?action=tags&type=${type}`, TTL_SHORT),
+  getMarkersByMedium: (medium: string) => cfetch(`/api/community?action=tags&type=marker&medium=${encodeURIComponent(medium)}`, TTL_SHORT),
   submitCommunityTag: (type: string, name: string, medium?: string) => fetch('/api/community?action=tag-submit', { method: 'POST', headers: h(), body: JSON.stringify({ type, name, medium }) }).then(r => r.json()),
   getAdminTags: (type = '') => fetch(`/api/community?action=admin-tags&type=${type}`, { headers: h() }).then(r => r.json()),
   approveTag: (id: string, name?: string) => fetch(`/api/community?action=admin-tag-approve&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify({ name }) }).then(r => r.json()),
   updateAdminTag: (id: string, data: { name?: string; medium?: string | null; status?: string }) => fetch(`/api/community?action=admin-tag-update&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   deleteTag: (id: string) => fetch(`/api/community?action=admin-tag&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
   // Community Curation
-  getCommunityCuration: () => fetch('/api/community?action=curation').then(r => r.json()),
+  getCommunityCuration: () => cfetch('/api/community?action=curation', TTL_SHORT),
   // Highlights & Events
-  getHeaderHighlights: () => fetch('/api/community?action=header-highlights').then(r => r.json()),
-  getCommunityHighlights: (type?: string) => fetch(`/api/community?action=highlights${type ? '&type=' + type : ''}`).then(r => r.json()),
-  getCommunityHighlight: (id: string) => fetch(`/api/community?action=highlights&id=${id}`).then(r => r.json()),
+  getHeaderHighlights: () => cfetch('/api/community?action=header-highlights', TTL_SHORT),
+  getCommunityHighlights: (type?: string) => cfetch(`/api/community?action=highlights${type ? '&type=' + type : ''}`, TTL_SHORT),
+  getCommunityHighlight: (id: string) => cfetch(`/api/community?action=highlights&id=${id}`, TTL_SHORT),
   getAdminHighlights: () => fetch('/api/community?action=admin-highlights', { headers: h() }).then(r => r.json()),
-  createHighlight: (data: any) => fetch('/api/community?action=admin-highlight', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
-  updateHighlight: (id: string, data: any) => fetch(`/api/community?action=admin-highlight-update&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
-  deleteHighlight: (id: string) => fetch(`/api/community?action=admin-highlight&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
+  createHighlight: (data: any) => fetch('/api/community?action=admin-highlight', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()).then(d => { bust('/api/community?action=highlight'); bust('/api/community?action=header-highlights'); return d; }),
+  updateHighlight: (id: string, data: any) => fetch(`/api/community?action=admin-highlight-update&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()).then(d => { bust('/api/community?action=highlight'); bust('/api/community?action=header-highlights'); return d; }),
+  deleteHighlight: (id: string) => fetch(`/api/community?action=admin-highlight&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()).then(d => { bust('/api/community?action=highlight'); bust('/api/community?action=header-highlights'); return d; }),
   // External Book Library
-  getExternalBooks: (q = '') => fetch(`/api/community?action=external-books&q=${encodeURIComponent(q)}`).then(r => r.json()),
-  getExternalAuthors: (q = '') => fetch(`/api/community?action=external-authors&q=${encodeURIComponent(q)}`).then(r => r.json()),
+  getExternalBooks: (q = '') => cfetch(`/api/community?action=external-books&q=${encodeURIComponent(q)}`, TTL_SHORT),
+  getExternalAuthors: (q = '') => cfetch(`/api/community?action=external-authors&q=${encodeURIComponent(q)}`, TTL_SHORT),
   getExternalBook: (slug: string) => fetch(`/api/community?action=external-book&slug=${encodeURIComponent(slug)}&guest_id=${getGuestId()}`, { headers: h() }).then(r => r.json()),
   getCommunityRelated: (id: string) => fetch(`/api/community?action=related&id=${id}&guest_id=${getGuestId()}`, { headers: h() }).then(r => r.json()),
   searchFeaturedCreators: (q: string) => fetch(`/api/community?action=admin-creators-search&q=${encodeURIComponent(q)}`, { headers: h() }).then(r => r.json()),
@@ -246,20 +271,20 @@ export const api = {
   },
 
   // Free Downloads
-  getFreeDownloads: () => fetch('/api/pages?type=free-download', { headers: h() }).then(r => r.json()),
-  getFreeDownload: (slug: string) => fetch(`/api/pages?type=free-download&slug=${slug}`).then(r => r.json()),
-  createFreeDownload: (data: any) => fetch('/api/pages?type=free-download', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
-  updateFreeDownload: (id: string, data: any) => fetch(`/api/pages?type=free-download&id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
-  deleteFreeDownload: (id: string) => fetch(`/api/pages?type=free-download&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
+  getFreeDownloads: () => cfetch('/api/pages?type=free-download', TTL_SHORT),
+  getFreeDownload: (slug: string) => cfetch(`/api/pages?type=free-download&slug=${slug}`, TTL_SHORT),
+  createFreeDownload: (data: any) => fetch('/api/pages?type=free-download', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()).then(d => { bust('/api/pages?type=free-download'); return d; }),
+  updateFreeDownload: (id: string, data: any) => fetch(`/api/pages?type=free-download&id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()).then(d => { bust('/api/pages?type=free-download'); return d; }),
+  deleteFreeDownload: (id: string) => fetch(`/api/pages?type=free-download&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()).then(d => { bust('/api/pages?type=free-download'); return d; }),
   downloadFree: (id: string) => fetch(`/api/pages?type=free-download&action=download&id=${id}`).then(r => r.json()),
 
   // Fluffy Journal
-  getJournalArticles: (articleType?: string) => fetch(`/api/pages?type=journal${articleType ? '&article_type='+articleType : ''}`).then(r => r.json()),
-  getJournalArticle: (slug: string) => fetch(`/api/pages?type=journal&slug=${slug}`).then(r => r.json()),
+  getJournalArticles: (articleType?: string) => cfetch(`/api/pages?type=journal${articleType ? '&article_type='+articleType : ''}`, TTL_SHORT),
+  getJournalArticle: (slug: string) => cfetch(`/api/pages?type=journal&slug=${slug}`, TTL_SHORT),
   getAdminJournalArticles: () => fetch('/api/pages?type=journal&admin=1', { headers: h() }).then(r => r.json()),
-  createJournalArticle: (data: any) => fetch('/api/pages?type=journal', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
-  updateJournalArticle: (id: string, data: any) => fetch(`/api/pages?type=journal&action=update&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
-  deleteJournalArticle: (id: string) => fetch(`/api/pages?type=journal&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
+  createJournalArticle: (data: any) => fetch('/api/pages?type=journal', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()).then(d => { bust('/api/pages?type=journal'); return d; }),
+  updateJournalArticle: (id: string, data: any) => fetch(`/api/pages?type=journal&action=update&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()).then(d => { bust('/api/pages?type=journal'); return d; }),
+  deleteJournalArticle: (id: string) => fetch(`/api/pages?type=journal&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()).then(d => { bust('/api/pages?type=journal'); return d; }),
   translateJournalArticle: (id: string) => fetch(`/api/pages?type=journal&action=translate&id=${id}`, { method: 'POST', headers: h() }).then(r => r.json()),
   getJournalReactions: (articleId: string) => fetch(`/api/pages?type=journal&action=reactions&id=${articleId}`, { headers: h() }).then(r => r.json()),
   reactJournalArticle: (articleId: string, type: 'love' | 'save') => fetch('/api/pages?type=journal&action=react', { method: 'POST', headers: h(), body: JSON.stringify({ article_id: articleId, type }) }).then(r => r.json()),
@@ -267,17 +292,17 @@ export const api = {
   getSavedJournalArticles: () => fetch('/api/pages?type=journal&action=saved', { headers: h() }).then(r => r.json()),
 
   // Theme
-  getCategories: () => fetch('/api/categories').then(r => r.json()),
+  getCategories: () => cfetch('/api/categories', TTL_LONG),
   getAdminCategories: () => fetch('/api/categories', { headers: h() }).then(r => r.json()),
   getPages: () => fetch('/api/pages', { headers: h() }).then(r => r.json()),
-  getPage: (slug: string) => fetch(`/api/pages?slug=${slug}`).then(r => r.json()),
+  getPage: (slug: string) => cfetch(`/api/pages?slug=${slug}`, TTL_LONG),
 
   // Legal Pages
-  getLegalPages: () => fetch('/api/pages?type=legal', { headers: h() }).then(r => r.json()),
-  getLegalPage: (slug: string) => fetch(`/api/pages?type=legal&slug=${encodeURIComponent(slug)}`).then(r => r.json()),
-  createLegalPage: (data: any) => fetch('/api/pages?type=legal', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
-  updateLegalPage: (id: string, data: any) => fetch(`/api/pages?type=legal&id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
-  deleteLegalPage: (id: string) => fetch(`/api/pages?type=legal&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
-  getTheme: () => fetch('/api/theme').then(r => r.json()),
-  saveTheme: (data: any) => fetch('/api/theme', { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
+  getLegalPages: () => cfetch('/api/pages?type=legal', TTL_LONG),
+  getLegalPage: (slug: string) => cfetch(`/api/pages?type=legal&slug=${encodeURIComponent(slug)}`, TTL_LONG),
+  createLegalPage: (data: any) => fetch('/api/pages?type=legal', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()).then(d => { bust('/api/pages?type=legal'); return d; }),
+  updateLegalPage: (id: string, data: any) => fetch(`/api/pages?type=legal&id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()).then(d => { bust('/api/pages?type=legal'); return d; }),
+  deleteLegalPage: (id: string) => fetch(`/api/pages?type=legal&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()).then(d => { bust('/api/pages?type=legal'); return d; }),
+  getTheme: () => cfetch('/api/theme', TTL_LONG),
+  saveTheme: (data: any) => fetch('/api/theme', { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()).then(d => { bust('/api/theme'); return d; }),
 };
