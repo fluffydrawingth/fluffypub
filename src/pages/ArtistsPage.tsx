@@ -22,7 +22,12 @@ export default function ArtistsPage() {
   return (
     <div style={{ fontFamily: theme.fontFamily }}>
       <div style={{ background:`linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, padding:'48px 24px 40px', textAlign:'center' }}>
-        <h1 style={{ fontSize:42, fontWeight:900, color:theme.textColor, margin:'0 0 12px' }}>Our Artists 🎨</h1>
+        {theme.labels?.artists_header_img && (
+          <img src={theme.labels.artists_header_img} alt="" style={{ width:'100%', maxHeight:200, objectFit:'cover', borderRadius:16, marginBottom:24, display:'block' }} />
+        )}
+        <h1 style={{ fontSize:42, fontWeight:900, color:theme.textColor, margin:'0 0 12px' }}>
+          {theme.labels?.artists_page_emoji ?? '🎨'} {theme.labels?.artists_page_title ?? 'Our Artists'}
+        </h1>
         <p style={{ color:theme.textColor+'88', fontSize:18, lineHeight:1.6 }}>Talented creators bringing joy through coloring</p>
       </div>
 

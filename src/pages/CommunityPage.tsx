@@ -121,7 +121,9 @@ export default function CommunityPage() {
 
         {/* Header — centered */}
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          {/* Single page header — editable in Admin → Theme & CMS → Page Sections (Color Your World) */}
+          {theme.labels?.community_header_img && (
+            <img src={theme.labels.community_header_img} alt="" style={{ width:'100%', maxHeight:200, objectFit:'cover', borderRadius:16, marginBottom:16, display:'block' }} />
+          )}
           <h1 style={{ fontSize: 'clamp(28px,4vw,40px)', fontWeight: 900, color: theme.textColor, margin: '0 0 4px' }}>{tRaw(theme.labels?.community_title_th || '🌈 แต่งแต้มโลกของคุณ', theme.labels?.community_title || '🌈 Color Your World')}</h1>
           <p style={{ color: theme.textColor + '88', fontSize: 17, lineHeight: 1.6, margin: '0 0 14px' }}>{tRaw(theme.labels?.community_subtitle_th || 'พื้นที่อบอุ่นสำหรับแบ่งปันผลงาน เคล็ดลับ และเครื่องมือที่ชอบ', theme.labels?.community_subtitle || 'A cozy place to share artwork, coloring tips and favorite tools.')}</p>
           {user ? (

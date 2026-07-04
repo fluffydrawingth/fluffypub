@@ -4766,6 +4766,67 @@ function ThemeTab() {
             </div>
           </div>
 
+          {/* ── Card: Page Headers ───────────────────────────── */}
+          <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+              <span style={{fontSize:18}}>📄</span>
+              <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Page Headers</span>
+            </div>
+            <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Customize the emoji, title, and optional banner image shown at the top of each page.</p>
+            <div style={{display:'flex',flexDirection:'column' as const,gap:14}}>
+              {([
+                ['Community','','community_title','community_title_th','community_header_img','','🌈 Color Your World','🌈 แต่งแต้มโลกของคุณ'],
+                ['Artists','artists_page_emoji','artists_page_title','artists_page_title_th','artists_header_img','🎨','Our Artists','ศิลปินของเรา'],
+                ['Free Downloads','free_emoji','free_title','free_title_th','free_header_img','⬇️','Free Downloads','ดาวน์โหลดฟรี'],
+                ['Fluffy Journal','journal_emoji','journal_title','journal_title_th','journal_header_img','📝','Fluffy Journal','Fluffy Journal'],
+              ] as [string,string,string,string,string,string,string,string][]).map(([pageLabel,emojiKey,titleKey,titleThKey,imgKey,defEmoji,defTitleEn,defTitleTh])=>{
+                const L:any = draft.labels||{};
+                const img = L[imgKey];
+                return (
+                  <div key={titleKey} style={{border:'1.5px solid #f3f4f6',borderRadius:12,padding:14}}>
+                    <div style={{fontSize:12,fontWeight:800,color:'#374151',marginBottom:10}}>{pageLabel}</div>
+                    <div style={{display:'grid',gridTemplateColumns:emojiKey?'64px 1fr 1fr':'1fr 1fr',gap:10,alignItems:'start'}}>
+                      {emojiKey && (
+                        <div>
+                          <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>Emoji</label>
+                          <input value={L[emojiKey]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [emojiKey]:e.target.value}}))} placeholder={defEmoji} maxLength={4}
+                            style={{width:'100%',padding:'8px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:18,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const,textAlign:'center' as const}} />
+                        </div>
+                      )}
+                      <div>
+                        <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>Title (EN)</label>
+                        <input value={L[titleKey]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [titleKey]:e.target.value}}))} placeholder={defTitleEn}
+                          style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} />
+                      </div>
+                      <div>
+                        <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>Title (TH)</label>
+                        <input value={L[titleThKey]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [titleThKey]:e.target.value}}))} placeholder={defTitleTh}
+                          style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} />
+                      </div>
+                    </div>
+                    <div style={{marginTop:10}}>
+                      <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:6}}>Banner Image (optional — shown above title)</label>
+                      {img && <img src={img} alt="" style={{width:'100%',maxHeight:100,objectFit:'cover',borderRadius:8,marginBottom:8}} />}
+                      <div style={{display:'flex',gap:8}}>
+                        <label style={{flex:1,padding:'8px',borderRadius:8,border:`1.5px dashed ${P}50`,textAlign:'center' as const,cursor:'pointer',fontSize:12,fontWeight:700,color:P}}>
+                          📤 Upload banner
+                          <input type="file" accept="image/*" style={{display:'none'}} onChange={async e=>{
+                            const f=e.target.files?.[0]; e.target.value='';
+                            if(!f)return;
+                            const r:any=await api.uploadFile(f,'page-headers');
+                            const url=r?.publicUrl||r?.url;
+                            if(url) setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [imgKey]:url}}));
+                          }} />
+                        </label>
+                        {img && <button onClick={()=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [imgKey]:''}}))} style={{padding:'8px 12px',borderRadius:8,border:'1.5px solid #fca5a5',background:'white',color:'#dc2626',cursor:'pointer',fontSize:12,fontWeight:700}}>Remove</button>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* ── Card: Community Badges (Creator / Customer) ────── */}
           <div style={{background:'white',border:'1.5px solid #f3f4f6',borderRadius:14,padding:'18px 20px',marginBottom:16,boxShadow:'0 1px 4px rgba(0,0,0,0.04)'}}>
             <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>

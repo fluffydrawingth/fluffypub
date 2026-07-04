@@ -62,8 +62,11 @@ export default function FreeDownloadsPage() {
 
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
+          {theme.labels?.free_header_img && (
+            <img src={theme.labels.free_header_img} alt="" style={{ width:'100%', maxHeight:200, objectFit:'cover', borderRadius:16, marginBottom:16, display:'block' }} />
+          )}
           <h1 style={{ fontSize: 34, fontWeight: 900, color: theme.textColor, margin: '0 0 6px' }}>
-            ⬇️ {tRaw('ดาวน์โหลดฟรี', 'Free Downloads')}
+            {theme.labels?.free_emoji ?? '⬇️'} {tRaw(theme.labels?.free_title_th || 'ดาวน์โหลดฟรี', theme.labels?.free_title || 'Free Downloads')}
           </h1>
           <p style={{ color: theme.textColor + '88', margin: '0 0 16px', fontSize: 17, lineHeight: 1.6 }}>
             {tRaw('ดาวน์โหลดไฟล์ฟรี ไม่ต้องสมัครสมาชิก', 'Free files — no sign-up required')}

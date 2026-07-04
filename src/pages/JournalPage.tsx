@@ -68,8 +68,11 @@ export default function JournalPage() {
 
         {/* Hero */}
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
+          {theme.labels?.journal_header_img && (
+            <img src={theme.labels.journal_header_img} alt="" style={{ width:'100%', maxHeight:200, objectFit:'cover', borderRadius:16, marginBottom:20, display:'block' }} />
+          )}
           <h1 style={{ fontSize: 40, fontWeight: 900, color: theme.textColor, margin: '0 0 10px' }}>
-            📝 {tRaw('Fluffy Journal', 'Fluffy Journal')}
+            {theme.labels?.journal_emoji ?? '📝'} {theme.labels?.journal_title ?? 'Fluffy Journal'}
           </h1>
           <p style={{ fontSize: 17, color: '#94a3b8', margin: 0, lineHeight: 1.65 }}>
             {tRaw(
