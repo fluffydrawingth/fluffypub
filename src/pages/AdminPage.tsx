@@ -4772,10 +4772,10 @@ function ThemeTab() {
               <span style={{fontSize:18}}>📄</span>
               <span style={{fontSize:14,fontWeight:800,color:'#111827'}}>Page Headers</span>
             </div>
-            <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Customize the emoji, title, and optional banner image shown at the top of each page.</p>
+            <p style={{fontSize:12,color:'#9ca3af',margin:'0 0 14px'}}>Customize the emoji or photo and title for each page. Upload a photo to replace the emoji.</p>
             <div style={{display:'flex',flexDirection:'column' as const,gap:14}}>
               {([
-                ['Community','','community_title','community_title_th','community_header_img','','🌈 Color Your World','🌈 แต่งแต้มโลกของคุณ'],
+                ['Community','community_emoji','community_title','community_title_th','community_header_img','🌈','Color Your World','แต่งแต้มโลกของคุณ'],
                 ['Artists','artists_page_emoji','artists_page_title','artists_page_title_th','artists_header_img','🎨','Our Artists','ศิลปินของเรา'],
                 ['Free Downloads','free_emoji','free_title','free_title_th','free_header_img','⬇️','Free Downloads','ดาวน์โหลดฟรี'],
                 ['Fluffy Journal','journal_emoji','journal_title','journal_title_th','journal_header_img','📝','Fluffy Journal','Fluffy Journal'],
@@ -4785,40 +4785,44 @@ function ThemeTab() {
                 return (
                   <div key={titleKey} style={{border:'1.5px solid #f3f4f6',borderRadius:12,padding:14}}>
                     <div style={{fontSize:12,fontWeight:800,color:'#374151',marginBottom:10}}>{pageLabel}</div>
-                    <div style={{display:'grid',gridTemplateColumns:emojiKey?'64px 1fr 1fr':'1fr 1fr',gap:10,alignItems:'start'}}>
-                      {emojiKey && (
-                        <div>
-                          <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>Emoji</label>
-                          <input value={L[emojiKey]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [emojiKey]:e.target.value}}))} placeholder={defEmoji} maxLength={4}
-                            style={{width:'100%',padding:'8px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:18,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const,textAlign:'center' as const}} />
+                    <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
+                      {/* Emoji / photo preview */}
+                      <div style={{width:64,height:64,borderRadius:14,background:'#f8fafc',border:'1.5px solid #e5e7eb',display:'flex',alignItems:'center',justifyContent:'center',fontSize:30,overflow:'hidden',flexShrink:0}}>
+                        {img ? <img src={img} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}} /> : (L[emojiKey]||defEmoji)}
+                      </div>
+                      <div style={{flex:1,display:'flex',flexDirection:'column' as const,gap:8}}>
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                          <div>
+                            <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:3}}>Emoji</label>
+                            <input value={L[emojiKey]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [emojiKey]:e.target.value}}))} placeholder={defEmoji} maxLength={4}
+                              style={{width:'100%',padding:'7px 8px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:18,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} />
+                          </div>
+                          <div style={{display:'flex',flexDirection:'column' as const,justifyContent:'flex-end'}}>
+                            <label style={{flex:1,padding:'7px',borderRadius:8,border:`1.5px dashed ${P}50`,textAlign:'center' as const,cursor:'pointer',fontSize:11,fontWeight:700,color:P,display:'flex',alignItems:'center',justifyContent:'center',gap:4}}>
+                              📷 {img ? 'Replace photo' : 'Upload photo'}
+                              <input type="file" accept="image/*" style={{display:'none'}} onChange={async e=>{
+                                const f=e.target.files?.[0]; e.target.value='';
+                                if(!f)return;
+                                const r:any=await api.uploadFile(f,'page-headers');
+                                const url=r?.publicUrl||r?.url;
+                                if(url) setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [imgKey]:url}}));
+                              }} />
+                            </label>
+                          </div>
                         </div>
-                      )}
-                      <div>
-                        <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>Title (EN)</label>
-                        <input value={L[titleKey]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [titleKey]:e.target.value}}))} placeholder={defTitleEn}
-                          style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} />
-                      </div>
-                      <div>
-                        <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:4}}>Title (TH)</label>
-                        <input value={L[titleThKey]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [titleThKey]:e.target.value}}))} placeholder={defTitleTh}
-                          style={{width:'100%',padding:'8px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} />
-                      </div>
-                    </div>
-                    <div style={{marginTop:10}}>
-                      <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:6}}>Banner Image (optional — shown above title)</label>
-                      {img && <img src={img} alt="" style={{width:'100%',maxHeight:100,objectFit:'cover',borderRadius:8,marginBottom:8}} />}
-                      <div style={{display:'flex',gap:8}}>
-                        <label style={{flex:1,padding:'8px',borderRadius:8,border:`1.5px dashed ${P}50`,textAlign:'center' as const,cursor:'pointer',fontSize:12,fontWeight:700,color:P}}>
-                          📤 Upload banner
-                          <input type="file" accept="image/*" style={{display:'none'}} onChange={async e=>{
-                            const f=e.target.files?.[0]; e.target.value='';
-                            if(!f)return;
-                            const r:any=await api.uploadFile(f,'page-headers');
-                            const url=r?.publicUrl||r?.url;
-                            if(url) setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [imgKey]:url}}));
-                          }} />
-                        </label>
-                        {img && <button onClick={()=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [imgKey]:''}}))} style={{padding:'8px 12px',borderRadius:8,border:'1.5px solid #fca5a5',background:'white',color:'#dc2626',cursor:'pointer',fontSize:12,fontWeight:700}}>Remove</button>}
+                        {img && <button onClick={()=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [imgKey]:''}}))} style={{alignSelf:'flex-start' as const,padding:'5px 12px',borderRadius:8,border:'1.5px solid #fca5a5',background:'white',color:'#dc2626',cursor:'pointer',fontSize:11,fontWeight:700}}>✕ Remove photo — use emoji</button>}
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                          <div>
+                            <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:3}}>Title (EN)</label>
+                            <input value={L[titleKey]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [titleKey]:e.target.value}}))} placeholder={defTitleEn}
+                              style={{width:'100%',padding:'7px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} />
+                          </div>
+                          <div>
+                            <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:3}}>Title (TH)</label>
+                            <input value={L[titleThKey]||''} onChange={e=>setDraft((d:any)=>({...d,labels:{...(d.labels||{}), [titleThKey]:e.target.value}}))} placeholder={defTitleTh}
+                              style={{width:'100%',padding:'7px 10px',borderRadius:8,border:'1.5px solid #e5e7eb',fontSize:13,outline:'none',fontFamily:'inherit',boxSizing:'border-box' as const}} />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
