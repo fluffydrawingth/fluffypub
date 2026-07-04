@@ -1551,6 +1551,22 @@ function ArtistsTab() {
     else { setMsg(next?'✓ Shown on homepage':'✓ Hidden from homepage'); setTimeout(()=>setMsg(''),2500); }
   };
 
+  const moveArtist = async (idx:number, dir:-1|1) => {
+    const target = idx + dir;
+    if (target < 0 || target >= artists.length) return;
+    // Swap positions in local state immediately
+    const next = [...artists];
+    [next[idx], next[target]] = [next[target], next[idx]];
+    // Assign sort_order based on new positions
+    const updated = next.map((a:any, i:number) => ({ ...a, sort_order: i }));
+    setArtists(updated);
+    // Persist both swapped artists
+    await Promise.all([
+      api.updateArtist(updated[idx].id, { sort_order: idx }),
+      api.updateArtist(updated[target].id, { sort_order: target }),
+    ]);
+  };
+
   const resetForm = () => {
     setName(''); setSlug(''); setBio(''); setEmail(''); setAvatarUrl(''); setCoverUrl('');
     setWebsite(''); setInstagram(''); setTwitter(''); setArtistStatus('active');
@@ -1693,11 +1709,17 @@ function ArtistsTab() {
       {/* Artist table */}
       <div style={{...card,overflow:'hidden'}}>
         <table style={{width:'100%',borderCollapse:'collapse'}}>
-          <thead><tr style={{borderBottom:'2px solid #f3f4f6',background:'#fafafa'}}>{['','ARTIST','SLUG','PRODUCTS','STATUS','HOMEPAGE',''].map((h,i)=><th key={i} style={{textAlign:'left',padding:'12px 16px',fontSize:11,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}</tr></thead>
-          <tbody>{artists.map(a=>(
+          <thead><tr style={{borderBottom:'2px solid #f3f4f6',background:'#fafafa'}}>{['ORDER','','ARTIST','SLUG','PRODUCTS','STATUS','HOMEPAGE',''].map((h,i)=><th key={i} style={{textAlign:'left',padding:'12px 16px',fontSize:11,color:'#9ca3af',fontWeight:700,letterSpacing:0.5}}>{h}</th>)}</tr></thead>
+          <tbody>{artists.map((a,idx)=>(
             <tr key={a.id} style={{borderBottom:'1px solid #f9fafb'}}
               onMouseEnter={e=>(e.currentTarget.style.background='#fafafa')}
               onMouseLeave={e=>(e.currentTarget.style.background='white')}>
+              <td style={{padding:'8px 12px',width:64}}>
+                <div style={{display:'flex',flexDirection:'column' as const,gap:2}}>
+                  <button onClick={()=>moveArtist(idx,-1)} disabled={idx===0} style={{padding:'2px 8px',borderRadius:6,border:'1.5px solid #e5e7eb',background:idx===0?'#f9fafb':'white',cursor:idx===0?'default':'pointer',fontSize:13,color:idx===0?'#d1d5db':'#374151',lineHeight:1}}>▲</button>
+                  <button onClick={()=>moveArtist(idx,1)} disabled={idx===artists.length-1} style={{padding:'2px 8px',borderRadius:6,border:'1.5px solid #e5e7eb',background:idx===artists.length-1?'#f9fafb':'white',cursor:idx===artists.length-1?'default':'pointer',fontSize:13,color:idx===artists.length-1?'#d1d5db':'#374151',lineHeight:1}}>▼</button>
+                </div>
+              </td>
               <td style={{padding:'12px 16px',width:52}}>
                 <div style={{width:40,height:40,borderRadius:'50%',background:'#fce7f3',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',fontSize:20}}>
                   {a.avatar_url?<img src={a.avatar_url} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:'🎨'}

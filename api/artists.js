@@ -294,10 +294,11 @@ module.exports = async function handler(req, res) {
     const { data: products } = await supabase.from('products').select('artist_id').eq('active', true);
     const result = realArtists.map(a => ({
       ...a,
-      // Homepage flag lives in social_links (migration-free)
+      // Homepage flag and sort_order live in social_links (migration-free)
       show_on_homepage: !!(a.social_links && a.social_links.show_on_homepage),
+      sort_order: a.social_links?.sort_order ?? 9999,
       productCount: (products || []).filter(p => p.artist_id === a.id).length,
-    }));
+    })).sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
     return json(res, 200, result);
   }
 
@@ -365,11 +366,14 @@ module.exports = async function handler(req, res) {
     const allowed = ['name','artist_slug','bio','avatar_url','cover_image_url','website','social_links','artist_status'];
     const updates = {};
     allowed.forEach(k => { if (req.body[k] !== undefined) updates[k] = req.body[k]; });
-    // Homepage flag stored inside social_links (migration-free)
-    if (req.body.show_on_homepage !== undefined) {
+    // Homepage flag and sort_order stored inside social_links (migration-free)
+    if (req.body.show_on_homepage !== undefined || req.body.sort_order !== undefined) {
       const { data: cur } = await supabase.from('profiles').select('social_links').eq('id', id).single();
       const sl = (cur && cur.social_links) || {};
-      updates.social_links = { ...sl, ...(updates.social_links || {}), show_on_homepage: !!req.body.show_on_homepage };
+      const patch = {};
+      if (req.body.show_on_homepage !== undefined) patch.show_on_homepage = !!req.body.show_on_homepage;
+      if (req.body.sort_order !== undefined) patch.sort_order = parseInt(req.body.sort_order) || 0;
+      updates.social_links = { ...sl, ...(updates.social_links || {}), ...patch };
     }
     updates.updated_at = new Date().toISOString();
     const { data, error } = await supabase.from('profiles').update(updates).eq('id', id).select().single();
