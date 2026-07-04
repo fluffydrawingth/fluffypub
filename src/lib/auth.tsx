@@ -53,10 +53,29 @@ function decodeJwt(token: string): any {
   } catch { return null; }
 }
 
+// Read cached user from localStorage synchronously (used for instant initial state)
+function readCachedUser(): AuthUser | null {
+  try {
+    const t = localStorage.getItem(TOKEN_KEY);
+    if (!t || !decodeJwt(t)) return null; // no token or expired
+    const raw = localStorage.getItem(USER_KEY);
+    if (!raw) return null;
+    const u: AuthUser = JSON.parse(raw);
+    if (u.email === ADMIN_EMAIL) u.role = 'admin';
+    return u;
+  } catch { return null; }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  // Initialize from localStorage so returning users never see a loading spinner.
+  // The background /me verify below still runs to catch expired tokens or role changes.
+  const [user, setUser] = useState<AuthUser | null>(() => readCachedUser());
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
-  const [loading, setLoading] = useState(true);
+  // loading=true only when there's a token but no cached user (e.g. very first login device)
+  const [loading, setLoading] = useState<boolean>(() => {
+    const t = localStorage.getItem(TOKEN_KEY);
+    return !!t && !readCachedUser();
+  });
 
   const refreshUser = async (_options?: { force?: boolean }): Promise<AuthUser | null> => {
     const t = localStorage.getItem(TOKEN_KEY);
