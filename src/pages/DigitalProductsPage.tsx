@@ -61,8 +61,13 @@ export default function DigitalProductsPage() {
       <style>{`@media(max-width:640px){.prod-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important;}}`}</style>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 16px' }}>
         <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 44, lineHeight: 1, marginBottom: 6 }}>
+            {theme.labels?.digital_header_img
+              ? <img src={theme.labels.digital_header_img} alt="" style={{ width:52, height:52, objectFit:'cover', borderRadius:12, display:'inline-block', verticalAlign:'middle' }} />
+              : (theme.labels?.digital_emoji ?? '💾')}
+          </div>
           <h1 style={{ fontSize: 34, fontWeight: 900, color: theme.textColor, margin: '0 0 6px', fontFamily: theme.fontFamily }}>
-            {tRaw('สินค้าดิจิทัล', 'Digital Products')} 💾
+            {tRaw(theme.labels?.digital_title_th || 'สินค้าดิจิทัล', theme.labels?.digital_title || 'Digital Products')}
           </h1>
           <p style={{ color: theme.textColor + '88', margin: 0, fontSize: 17, lineHeight: 1.6 }}>
             {tRaw('ดาวน์โหลดได้ทันทีหลังชำระเงิน', 'Instant download after payment')}

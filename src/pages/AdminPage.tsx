@@ -4776,6 +4776,8 @@ function ThemeTab() {
             <div style={{display:'flex',flexDirection:'column' as const,gap:14}}>
               {([
                 ['Community','community_emoji','community_title','community_title_th','community_header_img','🌈','Color Your World','แต่งแต้มโลกของคุณ'],
+                ['Shop (All Books)','shop_emoji','shop_title','shop_title_th','shop_header_img','📚','All Books','สินค้าทั้งหมด'],
+                ['Digital Products','digital_emoji','digital_title','digital_title_th','digital_header_img','💾','Digital Products','สินค้าดิจิทัล'],
                 ['Artists','artists_page_emoji','artists_page_title','artists_page_title_th','artists_header_img','🎨','Our Artists','ศิลปินของเรา'],
                 ['Free Downloads','free_emoji','free_title','free_title_th','free_header_img','⬇️','Free Downloads','ดาวน์โหลดฟรี'],
                 ['Fluffy Journal','journal_emoji','journal_title','journal_title_th','journal_header_img','📝','Fluffy Journal','Fluffy Journal'],

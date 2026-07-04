@@ -94,8 +94,13 @@ export default function ProductsPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 16px' }}>
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 44, lineHeight: 1, marginBottom: 6 }}>
+            {theme.labels?.shop_header_img
+              ? <img src={theme.labels.shop_header_img} alt="" style={{ width:52, height:52, objectFit:'cover', borderRadius:12, display:'inline-block', verticalAlign:'middle' }} />
+              : (theme.labels?.shop_emoji ?? '📚')}
+          </div>
           <h1 style={{ fontSize: 34, fontWeight: 900, color: theme.textColor, margin: '0 0 6px', fontFamily: theme.fontFamily }}>
-            {tRaw('สินค้าทั้งหมด','All Books')} 📚
+            {tRaw(theme.labels?.shop_title_th || 'สินค้าทั้งหมด', theme.labels?.shop_title || 'All Books')}
           </h1>
           <p style={{ color: theme.textColor + '88', margin: 0, fontSize: 17, lineHeight: 1.6 }}>
             {tRaw('ค้นพบสมุดระบายสีที่คุณชอบ','Discover your perfect coloring book')}
