@@ -5927,7 +5927,6 @@ function ArtistPayoutsTab() {
 
   const extTotal = externalSales.reduce((s,i) => s + (Number(i.royalty_amount) || 0), 0);
   const extByChannel = (ch: string) => externalSales.filter(i=>i.channel===ch).reduce((s,i)=>s+(Number(i.royalty_amount)||0), 0);
-  const grandTotalTHB = (breakdown?.totalEarningTHB ?? 0) + extTotal;
 
   const months = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const years = Array.from({ length: 4 }, (_,i) => now.getFullYear() - i);
@@ -5959,6 +5958,8 @@ function ArtistPayoutsTab() {
   const breakdown = selArtist && orders.length >= 0
     ? calcPayoutBreakdown(orders, productMap, selMonth, selYear)
     : null;
+
+  const grandTotalTHB = (breakdown?.totalEarningTHB ?? 0) + extTotal;
 
   const thisPayout = payouts.find(p => p.month === selMonth && p.year === selYear);
 
