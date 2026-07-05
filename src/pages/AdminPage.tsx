@@ -5904,6 +5904,31 @@ function ArtistPayoutsTab() {
   const [fPaidAt, setFPaidAt] = useState('');
   const [proofUploading, setProofUploading] = useState(false);
 
+  // External sales state
+  const [externalSales, setExternalSales] = useState<any[]>([]);
+  const [extLocked, setExtLocked]         = useState(false);
+  const [showExtForm, setShowExtForm]     = useState(false);
+  const [editExtIdx, setEditExtIdx]       = useState<number|null>(null);
+  const [extCh, setExtCh]                 = useState('tiktok');
+  const [extProd, setExtProd]             = useState('');
+  const [extQty, setExtQty]               = useState('1');
+  const [extGross, setExtGross]           = useState('');
+  const [extNet, setExtNet]               = useState('');
+  const [extRoyalty, setExtRoyalty]       = useState('');
+  const [extNote, setExtNote]             = useState('');
+
+  const CH_LABELS: Record<string,string> = { tiktok:'TikTok', shopee:'Shopee', other:'Other' };
+
+  const resetExtForm = () => {
+    setShowExtForm(false); setEditExtIdx(null);
+    setExtCh('tiktok'); setExtProd(''); setExtQty('1');
+    setExtGross(''); setExtNet(''); setExtRoyalty(''); setExtNote('');
+  };
+
+  const extTotal = externalSales.reduce((s,i) => s + (Number(i.royalty_amount) || 0), 0);
+  const extByChannel = (ch: string) => externalSales.filter(i=>i.channel===ch).reduce((s,i)=>s+(Number(i.royalty_amount)||0), 0);
+  const grandTotalTHB = (breakdown?.totalEarningTHB ?? 0) + extTotal;
+
   const months = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const years = Array.from({ length: 4 }, (_,i) => now.getFullYear() - i);
 
@@ -5950,13 +5975,18 @@ function ArtistPayoutsTab() {
       setFNote(thisPayout.payout_note || '');
       setFProof(thisPayout.payout_proof_url || '');
       setFPaidAt(thisPayout.paid_at ? thisPayout.paid_at.slice(0, 10) : '');
+      setExternalSales(Array.isArray(thisPayout.external_sales) ? thisPayout.external_sales : []);
+      setExtLocked(thisPayout.status === 'paid');
     } else {
       setEditId(null);
       setFCalcTHB(breakdown ? String(Math.round(breakdown.totalEarningTHB * 100) / 100) : '');
       setFCalcUSD(breakdown ? String(Math.round(breakdown.totalEarningUSD * 10000) / 10000) : '');
       setFPaidTHB(''); setFPaidUSD(''); setFRate('');
       setFStatus('pending'); setFNote(''); setFProof(''); setFPaidAt('');
+      setExternalSales([]);
+      setExtLocked(false);
     }
+    resetExtForm();
   }, [selMonth, selYear, selArtist, payouts.length, orders.length]);
 
   const uploadProof = async (file: File) => {
@@ -5997,6 +6027,7 @@ function ArtistPayoutsTab() {
         digital_gross_usd: breakdown.digitalGrossUSD,
         digital_earning_usd: breakdown.digitalEarningUSD,
       } : {}),
+      external_sales: externalSales,
     };
     if (editId) payload.id = editId;
     const result = await api.saveArtistPayout(payload);
@@ -6114,6 +6145,219 @@ function ArtistPayoutsTab() {
         </div>
       )}
 
+      {/* ── B) External Sales (Manual) ─────────────────────── */}
+      {selArtist && !calcLoading && (
+        <div style={{ ...card, padding:20, marginBottom:20 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+            <div>
+              <h3 style={{ fontSize:15, fontWeight:800, color:'#111827', margin:'0 0 2px' }}>
+                🛒 External Sales (Manual)
+              </h3>
+              <span style={{ fontSize:11, color:'#9ca3af' }}>TikTok, Shopee, Other — {artistName ? `${artistName} · ` : ''}{months[selMonth]} {selYear}</span>
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+              {extLocked && (
+                <button onClick={()=>setExtLocked(false)}
+                  style={{ padding:'6px 14px', borderRadius:10, border:'1.5px solid #d97706', background:'#fef3c7', color:'#d97706', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+                  🔓 Unlock to edit
+                </button>
+              )}
+              {!extLocked && !showExtForm && (
+                <button onClick={()=>{ resetExtForm(); setShowExtForm(true); }}
+                  style={{ padding:'6px 14px', borderRadius:10, border:'none', background:P, color:'white', cursor:'pointer', fontSize:12, fontWeight:700 }}>
+                  + Add external sale
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Add / Edit row form */}
+          {!extLocked && showExtForm && (
+            <div style={{ background:'#f8fafc', borderRadius:12, padding:14, marginBottom:16, border:'1.5px solid #e5e7eb' }}>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))', gap:10, marginBottom:10 }}>
+                <div>
+                  <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#374151', marginBottom:3 }}>Channel *</label>
+                  <select value={extCh} onChange={e=>setExtCh(e.target.value)}
+                    style={{ width:'100%', padding:'7px 10px', borderRadius:8, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none' }}>
+                    <option value="tiktok">TikTok</option>
+                    <option value="shopee">Shopee</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div style={{ gridColumn:'span 2' }}>
+                  <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#374151', marginBottom:3 }}>Product *</label>
+                  <select value={extProd} onChange={e=>{
+                    setExtProd(e.target.value);
+                    const prod = products.find((p:any)=>p.id===e.target.value);
+                    if (prod?.artist_physical_royalty_thb && extQty) {
+                      setExtRoyalty(String(prod.artist_physical_royalty_thb * Number(extQty)));
+                    }
+                  }} style={{ width:'100%', padding:'7px 10px', borderRadius:8, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none' }}>
+                    <option value="">Select product…</option>
+                    {products.map((p:any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#374151', marginBottom:3 }}>Qty *</label>
+                  <input type="number" min="1" value={extQty} onChange={e=>{
+                    setExtQty(e.target.value);
+                    const prod = products.find((p:any)=>p.id===extProd);
+                    if (prod?.artist_physical_royalty_thb && e.target.value) {
+                      setExtRoyalty(String(prod.artist_physical_royalty_thb * Number(e.target.value)));
+                    }
+                  }} style={{ width:'100%', padding:'7px 10px', borderRadius:8, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none', boxSizing:'border-box' as const }} />
+                </div>
+                <div>
+                  <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#374151', marginBottom:3 }}>Gross ฿ <span style={{ color:'#9ca3af', fontWeight:400 }}>(opt)</span></label>
+                  <input type="number" value={extGross} onChange={e=>setExtGross(e.target.value)} placeholder="—"
+                    style={{ width:'100%', padding:'7px 10px', borderRadius:8, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none', boxSizing:'border-box' as const }} />
+                </div>
+                <div>
+                  <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#374151', marginBottom:3 }}>Net ฿ <span style={{ color:'#9ca3af', fontWeight:400 }}>(opt)</span></label>
+                  <input type="number" value={extNet} onChange={e=>setExtNet(e.target.value)} placeholder="—"
+                    style={{ width:'100%', padding:'7px 10px', borderRadius:8, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none', boxSizing:'border-box' as const }} />
+                </div>
+                <div>
+                  <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#374151', marginBottom:3 }}>Royalty ฿ <span style={{ color:'#9ca3af', fontWeight:400 }}>(opt)</span></label>
+                  <input type="number" value={extRoyalty} onChange={e=>setExtRoyalty(e.target.value)} placeholder="auto-suggested"
+                    style={{ width:'100%', padding:'7px 10px', borderRadius:8, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none', boxSizing:'border-box' as const }} />
+                </div>
+                <div style={{ gridColumn:'1/-1' }}>
+                  <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#374151', marginBottom:3 }}>Note <span style={{ color:'#9ca3af', fontWeight:400 }}>(opt)</span></label>
+                  <input value={extNote} onChange={e=>setExtNote(e.target.value)} placeholder="e.g. event sale, bundle discount…"
+                    style={{ width:'100%', padding:'7px 10px', borderRadius:8, border:'1.5px solid #e5e7eb', fontSize:13, outline:'none', boxSizing:'border-box' as const }} />
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:8 }}>
+                <button onClick={()=>{
+                  if (!extProd) { alert('Please select a product.'); return; }
+                  const prod = products.find((p:any)=>p.id===extProd);
+                  const item = {
+                    id: editExtIdx !== null ? externalSales[editExtIdx].id : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                    channel: extCh,
+                    product_id: extProd,
+                    product_name: prod?.name || extProd,
+                    qty: Number(extQty) || 0,
+                    gross_amount: extGross !== '' ? Number(extGross) : null,
+                    net_amount: extNet !== '' ? Number(extNet) : null,
+                    royalty_amount: extRoyalty !== '' ? Number(extRoyalty) : null,
+                    note: extNote || null,
+                  };
+                  if (editExtIdx !== null) {
+                    setExternalSales((prev:any[]) => { const n=[...prev]; n[editExtIdx]=item; return n; });
+                  } else {
+                    setExternalSales((prev:any[]) => [...prev, item]);
+                  }
+                  resetExtForm();
+                }} style={{ padding:'7px 18px', borderRadius:10, border:'none', background:P, color:'white', cursor:'pointer', fontSize:13, fontWeight:700 }}>
+                  {editExtIdx !== null ? 'Update item' : 'Add item'}
+                </button>
+                <button onClick={resetExtForm} style={{ padding:'7px 14px', borderRadius:10, border:'1.5px solid #e5e7eb', background:'white', color:'#374151', cursor:'pointer', fontSize:13, fontWeight:600 }}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {/* Sales table */}
+          {externalSales.length > 0 ? (
+            <>
+              <div style={{ overflowX:'auto' as const }}>
+                <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13, minWidth:500 }}>
+                  <thead><tr style={{ background:'#f9fafb', borderBottom:'2px solid #f3f4f6' }}>
+                    {['Channel','Product','Qty','Royalty ฿','Note',...(!extLocked?['']:[''])].map(h=>
+                      <th key={h} style={{ textAlign:'left', padding:'8px 10px', fontSize:11, color:'#9ca3af', fontWeight:700, whiteSpace:'nowrap' as const }}>{h}</th>
+                    )}
+                  </tr></thead>
+                  <tbody>
+                    {(['tiktok','shopee','other'] as const).map(ch => {
+                      const rows = externalSales.map((item,idx)=>({item,idx})).filter(({item})=>item.channel===ch);
+                      if (!rows.length) return null;
+                      return (
+                        <React.Fragment key={ch}>
+                          <tr><td colSpan={extLocked?5:6} style={{ padding:'6px 10px 2px', fontSize:11, fontWeight:800, color:'#6b7280', background:'#f9fafb', borderBottom:'1px solid #f3f4f6' }}>{CH_LABELS[ch]}</td></tr>
+                          {rows.map(({item,idx})=>(
+                            <tr key={item.id} style={{ borderBottom:'1px solid #f9fafb' }}>
+                              <td style={{ padding:'8px 10px', color:'#374151', width:80 }}></td>
+                              <td style={{ padding:'8px 10px', fontWeight:600, color:'#111827' }}>{item.product_name}</td>
+                              <td style={{ padding:'8px 10px', color:'#374151', textAlign:'center' as const, width:60 }}>{item.qty}</td>
+                              <td style={{ padding:'8px 10px', fontWeight:700, color:'#059669', whiteSpace:'nowrap' as const }}>
+                                {item.royalty_amount != null ? thbFmt(item.royalty_amount) : '—'}
+                              </td>
+                              <td style={{ padding:'8px 10px', color:'#9ca3af', fontSize:12 }}>{item.note || '—'}</td>
+                              {!extLocked && (
+                                <td style={{ padding:'8px 10px', whiteSpace:'nowrap' as const }}>
+                                  <div style={{ display:'flex', gap:6 }}>
+                                    <button onClick={()=>{
+                                      setEditExtIdx(idx); setExtCh(item.channel); setExtProd(item.product_id||'');
+                                      setExtQty(String(item.qty)); setExtGross(item.gross_amount!=null?String(item.gross_amount):'');
+                                      setExtNet(item.net_amount!=null?String(item.net_amount):'');
+                                      setExtRoyalty(item.royalty_amount!=null?String(item.royalty_amount):'');
+                                      setExtNote(item.note||''); setShowExtForm(true);
+                                    }} style={{ padding:'4px 10px', borderRadius:8, border:'1px solid #e5e7eb', background:'white', cursor:'pointer', fontSize:12, fontWeight:600 }}>Edit</button>
+                                    <button onClick={()=>setExternalSales((prev:any[])=>prev.filter((_,i)=>i!==idx))}
+                                      style={{ padding:'4px 10px', borderRadius:8, border:'1px solid #fca5a5', background:'#fef2f2', cursor:'pointer', fontSize:12, fontWeight:700, color:'#dc2626' }}>Del</button>
+                                  </div>
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Channel subtotals + grand */}
+              <div style={{ display:'flex', flexWrap:'wrap' as const, gap:10, marginTop:14, padding:'12px 14px', background:'#f8fafc', borderRadius:12, border:'1.5px solid #f3f4f6' }}>
+                {(['tiktok','shopee','other'] as const).filter(ch=>externalSales.some(i=>i.channel===ch)).map(ch=>(
+                  <div key={ch} style={{ fontSize:13 }}>
+                    <span style={{ color:'#6b7280' }}>{CH_LABELS[ch]}:</span>{' '}
+                    <span style={{ fontWeight:700 }}>{thbFmt(extByChannel(ch))}</span>
+                  </div>
+                ))}
+                <div style={{ marginLeft:'auto', fontSize:14, fontWeight:900, color:'#111827' }}>
+                  External total: {thbFmt(extTotal)}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{ textAlign:'center' as const, color:'#9ca3af', fontSize:13, padding:'20px 0' }}>
+              No external sales added yet.{!extLocked && ' Click "+ Add external sale" to start.'}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── C) Grand Total summary ────────────────────────── */}
+      {selArtist && !calcLoading && breakdown && (
+        <div style={{ ...card, padding:16, marginBottom:20, background:'#fdf4ff', border:'1.5px solid #e9d5ff' }}>
+          <div style={{ fontSize:13, fontWeight:800, color:'#6b21a8', marginBottom:10 }}>
+            💰 Total Payout — {artistName ? `${artistName} · ` : ''}{months[selMonth]} {selYear}
+          </div>
+          <div style={{ display:'flex', flexDirection:'column' as const, gap:7 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', fontSize:13 }}>
+              <span style={{ color:'#374151' }}>A) Fluffy Pub (auto)</span>
+              <span style={{ fontWeight:700 }}>
+                {thbFmt(breakdown.totalEarningTHB)}
+                {breakdown.totalEarningUSD > 0 && <span style={{ color:'#1d4ed8', marginLeft:8 }}>+ {usdFmt(breakdown.totalEarningUSD)}</span>}
+              </span>
+            </div>
+            <div style={{ display:'flex', justifyContent:'space-between', fontSize:13 }}>
+              <span style={{ color:'#374151' }}>B) External (manual)</span>
+              <span style={{ fontWeight:700 }}>{thbFmt(extTotal)}</span>
+            </div>
+            <div style={{ height:1, background:'#e9d5ff', margin:'2px 0' }} />
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <span style={{ fontWeight:800, color:'#4c1d95', fontSize:14 }}>C) Grand Total</span>
+              <span style={{ fontSize:17, fontWeight:900, color:'#4c1d95' }}>
+                {thbFmt(grandTotalTHB)}
+                {breakdown.totalEarningUSD > 0 && <span style={{ fontSize:13, color:'#1d4ed8', marginLeft:8 }}>+ {usdFmt(breakdown.totalEarningUSD)}</span>}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit / Create form */}
       {selArtist && !calcLoading && (
         <div style={{ ...card, padding:20, marginBottom:20 }}>
@@ -6214,16 +6458,18 @@ function ArtistPayoutsTab() {
             <div style={{ overflowX:'auto' as const }}>
               <table style={{ width:'100%', borderCollapse:'collapse', minWidth:600 }}>
                 <thead><tr style={{ background:'#f9fafb', borderBottom:'2px solid #f3f4f6' }}>
-                  {['Period','Calc THB','Calc USD','Paid THB','Paid USD','Rate','Status','Proof',''].map(h=><th key={h} style={{ textAlign:'left', padding:'10px 12px', fontSize:11, color:'#9ca3af', fontWeight:700, whiteSpace:'nowrap' as const }}>{h}</th>)}
+                  {['Period','Fluffy Pub THB','Fluffy Pub USD','External ฿','Paid THB','Paid USD','Status','Proof',''].map(h=><th key={h} style={{ textAlign:'left', padding:'10px 12px', fontSize:11, color:'#9ca3af', fontWeight:700, whiteSpace:'nowrap' as const }}>{h}</th>)}
                 </tr></thead>
                 <tbody>{payouts.map(py=>(
                   <tr key={py.id} style={{ borderBottom:'1px solid #f9fafb' }}>
                     <td style={{ padding:'10px 12px', fontWeight:700, color:'#111827', fontSize:13, whiteSpace:'nowrap' as const }}>{months[py.month]} {py.year}</td>
                     <td style={{ padding:'10px 12px', fontSize:12, fontWeight:700 }}>{thbFmt(py.calculated_earning_thb || py.calculated_earning || 0)}</td>
                     <td style={{ padding:'10px 12px', fontSize:12, fontWeight:700, color:'#1e40af' }}>{usdFmt(py.calculated_earning_usd || 0)}</td>
+                    <td style={{ padding:'10px 12px', fontSize:12, fontWeight:700, color:'#7c3aed' }}>
+                      {Array.isArray(py.external_sales) && py.external_sales.length > 0 ? thbFmt(py.external_sales.reduce((s:number,i:any)=>s+(Number(i.royalty_amount)||0),0)) : '—'}
+                    </td>
                     <td style={{ padding:'10px 12px', fontSize:12, fontWeight:700, color:'#059669' }}>{thbFmt(py.paid_amount_thb || py.paid_amount || 0)}</td>
                     <td style={{ padding:'10px 12px', fontSize:12, fontWeight:700, color:'#0070ba' }}>{usdFmt(py.paid_amount_usd || 0)}</td>
-                    <td style={{ padding:'10px 12px', fontSize:11, color:'#6b7280' }}>{py.usd_to_thb_rate ? `×${py.usd_to_thb_rate}` : '—'}</td>
                     <td style={{ padding:'10px 12px' }}><span style={{ background:py.status==='paid'?'#d1fae5':'#fef3c7', color:py.status==='paid'?'#059669':'#d97706', borderRadius:20, padding:'3px 10px', fontSize:11, fontWeight:700 }}>{py.status==='paid'?'✅ Paid':'⏳ Pending'}</span></td>
                     <td style={{ padding:'10px 12px' }}>{py.payout_proof_url ? <a href={py.payout_proof_url} target="_blank" rel="noreferrer" style={{ color:P, fontWeight:700, fontSize:12 }}>View</a> : <span style={{ color:'#9ca3af', fontSize:12 }}>—</span>}</td>
                     <td style={{ padding:'10px 12px' }}>

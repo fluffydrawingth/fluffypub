@@ -238,6 +238,7 @@ module.exports = async function handler(req, res) {
       'digital_qty_thb','digital_gross_thb','digital_earning_thb',
       'digital_qty_usd','digital_gross_usd','digital_earning_usd',
       'status','payout_proof_url','payout_note','paid_at',
+      'external_sales',
       // legacy
       'calculated_earning','paid_amount','currency',
     ];
