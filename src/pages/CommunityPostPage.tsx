@@ -250,9 +250,9 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
               <>
                 {/* 1. Header + Caption box */}
                 {(post.post_header || post.caption) && (
-                  <div style={{ background: p + '0c', border: `1.5px solid ${p}20`, borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
-                    {post.post_header && <p style={{ fontSize: 20, fontWeight: 900, color: '#1e293b', margin: '0 0 6px', lineHeight: 1.3 }}>{post.post_header}</p>}
-                    {post.caption && <p style={{ fontSize: 17, color: '#334155', lineHeight: 1.65, margin: 0, fontWeight: 500 }}>{post.caption}</p>}
+                  <div style={{ background: p + '12', borderLeft: `4px solid ${p}`, borderRadius: '0 14px 14px 0', padding: '14px 18px', marginBottom: 14 }}>
+                    {post.post_header && <p style={{ fontSize: 21, fontWeight: 900, color: p, margin: '0 0 6px', lineHeight: 1.3 }}>{post.post_header}</p>}
+                    {post.caption && <p style={{ fontSize: 16, color: '#334155', lineHeight: 1.7, margin: 0, fontWeight: 400 }}>{post.caption}</p>}
                   </div>
                 )}
 
