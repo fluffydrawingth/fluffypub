@@ -47,6 +47,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
   // Owner edit — full form
   const [editing, setEditing] = useState(false);
   const [eCaption, setECaption] = useState('');
+  const [eHeader, setEHeader] = useState('');
   const [eDetails, setEDetails] = useState<{ medium: string; brand: string }[]>([{ medium: '', brand: '' }]);
   const [eKeywords, setEKeywords] = useState<string[]>([]);
   const [ePalettes, setEPalettes] = useState<string[]>([]);
@@ -114,6 +115,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
 
   const startEdit = () => {
     setECaption(post.caption || '');
+    setEHeader(post.post_header || '');
     // Load structured rows from coloring_details, else derive from legacy mediums/markers
     const cd = Array.isArray(post.coloring_details) && post.coloring_details.length
       ? post.coloring_details.map((d: any) => ({ medium: d.medium || '', brand: d.brand || '' }))
@@ -133,6 +135,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
   const saveEdit = async () => {
     setSavingEdit(true);
     const body: any = {
+      post_header: eHeader.trim() || null,
       caption: eCaption,
       coloring_details: eDetails.filter(d => d.medium.trim()).map(d => ({ medium: d.medium.trim(), brand: d.brand.trim() })),
       mediums: [...new Set(eDetails.map(d => d.medium.trim()).filter(Boolean))],
@@ -229,6 +232,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
             {editing ? (
               <FullEditForm
                 post={post} p={p} theme={theme} tRaw={tRaw} efld={efld}
+                eHeader={eHeader} setEHeader={setEHeader}
                 eCaption={eCaption} setECaption={setECaption}
                 eDetails={eDetails} setEDetails={setEDetails}
                 eKeywords={eKeywords} setEKeywords={setEKeywords}
@@ -244,10 +248,11 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
               />
             ) : (
               <>
-                {/* 1. Caption box — prominent, at top */}
-                {post.caption && (
+                {/* 1. Header + Caption box */}
+                {(post.post_header || post.caption) && (
                   <div style={{ background: p + '0c', border: `1.5px solid ${p}20`, borderRadius: 14, padding: '14px 16px', marginBottom: 14 }}>
-                    <p style={{ fontSize: 18, color: '#334155', lineHeight: 1.65, margin: 0, fontWeight: 600 }}>{post.caption}</p>
+                    {post.post_header && <p style={{ fontSize: 20, fontWeight: 900, color: '#1e293b', margin: '0 0 6px', lineHeight: 1.3 }}>{post.post_header}</p>}
+                    {post.caption && <p style={{ fontSize: 17, color: '#334155', lineHeight: 1.65, margin: 0, fontWeight: 500 }}>{post.caption}</p>}
                   </div>
                 )}
 
@@ -392,7 +397,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
 }
 
 // ── Full edit form ─────────────────────────────────────────────────────────────
-function FullEditForm({ post, p, theme, tRaw, efld, eCaption, setECaption, eDetails, setEDetails, eKeywords, setEKeywords, ePalettes, setEPalettes, eBookMode, setEBookMode, eSelProduct, setESelProduct, eProdQuery, setEProdQuery, eProdResults, eExtTitle, setEExtTitle, eExtAuthor, setEExtAuthor, eTools, setETools, isCreator, savingEdit, onSave, onCancel }: any) {
+function FullEditForm({ post, p, theme, tRaw, efld, eHeader, setEHeader, eCaption, setECaption, eDetails, setEDetails, eKeywords, setEKeywords, ePalettes, setEPalettes, eBookMode, setEBookMode, eSelProduct, setESelProduct, eProdQuery, setEProdQuery, eProdResults, eExtTitle, setEExtTitle, eExtAuthor, setEExtAuthor, eTools, setETools, isCreator, savingEdit, onSave, onCancel }: any) {
   return (
     <div style={{ background: '#f8fafc', borderRadius: 14, padding: 16, marginBottom: 18, border: `1.5px solid ${p}20` }}>
       <div style={{ fontSize: 14, fontWeight: 800, color: '#1e293b', marginBottom: 12 }}>✏️ {tRaw('แก้ไขโพสต์', 'Edit post')}</div>
@@ -436,6 +441,8 @@ function FullEditForm({ post, p, theme, tRaw, efld, eCaption, setECaption, eDeta
 
       {isCreator && <RecommendedToolsBlock tools={eTools} setTools={setETools} theme={theme} p={p} fld={efld} tRaw={tRaw} />}
 
+      <div style={{ fontSize: 12, fontWeight: 800, color: '#374151', margin: '4px 0 4px' }}>✍️ {tRaw('หัวข้อ', 'Header')} <span style={{ fontWeight: 400, color: '#9ca3af', fontSize: 11 }}>{tRaw('(ไม่บังคับ)', '(optional)')}</span></div>
+      <input value={eHeader || ''} maxLength={100} onChange={e => setEHeader(e.target.value)} placeholder={tRaw('ชื่อผลงาน', 'Post title')} style={{ ...efld, fontWeight: 700, marginBottom: 8 }} />
       <div style={{ fontSize: 12, fontWeight: 800, color: '#374151', margin: '4px 0 4px' }}>✏️ {tRaw('คำบรรยาย', 'Caption')} <span style={{ fontWeight: 500, color: '#9ca3af' }}>({eCaption.length}/300)</span></div>
       <textarea value={eCaption} maxLength={300} onChange={e => setECaption(e.target.value)} rows={3} style={{ ...efld, resize: 'vertical', marginBottom: 12 }} />
 

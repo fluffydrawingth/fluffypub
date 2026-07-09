@@ -72,12 +72,17 @@ export default function CommunityPage() {
   });
 
   useEffect(() => {
+    // Critical: load immediately (above-the-fold)
     api.getCommunityCozyPicks().then((d: any) => setCozy(d?.posts || [])).catch(() => {});
     (api as any).getHeaderHighlights().then((d: any) => setHeaderHighlights(d?.highlights || [])).catch(() => {});
-    api.getCommunityHighlights().then((d: any) => setHighlights(d?.highlights || [])).catch(() => {});
-    api.getCommunityCreators({ sort: 'featured', limit: 4 }).then((d: any) => setDiscoverCreators(d?.creators || [])).catch(() => {});
-    api.getCommunityCuration().then((d: any) => setCuration({ featured_books: d?.featured_books || [], featured_creators: d?.featured_creators || [] })).catch(() => {});
-    api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [], mediums: d?.mediums || [], books: d?.books || [], externalBooks: d?.externalBooks || [] })).catch(() => {});
+    // Deferred: load after main posts are visible
+    const t = setTimeout(() => {
+      api.getCommunityHighlights().then((d: any) => setHighlights(d?.highlights || [])).catch(() => {});
+      api.getCommunityCreators({ sort: 'featured', limit: 4 }).then((d: any) => setDiscoverCreators(d?.creators || [])).catch(() => {});
+      api.getCommunityCuration().then((d: any) => setCuration({ featured_books: d?.featured_books || [], featured_creators: d?.featured_creators || [] })).catch(() => {});
+      api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [], mediums: d?.mediums || [], books: d?.books || [], externalBooks: d?.externalBooks || [] })).catch(() => {});
+    }, 800);
+    return () => clearTimeout(t);
   }, []);
 
   const loadPage = useCallback((pg: number, f: Filter, q: string, ptab: string) => {
@@ -497,6 +502,7 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
   const [tools, setTools] = useState<{ name: string; url: string }[]>([]);
   const [postType, setPostType] = useState<'artwork' | 'tip' | 'tools'>('artwork');
   const [previewIdx, setPreviewIdx] = useState(0);
+  const [postHeader, setPostHeader] = useState('');
   const canAffiliate = !!(user?.affiliate_enabled || user?.role === 'admin');
   const [caption, setCaption] = useState('');
   const [busy, setBusy] = useState(false);
@@ -569,6 +575,7 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
         markers: [...new Set(details.map(d => d.brand.trim()).filter(Boolean))],
         palettes,
         keywords,
+        post_header: postHeader.trim() || null,
         caption: caption.trim(),
         post_type: postType,
         recommended_tools: canAffiliate ? tools.filter(t => t.name.trim()) : [],
@@ -709,6 +716,8 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
           {/* Recommended tools — Fluffy Creators only (affiliate links allowed, max 2) */}
           {canAffiliate && <RecommendedToolsBlock tools={tools} setTools={setTools} theme={theme} p={p} fld={fld} tRaw={tRaw} />}
 
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', margin: '4px 0 6px' }}>✍️ {tRaw('หัวข้อ', 'Header')} <span style={{ color: '#9ca3af', fontWeight: 400, fontSize: 12 }}>{tRaw('(ไม่บังคับ — แสดงเป็นชื่อโพสต์)', '(optional — shown as post title)')}</span></div>
+          <input value={postHeader} maxLength={100} onChange={e => setPostHeader(e.target.value)} placeholder={tRaw('ชื่อผลงาน เช่น Chilling Day', 'e.g. Chilling Day')} style={{ ...fld, fontWeight: 700, fontSize: 15, marginBottom: 10 }} />
           <div style={{ fontSize: 13, fontWeight: 800, color: '#374151', margin: '4px 0 6px' }}>✏️ {tRaw('คำบรรยาย', 'Caption')} <span style={{ color: '#9ca3af', fontWeight: 500 }}>({caption.length}/300)</span></div>
           <textarea value={caption} maxLength={300} onChange={e => setCaption(e.target.value)} rows={2} placeholder={tRaw('เล่าเกี่ยวกับผลงานชิ้นนี้...', 'Tell us about this piece...')} style={{ ...fld, resize: 'vertical' }} />
 

@@ -177,9 +177,9 @@ export const api = {
   followCreator: (creator_id: string) => fetch('/api/community?action=follow', { method: 'POST', headers: h(), body: JSON.stringify({ creator_id }) }).then(r => r.json()),
   unfollowCreator: (creator_id: string) => fetch(`/api/community?action=follow&creator_id=${creator_id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
   getFollowedCreators: () => fetch('/api/community?action=followed-creators', { headers: h() }).then(r => r.json()),
-  getCommunityFacets: () => fetch('/api/community?action=facets').then(r => r.json()),
-  getCommunityArchive: () => fetch('/api/community?action=archive').then(r => r.json()),
-  getCommunityCozyPicks: () => fetch(`/api/community?action=cozy-picks&guest_id=${getGuestId()}`, { headers: h() }).then(r => r.json()),
+  getCommunityFacets: () => cfetch('/api/community?action=facets', TTL_SHORT),
+  getCommunityArchive: () => cfetch('/api/community?action=archive', TTL_SHORT),
+  getCommunityCozyPicks: () => cfetch(`/api/community?action=cozy-picks&guest_id=${getGuestId()}`, TTL_SHORT),
   updateCommunityPost: (id: string, data: any) => fetch(`/api/community?id=${id}`, { method: 'PUT', headers: h(), body: JSON.stringify(data) }).then(r => r.json()),
   // Admin — Community Dashboard
   getCommunityStats: () => fetch('/api/community?action=admin-stats', { headers: h() }).then(r => r.json()),

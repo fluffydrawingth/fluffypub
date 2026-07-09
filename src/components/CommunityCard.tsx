@@ -96,10 +96,15 @@ export default function CommunityCard({ post, compact = false, priority = false 
           ) : <span />}
         </div>
 
-        {/* 📝 Caption — 2 lines */}
+        {/* 📝 Header + Caption */}
         <div style={{ minHeight: 36, marginBottom: 8 }}>
+          {post.post_header && (
+            <p style={{ fontSize: 14.5, fontWeight: 800, color: '#1e293b', lineHeight: 1.4, margin: '0 0 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {post.post_header}
+            </p>
+          )}
           {post.caption ? (
-            <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.55, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+            <p style={{ fontSize: 13.5, color: '#475569', lineHeight: 1.5, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: post.post_header ? 1 : 2, WebkitBoxOrient: 'vertical' as any }}>
               {post.caption}
             </p>
           ) : null}

@@ -682,12 +682,13 @@ module.exports = async function handler(req, res) {
       recommended_tools: recommendedTools,
       keywords: sanitizeKeywords(b.keywords),
       coloring_details: sanitizeColoringDetails(b.coloring_details),
+      post_header: b.post_header ? String(b.post_header).trim().slice(0, 100) : null,
       caption: (b.caption || '').slice(0, CAPTION_MAX), status: 'published',
     };
     let { data, error } = await supabase.from('community_posts').insert(row).select().single();
     // Resilience: drop not-yet-migrated optional columns and retry
-    if (error && /(recommended_tools|keywords|coloring_details|post_type)/.test(error.message || '')) {
-      const { recommended_tools, keywords, coloring_details, post_type, ...rest } = row;
+    if (error && /(recommended_tools|keywords|coloring_details|post_type|post_header)/.test(error.message || '')) {
+      const { recommended_tools, keywords, coloring_details, post_type, post_header, ...rest } = row;
       ({ data, error } = await supabase.from('community_posts').insert(rest).select().single());
     }
     if (error) return json(res, 400, { error: error.message });
@@ -731,6 +732,7 @@ module.exports = async function handler(req, res) {
       const imgs = b.artwork_urls.filter(u => typeof u === 'string' && u.trim()).slice(0, 10);
       if (imgs.length) { updates.artwork_urls = imgs; updates.artwork_url = imgs[0]; updates.thumb_url = b.thumb_url || imgs[0]; }
     }
+    if (b.post_header !== undefined) updates.post_header = b.post_header ? String(b.post_header).trim().slice(0, 100) : null;
     if (b.caption !== undefined) updates.caption = String(b.caption).slice(0, CAPTION_MAX);
     // Book change — resolve external book library, clear book if switching to product/none
     let newExtBookId = existing.external_book_id || null;
@@ -764,8 +766,8 @@ module.exports = async function handler(req, res) {
     if (b.post_type !== undefined && ['artwork', 'tip', 'tools'].includes(b.post_type)) updates.post_type = b.post_type;
     let { data, error } = await supabase.from('community_posts').update(updates).eq('id', id).select().single();
     // Resilience: drop not-yet-migrated optional columns and retry
-    if (error && /(recommended_tools|keywords|coloring_details|post_type)/.test(error.message || '')) {
-      const { recommended_tools, keywords, coloring_details, post_type, ...rest } = updates;
+    if (error && /(recommended_tools|keywords|coloring_details|post_type|post_header)/.test(error.message || '')) {
+      const { recommended_tools, keywords, coloring_details, post_type, post_header, ...rest } = updates;
       ({ data, error } = await supabase.from('community_posts').update(rest).eq('id', id).select().single());
     }
     if (error) return json(res, 400, { error: error.message });
