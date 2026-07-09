@@ -165,8 +165,13 @@ export default function CommunityPage() {
                         : <span>🩷</span>
                       }
                     </div>
-                    {/* Title */}
-                    <span style={{ flex: 1, fontSize: 14, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.title}</span>
+                    {/* Title + caption */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.title}</div>
+                      {h.description && (
+                        <div style={{ fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}>{h.description}</div>
+                      )}
+                    </div>
                     {/* Countdown */}
                     {showDays && (
                       <span style={{ fontSize: 11.5, fontWeight: 700, color: days! <= 3 ? '#ef4444' : '#f59e0b', background: days! <= 3 ? '#fef2f2' : '#fffbeb', borderRadius: 6, padding: '2px 6px', flexShrink: 0 }}>

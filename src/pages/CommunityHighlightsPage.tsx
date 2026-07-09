@@ -29,6 +29,7 @@ export function HighlightDetailPage({ id }: { id: string }) {
   const p = theme.primaryColor;
   const [h, setH] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [journalRelated, setJournalRelated] = useState<any[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -36,6 +37,10 @@ export function HighlightDetailPage({ id }: { id: string }) {
       setH(d?.highlight || null);
       setLoading(false);
     }).catch(() => setLoading(false));
+    // Fetch a few journal articles for the "You may like" section
+    api.getJournalArticles().then((all: any) => {
+      setJournalRelated(Array.isArray(all) ? all.slice(0, 3) : []);
+    }).catch(() => {});
   }, [id]);
 
   if (loading) return (
@@ -60,156 +65,193 @@ export function HighlightDetailPage({ id }: { id: string }) {
   return (
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
       <style>{`
-        .highlight-detail-wrap {
+        .hl-wrap {
           max-width: 960px;
           margin: 0 auto;
-          padding: 36px 20px 72px;
+          padding: 32px 20px 72px;
         }
-        .highlight-detail-card {
-          background: rgba(255,255,255,0.72);
-          border: 1px solid rgba(255,255,255,0.78);
-          border-radius: 24px;
-          box-shadow: 0 16px 44px rgba(15, 23, 42, 0.08);
-          padding: 22px;
+        /* Header card: cover left, meta right — same pattern as journal */
+        .hl-header-card {
+          display: grid;
+          grid-template-columns: minmax(260px, 340px) 1fr;
+          gap: 22px;
+          align-items: flex-start;
+          background: rgba(255,255,255,0.68);
+          border: 1px solid rgba(255,255,255,0.72);
+          border-radius: 22px;
+          padding: 18px;
+          box-shadow: 0 14px 40px rgba(15,23,42,0.08);
           backdrop-filter: blur(10px);
+          margin-bottom: 18px;
         }
-        .highlight-cover {
-          border-radius: 20px;
+        .hl-cover {
+          border-radius: 16px;
           overflow: hidden;
           background: white;
           border: 1.5px solid #f1f5f9;
-          margin-bottom: 24px;
+          aspect-ratio: 1/1;
         }
-        .highlight-cover img {
+        .hl-cover img {
           width: 100%;
-          max-height: 520px;
-          object-fit: contain;
-          object-position: center;
+          height: 100%;
+          object-fit: cover;
           display: block;
         }
-        .highlight-detail-body {
-          background: rgba(255,255,255,0.82);
-          border: 1.5px solid ${p}12;
-          border-radius: 18px;
-          padding: 26px 28px 28px;
-        }
-        .highlight-date-row {
+        .hl-meta {
           display: flex;
-          gap: 12px;
+          flex-direction: column;
+          gap: 10px;
+          padding: 4px 0;
+        }
+        .hl-date-row {
+          display: flex;
+          gap: 8px;
           flex-wrap: wrap;
-          margin: 18px 0 0;
-          font-size: 15px;
+        }
+        .hl-date-pill {
+          background: #f8fafc;
+          border: 1px solid #eef2f7;
+          border-radius: 10px;
+          padding: 6px 11px;
+          font-size: 13.5px;
           color: #64748b;
           font-weight: 650;
         }
-        .highlight-date-row span {
-          background: #f8fafc;
-          border: 1px solid #eef2f7;
-          border-radius: 12px;
-          padding: 7px 11px;
+        /* Body */
+        .hl-body {
+          background: rgba(255,255,255,0.72);
+          border: 1px solid rgba(255,255,255,0.78);
+          border-radius: 22px;
+          padding: clamp(22px,4vw,36px);
+          box-shadow: 0 12px 36px rgba(15,23,42,0.06);
+          backdrop-filter: blur(8px);
+          font-size: 17px;
+          line-height: 1.85;
+          color: #374151;
+          margin-bottom: 18px;
         }
-        .highlight-divider {
-          height: 1.5px;
-          background: ${p}20;
-          border-radius: 2px;
-          margin: 24px 0;
+        /* Related journal */
+        .hl-related-grid {
+          display: grid;
+          grid-template-columns: repeat(3,1fr);
+          gap: 12px;
         }
-        @media (max-width: 640px) {
-          .highlight-detail-wrap {
-            padding: 24px 12px 56px;
-          }
-          .highlight-detail-card {
-            border-radius: 20px;
-            padding: 14px;
-          }
-          .highlight-cover {
-            border-radius: 16px;
-            margin-bottom: 16px;
-          }
-          .highlight-cover img {
-            max-height: 360px;
-          }
-          .highlight-detail-body {
-            border-radius: 16px;
-            padding: 20px 16px 22px;
-          }
-          .highlight-date-row {
-            gap: 8px;
-            font-size: 14px;
-          }
-          .highlight-date-row span {
-            width: 100%;
-            box-sizing: border-box;
-          }
+        @media(max-width:700px) {
+          .hl-header-card { grid-template-columns: 1fr; padding: 14px; gap: 14px; }
+          .hl-cover { aspect-ratio: 16/9; }
+          .hl-related-grid { grid-template-columns: 1fr; }
+          .hl-wrap { padding: 20px 12px 56px; }
+        }
+        @media(max-width:480px) {
+          .hl-related-grid { grid-template-columns: repeat(2,1fr); }
         }
       `}</style>
-      <div className="highlight-detail-wrap">
+      <div className="hl-wrap">
 
-        <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 15, fontWeight: 600, padding: '0 0 24px', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 15, fontWeight: 600, padding: '0 0 22px', display: 'flex', alignItems: 'center', gap: 6 }}>
           ← {tRaw('ชุมชน', 'Community')}
         </button>
 
-        <div className="highlight-detail-card">
-          {/* Cover image — contain, white bg, max height */}
-          {h.cover_image && (
-            <div className="highlight-cover">
+        {/* ── Header: cover left + meta right ── */}
+        <div className="hl-header-card">
+          {/* Cover */}
+          {h.cover_image ? (
+            <div className="hl-cover">
               <img src={h.cover_image} alt={h.title} />
+            </div>
+          ) : (
+            <div className="hl-cover" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, background: tm.color + '10' }}>
+              {tm.emoji}
             </div>
           )}
 
-          <div className="highlight-detail-body">
+          {/* Meta */}
+          <div className="hl-meta">
             {/* Type badge */}
-            <div style={{ marginBottom: 14 }}>
-              <span style={{ fontSize: 13.5, fontWeight: 800, padding: '5px 14px', borderRadius: 20, background: isSubtle ? '#f1f5f9' : tm.color + '18', color: isSubtle ? '#64748b' : tm.color }}>
-                {tm.emoji} {lang === 'th' ? tm.th : tm.en}
-              </span>
-            </div>
+            <span style={{ fontSize: 13, fontWeight: 800, padding: '4px 13px', borderRadius: 18, background: isSubtle ? '#f1f5f9' : tm.color + '18', color: isSubtle ? '#64748b' : tm.color, alignSelf: 'flex-start' as const }}>
+              {tm.emoji} {lang === 'th' ? tm.th : tm.en}
+            </span>
 
-            <h1 style={{ fontSize: 'clamp(30px, 4vw, 42px)', fontWeight: 900, color: '#1e293b', margin: '0', lineHeight: 1.22 }}>{h.title}</h1>
+            <h1 style={{ fontSize: 'clamp(24px,3.5vw,38px)', fontWeight: 900, color: '#1e293b', margin: 0, lineHeight: 1.22 }}>
+              {h.title}
+            </h1>
 
             {/* Dates */}
             {(h.start_date || h.end_date) && (
-              <div className="highlight-date-row">
-                {h.start_date && <span>📅 {tRaw('เริ่ม', 'Starts')} {fmtDate(h.start_date)}</span>}
-                {h.end_date && <span>🏁 {tRaw('สิ้นสุด', 'Ends')} {fmtDate(h.end_date)}</span>}
+              <div className="hl-date-row">
+                {h.start_date && <span className="hl-date-pill">📅 {tRaw('เริ่ม', 'Starts')} {fmtDate(h.start_date)}</span>}
+                {h.end_date && <span className="hl-date-pill">🏁 {tRaw('สิ้นสุด', 'Ends')} {fmtDate(h.end_date)}</span>}
               </div>
             )}
 
-            {(h.description || blocks.length > 0 || h.link_url) && <div className="highlight-divider" />}
-
-            {/* Short description */}
+            {/* Description as sub-heading */}
             {h.description && (
-              <p style={{ fontSize: 17, color: '#374151', lineHeight: 1.85, margin: blocks.length > 0 ? '0 0 24px' : 0, whiteSpace: 'pre-wrap' }}>{h.description}</p>
-            )}
-
-            {/* Content blocks */}
-            {blocks.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                {blocks.map((block: any, i: number) => {
-                  if (block.type === 'image' && block.url) return (
-                    <div key={i} style={{ borderRadius: 16, overflow: 'hidden', background: 'white', border: '1.5px solid #f1f5f9' }}>
-                      <img src={block.url} alt="" style={{ width: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
-                    </div>
-                  );
-                  if (block.type === 'text' && block.value) return (
-                    <p key={i} style={{ fontSize: 17, color: '#374151', lineHeight: 1.85, margin: 0, whiteSpace: 'pre-wrap' }}>{block.value}</p>
-                  );
-                  return null;
-                })}
-              </div>
+              <p style={{ fontSize: 15.5, color: '#64748b', lineHeight: 1.7, margin: 0 }}>{h.description}</p>
             )}
 
             {/* Link button */}
             {h.link_url && (
-              <div style={{ marginTop: 32 }}>
-                <a href={h.link_url} target="_blank" rel="noopener noreferrer"
-                  style={{ display: 'inline-block', background: p, color: 'white', textDecoration: 'none', padding: '12px 28px', borderRadius: 24, fontSize: 16, fontWeight: 800 }}>
-                  {tRaw('ดูรายละเอียดเพิ่มเติม →', 'Learn more →')}
-                </a>
-              </div>
+              <a href={h.link_url} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: p, color: 'white', textDecoration: 'none', padding: '10px 22px', borderRadius: 20, fontSize: 14.5, fontWeight: 800, alignSelf: 'flex-start' as const }}>
+                {tRaw('ดูรายละเอียดเพิ่มเติม →', 'Learn more →')}
+              </a>
             )}
           </div>
         </div>
+
+        {/* ── Body: content blocks ── */}
+        {blocks.length > 0 && (
+          <div className="hl-body">
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 24 }}>
+              {blocks.map((block: any, i: number) => {
+                if (block.type === 'image' && block.url) return (
+                  <div key={i} style={{ borderRadius: 16, overflow: 'hidden', background: 'white', border: '1.5px solid #f1f5f9' }}>
+                    <img src={block.url} alt="" style={{ width: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
+                  </div>
+                );
+                if (block.type === 'text' && block.value) return (
+                  <p key={i} style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{block.value}</p>
+                );
+                return null;
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── You may like — related journal articles ── */}
+        {journalRelated.length > 0 && (
+          <div style={{ marginTop: 40 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <span style={{ fontSize: 16, fontWeight: 800, color: '#1e293b' }}>📝 {tRaw('บทความที่คุณอาจชอบ', 'You may also like')}</span>
+              <button onClick={() => navigate('/journal')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 13, fontWeight: 700, padding: 0 }}>{tRaw('ดูทั้งหมด →', 'View all →')}</button>
+            </div>
+            <div className="hl-related-grid">
+              {journalRelated.map((a: any) => {
+                const title = (lang === 'th' ? a.title_th : a.title_en) || a.title_th || a.title_en || '';
+                const excerpt = (lang === 'th' ? a.excerpt_th : a.excerpt_en) || a.excerpt_th || a.excerpt_en || '';
+                const date = new Date(a.created_at).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                return (
+                  <div key={a.id} onClick={() => navigate(`/journal/${a.slug}`)}
+                    style={{ background: 'white', borderRadius: 16, overflow: 'hidden', border: '1.5px solid #f1f5f9', cursor: 'pointer', boxShadow: '0 1px 6px rgba(0,0,0,0.05)', transition: 'transform 0.15s, box-shadow 0.15s' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = `0 6px 20px ${p}18`; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 6px rgba(0,0,0,0.05)'; }}>
+                    {a.cover_image && (
+                      <div style={{ aspectRatio: '16/9', overflow: 'hidden', background: '#f8fafc' }}>
+                        <img src={a.cover_image} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      </div>
+                    )}
+                    <div style={{ padding: '12px 14px' }}>
+                      <div style={{ fontSize: 14.5, fontWeight: 800, color: '#1e293b', lineHeight: 1.35, marginBottom: 5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden' }}>{title}</div>
+                      {excerpt && <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden', marginBottom: 6 }}>{excerpt}</div>}
+                      <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>📅 {date}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
