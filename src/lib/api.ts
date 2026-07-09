@@ -142,6 +142,7 @@ export const api = {
   deleteAffiliatePayout: (id: string) => fetch(`/api/users?action=affiliate-payout&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()),
 
   // Community — "Share Your Colorful World"
+  getCommunityInit: (guestId: string, limit = 12) => fetch(`/api/community?action=init&guest_id=${encodeURIComponent(guestId)}&limit=${limit}`, { headers: h() }).then(r => r.json()),
   getCommunityPosts: (opts: { page?: number; limit?: number; product_id?: string; external_book_id?: string; user_id?: string; palette?: string; marker?: string; medium?: string; month?: string; post_type?: string } = {}) => {
     const q = new URLSearchParams({ action: 'list', page: String(opts.page ?? 0), limit: String(opts.limit ?? 20) });
     if (opts.product_id) q.set('product_id', opts.product_id);

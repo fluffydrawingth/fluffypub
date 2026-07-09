@@ -1180,6 +1180,27 @@ module.exports = async function handler(req, res) {
 
   // ─────────────────── Highlights & Events ───────────────────
 
+  // GET ?action=init — bundles first-page posts + cozy picks + header highlights in one request
+  if (req.method === 'GET' && action === 'init') {
+    const viewer = await getUser(req);
+    const guestId = req.query.guest_id || null;
+    const limit = Math.min(12, Math.max(1, parseInt(req.query.limit) || 12));
+    const [postsResult, cozyResult, hlResult] = await Promise.all([
+      supabase.from('community_posts').select('*', { count: 'exact' }).eq('status', 'published').order('created_at', { ascending: false }).range(0, limit - 1),
+      supabase.from('community_posts').select('*').eq('status', 'published').eq('featured', true).order('featured_at', { ascending: false }).range(0, 5),
+      supabase.from('community_highlights').select('*').eq('status', 'active').eq('show_in_header', true).order('sort_order').order('start_date', { ascending: false }).limit(3),
+    ]);
+    const [posts, cozy] = await Promise.all([
+      decorate(postsResult.data || [], viewer?.id, guestId),
+      decorate(cozyResult.data || [], viewer?.id, guestId),
+    ]);
+    return json(res, 200, {
+      posts, hasMore: 0 + (postsResult.count || 0) > limit,
+      cozy,
+      headerHighlights: hlResult.data || [],
+    });
+  }
+
   // GET ?action=header-highlights — public, active items pinned to header (max 3)
   if (req.method === 'GET' && action === 'header-highlights') {
     const { data } = await supabase.from('community_highlights').select('*').eq('status', 'active').eq('show_in_header', true).order('sort_order').order('start_date', { ascending: false }).limit(3);

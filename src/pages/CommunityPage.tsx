@@ -6,6 +6,7 @@ import { useT } from '../config/translations';
 import { isImageUrl } from '../lib/avatar';
 import { useLang } from '../lib/lang';
 import { api } from '../lib/api';
+import { getGuestId } from '../lib/ref';
 import { makeImageVariants } from '../lib/imageThumb';
 import CommunityCard from '../components/CommunityCard';
 import { HighlightCard } from './CommunityHighlightsPage';
@@ -71,21 +72,33 @@ export default function CommunityPage() {
     jsonLd: breadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Community', path: '/community' }]),
   });
 
+  // Track whether the init bundle already populated page 0
+  const initDone = useRef(false);
+
   useEffect(() => {
-    // Critical: load immediately (above-the-fold)
-    api.getCommunityCozyPicks().then((d: any) => setCozy(d?.posts || [])).catch(() => {});
-    (api as any).getHeaderHighlights().then((d: any) => setHeaderHighlights(d?.highlights || [])).catch(() => {});
-    // Deferred: load after main posts are visible
+    // ONE request: posts page-0 + cozy picks + header highlights
+    (api as any).getCommunityInit(getGuestId(), PAGE).then((d: any) => {
+      setPosts(d?.posts || []);
+      setHasMore(!!d?.hasMore);
+      setCozy(d?.cozy || []);
+      setHeaderHighlights(d?.headerHighlights || []);
+      setLoading(false);
+      initDone.current = true;
+    }).catch(() => { setLoading(false); });
+
+    // Deferred non-critical sections (filters, discover, curation)
     const t = setTimeout(() => {
       api.getCommunityHighlights().then((d: any) => setHighlights(d?.highlights || [])).catch(() => {});
       api.getCommunityCreators({ sort: 'featured', limit: 4 }).then((d: any) => setDiscoverCreators(d?.creators || [])).catch(() => {});
       api.getCommunityCuration().then((d: any) => setCuration({ featured_books: d?.featured_books || [], featured_creators: d?.featured_creators || [] })).catch(() => {});
       api.getCommunityFacets().then((d: any) => setFacets({ palettes: d?.palettes || [], markers: d?.markers || [], mediums: d?.mediums || [], books: d?.books || [], externalBooks: d?.externalBooks || [] })).catch(() => {});
-    }, 800);
+    }, 1000);
     return () => clearTimeout(t);
   }, []);
 
   const loadPage = useCallback((pg: number, f: Filter, q: string, ptab: string) => {
+    // Skip the very first page-0/all/no-search load — init already covered it
+    if (pg === 0 && f.kind === 'all' && !q && ptab === 'all' && !initDone.current) return;
     setLoading(true);
     const done = (d: any) => {
       const list = d?.posts || [];
@@ -93,7 +106,6 @@ export default function CommunityPage() {
       setHasMore(!!d?.hasMore);
       setLoading(false);
     };
-    // Universal search overrides tag filters
     if (q && q.trim()) {
       api.searchCommunity(q.trim(), pg).then(done).catch(() => setLoading(false));
       return;
