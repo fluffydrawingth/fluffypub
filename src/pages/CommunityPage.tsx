@@ -525,6 +525,15 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
 
   // Crop flow: pick raw → modal → apply (replace if re-cropping, else append)
   const onPickRaw = (f: File) => { setCropRaw(f); setCropIdx(null); };
+  const onPickMultiple = (files: FileList) => {
+    if (files.length === 1) { onPickRaw(files[0]); return; }
+    // Multiple files: skip crop, add all up to max 10
+    setImages(prev => {
+      const remaining = 10 - prev.length;
+      const toAdd = Array.from(files).slice(0, remaining).map(f => ({ file: f, preview: URL.createObjectURL(f) }));
+      return [...prev, ...toAdd];
+    });
+  };
   const applyCropped = (f: File) => {
     const img = { file: f, preview: URL.createObjectURL(f) };
     setImages(prev => cropIdx != null ? prev.map((x, i) => i === cropIdx ? img : x) : [...prev, img]);
@@ -599,7 +608,7 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
               <div style={{ aspectRatio: '4/5', borderRadius: 14, border: `2px dashed ${p}40`, background: p + '08', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{ color: p, fontWeight: 700, fontSize: 13, textAlign: 'center', padding: 16 }}>🖼️ {tRaw('แตะเพื่ออัปโหลดรูปผลงาน', 'Tap to upload artwork')}</span>
               </div>
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onPickRaw(f); e.target.value = ''; }} />
+              <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => { if (e.target.files?.length) onPickMultiple(e.target.files); e.target.value = ''; }} />
             </label>
           ) : (
             <>
@@ -619,7 +628,7 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
                 {images.length < 10 && (
                   <label style={{ width: 52, height: 52, borderRadius: 8, border: `1.5px dashed ${p}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: p, fontSize: 20, fontWeight: 700 }}>
                     +
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onPickRaw(f); e.target.value = ''; }} />
+                    <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => { if (e.target.files?.length) onPickMultiple(e.target.files); e.target.value = ''; }} />
                   </label>
                 )}
               </div>
