@@ -29,18 +29,12 @@ export function HighlightDetailPage({ id }: { id: string }) {
   const p = theme.primaryColor;
   const [h, setH] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [journalRelated, setJournalRelated] = useState<any[]>([]);
-
   useEffect(() => {
     setLoading(true);
     (api as any).getCommunityHighlight(id).then((d: any) => {
       setH(d?.highlight || null);
       setLoading(false);
     }).catch(() => setLoading(false));
-    // Fetch a few journal articles for the "You may like" section
-    api.getJournalArticles().then((all: any) => {
-      setJournalRelated(Array.isArray(all) ? all.slice(0, 3) : []);
-    }).catch(() => {});
   }, [id]);
 
   if (loading) return (
@@ -130,20 +124,10 @@ export function HighlightDetailPage({ id }: { id: string }) {
           color: #374151;
           margin-bottom: 18px;
         }
-        /* Related journal */
-        .hl-related-grid {
-          display: grid;
-          grid-template-columns: repeat(3,1fr);
-          gap: 12px;
-        }
         @media(max-width:700px) {
           .hl-header-card { grid-template-columns: 1fr; padding: 14px; gap: 14px; }
           .hl-cover { aspect-ratio: 16/9; }
-          .hl-related-grid { grid-template-columns: 1fr; }
           .hl-wrap { padding: 20px 12px 56px; }
-        }
-        @media(max-width:480px) {
-          .hl-related-grid { grid-template-columns: repeat(2,1fr); }
         }
       `}</style>
       <div className="hl-wrap">
@@ -213,40 +197,6 @@ export function HighlightDetailPage({ id }: { id: string }) {
                   <p key={i} style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{block.value}</p>
                 );
                 return null;
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ── You may like — related journal articles ── */}
-        {journalRelated.length > 0 && (
-          <div style={{ marginTop: 40 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <span style={{ fontSize: 16, fontWeight: 800, color: '#1e293b' }}>📝 {tRaw('บทความที่คุณอาจชอบ', 'You may also like')}</span>
-              <button onClick={() => navigate('/journal')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: p, fontSize: 13, fontWeight: 700, padding: 0 }}>{tRaw('ดูทั้งหมด →', 'View all →')}</button>
-            </div>
-            <div className="hl-related-grid">
-              {journalRelated.map((a: any) => {
-                const title = (lang === 'th' ? a.title_th : a.title_en) || a.title_th || a.title_en || '';
-                const excerpt = (lang === 'th' ? a.excerpt_th : a.excerpt_en) || a.excerpt_th || a.excerpt_en || '';
-                const date = new Date(a.created_at).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                return (
-                  <div key={a.id} onClick={() => navigate(`/journal/${a.slug}`)}
-                    style={{ background: 'white', borderRadius: 16, overflow: 'hidden', border: '1.5px solid #f1f5f9', cursor: 'pointer', boxShadow: '0 1px 6px rgba(0,0,0,0.05)', transition: 'transform 0.15s, box-shadow 0.15s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = `0 6px 20px ${p}18`; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 1px 6px rgba(0,0,0,0.05)'; }}>
-                    {a.cover_image && (
-                      <div style={{ aspectRatio: '16/9', overflow: 'hidden', background: '#f8fafc' }}>
-                        <img src={a.cover_image} alt={title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                      </div>
-                    )}
-                    <div style={{ padding: '12px 14px' }}>
-                      <div style={{ fontSize: 14.5, fontWeight: 800, color: '#1e293b', lineHeight: 1.35, marginBottom: 5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden' }}>{title}</div>
-                      {excerpt && <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden', marginBottom: 6 }}>{excerpt}</div>}
-                      <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>📅 {date}</div>
-                    </div>
-                  </div>
-                );
               })}
             </div>
           </div>
