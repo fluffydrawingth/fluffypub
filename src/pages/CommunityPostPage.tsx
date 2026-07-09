@@ -282,9 +282,9 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           {post.mediums?.length > 0 && <div style={{ fontSize: 15.5, color: '#334155' }}><span style={{ color: '#7c3aed', fontWeight: 700 }}>🎨 {tRaw('เทคนิค', 'Mediums')}:</span> {post.mediums.join(', ')}</div>}
                           {post.markers?.length > 0 && <div style={{ fontSize: 15.5, color: '#334155' }}><span style={{ color: '#1d4ed8', fontWeight: 700 }}>🖍️ {tRaw('ปากกา/ชุดสี', 'Markers / sets')}:</span> {post.markers.join(', ')}</div>}
-                          {post.palettes?.length > 0 && <div style={{ fontSize: 15.5, color: '#334155' }}><span style={{ color: '#be185d', fontWeight: 700 }}>🌷 {tRaw('พาเลตต์', 'Palettes')}:</span> {post.palettes.join(', ')}</div>}
                         </div>
                       )}
+                      {post.palettes?.length > 0 && <div style={{ fontSize: 15.5, color: '#334155', marginTop: pairs.length ? 8 : 0 }}><span style={{ color: '#be185d', fontWeight: 700 }}>🌷 {tRaw('พาเลตต์', 'Palettes')}:</span> {post.palettes.join(', ')}</div>}
                     </div>
                   );
                 })()}
