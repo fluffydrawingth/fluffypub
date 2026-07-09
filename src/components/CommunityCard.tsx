@@ -96,24 +96,18 @@ export default function CommunityCard({ post, compact = false, priority = false 
           ) : <span />}
         </div>
 
-        {/* Header (priority) + Caption */}
-        <div style={{ marginBottom: 8 }}>
-          {post.post_header ? (
-            <>
-              <p style={{ fontSize: 14.5, fontWeight: 800, color: '#1e293b', lineHeight: 1.35, margin: '0 0 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {post.post_header}
-              </p>
-              {post.caption && (
-                <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
-                  {post.caption}
-                </p>
-              )}
-            </>
-          ) : post.caption ? (
-            <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.55, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+        {/* Header (priority) + Caption — fixed height so all cards align */}
+        <div style={{ height: 64, marginBottom: 8, overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+          {post.post_header && (
+            <p style={{ fontSize: 14.5, fontWeight: 800, color: '#1e293b', lineHeight: 1.35, margin: '0 0 3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              {post.post_header}
+            </p>
+          )}
+          {(post.caption) && (
+            <p style={{ fontSize: post.post_header ? 13 : 14, color: post.post_header ? '#64748b' : '#475569', lineHeight: 1.55, margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: post.post_header ? 2 : 3, WebkitBoxOrient: 'vertical' as any }}>
               {post.caption}
             </p>
-          ) : <div style={{ minHeight: 36 }} />}
+          )}
         </div>
 
         {/* 👤 Creator — 1 line */}

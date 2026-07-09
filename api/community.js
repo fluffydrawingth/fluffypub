@@ -190,7 +190,7 @@ async function autoSubmitTags(mediums = [], markers = [], palettes = []) {
     const normalized = String(name).trim().toLowerCase();
     const display = String(name).trim();
     try {
-      const { data: existing } = await supabase.from('community_tags').select('id').eq('type', type).eq('normalized', normalized).single();
+      const { data: existing } = await supabase.from('community_tags').select('id').eq('type', type).eq('normalized', normalized).maybeSingle();
       if (!existing) {
         await supabase.from('community_tags').insert({ type, name: display, normalized, status: 'pending' });
       }
