@@ -564,16 +564,19 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
     if (!images.length) { setErr(tRaw('กรุณาเลือกรูปผลงาน', 'Please choose your artwork image.')); return; }
     setBusy(true);
     try {
-      // Upload each image's full variant; thumb from the first (cover)
-      const fulls: string[] = [];
-      let coverThumb = '';
-      for (let i = 0; i < images.length; i++) {
-        const { full, thumb } = await makeImageVariants(images[i].file);
-        const [up, upT] = await Promise.all([api.uploadFile(full, 'community'), i === 0 ? api.uploadFile(thumb, 'community') : Promise.resolve(null)]);
-        if (up?.error) { setErr(up.error); setBusy(false); return; }
-        fulls.push(up.publicUrl);
-        if (i === 0) coverThumb = upT?.publicUrl || up.publicUrl;
-      }
+      // Process + upload all images in parallel (was sequential — 4 images = 4× slower)
+      const uploadResults = await Promise.all(images.map(async (img, i) => {
+        const { full, thumb } = await makeImageVariants(img.file);
+        const [up, upT] = await Promise.all([
+          api.uploadFile(full, 'community'),
+          i === 0 ? api.uploadFile(thumb, 'community') : Promise.resolve(null),
+        ]);
+        return { up, upT, i };
+      }));
+      const failed = uploadResults.find(r => r.up?.error);
+      if (failed) { setErr(failed.up.error); setBusy(false); return; }
+      const fulls = uploadResults.map(r => r.up.publicUrl);
+      const coverThumb = uploadResults[0].upT?.publicUrl || uploadResults[0].up.publicUrl;
       const res = await api.createCommunityPost({
         artwork_url: fulls[0], artwork_urls: fulls, thumb_url: coverThumb,
         product_id: bookMode === 'product' ? (selProduct?.id || null) : null,
