@@ -496,6 +496,7 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
   const [palettes, setPalettes] = useState<string[]>([]);
   const [tools, setTools] = useState<{ name: string; url: string }[]>([]);
   const [postType, setPostType] = useState<'artwork' | 'tip' | 'tools'>('artwork');
+  const [previewIdx, setPreviewIdx] = useState(0);
   const canAffiliate = !!(user?.affiliate_enabled || user?.role === 'admin');
   const [caption, setCaption] = useState('');
   const [busy, setBusy] = useState(false);
@@ -612,32 +613,36 @@ function UploadForm({ theme, p, tRaw, onPosted, user }: any) {
             </label>
           ) : (
             <>
-              {/* Cover preview */}
-              <div style={{ aspectRatio: '4/5', borderRadius: 14, overflow: 'hidden', background: '#f8fafc', border: `1.5px solid ${p}20` }}>
-                <img src={images[0].preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {/* Main preview — shows whichever thumbnail is selected */}
+              <div style={{ aspectRatio: '4/5', borderRadius: 14, overflow: 'hidden', background: '#f8fafc', border: `1.5px solid ${p}20`, position: 'relative' }}>
+                <img src={images[Math.min(previewIdx, images.length - 1)].preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <button onClick={() => recrop(Math.min(previewIdx, images.length - 1))}
+                  style={{ position: 'absolute', bottom: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: 'white', border: 'none', borderRadius: 8, padding: '5px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  ✂️ {tRaw('ตัดรูป', 'Crop')}
+                </button>
               </div>
               {/* Thumbnail strip */}
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
                 {images.map((im, i) => (
-                  <div key={i} style={{ position: 'relative', width: 52, height: 52, borderRadius: 8, overflow: 'hidden', border: i === 0 ? `2px solid ${p}` : '1.5px solid #e5e7eb' }}>
+                  <div key={i} onClick={() => setPreviewIdx(i)} style={{ position: 'relative', width: 52, height: 52, borderRadius: 8, overflow: 'hidden', border: i === previewIdx ? `2px solid ${p}` : '1.5px solid #e5e7eb', cursor: 'pointer', flexShrink: 0 }}>
                     <img src={im.preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     {i === 0 && <span style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: p, color: 'white', fontSize: 8, fontWeight: 800, textAlign: 'center' }}>{tRaw('ปก', 'Cover')}</span>}
-                    <button onClick={() => removeImg(i)} style={{ position: 'absolute', top: 0, right: 0, width: 16, height: 16, borderRadius: '0 0 0 6px', border: 'none', background: 'rgba(220,38,38,0.9)', color: 'white', fontSize: 10, cursor: 'pointer', lineHeight: 1 }}>✕</button>
+                    <button onClick={e => { e.stopPropagation(); removeImg(i); if (previewIdx >= images.length - 1) setPreviewIdx(Math.max(0, images.length - 2)); }}
+                      style={{ position: 'absolute', top: 0, right: 0, width: 16, height: 16, borderRadius: '0 0 0 6px', border: 'none', background: 'rgba(220,38,38,0.9)', color: 'white', fontSize: 10, cursor: 'pointer', lineHeight: 1 }}>✕</button>
                   </div>
                 ))}
                 {images.length < 10 && (
-                  <label style={{ width: 52, height: 52, borderRadius: 8, border: `1.5px dashed ${p}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: p, fontSize: 20, fontWeight: 700 }}>
+                  <label style={{ width: 52, height: 52, borderRadius: 8, border: `1.5px dashed ${p}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: p, fontSize: 20, fontWeight: 700, flexShrink: 0 }}>
                     +
                     <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => { if (e.target.files?.length) onPickMultiple(e.target.files); e.target.value = ''; }} />
                   </label>
                 )}
               </div>
               <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                <button onClick={() => recrop(0)} style={{ flex: 1, background: 'none', border: `1px solid ${p}40`, borderRadius: 8, padding: '5px', fontSize: 12, color: p, cursor: 'pointer', fontWeight: 700, fontFamily: theme.fontFamily }}>✂️ {tRaw('แก้ไขการตัดรูปปก', 'Edit cover crop')}</button>
                 <button onClick={() => setImages([])} style={{ flex: 1, background: 'none', border: `1px solid #e5e7eb`, borderRadius: 8, padding: '5px', fontSize: 12, color: '#94a3b8', cursor: 'pointer', fontFamily: theme.fontFamily }}>✕ {tRaw('ล้างทั้งหมด', 'Clear all')}</button>
               </div>
               {images.length > 1 && (
-                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6, textAlign: 'center' }}>{tRaw('รูปแรกคือภาพปก', 'First image is the cover')}</div>
+                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6, textAlign: 'center' }}>{tRaw('รูปแรกคือภาพปก · แตะรูปย่อเพื่อดูและตัด', 'First image is cover · tap thumbnail to preview & crop')}</div>
               )}
             </>
           )}
