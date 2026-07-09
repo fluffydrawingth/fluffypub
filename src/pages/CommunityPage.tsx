@@ -224,9 +224,9 @@ export default function CommunityPage() {
             {searchQ && <button onClick={() => { setSearchQ(''); setDebouncedQ(''); }} aria-label="Clear" style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#94a3b8' }}>✕</button>}
           </div>
           {/* Filter tabs: All | Gallery | Tips / How to */}
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
-            {([['all', t('all')], ['gallery', `🎨 ${t('gallery')}`], ['tips', `✨ ${t('tips_howto')}`]] as const).map(([k, lbl]) => (
-              <button key={k} onClick={() => { setPostTab(k); setSearchQ(''); setDebouncedQ(''); setFilter({ kind: 'all' }); }} style={{ padding: '7px 16px', borderRadius: 18, border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 700, background: postTab === k ? p : p + '15', color: postTab === k ? 'white' : p, fontFamily: theme.fontFamily }}>{lbl}</button>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12, flexWrap: 'nowrap' }}>
+            {([['all', t('all')], ['gallery', `🎨 ${tRaw('แกลเลอรี', 'Gallery')}`], ['tips', `✨ ${tRaw('วิธีระบายสี', 'How to')}`]] as const).map(([k, lbl]) => (
+              <button key={k} onClick={() => { setPostTab(k); setSearchQ(''); setDebouncedQ(''); setFilter({ kind: 'all' }); }} style={{ padding: '7px 14px', borderRadius: 18, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, background: postTab === k ? p : p + '15', color: postTab === k ? 'white' : p, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>{lbl}</button>
             ))}
           </div>
         </div>
