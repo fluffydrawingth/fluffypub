@@ -213,6 +213,7 @@ export const api = {
   createHighlight: (data: any) => fetch('/api/community?action=admin-highlight', { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()).then(d => { bust('/api/community?action=highlight'); bust('/api/community?action=header-highlights'); return d; }),
   updateHighlight: (id: string, data: any) => fetch(`/api/community?action=admin-highlight-update&id=${id}`, { method: 'POST', headers: h(), body: JSON.stringify(data) }).then(r => r.json()).then(d => { bust('/api/community?action=highlight'); bust('/api/community?action=header-highlights'); return d; }),
   deleteHighlight: (id: string) => fetch(`/api/community?action=admin-highlight&id=${id}`, { method: 'DELETE', headers: h() }).then(r => r.json()).then(d => { bust('/api/community?action=highlight'); bust('/api/community?action=header-highlights'); return d; }),
+  translateHighlight: (id: string) => fetch(`/api/community?action=admin-highlight-translate&id=${id}`, { method: 'POST', headers: h() }).then(r => r.json()),
   // External Book Library
   getExternalBooks: (q = '') => cfetch(`/api/community?action=external-books&q=${encodeURIComponent(q)}`, TTL_SHORT),
   getExternalAuthors: (q = '') => cfetch(`/api/community?action=external-authors&q=${encodeURIComponent(q)}`, TTL_SHORT),

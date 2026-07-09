@@ -2773,7 +2773,7 @@ const HL_TYPES = ['challenge','giveaway','announcement','partner','sponsored'] a
 type HLType = typeof HL_TYPES[number];
 const HL_STATUSES = ['draft','active','expired'] as const;
 
-const EMPTY_HL = { title:'', type:'announcement' as HLType, cover_image:'', description:'', start_date:'', end_date:'', link_url:'', status:'draft' as string, sort_order:0, content_blocks:[] as any[], card_size:'md' as string, show_in_header:false as boolean };
+const EMPTY_HL = { title_th:'', title_en:'', type:'announcement' as HLType, cover_image:'', description_th:'', description_en:'', start_date:'', end_date:'', link_url:'', status:'draft' as string, sort_order:0, content_blocks:[] as any[], card_size:'md' as string, show_in_header:false as boolean };
 
 function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}) {
   const [items, setItems] = React.useState<any[]>([]);
@@ -2781,6 +2781,7 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
   const [editing, setEditing] = React.useState<any|null>(null);
   const [form, setForm] = React.useState<any>(EMPTY_HL);
   const [saving, setSaving] = React.useState(false);
+  const [translating, setTranslating] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
   const [blockUploading, setBlockUploading] = React.useState<number|null>(null);
 
@@ -2788,11 +2789,21 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
   React.useEffect(()=>{ load(); },[]);
 
   const openNew = () => { setEditing('new'); setForm({...EMPTY_HL, content_blocks:[]}); };
-  const openEdit = (h:any) => { setEditing(h.id); setForm({ title:h.title||'', type:h.type||'announcement', cover_image:h.cover_image||'', description:h.description||'', start_date:h.start_date||'', end_date:h.end_date||'', link_url:h.link_url||'', status:h.status||'draft', sort_order:h.sort_order||0, content_blocks:Array.isArray(h.content_blocks)?h.content_blocks:[], card_size:h.card_size||'md', show_in_header:!!h.show_in_header }); };
+  const openEdit = (h:any) => { setEditing(h.id); setForm({ title_th:h.title_th||h.title||'', title_en:h.title_en||'', type:h.type||'announcement', cover_image:h.cover_image||'', description_th:h.description_th||h.description||'', description_en:h.description_en||'', start_date:h.start_date||'', end_date:h.end_date||'', link_url:h.link_url||'', status:h.status||'draft', sort_order:h.sort_order||0, content_blocks:Array.isArray(h.content_blocks)?h.content_blocks:[], card_size:h.card_size||'md', show_in_header:!!h.show_in_header }); };
   const cancel = () => { setEditing(null); };
 
+  const translate = async () => {
+    if (!editing || editing === 'new') return flash('⚠️ Save first, then auto-translate');
+    setTranslating(true);
+    const r = await (api as any).translateHighlight(editing).catch(() => null);
+    setTranslating(false);
+    if (!r || r.error) return flash('⚠️ Translation failed');
+    setForm((f:any) => ({ ...f, title_en: r.title_en || f.title_en, description_en: r.description_en || f.description_en }));
+    flash('✅ Translated! Review & save.');
+  };
+
   const save = async () => {
-    if (!form.title.trim()) return flash('⚠️ Title is required');
+    if (!String(form.title_th||'').trim()) return flash('⚠️ Thai title is required');
     setSaving(true);
     const r = editing==='new' ? await api.createHighlight(form) : await api.updateHighlight(editing, form);
     setSaving(false);
@@ -2856,7 +2867,18 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
       {editing && (
         <div style={{...card,padding:20,marginBottom:20,border:`2px solid ${P}30`}}>
           <h3 style={{fontSize:14,fontWeight:800,margin:'0 0 16px'}}>{editing==='new'?'New Highlight':'Edit Highlight'}</h3>
-          {inp('Title *', 'title', 'text', 'e.g. June Coloring Challenge')}
+          {inp('Title (TH) *', 'title_th', 'text', 'ชื่อกิจกรรม (ภาษาไทย)')}
+          <div style={{marginBottom:12}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+              <label style={{fontSize:12,fontWeight:700,color:'#374151'}}>Title (EN) <span style={{fontWeight:400,color:'#9ca3af'}}>— English</span></label>
+              <button onClick={translate} disabled={translating||editing==='new'} style={{padding:'4px 11px',borderRadius:8,border:'none',background:translating?'#e5e7eb':'#0369a1',color:'white',cursor:translating||editing==='new'?'not-allowed':'pointer',fontSize:11,fontWeight:700}}>
+                {translating?'Translating…':'✨ Auto-translate from Thai'}
+              </button>
+            </div>
+            {editing==='new' && <p style={{fontSize:11,color:'#64748b',margin:'0 0 6px'}}>Save first, then auto-translate.</p>}
+            <input type="text" value={form.title_en||''} onChange={e=>setForm((f:any)=>({...f,title_en:e.target.value}))} placeholder="e.g. June Coloring Challenge"
+              style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',boxSizing:'border-box' as const}} />
+          </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
             <div>
               <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Type</label>
@@ -2889,10 +2911,15 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
             </div>
           </div>
 
-          {/* Short description */}
+          {/* Short description — bilingual */}
           <div style={{marginBottom:12}}>
-            <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Short Description <span style={{fontWeight:400,color:'#9ca3af'}}>(shown on card)</span></label>
-            <textarea value={form.description||''} onChange={e=>setForm((f:any)=>({...f,description:e.target.value}))} rows={2} maxLength={500} placeholder="Brief description shown on the card…"
+            <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Short Description (TH) <span style={{fontWeight:400,color:'#9ca3af'}}>(แสดงบนการ์ด)</span></label>
+            <textarea value={form.description_th||''} onChange={e=>setForm((f:any)=>({...f,description_th:e.target.value}))} rows={2} maxLength={500} placeholder="คำอธิบายสั้น ๆ ภาษาไทย…"
+              style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',resize:'vertical' as const,boxSizing:'border-box' as const}} />
+          </div>
+          <div style={{marginBottom:12}}>
+            <label style={{display:'block',fontSize:12,fontWeight:700,color:'#374151',marginBottom:4}}>Short Description (EN) <span style={{fontWeight:400,color:'#9ca3af'}}>(shown on card — auto-translated above)</span></label>
+            <textarea value={form.description_en||''} onChange={e=>setForm((f:any)=>({...f,description_en:e.target.value}))} rows={2} maxLength={500} placeholder="Brief description shown on the card…"
               style={{width:'100%',padding:'9px 12px',borderRadius:10,border:'1.5px solid #e5e7eb',fontSize:13,fontFamily:'inherit',resize:'vertical' as const,boxSizing:'border-box' as const}} />
           </div>
 
@@ -2988,7 +3015,8 @@ function HighlightsTab({P,card,flash}:{P:string;card:any;flash:(m:string)=>void}
               {h.cover_image && <img src={h.cover_image} alt="" style={{width:60,height:44,objectFit:'cover',borderRadius:8,flexShrink:0}} />}
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:1}}>
-                  <span style={{fontSize:13,fontWeight:800,color:'#1e293b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{h.title}</span>
+                  <span style={{fontSize:13,fontWeight:800,color:'#1e293b',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{h.title_th||h.title}</span>
+                  {h.title_en && <span style={{fontSize:10,fontWeight:700,color:'#0369a1',flexShrink:0}}>🇬🇧 EN ✓</span>}
                   {h.show_in_header && <span style={{fontSize:10,fontWeight:800,padding:'2px 7px',borderRadius:8,background:P+'18',color:P,flexShrink:0,whiteSpace:'nowrap'}}>📌 Header</span>}
                 </div>
                 <div style={{fontSize:11.5,color:'#94a3b8'}}>{h.type} {h.end_date?`· ends ${h.end_date}`:''}</div>

@@ -141,7 +141,7 @@ export function HighlightDetailPage({ id }: { id: string }) {
           {/* Cover */}
           {h.cover_image ? (
             <div className="hl-cover">
-              <img src={h.cover_image} alt={h.title} />
+              <img src={h.cover_image} alt={tRaw(h.title_th||h.title, h.title_en||h.title)} />
             </div>
           ) : (
             <div className="hl-cover" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 64, background: tm.color + '10' }}>
@@ -157,7 +157,7 @@ export function HighlightDetailPage({ id }: { id: string }) {
             </span>
 
             <h1 style={{ fontSize: 'clamp(24px,3.5vw,38px)', fontWeight: 900, color: '#1e293b', margin: 0, lineHeight: 1.22 }}>
-              {h.title}
+              {tRaw(h.title_th || h.title, h.title_en || h.title)}
             </h1>
 
             {/* Dates */}
@@ -169,8 +169,10 @@ export function HighlightDetailPage({ id }: { id: string }) {
             )}
 
             {/* Description as sub-heading */}
-            {h.description && (
-              <p style={{ fontSize: 15.5, color: '#64748b', lineHeight: 1.7, margin: 0 }}>{h.description}</p>
+            {(h.description_th || h.description_en || h.description) && (
+              <p style={{ fontSize: 15.5, color: '#64748b', lineHeight: 1.7, margin: 0 }}>
+                {tRaw(h.description_th || h.description, h.description_en || h.description)}
+              </p>
             )}
 
             {/* Link button */}
@@ -225,7 +227,7 @@ export function HighlightCard({ h, p, theme, lang, tRaw }: any) {
       {/* Image — contain, white bg, compact height */}
       {h.cover_image && (
         <div style={{ position: 'relative', background: 'white', overflow: 'hidden', flexShrink: 0, borderBottom: '1px solid #f1f5f9' }}>
-          <img src={h.cover_image} alt={h.title}
+          <img src={h.cover_image} alt={tRaw(h.title_th||h.title, h.title_en||h.title)}
             style={{ width: '100%', height: h.card_size === 'lg' ? 200 : h.card_size === 'sm' ? 80 : 110, objectFit: 'contain', objectPosition: 'center', display: 'block' }} />
           {isSubtle && (
             <span style={{ position: 'absolute', top: 7, right: 7, background: 'rgba(255,255,255,0.92)', color: '#64748b', fontSize: 11.5, fontWeight: 700, padding: '2px 7px', borderRadius: 8 }}>
@@ -241,10 +243,10 @@ export function HighlightCard({ h, p, theme, lang, tRaw }: any) {
             {tm.emoji} {lang === 'th' ? tm.th : tm.en}
           </span>
         )}
-        <div style={{ fontSize: 15, fontWeight: 800, color: '#1e293b', lineHeight: 1.35 }}>{h.title}</div>
-        {h.description && (
+        <div style={{ fontSize: 15, fontWeight: 800, color: '#1e293b', lineHeight: 1.35 }}>{tRaw(h.title_th || h.title, h.title_en || h.title)}</div>
+        {(h.description_th || h.description_en || h.description) && (
           <div style={{ fontSize: 13.5, color: '#64748b', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
-            {h.description}
+            {tRaw(h.description_th || h.description, h.description_en || h.description)}
           </div>
         )}
         {endDate && (

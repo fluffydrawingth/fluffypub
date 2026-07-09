@@ -167,9 +167,9 @@ export default function CommunityPage() {
                     </div>
                     {/* Title + caption */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{h.title}</div>
-                      {h.description && (
-                        <div style={{ fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}>{h.description}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{tRaw(h.title_th||h.title, h.title_en||h.title)}</div>
+                      {(h.description_th||h.description_en||h.description) && (
+                        <div style={{ fontSize: 12, color: '#94a3b8', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}>{tRaw(h.description_th||h.description, h.description_en||h.description)}</div>
                       )}
                     </div>
                     {/* Countdown */}

@@ -121,6 +121,25 @@ function sanitizeColoringDetails(input) {
   return out;
 }
 
+// ─── Google Translate helper (TH → EN, free tier) ─────────────────────────────
+async function translateTH(text) {
+  const src = String(text || '').trim();
+  if (!src) return '';
+  const encoded = encodeURIComponent(src);
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=th&tl=en&dt=t&q=${encoded}`;
+  try {
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const parsed = await r.json();
+    return (parsed[0] || []).map(p => (p && p[0]) || '').join('').trim() || src;
+  } catch (_) { return src; }
+}
+async function translateOrFallback(text) {
+  const src = String(text || '').trim();
+  if (!src) return '';
+  const t = await translateTH(src);
+  return t || src;
+}
+
 // Find an existing external book by normalized title+author, or create one.
 // normalized_title = "title|author" (both lowercased) for case-insensitive dedup.
 async function resolveExternalBook(title, author) {
@@ -1195,10 +1214,14 @@ module.exports = async function handler(req, res) {
     if (!String(b.title||'').trim()) return json(res, 400, { error: 'title required' });
     if (!TYPES.includes(b.type)) return json(res, 400, { error: 'invalid type' });
     const row = {
-      title: String(b.title).trim().slice(0, 120),
+      title: String(b.title||b.title_th||'').trim().slice(0, 120),
+      title_th: b.title_th ? String(b.title_th).trim().slice(0, 120) : null,
+      title_en: b.title_en ? String(b.title_en).trim().slice(0, 120) : null,
       type: b.type,
       cover_image: b.cover_image || null,
       description: b.description ? String(b.description).slice(0, 500) : null,
+      description_th: b.description_th ? String(b.description_th).slice(0, 500) : null,
+      description_en: b.description_en ? String(b.description_en).slice(0, 500) : null,
       start_date: b.start_date || null,
       end_date: b.end_date || null,
       link_url: b.link_url || null,
@@ -1220,10 +1243,14 @@ module.exports = async function handler(req, res) {
     const b = req.body || {};
     const TYPES = ['challenge','giveaway','announcement','partner','sponsored'];
     const upd = { updated_at: new Date().toISOString() };
-    if (b.title !== undefined) upd.title = String(b.title).trim().slice(0, 120);
+    if (b.title !== undefined) upd.title = String(b.title||b.title_th||'').trim().slice(0, 120);
+    if (b.title_th !== undefined) upd.title_th = b.title_th ? String(b.title_th).trim().slice(0, 120) : null;
+    if (b.title_en !== undefined) upd.title_en = b.title_en ? String(b.title_en).trim().slice(0, 120) : null;
     if (b.type !== undefined && TYPES.includes(b.type)) upd.type = b.type;
     if (b.cover_image !== undefined) upd.cover_image = b.cover_image || null;
     if (b.description !== undefined) upd.description = b.description ? String(b.description).slice(0, 500) : null;
+    if (b.description_th !== undefined) upd.description_th = b.description_th ? String(b.description_th).slice(0, 500) : null;
+    if (b.description_en !== undefined) upd.description_en = b.description_en ? String(b.description_en).slice(0, 500) : null;
     if (b.start_date !== undefined) upd.start_date = b.start_date || null;
     if (b.end_date !== undefined) upd.end_date = b.end_date || null;
     if (b.link_url !== undefined) upd.link_url = b.link_url || null;
@@ -1235,6 +1262,23 @@ module.exports = async function handler(req, res) {
     const { error } = await supabase.from('community_highlights').update(upd).eq('id', id);
     if (error) return json(res, 400, { error: error.message });
     return json(res, 200, { success: true });
+  }
+
+  // POST ?action=admin-highlight-translate&id= — auto-translate TH → EN (admin)
+  if (req.method === 'POST' && action === 'admin-highlight-translate') {
+    const admin = await requireAuth(req, res, ['admin']); if (!admin) return;
+    const { id } = req.query; if (!id) return json(res, 400, { error: 'id required' });
+    const { data: hl } = await supabase.from('community_highlights').select('title_th,description_th').eq('id', id).single();
+    if (!hl) return json(res, 404, { error: 'Not found' });
+    const [title_en, description_en] = await Promise.all([
+      hl.title_th ? translateOrFallback(hl.title_th) : Promise.resolve(null),
+      hl.description_th ? translateOrFallback(hl.description_th) : Promise.resolve(null),
+    ]);
+    const upd = { updated_at: new Date().toISOString() };
+    if (title_en) upd.title_en = title_en;
+    if (description_en) upd.description_en = description_en;
+    await supabase.from('community_highlights').update(upd).eq('id', id);
+    return json(res, 200, { title_en, description_en });
   }
 
   // DELETE ?action=admin-highlight&id= — admin: delete
