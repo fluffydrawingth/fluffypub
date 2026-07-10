@@ -43,6 +43,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [related, setRelated] = useState<any[]>([]);
+  const [captionExpanded, setCaptionExpanded] = useState(false);
 
   // Owner edit — full form
   const [editing, setEditing] = useState(false);
@@ -116,7 +117,6 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
   const startEdit = () => {
     setECaption(post.caption || '');
     setEHeader(post.post_header || '');
-    // Load structured rows from coloring_details, else derive from legacy mediums/markers
     const cd = Array.isArray(post.coloring_details) && post.coloring_details.length
       ? post.coloring_details.map((d: any) => ({ medium: d.medium || '', brand: d.brand || '' }))
       : (post.mediums || []).map((m: string, i: number) => ({ medium: m, brand: (post.markers || [])[i] || '' }));
@@ -183,149 +183,269 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
   const isAdmin = user?.role === 'admin';
   const efld = { width: '100%', padding: '9px 12px', borderRadius: 10, border: `1.5px solid ${p}30`, fontSize: 14, outline: 'none', fontFamily: theme.fontFamily, boxSizing: 'border-box' as const };
   const created = post.created_at ? new Date(post.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '';
-  const chips = (items: string[], emoji: string, bg: string, color: string) => (items || []).map((m: string) => (
-    <span key={m} style={{ background: bg, color, borderRadius: 20, padding: '4px 11px', fontSize: 12, fontWeight: 700 }}>{emoji} {m}</span>
-  ));
+
+  const editFormProps = {
+    post, p, theme, tRaw, efld,
+    eHeader, setEHeader, eCaption, setECaption,
+    eDetails, setEDetails, eKeywords, setEKeywords,
+    ePalettes, setEPalettes, eBookMode, setEBookMode,
+    eSelProduct, setESelProduct, eProdQuery, setEProdQuery, eProdResults,
+    eExtTitle, setEExtTitle, eExtAuthor, setEExtAuthor,
+    eTools, setETools, isCreator: !!c?.affiliate_enabled,
+    savingEdit, onSave: saveEdit, onCancel: () => setEditing(false),
+  };
+
+  // ── Shared sub-sections ────────────────────────────────────────────────────
+  const pairs = Array.isArray(post.coloring_details) ? post.coloring_details.filter((d: any) => d && d.medium) : [];
+  const hasColoringDetails = !!(pairs.length || post.mediums?.length || post.markers?.length || post.palettes?.length);
+
+  const ColoringDetailsCard = ({ compact = false }: { compact?: boolean }) => hasColoringDetails ? (
+    <div style={{ background: 'white', border: '1px solid #f1f5f9', borderRadius: 12, padding: compact ? '10px 14px' : '12px 16px', marginBottom: 10 }}>
+      <div style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>🎨 {tRaw('รายละเอียดการลงสี', 'Coloring details')}</div>
+      {pairs.length ? (
+        <ul style={{ margin: 0, paddingLeft: 16, fontSize: 15, color: '#334155', lineHeight: 1.8 }}>
+          {pairs.map((d: any, i: number) => <li key={i}><b>{d.medium}</b>{d.brand ? ` — ${d.brand}` : <span style={{ color: '#94a3b8' }}> — {tRaw('ไม่ระบุยี่ห้อ', 'unknown brand')}</span>}</li>)}
+        </ul>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {post.mediums?.length > 0 && <div style={{ fontSize: 14, color: '#334155' }}><span style={{ color: '#7c3aed', fontWeight: 700 }}>🎨 {tRaw('เทคนิค', 'Mediums')}:</span> {post.mediums.join(', ')}</div>}
+          {post.markers?.length > 0 && <div style={{ fontSize: 14, color: '#334155' }}><span style={{ color: '#1d4ed8', fontWeight: 700 }}>🖍️ {tRaw('ปากกา/ชุดสี', 'Markers')}:</span> {post.markers.join(', ')}</div>}
+        </div>
+      )}
+      {post.palettes?.length > 0 && <div style={{ fontSize: 14, color: '#334155', marginTop: pairs.length ? 6 : 0 }}><span style={{ color: '#be185d', fontWeight: 700 }}>🌷 {tRaw('พาเลตต์', 'Palettes')}:</span> {post.palettes.join(', ')}</div>}
+    </div>
+  ) : null;
+
+  const BookCard = ({ compact = false }: { compact?: boolean }) => (
+    <div style={{ background: 'white', border: '1px solid #f1f5f9', borderRadius: 12, padding: compact ? '10px 14px' : '12px 16px', marginBottom: 10 }}>
+      <div style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>📚 {tRaw('หนังสือที่ใช้', 'Book used')}</div>
+      {post.product ? (
+        <button onClick={() => navigate(`/products/${post.product.slug}${c?.affiliate_enabled ? `?ref=${c.id}` : ''}`)} style={{ background: p + '12', color: p, border: 'none', cursor: 'pointer', borderRadius: 10, padding: '7px 13px', fontSize: 14, fontWeight: 800, fontFamily: theme.fontFamily }}>📚 {post.product.title} →</button>
+      ) : (post.external_book?.title || post.external_book_title) ? (
+        <div style={{ fontSize: 15, color: '#475569', fontWeight: 600 }}>📖 {post.external_book?.title || post.external_book_title}{(post.external_book?.author || post.external_book_author) ? <span style={{ fontWeight: 400 }}> by {post.external_book?.author || post.external_book_author}</span> : ''}</div>
+      ) : <div style={{ fontSize: 14, color: '#cbd5e1' }}>—</div>}
+    </div>
+  );
+
+  const RecsCard = () => post.recommended_tools?.length > 0 ? (
+    <div style={{ background: '#fafafa', border: '1px solid #f1f5f9', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
+      <div style={{ fontSize: 12, fontWeight: 800, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>🖍 {tRaw('เครื่องมือที่แนะนำ', 'Creator recommendations')}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {post.recommended_tools.map((t: any, i: number) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#475569' }}>{t.name}</span>
+            {t.url && <a href={t.url} target="_blank" rel="noopener noreferrer sponsored" style={{ fontSize: 13, fontWeight: 800, color: p, textDecoration: 'none', whiteSpace: 'nowrap' }}>{tRaw('ดูลิงก์', 'View link')} →</a>}
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
+
+  const ReactionsRow = ({ mobile = false }: { mobile?: boolean }) => (
+    <div style={mobile ? { overflowX: 'auto', paddingBottom: 2 } : { display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+      <div style={mobile ? { display: 'flex', gap: 6, flexWrap: 'nowrap', width: 'max-content' } : { display: 'contents' }}>
+        {REACTIONS.map(r => {
+          const on = mine.includes(r.type);
+          const n = counts[r.type] || 0;
+          return (
+            <button key={r.type} onClick={() => react(r.type)}
+              style={{ display: 'flex', alignItems: 'center', gap: mobile ? 3 : 4, padding: mobile ? '5px 9px' : '6px 12px', borderRadius: 20, border: `1.5px solid ${on ? p : '#eef2f7'}`, background: on ? p + '12' : 'white', cursor: 'pointer', fontSize: mobile ? 12 : 14, fontWeight: 700, color: on ? p : '#64748b', fontFamily: theme.fontFamily, whiteSpace: 'nowrap', flexShrink: 0 }}>
+              <span>{r.emoji}</span>
+              <span>{lang === 'th' ? r.th : r.en}</span>
+              {n > 0 && <span style={{ fontSize: mobile ? 11 : 12, color: on ? p : '#94a3b8' }}>· {n}</span>}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const AvatarBtn = ({ size = 40 }: { size?: number }) => (
+    <button onClick={() => c && navigate(`/creator/${c.id}`)} style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', background: p + '20', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      {isImageUrl(c?.avatar_url) ? <img src={c.avatar_url} alt={c?.name} loading="lazy" decoding="async" width={size} height={size} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : c?.avatar_url ? <span style={{ fontSize: size * 0.5 }}>{c.avatar_url}</span> : <BadgeIcon affiliate={c?.affiliate_enabled} size={size * 0.45} />}
+    </button>
+  );
 
   return (
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
-      <style>{`@media(max-width:760px){.cp-grid{grid-template-columns:1fr!important}}`}</style>
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 16px 60px' }}>
-        <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 15, fontWeight: 600, padding: '0 0 16px' }}>← {tRaw('ชุมชน', 'Community')}</button>
+      <style>{`
+        @media(max-width:759px){ .cp-desktop{display:none!important} }
+        @media(min-width:760px){ .cp-mobile{display:none!important} }
+        .cp-right-col::-webkit-scrollbar{width:0}
+      `}</style>
 
-        <div className="cp-grid" style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 24, alignItems: 'start' }}>
-          {/* Artwork — full original ratio carousel, no cropping on detail page */}
-          <div>
-            <div style={{ filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.08))' }}>
-              <ImageCarousel images={images} fit="contain" rounded={18} onImageClick={() => setLightbox(true)} thumbnails priority />
-            </div>
-            <div style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', marginTop: 6 }}>🔍 {tRaw('แตะที่ภาพเพื่อขยาย', 'Tap to zoom')}</div>
+      {/* ═══════════════════════════════════════════════════
+          MOBILE LAYOUT — Instagram-style stacked
+      ═══════════════════════════════════════════════════ */}
+      <div className="cp-mobile">
+        <div style={{ maxWidth: 480, margin: '0 auto', paddingBottom: 40 }}>
+
+          {/* Back */}
+          <div style={{ padding: '10px 16px 4px' }}>
+            <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 14, fontWeight: 600, padding: 0 }}>← {tRaw('ชุมชน', 'Community')}</button>
           </div>
 
-          {/* Details */}
-          <div>
-            {/* Creator + action buttons */}
-            {c && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-                <button onClick={() => navigate(`/creator/${c.id}`)} style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', background: p + '20', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
-                  {isImageUrl(c.avatar_url) ? <img src={c.avatar_url} alt={c.name} loading="lazy" decoding="async" width={44} height={44} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : c.avatar_url ? <span style={{ fontSize: 22 }}>{c.avatar_url}</span> : <BadgeIcon affiliate={c.affiliate_enabled} size={20} />}
+          {/* 1. Header: avatar · name · date | save + share */}
+          {c && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px 10px' }}>
+              <AvatarBtn size={38} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <button onClick={() => navigate(`/creator/${c.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 14, fontWeight: 800, color: '#1e293b', textAlign: 'left', fontFamily: theme.fontFamily }}>
+                  <BadgeIcon affiliate={c.affiliate_enabled} size={13} /> {c.name}
                 </button>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <button onClick={() => navigate(`/creator/${c.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 16, fontWeight: 800, color: '#1e293b', textAlign: 'left' }}><BadgeIcon affiliate={c.affiliate_enabled} size={15} /> {c.name}</button>
-                  {created && <div style={{ fontSize: 13, color: '#94a3b8' }}>{created}</div>}
-                </div>
-                <button onClick={toggleSave} style={{ padding: '7px 12px', borderRadius: 20, border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', color: saved ? p : '#64748b', cursor: 'pointer', fontSize: 14, fontWeight: 800, fontFamily: theme.fontFamily }}>
-                  {saved ? `🔖 ${tRaw('บันทึกแล้ว', 'Saved')}` : `🔖 ${tRaw('บันทึก', 'Save')}`}
-                </button>
-                <ShareButton post={post} p={p} theme={theme} tRaw={tRaw} />
+                {created && <div style={{ fontSize: 12, color: '#94a3b8' }}>{created}</div>}
               </div>
-            )}
+              <button onClick={toggleSave} style={{ padding: '6px 10px', borderRadius: 20, border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', color: saved ? p : '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
+                {saved ? `🔖 ${tRaw('บันทึกแล้ว', 'Saved')}` : `🔖 ${tRaw('บันทึก', 'Save')}`}
+              </button>
+              <ShareButton post={post} p={p} theme={theme} tRaw={tRaw} />
+            </div>
+          )}
 
-            {/* Owner actions */}
-            {(isOwner || isAdmin) && !editing && (
-              <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-                <button onClick={startEdit} style={{ padding: '7px 14px', borderRadius: 20, border: `1.5px solid ${p}40`, background: 'white', color: p, cursor: 'pointer', fontSize: 14, fontWeight: 800, fontFamily: theme.fontFamily }}>✏️ {tRaw('แก้ไข', 'Edit')}</button>
-                <button onClick={() => setShowDeleteConfirm(true)} style={{ padding: '7px 14px', borderRadius: 20, border: '1.5px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: 14, fontWeight: 800, fontFamily: theme.fontFamily }}>🗑️ {tRaw('ลบโพสต์', 'Delete')}</button>
-              </div>
-            )}
+          {/* Owner actions */}
+          {(isOwner || isAdmin) && !editing && (
+            <div style={{ display: 'flex', gap: 8, padding: '0 16px 8px' }}>
+              <button onClick={startEdit} style={{ padding: '6px 12px', borderRadius: 20, border: `1.5px solid ${p}40`, background: 'white', color: p, cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>✏️ {tRaw('แก้ไข', 'Edit')}</button>
+              <button onClick={() => setShowDeleteConfirm(true)} style={{ padding: '6px 12px', borderRadius: 20, border: '1.5px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>🗑️ {tRaw('ลบ', 'Delete')}</button>
+            </div>
+          )}
 
-            {editing ? (
-              <FullEditForm
-                post={post} p={p} theme={theme} tRaw={tRaw} efld={efld}
-                eHeader={eHeader} setEHeader={setEHeader}
-                eCaption={eCaption} setECaption={setECaption}
-                eDetails={eDetails} setEDetails={setEDetails}
-                eKeywords={eKeywords} setEKeywords={setEKeywords}
-                ePalettes={ePalettes} setEPalettes={setEPalettes}
-                eBookMode={eBookMode} setEBookMode={setEBookMode}
-                eSelProduct={eSelProduct} setESelProduct={setESelProduct}
-                eProdQuery={eProdQuery} setEProdQuery={setEProdQuery}
-                eProdResults={eProdResults}
-                eExtTitle={eExtTitle} setEExtTitle={setEExtTitle}
-                eExtAuthor={eExtAuthor} setEExtAuthor={setEExtAuthor}
-                eTools={eTools} setETools={setETools} isCreator={!!c?.affiliate_enabled}
-                savingEdit={savingEdit} onSave={saveEdit} onCancel={() => setEditing(false)}
-              />
-            ) : (
-              <>
-                {/* 1. Header + Caption box */}
-                {(post.post_header || post.caption) && (
-                  <div style={{ background: 'white', borderLeft: `4px solid ${p}`, borderRadius: '0 14px 14px 0', padding: '14px 18px', marginBottom: 14 }}>
-                    {post.post_header && <p style={{ fontSize: 21, fontWeight: 900, color: p, margin: '0 0 6px', lineHeight: 1.3 }}>{post.post_header}</p>}
-                    {post.caption && <p style={{ fontSize: 16, color: '#334155', lineHeight: 1.7, margin: 0, fontWeight: 400 }}>{post.caption}</p>}
-                  </div>
-                )}
+          {/* 2. Image — white frame card */}
+          <div style={{ padding: '0 12px', marginBottom: 0 }}>
+            <div style={{ background: 'white', borderRadius: 16, padding: 10, boxShadow: '0 2px 16px rgba(0,0,0,0.08)', position: 'relative' }}>
+              <ImageCarousel images={images} fit="contain" rounded={10} onImageClick={() => setLightbox(true)} priority />
+              <button onClick={() => setLightbox(true)}
+                style={{ position: 'absolute', bottom: 18, right: 18, background: 'rgba(0,0,0,0.38)', border: 'none', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', color: 'white', fontSize: 14, lineHeight: 1 }}>
+                🔍
+              </button>
+            </div>
+          </div>
 
-                {/* 2. Book used box */}
-                <div style={{ background: 'white', border: '1.5px solid #f1f5f9', borderRadius: 14, padding: '12px 16px', marginBottom: 14 }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#94a3b8', marginBottom: 8 }}>📚 {tRaw('หนังสือที่ใช้', 'Book used')}</div>
-                  {post.product ? (
-                    <button onClick={() => navigate(`/products/${post.product.slug}${c?.affiliate_enabled ? `?ref=${c.id}` : ''}`)} style={{ background: p + '12', color: p, border: 'none', cursor: 'pointer', borderRadius: 12, padding: '8px 14px', fontSize: 15, fontWeight: 800, fontFamily: theme.fontFamily }}>📚 {post.product.title} →</button>
-                  ) : (post.external_book?.title || post.external_book_title) ? (
-                    <div style={{ fontSize: 16, color: '#475569', fontWeight: 600 }}>📖 {post.external_book?.title || post.external_book_title}{(post.external_book?.author || post.external_book_author) ? <span style={{ fontWeight: 400 }}> by {post.external_book?.author || post.external_book_author}</span> : ''}</div>
-                  ) : <div style={{ fontSize: 15, color: '#cbd5e1' }}>—</div>}
+          {/* 3. Reactions — scrollable compact row */}
+          <div style={{ padding: '12px 16px 0', overflowX: 'auto' }}>
+            <ReactionsRow mobile />
+          </div>
+
+          {/* 4. Title + Caption — clean, no bordered box */}
+          {editing ? (
+            <div style={{ padding: '12px 16px' }}>
+              <FullEditForm {...editFormProps} />
+            </div>
+          ) : (
+            <div style={{ padding: '12px 16px 8px' }}>
+              {post.post_header && (
+                <h1 style={{ fontSize: 19, fontWeight: 900, color: p, margin: '0 0 6px', lineHeight: 1.3 }}>{post.post_header}</h1>
+              )}
+              {post.caption && (
+                <div>
+                  <p style={{ fontSize: 15, color: '#334155', lineHeight: 1.65, margin: 0, ...(captionExpanded ? {} : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any }) }}>
+                    {post.caption}
+                  </p>
+                  {post.caption.length > 100 && (
+                    <button onClick={() => setCaptionExpanded(e => !e)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 13, fontWeight: 700, padding: '4px 0', fontFamily: theme.fontFamily }}>
+                      {captionExpanded ? tRaw('ย่อ', 'See less') : tRaw('อ่านต่อ', 'See more')}
+                    </button>
+                  )}
                 </div>
+              )}
+            </div>
+          )}
 
-                {/* 3. Coloring details box — structured medium — brand pairs */}
-                {(() => {
-                  const pairs = Array.isArray(post.coloring_details) ? post.coloring_details.filter((d: any) => d && d.medium) : [];
-                  const hasAny = pairs.length || post.mediums?.length || post.markers?.length || post.palettes?.length;
-                  if (!hasAny) return null;
-                  return (
-                    <div style={{ background: 'white', border: '1.5px solid #f1f5f9', borderRadius: 14, padding: '12px 16px', marginBottom: 14 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: '#94a3b8', marginBottom: 8 }}>🎨 {tRaw('รายละเอียดการลงสี', 'Coloring details')}</div>
-                      {pairs.length ? (
-                        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 16, color: '#334155', lineHeight: 1.85 }}>
-                          {pairs.map((d: any, i: number) => <li key={i}><b>{d.medium}</b>{d.brand ? ` — ${d.brand}` : <span style={{ color: '#94a3b8' }}> — {tRaw('ไม่ระบุยี่ห้อ', 'unknown brand')}</span>}</li>)}
-                        </ul>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {post.mediums?.length > 0 && <div style={{ fontSize: 15.5, color: '#334155' }}><span style={{ color: '#7c3aed', fontWeight: 700 }}>🎨 {tRaw('เทคนิค', 'Mediums')}:</span> {post.mediums.join(', ')}</div>}
-                          {post.markers?.length > 0 && <div style={{ fontSize: 15.5, color: '#334155' }}><span style={{ color: '#1d4ed8', fontWeight: 700 }}>🖍️ {tRaw('ปากกา/ชุดสี', 'Markers / sets')}:</span> {post.markers.join(', ')}</div>}
-                        </div>
-                      )}
-                      {post.palettes?.length > 0 && <div style={{ fontSize: 15.5, color: '#334155', marginTop: pairs.length ? 8 : 0 }}><span style={{ color: '#be185d', fontWeight: 700 }}>🌷 {tRaw('พาเลตต์', 'Palettes')}:</span> {post.palettes.join(', ')}</div>}
-                    </div>
-                  );
-                })()}
+          {/* 5. Secondary cards */}
+          {!editing && (
+            <div style={{ padding: '4px 12px 8px' }}>
+              <BookCard compact />
+              <ColoringDetailsCard compact />
+              <RecsCard />
+            </div>
+          )}
+        </div>
+      </div>
 
-                {/* 4. Creator recommendations box — Fluffy Creator picks (detail page only) */}
-                {post.recommended_tools?.length > 0 && (
-                  <div style={{ background: p + '08', border: `1.5px solid ${p}20`, borderRadius: 14, padding: '12px 16px', marginBottom: 14 }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: p, marginBottom: 8 }}>🖍 {tRaw('เครื่องมือที่ครีเอเตอร์แนะนำ', 'Creator recommendations')}</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {post.recommended_tools.map((t: any, i: number) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                          <span style={{ fontSize: 16, fontWeight: 700, color: '#1e293b' }}>{t.name}</span>
-                          {t.url && <a href={t.url} target="_blank" rel="noopener noreferrer sponsored" style={{ fontSize: 15, fontWeight: 800, color: p, textDecoration: 'none', whiteSpace: 'nowrap' }}>{tRaw('ดูลิงก์', 'View link')} →</a>}
-                        </div>
-                      ))}
-                    </div>
+      {/* ═══════════════════════════════════════════════════
+          DESKTOP LAYOUT — sticky two-column
+      ═══════════════════════════════════════════════════ */}
+      <div className="cp-desktop">
+        <div style={{ maxWidth: 1040, margin: '0 auto', padding: '24px 20px 60px' }}>
+          <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 15, fontWeight: 600, padding: '0 0 16px' }}>← {tRaw('ชุมชน', 'Community')}</button>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 32, alignItems: 'start' }}>
+            {/* Left — artwork carousel */}
+            <div>
+              <div style={{ filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.08))' }}>
+                <ImageCarousel images={images} fit="contain" rounded={18} onImageClick={() => setLightbox(true)} thumbnails priority />
+              </div>
+            </div>
+
+            {/* Right — sticky info column */}
+            <div className="cp-right-col" style={{ position: 'sticky', top: 80, maxHeight: 'calc(100vh - 100px)', overflowY: 'auto', paddingRight: 2 }}>
+
+              {/* 1. Creator header */}
+              {c && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                  <AvatarBtn size={44} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <button onClick={() => navigate(`/creator/${c.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 16, fontWeight: 800, color: '#1e293b', textAlign: 'left', fontFamily: theme.fontFamily }}>
+                      <BadgeIcon affiliate={c.affiliate_enabled} size={15} /> {c.name}
+                    </button>
+                    {created && <div style={{ fontSize: 13, color: '#94a3b8' }}>{created}</div>}
                   </div>
-                )}
-              </>
-            )}
-
-            {/* Reactions */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 14, borderTop: '1px solid #eef2f7' }}>
-              {REACTIONS.map(r => {
-                const on = mine.includes(r.type);
-                const n = counts[r.type] || 0;
-                return (
-                  <button key={r.type} onClick={() => react(r.type)} title={tRaw(r.th, r.en)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '7px 12px', borderRadius: 20, border: `1.5px solid ${on ? p : '#eef2f7'}`, background: on ? p + '12' : 'white', cursor: 'pointer', fontSize: 15, fontWeight: 700, color: on ? p : '#64748b', fontFamily: theme.fontFamily }}>
-                    <span>{r.emoji}</span><span style={{ fontSize: 13 }}>{lang === 'th' ? r.th : r.en}</span>{n > 0 && <span style={{ fontSize: 13 }}>· {n}</span>}
+                  <button onClick={toggleSave} style={{ padding: '7px 12px', borderRadius: 20, border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', color: saved ? p : '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
+                    {saved ? `🔖 ${tRaw('บันทึกแล้ว', 'Saved')}` : `🔖 ${tRaw('บันทึก', 'Save')}`}
                   </button>
-                );
-              })}
+                  <ShareButton post={post} p={p} theme={theme} tRaw={tRaw} />
+                </div>
+              )}
+
+              {/* Owner actions */}
+              {(isOwner || isAdmin) && !editing && (
+                <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                  <button onClick={startEdit} style={{ padding: '7px 14px', borderRadius: 20, border: `1.5px solid ${p}40`, background: 'white', color: p, cursor: 'pointer', fontSize: 14, fontWeight: 800, fontFamily: theme.fontFamily }}>✏️ {tRaw('แก้ไข', 'Edit')}</button>
+                  <button onClick={() => setShowDeleteConfirm(true)} style={{ padding: '7px 14px', borderRadius: 20, border: '1.5px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: 14, fontWeight: 800, fontFamily: theme.fontFamily }}>🗑️ {tRaw('ลบโพสต์', 'Delete')}</button>
+                </div>
+              )}
+
+              {editing ? (
+                <FullEditForm {...editFormProps} />
+              ) : (
+                <>
+                  {/* 2. Title + Caption */}
+                  {(post.post_header || post.caption) && (
+                    <div style={{ background: 'white', borderLeft: `4px solid ${p}`, borderRadius: '0 14px 14px 0', padding: '14px 18px', marginBottom: 16 }}>
+                      {post.post_header && <p style={{ fontSize: 21, fontWeight: 900, color: p, margin: '0 0 6px', lineHeight: 1.3 }}>{post.post_header}</p>}
+                      {post.caption && <p style={{ fontSize: 16, color: '#334155', lineHeight: 1.7, margin: 0, fontWeight: 400 }}>{post.caption}</p>}
+                    </div>
+                  )}
+
+                  {/* 3. Reactions — moved above detail cards */}
+                  <div style={{ marginBottom: 16 }}>
+                    <ReactionsRow />
+                  </div>
+
+                  {/* 4. Book used */}
+                  <BookCard />
+
+                  {/* 5. Coloring details */}
+                  <ColoringDetailsCard />
+
+                  {/* 6. Creator recommendations */}
+                  <RecsCard />
+                </>
+              )}
             </div>
           </div>
         </div>
+      </div>
 
-        {/* You may also like — horizontal carousel, no wrapping */}
+      {/* ═══════════════════════════════════════════════════
+          COMMON — related posts, comments, modals
+      ═══════════════════════════════════════════════════ */}
+      <div style={{ maxWidth: 1040, margin: '0 auto', padding: '0 20px' }}>
+        {/* You may also like */}
         {related.length > 0 && (
           <div style={{ marginTop: 40 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 900, color: theme.textColor, marginBottom: 14 }}>✨ {tRaw('คุณอาจชอบสิ่งนี้', 'You may also like')}</h2>
+            <h2 style={{ fontSize: 20, fontWeight: 900, color: theme.textColor, marginBottom: 14 }}>✨ {tRaw('คุณอาจชอบสิ่งนี้', 'You may also like')}</h2>
             <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 8, scrollSnapType: 'x mandatory' }}>
               {related.map((rp: any) => (
                 <div key={rp.id} style={{ width: 180, flexShrink: 0, scrollSnapAlign: 'start' }}>
@@ -337,8 +457,8 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
         )}
 
         {/* Comments */}
-        <div style={{ marginTop: 36, maxWidth: 680 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 900, color: theme.textColor, marginBottom: 14 }}>💬 {tRaw('ความคิดเห็น', 'Comments')} ({comments.length})</h2>
+        <div style={{ marginTop: 36, maxWidth: 680, paddingBottom: 60 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 900, color: theme.textColor, marginBottom: 14 }}>💬 {tRaw('ความคิดเห็น', 'Comments')} ({comments.length})</h2>
           {user ? (
             <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
               <input value={commentBody} maxLength={500} onChange={e => setCommentBody(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') submitComment(); }}
@@ -352,19 +472,17 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
           )}
           {comments.length === 0 ? (
             <div style={{ color: '#94a3b8', fontSize: 16 }}>{tRaw('ยังไม่มีความคิดเห็น เป็นคนแรกสิ!', 'No comments yet — be the first!')}</div>
-          ) : comments.map(cm => {
-            return (
-              <div key={cm.id} style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-                <span style={{ width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', background: p + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
-                  {isImageUrl(cm.author?.avatar_url) ? <img src={cm.author.avatar_url} alt="" loading="lazy" decoding="async" width={34} height={34} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : cm.author?.avatar_url ? <span style={{ fontSize: 16 }}>{cm.author.avatar_url}</span> : <BadgeIcon affiliate={cm.author?.affiliate_enabled} size={16} />}
-                </span>
-                <div style={{ background: 'white', borderRadius: 14, padding: '10px 14px', flex: 1, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#1e293b', marginBottom: 2 }}><BadgeIcon affiliate={cm.author?.affiliate_enabled} size={14} /> {cm.author?.name || 'Community Member'}</div>
-                  <div style={{ fontSize: 16, color: '#334155', lineHeight: 1.55 }}>{cm.body}</div>
-                </div>
+          ) : comments.map(cm => (
+            <div key={cm.id} style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+              <span style={{ width: 34, height: 34, borderRadius: '50%', overflow: 'hidden', background: p + '20', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>
+                {isImageUrl(cm.author?.avatar_url) ? <img src={cm.author.avatar_url} alt="" loading="lazy" decoding="async" width={34} height={34} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : cm.author?.avatar_url ? <span style={{ fontSize: 16 }}>{cm.author.avatar_url}</span> : <BadgeIcon affiliate={cm.author?.affiliate_enabled} size={16} />}
+              </span>
+              <div style={{ background: 'white', borderRadius: 14, padding: '10px 14px', flex: 1, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#1e293b', marginBottom: 2 }}><BadgeIcon affiliate={cm.author?.affiliate_enabled} size={14} /> {cm.author?.name || 'Community Member'}</div>
+                <div style={{ fontSize: 15, color: '#334155', lineHeight: 1.55 }}>{cm.body}</div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -498,7 +616,7 @@ function TagEditBlock({ label, type, values, setValues, theme, p, efld, tRaw }: 
   );
 }
 
-// ── Share button — exports artwork with watermark for sharing ──────────────────
+// ── Share button ───────────────────────────────────────────────────────────────
 function ShareButton({ post, p, theme, tRaw }: any) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -513,7 +631,6 @@ function ShareButton({ post, p, theme, tRaw }: any) {
     setOpen(false);
   };
 
-  // Build a watermarked image in a canvas and return a blob URL
   const buildWatermarkedBlob = (): Promise<string> => new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -523,7 +640,6 @@ function ShareButton({ post, p, theme, tRaw }: any) {
       canvas.width = W; canvas.height = H;
       const ctx = canvas.getContext('2d')!;
       ctx.drawImage(img, 0, 0);
-      // Watermark: bottom-right, semi-transparent
       const fontSize = Math.max(14, Math.round(W / 40));
       ctx.font = `bold ${fontSize}px sans-serif`;
       const text = 'Fluffy Pub  /  fluffypub.com';
@@ -550,7 +666,6 @@ function ShareButton({ post, p, theme, tRaw }: any) {
         const file = new File([blob], 'artwork-fluffy-pub.jpg', { type: 'image/jpeg' });
         URL.revokeObjectURL(blobUrl);
         await navigator.share({ title, text: title, url: postUrl, files: [file] }).catch(() => {
-          // files not supported — fall back to URL-only share
           navigator.share({ title, text: title, url: postUrl }).catch(() => {});
         });
       } catch { navigator.share({ title, url: postUrl }).catch(() => {}); }
