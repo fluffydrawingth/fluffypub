@@ -105,6 +105,8 @@ function CommunitySection() {
             </button>
           );
         })}
+        {/* Trailing spacer so last card isn't clipped — browsers ignore padding-right on overflow-x containers */}
+        <div aria-hidden style={{ flexShrink: 0, width: 16 }} />
       </div>
 
       <div style={{ textAlign: 'center', marginTop: 22 }}>

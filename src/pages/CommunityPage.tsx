@@ -241,6 +241,7 @@ export default function CommunityPage() {
                   <CommunityCard post={post} compact />
                 </div>
               ))}
+              <div aria-hidden style={{ flexShrink: 0, width: 16 }} />
             </div>
           </div>
         )}
@@ -269,6 +270,7 @@ export default function CommunityPage() {
                   <div style={{ fontSize: 12, color: p, fontWeight: 700, marginTop: 4 }}>{c.posts} {tRaw('โพสต์', 'posts')}</div>
                 </button>
               ))}
+              <div aria-hidden style={{ flexShrink: 0, width: 16 }} />
             </div>
           </div>
         )}
