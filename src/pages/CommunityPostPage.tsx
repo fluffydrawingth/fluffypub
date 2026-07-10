@@ -285,9 +285,9 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
             <button onClick={() => navigate('/community')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 14, fontWeight: 600, padding: 0 }}>← {tRaw('ชุมชน', 'Community')}</button>
           </div>
 
-          {/* 1. Header: avatar · name · date | save + share */}
+          {/* 1. Header: avatar · name · date | save + share — sits behind the card */}
           {c && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px 10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px 28px' }}>
               <AvatarBtn size={38} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <button onClick={() => navigate(`/creator/${c.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 14, fontWeight: 800, color: '#1e293b', textAlign: 'left', fontFamily: theme.fontFamily }}>
@@ -302,59 +302,63 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
             </div>
           )}
 
-          {/* Owner actions */}
-          {(isOwner || isAdmin) && !editing && (
-            <div style={{ display: 'flex', gap: 8, padding: '0 16px 8px' }}>
-              <button onClick={startEdit} style={{ padding: '6px 12px', borderRadius: 20, border: `1.5px solid ${p}40`, background: 'white', color: p, cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>✏️ {tRaw('แก้ไข', 'Edit')}</button>
-              <button onClick={() => setShowDeleteConfirm(true)} style={{ padding: '6px 12px', borderRadius: 20, border: '1.5px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>🗑️ {tRaw('ลบ', 'Delete')}</button>
-            </div>
-          )}
+          {/* White card — rises over header, contains image + reactions + title + caption */}
+          <div style={{ margin: '-20px 10px 0', background: 'white', borderRadius: 20, boxShadow: '0 -2px 24px rgba(0,0,0,0.10)', overflow: 'hidden', position: 'relative', zIndex: 1 }}>
 
-          {/* 2. Image — white frame card */}
-          <div style={{ padding: '0 12px', marginBottom: 0 }}>
-            <div style={{ background: 'white', borderRadius: 16, padding: 10, boxShadow: '0 2px 16px rgba(0,0,0,0.08)', position: 'relative' }}>
-              <ImageCarousel images={images} fit="contain" rounded={10} onImageClick={() => setLightbox(true)} priority />
+            {/* Owner actions inside card */}
+            {(isOwner || isAdmin) && !editing && (
+              <div style={{ display: 'flex', gap: 8, padding: '14px 14px 0' }}>
+                <button onClick={startEdit} style={{ padding: '6px 12px', borderRadius: 20, border: `1.5px solid ${p}40`, background: 'white', color: p, cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>✏️ {tRaw('แก้ไข', 'Edit')}</button>
+                <button onClick={() => setShowDeleteConfirm(true)} style={{ padding: '6px 12px', borderRadius: 20, border: '1.5px solid #fca5a5', background: 'white', color: '#dc2626', cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily }}>🗑️ {tRaw('ลบ', 'Delete')}</button>
+              </div>
+            )}
+
+            {/* Image with inner padding to show the white frame */}
+            <div style={{ padding: '14px 14px 0', position: 'relative' }}>
+              <div style={{ borderRadius: 12, overflow: 'hidden', position: 'relative' }}>
+                <ImageCarousel images={images} fit="contain" rounded={10} onImageClick={() => setLightbox(true)} priority />
+              </div>
               <button onClick={() => setLightbox(true)}
-                style={{ position: 'absolute', bottom: 18, right: 18, background: 'rgba(0,0,0,0.38)', border: 'none', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', color: 'white', fontSize: 14, lineHeight: 1 }}>
+                style={{ position: 'absolute', bottom: 10, right: 22, background: 'rgba(0,0,0,0.38)', border: 'none', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', color: 'white', fontSize: 13, lineHeight: 1, zIndex: 2 }}>
                 🔍
               </button>
             </div>
-          </div>
 
-          {/* 3. Reactions — scrollable compact row */}
-          <div style={{ padding: '12px 16px 0', overflowX: 'auto' }}>
-            <ReactionsRow mobile />
-          </div>
+            {/* Reactions */}
+            <div style={{ padding: '10px 14px 0', overflowX: 'auto' }}>
+              <ReactionsRow mobile />
+            </div>
 
-          {/* 4. Title + Caption — clean, no bordered box */}
-          {editing ? (
-            <div style={{ padding: '12px 16px' }}>
-              <FullEditForm {...editFormProps} />
-            </div>
-          ) : (
-            <div style={{ padding: '12px 16px 8px' }}>
-              {post.post_header && (
-                <h1 style={{ fontSize: 19, fontWeight: 900, color: p, margin: '0 0 6px', lineHeight: 1.3 }}>{post.post_header}</h1>
-              )}
-              {post.caption && (
-                <div>
-                  <p style={{ fontSize: 15, color: '#334155', lineHeight: 1.65, margin: 0, ...(captionExpanded ? {} : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any }) }}>
-                    {post.caption}
-                  </p>
-                  {post.caption.length > 100 && (
-                    <button onClick={() => setCaptionExpanded(e => !e)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 13, fontWeight: 700, padding: '4px 0', fontFamily: theme.fontFamily }}>
-                      {captionExpanded ? tRaw('ย่อ', 'See less') : tRaw('อ่านต่อ', 'See more')}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+            {/* Title + Caption inside the card */}
+            {editing ? (
+              <div style={{ padding: '12px 14px' }}>
+                <FullEditForm {...editFormProps} />
+              </div>
+            ) : (
+              <div style={{ padding: '10px 14px 16px' }}>
+                {post.post_header && (
+                  <h1 style={{ fontSize: 18, fontWeight: 900, color: p, margin: '0 0 5px', lineHeight: 1.3 }}>{post.post_header}</h1>
+                )}
+                {post.caption && (
+                  <div>
+                    <p style={{ fontSize: 15, color: '#334155', lineHeight: 1.65, margin: 0, ...(captionExpanded ? {} : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as any }) }}>
+                      {post.caption}
+                    </p>
+                    {post.caption.length > 100 && (
+                      <button onClick={() => setCaptionExpanded(e => !e)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 13, fontWeight: 700, padding: '4px 0', fontFamily: theme.fontFamily }}>
+                        {captionExpanded ? tRaw('ย่อ', 'See less') : tRaw('อ่านต่อ', 'See more')}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>{/* end white card */}
 
           {/* 5. Secondary cards */}
           {!editing && (
-            <div style={{ padding: '4px 12px 8px' }}>
+            <div style={{ padding: '12px 10px 8px' }}>
               <BookCard compact />
               <ColoringDetailsCard compact />
               <RecsCard />
