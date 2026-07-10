@@ -22,9 +22,8 @@ const GRID = [
   `@media(max-width:767px){.cm-grid{column-count:1}}`,
   `.cm-grid>div{margin-bottom:16px}`,
   // Cozy Picks row: centered when it fits, always horizontally swipeable (esp. mobile)
-  `.cozy-row{display:flex;gap:14px;padding-bottom:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;justify-content:center}`,
-  `.cozy-row.many{justify-content:flex-start}`,
-  `@media(max-width:760px){.cozy-row{justify-content:flex-start}}`,
+  `.cozy-row{display:flex;gap:14px;padding-bottom:8px;overflow-x:auto;-webkit-overflow-scrolling:touch}`,
+  `@media(max-width:760px){.cozy-row{padding-left:4px}}`,
 ].join('');
 
 type Filter = { kind: 'all' | 'palette' | 'marker' | 'medium' | 'month' | 'product'; value?: string; label?: string };
