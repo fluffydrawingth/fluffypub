@@ -202,8 +202,11 @@ function FeaturedSection({ products }: { products: any[] }) {
     <section style={{ background:'white' }}>
       <style>{`
         @media(max-width:640px){
-          .hp-feat-wrap{padding:32px 16px!important;}
-          .hp-feat-grid{grid-template-columns:repeat(2,1fr)!important;gap:12px!important;}
+          .hp-feat-wrap{padding:32px 0!important;}
+          .hp-feat-header,.hp-feat-footer{padding:0 16px!important;}
+          .hp-feat-grid{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;padding:0 16px 12px!important;scrollbar-width:none!important;gap:14px!important;}
+          .hp-feat-grid::-webkit-scrollbar{display:none!important;}
+          .hp-feat-card-wrap{width:72vw!important;min-width:200px!important;max-width:240px!important;flex-shrink:0!important;}
         }
       `}</style>
       <div className="hp-feat-wrap" style={{ maxWidth:1200, margin:'0 auto', padding:'64px 24px' }}>
@@ -213,8 +216,11 @@ function FeaturedSection({ products }: { products: any[] }) {
         </div>
         <div className="hp-feat-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:24 }}>
           {products.map((p, idx) => (
-            <ProductCard key={p.id} product={p} priority={idx === 0} />
+            <div key={p.id} className="hp-feat-card-wrap">
+              <ProductCard product={p} priority={idx === 0} />
+            </div>
           ))}
+          <div aria-hidden style={{ flexShrink: 0, width: 1 }} />
         </div>
         <div className="hp-feat-footer" style={{ textAlign:'center', marginTop:40 }}>
           <button onClick={()=>navigate('/products')} style={{ background:'transparent', border:`2px solid ${theme.primaryColor}`, color:theme.primaryColor, cursor:'pointer', padding:'12px 32px', borderRadius:24, fontSize:16.5, fontWeight:800, fontFamily:theme.fontFamily }}>{tl(theme.labels?.featured_btn || 'View All Books →', theme.labels?.featured_btn_th)}</button>
