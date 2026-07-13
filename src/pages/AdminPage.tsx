@@ -56,7 +56,7 @@ export default function AdminPage() {
         </div>
         <div style={{ fontSize:12, color:'#9ca3af', fontWeight:500 }}>Fluffy Pub Studio</div>
       </div>
-      <nav style={{ flex:1, padding:'0 12px' }}>
+      <nav style={{ flex:1, padding:'0 12px', overflowY:'auto' }}>
         <NavItem icon="📊" label="Dashboard"    active={tab==='dashboard'}  onClick={()=>selectTab('dashboard')} />
         <NavItem icon="📚" label="Products"     active={tab==='products'}   onClick={()=>selectTab('products')} />
         <NavItem icon="📦" label="Orders"       active={tab==='orders'}     onClick={()=>selectTab('orders')} />
