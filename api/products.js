@@ -44,7 +44,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'POST') {
     const user = await requireAuth(req, res, ['artist', 'admin']);
     if (!user) return;
-    const { title, price, category, categories, description = '', rich_description, image = '🎨', cover_image_url, type, is_physical = false, is_digital = true, pages = 0, tags = [], original_price, status = 'published', digital_download_url, download_instruction, physical_stock = 0, shipping_required = false, shipping_note = '', artist_id } = req.body || {};
+    const { title, price, category, categories, description = '', rich_description, image = '🎨', cover_image_url, type, is_physical = false, is_digital = true, pages = 0, tags = [], original_price, status = 'published', digital_download_url, download_instruction, physical_stock = 0, shipping_required = false, shipping_note = '', artist_id, title_th, title_en, price_thb, price_usd, description_th, description_en, r2_key, r2_file_name, file_size, file_type, artist_physical_royalty_thb, digital_artist_royalty_percent, commission_enabled, creator_commission_percent, minimum_price_thb, minimum_price_usd } = req.body || {};
     // derive type from checkboxes if not provided
     // DB constraint: type only allows 'digital' or 'physical'
     // Use is_physical/is_digital boolean fields for 'both' products
@@ -64,7 +64,36 @@ module.exports = async function handler(req, res) {
     const artistName = artistProfile?.name || artistProfile?.artist_slug || '';
     const artistSlug = artistProfile?.artist_slug || '';
     const { search_keywords } = req.body;
-    const { data, error } = await supabase.from('products').insert({ title, slug, price: parseFloat(price), original_price: original_price ? parseFloat(original_price) : null, artist_id: finalArtistId, artist_name: artistName, artist_slug: artistSlug, category, categories: categories && categories.length ? categories : (category ? [category] : []), description, rich_description: rich_description || null, image, cover_image_url: cover_image_url || null, type: finalType, is_physical: Boolean(is_physical), is_digital: Boolean(is_digital), pages: parseInt(pages) || 0, tags, search_keywords: search_keywords || null, status, is_new: Boolean(req.body.is_new), is_hot: Boolean(req.body.is_hot), active: true, digital_download_url: digital_download_url || null, download_instruction: download_instruction || null, physical_stock: parseInt(physical_stock) || 0, shipping_required: Boolean(shipping_required), shipping_note: shipping_note || '', variants: [] }).select().single();
+    const { data, error } = await supabase.from('products').insert({
+      title, slug,
+      price: parseFloat(price),
+      original_price: original_price ? parseFloat(original_price) : null,
+      artist_id: finalArtistId, artist_name: artistName, artist_slug: artistSlug,
+      category, categories: categories && categories.length ? categories : (category ? [category] : []),
+      description, rich_description: rich_description || null,
+      image, cover_image_url: cover_image_url || null,
+      type: finalType, is_physical: Boolean(is_physical), is_digital: Boolean(is_digital),
+      pages: parseInt(pages) || 0, tags,
+      search_keywords: search_keywords || null,
+      status, is_new: Boolean(req.body.is_new), is_hot: Boolean(req.body.is_hot), active: true,
+      digital_download_url: digital_download_url || null,
+      download_instruction: download_instruction || null,
+      physical_stock: parseInt(physical_stock) || 0,
+      shipping_required: Boolean(shipping_required), shipping_note: shipping_note || '',
+      variants: [],
+      title_th: title_th || null, title_en: title_en || null,
+      price_thb: price_thb ? parseFloat(price_thb) : null,
+      price_usd: price_usd ? parseFloat(price_usd) : null,
+      description_th: description_th || null, description_en: description_en || null,
+      r2_key: r2_key || null, r2_file_name: r2_file_name || null,
+      file_size: file_size || null, file_type: file_type || null,
+      artist_physical_royalty_thb: artist_physical_royalty_thb != null ? parseFloat(artist_physical_royalty_thb) : null,
+      digital_artist_royalty_percent: digital_artist_royalty_percent != null ? parseFloat(digital_artist_royalty_percent) : null,
+      commission_enabled: Boolean(commission_enabled),
+      creator_commission_percent: creator_commission_percent ? parseFloat(creator_commission_percent) : 5,
+      minimum_price_thb: minimum_price_thb ? parseFloat(minimum_price_thb) : 99,
+      minimum_price_usd: minimum_price_usd ? parseFloat(minimum_price_usd) : 2.99,
+    }).select().single();
     if (error) return json(res, 400, { error: error.message });
     return json(res, 201, data);
   }
