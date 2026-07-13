@@ -202,11 +202,8 @@ function FeaturedSection({ products }: { products: any[] }) {
     <section style={{ background:'white' }}>
       <style>{`
         @media(max-width:640px){
-          .hp-feat-wrap{padding:32px 0!important;}
-          .hp-feat-header,.hp-feat-footer{padding:0 16px!important;}
-          .hp-feat-scroll{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;padding:0 16px 12px!important;scrollbar-width:none!important;gap:12px!important;justify-content:flex-start!important;}
-          .hp-feat-scroll::-webkit-scrollbar{display:none!important;}
-          .hp-feat-card{width:72vw!important;min-width:200px!important;max-width:260px!important;flex-shrink:0!important;flex-grow:0!important;}
+          .hp-feat-wrap{padding:32px 16px!important;}
+          .hp-feat-grid{grid-template-columns:repeat(2,1fr)!important;gap:12px!important;}
         }
       `}</style>
       <div className="hp-feat-wrap" style={{ maxWidth:1200, margin:'0 auto', padding:'64px 24px' }}>
@@ -214,11 +211,9 @@ function FeaturedSection({ products }: { products: any[] }) {
           <span style={{ fontSize:14.5, fontWeight:800, color:theme.primaryColor, letterSpacing:1, textTransform:'uppercase' as const }}>{tl(theme.labels?.featured_eyebrow || '✨ Handpicked for You', theme.labels?.featured_eyebrow_th)}</span>
           <h2 style={{ fontSize:40, fontWeight:900, color:theme.textColor, margin:'8px 0 12px', fontFamily:theme.fontFamily }}>{tl(theme.labels?.featured_title || 'Featured Collections', theme.labels?.featured_title_th)}</h2>
         </div>
-        <div className="hp-feat-scroll" style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
+        <div className="hp-feat-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:24 }}>
           {products.map((p, idx) => (
-            <div key={p.id} className="hp-feat-card" style={{ width: 'min(100%, 260px)', flexShrink: 0, flexGrow: 0, display: 'flex' }}>
-              <ProductCard product={p} priority={idx === 0} />
-            </div>
+            <ProductCard key={p.id} product={p} priority={idx === 0} />
           ))}
         </div>
         <div className="hp-feat-footer" style={{ textAlign:'center', marginTop:40 }}>
