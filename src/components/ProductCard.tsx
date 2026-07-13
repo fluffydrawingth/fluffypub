@@ -84,7 +84,7 @@ export default function ProductCard({ product, priority = false }: { product: an
         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${p}20`; }}
         onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)'; }}>
         {/* Square image */}
-        <div onClick={() => navigate(`/products/${product.slug}`)} style={{ position: 'relative', width: '100%', paddingBottom: '100%', background: `linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, overflow: 'hidden' }}>
+        <div onClick={() => navigate(`/products/${product.slug}`)} style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', background: `linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, overflow: 'hidden', flexShrink: 0 }}>
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 60 }}>
             {product.cover_image_url
               ? <img src={product.cover_image_url} alt={title} loading={priority ? 'eager' : 'lazy'} decoding="async" width={600} height={600} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
