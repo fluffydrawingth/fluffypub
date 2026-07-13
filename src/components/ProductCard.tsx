@@ -80,7 +80,7 @@ export default function ProductCard({ product, priority = false }: { product: an
 
   return (
     <>
-      <div style={{ background: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: `1.5px solid ${p}15`, transition: 'all 0.2s', cursor: 'pointer', fontFamily: theme.fontFamily }}
+      <div style={{ background: 'white', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: `1.5px solid ${p}15`, transition: 'all 0.2s', cursor: 'pointer', fontFamily: theme.fontFamily, display: 'flex', flexDirection: 'column', height: '100%' }}
         onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = `0 8px 24px ${p}20`; }}
         onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.07)'; }}>
         {/* Square image */}
@@ -109,9 +109,9 @@ export default function ProductCard({ product, priority = false }: { product: an
             {fav ? '❤️' : '🤍'}
           </button>
         </div>
-        <div style={{ padding: '12px 14px 14px' }}>
+        <div style={{ padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', flex: 1 }}>
           <div style={{ fontSize: 12.5, color: p, fontWeight: 800, marginBottom: 4 }}>{artist}{artist && product.category ? ' · ' : ''}{product.category}</div>
-          <div onClick={() => navigate(`/products/${product.slug}`)} style={{ fontSize: 16, fontWeight: 900, color: theme.textColor, marginBottom: 9, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any }}>
+          <div onClick={() => navigate(`/products/${product.slug}`)} style={{ fontSize: 16, fontWeight: 900, color: theme.textColor, marginBottom: 9, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, flex: 1 }}>
             {title}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>

@@ -216,7 +216,7 @@ function FeaturedSection({ products }: { products: any[] }) {
         </div>
         <div className="hp-feat-scroll" style={{ display:'flex', flexWrap:'wrap', gap:24, justifyContent:'center' }}>
           {products.map((p, idx) => (
-            <div key={p.id} className="hp-feat-card" style={{ width: 'min(100%, 260px)', flexShrink: 0, flexGrow: 0 }}>
+            <div key={p.id} className="hp-feat-card" style={{ width: 'min(100%, 260px)', flexShrink: 0, flexGrow: 0, display: 'flex' }}>
               <ProductCard product={p} priority={idx === 0} />
             </div>
           ))}
