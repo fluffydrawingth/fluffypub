@@ -28,4 +28,15 @@ values
   ('curated-palettes', '[]'::jsonb)
 on conflict (key) do nothing;
 
+-- Grants — the API uses the service role; enable RLS as backstop with no anon
+-- write access, matching migrate_community.sql's convention. Public can READ
+-- directly if the anon key is ever used (this data isn't sensitive — hex
+-- colors and palette names); all writes go through the service-role API
+-- (api/color-lab.js's `requireAuth(req, res, ['admin'])`).
+grant all privileges on color_lab_data to anon, authenticated, service_role;
+alter table color_lab_data enable row level security;
+do $$ begin
+  create policy "color lab data public read" on color_lab_data for select using (true);
+exception when duplicate_object then null; end $$;
+
 notify pgrst, 'reload schema';

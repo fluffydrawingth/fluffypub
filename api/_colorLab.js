@@ -1,4 +1,4 @@
-// Fluffy Color Lab integration: one endpoint for both resources this
+// Fluffy Color Lab integration: one handler for both resources this
 // feature persists, dispatched by `?resource=`, following the same
 // shape as api/categories.js — GET is public (site visitors need the
 // marker reference data to see matches; the curated-palette list is
@@ -6,6 +6,13 @@
 // color database, authoring curated palettes). See
 // scripts/migrate_color_lab.sql and
 // src/color-lab/features/marker-db/repository/SupabaseMarkerRepository.ts.
+//
+// Underscore-prefixed (not routed directly by Vercel) because the
+// Hobby plan caps deployments at 12 Serverless Functions and this
+// project's api/ folder was already at that limit — see api/pages.js's
+// `resource` dispatch branch and the `/api/color-lab` rewrite in
+// vercel.json, which route requests here without adding a 13th
+// function file.
 const { supabase, requireAuth, json } = require('./_lib');
 
 const EMPTY_MARKERS = {
@@ -26,7 +33,7 @@ function emptyFor(req) {
   return req.query.resource === 'curated' ? EMPTY_CURATED : EMPTY_MARKERS;
 }
 
-module.exports = async function handler(req, res) {
+module.exports = async function handleColorLab(req, res) {
   const key = resourceKey(req);
 
   if (req.method === 'GET') {

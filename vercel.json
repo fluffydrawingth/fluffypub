@@ -4,6 +4,7 @@
   "rewrites": [
     { "source": "/robots.txt", "destination": "/api/pages?type=robots" },
     { "source": "/sitemap.xml", "destination": "/api/pages?type=sitemap" },
+    { "source": "/api/color-lab", "destination": "/api/pages" },
     { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
