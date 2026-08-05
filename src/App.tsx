@@ -37,6 +37,7 @@ import CommunityHighlightsPage, { HighlightDetailPage } from './pages/CommunityH
 import CommunityPostPage from './pages/CommunityPostPage';
 import ExternalBookPage from './pages/ExternalBookPage';
 import CreatorProfilePage from './pages/CreatorProfilePage';
+import ColorLabPage from './pages/ColorLabPage';
 import { LangProvider } from './lib/lang';
 import { FavoritesProvider } from './lib/favorites';
 import { organizationSchema, useSEO, websiteSchema } from './lib/seo';
@@ -127,6 +128,7 @@ function AppContent() {
   const page = () => {
     switch (route.path) {
       case '/': return <HomePage />;
+      case '/creative-tools/color-lab': return <ColorLabPage />;
       case '/pages': return <PagesIndexPage />;
       case '/pages/:slug': return <CmsPage slug={route.params?.slug||''} />;
       case '/products': return <ProductsPage />;

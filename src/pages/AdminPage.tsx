@@ -10,9 +10,10 @@ import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
 import ImageCropEditor from '../components/ImageCropEditor';
 import HtmlEditor from '../components/HtmlEditor';
+import ColorLabAdminTab from '../components/ColorLabAdminTab';
 
 const ADMIN_EMAIL = 'fluffydrawing.th@gmail.com';
-type Tab = 'dashboard'|'products'|'orders'|'artists'|'artist-requests'|'payouts'|'affiliate-requests'|'affiliates'|'community'|'categories'|'journal'|'free-downloads'|'legal'|'policies'|'theme'|'lang';
+type Tab = 'dashboard'|'products'|'orders'|'artists'|'artist-requests'|'payouts'|'affiliate-requests'|'affiliates'|'community'|'categories'|'journal'|'free-downloads'|'legal'|'policies'|'theme'|'lang'|'color-lab';
 
 function NavItem({icon,label,active,onClick}:any) {
   return (
@@ -41,6 +42,7 @@ export default function AdminPage() {
     dashboard:'Dashboard', products:'Products', orders:'Orders', artists:'Artists', 'artist-requests':'Artist Requests', payouts:'Artist Payouts',
     'affiliate-requests':'Fluffy Creator Requests', affiliates:'Fluffy Creators', community:'Community Dashboard',
     categories:'Categories', journal:'Fluffy Journal', 'free-downloads':'Free Downloads', legal:'Legal Pages', policies:'Creator & Artist Policies', theme:'Theme & CMS', lang:'Language CMS',
+    'color-lab': 'Color Lab',
   };
 
   const selectTab = (t: Tab) => { setTab(t); setSidebarOpen(false); };
@@ -73,6 +75,7 @@ export default function AdminPage() {
         <NavItem icon="📜" label="Creator & Artist Policies" active={tab==='policies'} onClick={()=>selectTab('policies')} />
         <NavItem icon="✨" label="Theme & CMS"    active={tab==='theme'}           onClick={()=>selectTab('theme')} />
         <NavItem icon="🌐" label="Language CMS" active={tab==='lang'}       onClick={()=>selectTab('lang')} />
+        <NavItem icon="🎨" label="Color Lab" active={tab==='color-lab'}     onClick={()=>selectTab('color-lab')} />
       </nav>
       <div style={{ padding:'16px 12px', borderTop:'1px solid #f3f4f6' }}>
         <button onClick={()=>navigate('/')} style={{ width:'100%', padding:'9px', borderRadius:10, border:'1px solid #e5e7eb', color:'#6b7280', cursor:'pointer', background:'transparent', fontSize:13, fontWeight:600, marginBottom:8, fontFamily:'inherit' }}>← View Store</button>
@@ -125,6 +128,7 @@ export default function AdminPage() {
         {tab==='policies'        && <PoliciesTab />}
         {tab==='theme'           && <ThemeTab />}
         {tab==='lang'       && <LanguageCMSTab />}
+        {tab==='color-lab'  && <ColorLabAdminTab />}
       </div>
     </div>
   );

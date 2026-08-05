@@ -50,6 +50,10 @@ export default function Navbar() {
     [lang === 'th' ? '🌈 ชุมชน' : '🌈 Community', '/community'],
     [tl('nav_artists', 'nav_artists_th', t('artists')), '/artists'],
     [tl('nav_journal', 'nav_journal_th', lang === 'th' ? '📝 Journal' : '📝 Journal'), '/journal'],
+    // Only Color Lab entry point in the public navbar — no Marker Database or
+    // Curated Palettes link, ever. See fluffy-color-lab's
+    // docs/integration-with-fluffypub.md ("Fluffy Pub navbar").
+    [lang === 'th' ? '🎨 เครื่องมือสร้างสรรค์' : '🎨 Creative Tools', '/creative-tools/color-lab'],
   ];
 
   const handleNav = (path: string) => { navigate(path); setNavOpen(false); };
