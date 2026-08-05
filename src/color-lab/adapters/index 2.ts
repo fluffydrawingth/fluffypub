@@ -1,5 +1,0 @@
-export * from './StorageAdapter'
-export * from './AdminAccessAdapter'
-export * from './NavigationAdapter'
-export * from './CommunityImageSourceAdapter'
-export * from './LocalizationAdapter'

@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Shuffle, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SaveAsCuratedPaletteButton } from '@/features/curated-palettes'
-import { MarkerMatchPanel } from '@/features/marker-matcher'
+import { MarkerMatchPanel, type MarkerMatchResult } from '@/features/marker-matcher'
 import { AdjustColorsPanel, PaletteDisplay, PaletteExportButton } from '@/features/palette'
 import { useLocalization } from '@/localization'
 import type { PaletteColor } from '@/shared/color'
@@ -46,6 +46,16 @@ export function PaletteResultPanel({
 }: PaletteResultPanelProps) {
   const { t } = useLocalization()
   const [adjusting, setAdjusting] = useState(false)
+  const [matches, setMatches] = useState<MarkerMatchResult[] | null>(null)
+
+  // Label the PNG export with the marker code the user matched each swatch
+  // to, aligned by index — but only where the match's own requestedHex
+  // still agrees with the current palette's hex at that position, so a
+  // stale in-flight match (palette just regenerated, re-match not back
+  // yet) never mislabels a swatch. See exportPaletteAsPng.
+  const markerCodes = matches
+    ? palette.map((color, i) => (matches[i]?.requestedHex === color.hex ? matches[i].closestMarkerCode : undefined))
+    : undefined
 
   return (
     <div className="flex w-full flex-col items-center gap-5">
@@ -66,7 +76,7 @@ export function PaletteResultPanel({
           <Shuffle className={cn('size-4', isRegenerating && 'animate-spin')} />
           {t('common.regenerate')}
         </Button>
-        <PaletteExportButton palette={palette} />
+        <PaletteExportButton palette={palette} markerCodes={markerCodes} />
         {adjust && (
           <Button
             type="button"
@@ -92,7 +102,7 @@ export function PaletteResultPanel({
         />
       )}
 
-      {!error && <MarkerMatchPanel palette={palette} />}
+      {!error && <MarkerMatchPanel palette={palette} onMatchesChange={setMatches} />}
 
       {devDiagnostics}
     </div>
