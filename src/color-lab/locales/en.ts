@@ -245,6 +245,7 @@ export const en = {
     importResultUpdated: '{count} updated',
     importResultSkipped: '{count} skipped',
     importResultNothing: 'Nothing to import.',
+    importResultError: 'Import failed: {message}',
     setNameLabel: 'Set name',
     setNamePlaceholder: 'e.g. My hand-mixed markers',
     setNameHint:

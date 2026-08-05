@@ -233,15 +233,22 @@ export function SetDetailPage({
 
   const handleConfirmImport = async () => {
     if (!importPreview) return
-    const result = await commitSetCsvImport(importPreview, userSet, markerRepository, duplicatePolicy)
-    await onChanged()
-    setImportPreview(null)
-    const parts = [
-      result.created > 0 && t('markerDatabase.importResultAdded', { count: result.created }),
-      result.updated > 0 && t('markerDatabase.importResultUpdated', { count: result.updated }),
-      result.skipped > 0 && t('markerDatabase.importResultSkipped', { count: result.skipped }),
-    ].filter(Boolean)
-    setStatus(parts.length > 0 ? parts.join(', ') + '.' : t('markerDatabase.importResultNothing'))
+    try {
+      const result = await commitSetCsvImport(importPreview, userSet, markerRepository, duplicatePolicy)
+      await onChanged()
+      setImportPreview(null)
+      const parts = [
+        result.created > 0 && t('markerDatabase.importResultAdded', { count: result.created }),
+        result.updated > 0 && t('markerDatabase.importResultUpdated', { count: result.updated }),
+        result.skipped > 0 && t('markerDatabase.importResultSkipped', { count: result.skipped }),
+      ].filter(Boolean)
+      setStatus(parts.length > 0 ? parts.join(', ') + '.' : t('markerDatabase.importResultNothing'))
+    } catch (err) {
+      // A network-backed repository (Fluffy Pub's Supabase-backed one) can
+      // fail partway through — surface it instead of leaving the modal
+      // open with no feedback, see docs/integration-with-fluffypub.md.
+      setStatus(t('markerDatabase.importResultError', { message: err instanceof Error ? err.message : String(err) }))
+    }
   }
 
   return (

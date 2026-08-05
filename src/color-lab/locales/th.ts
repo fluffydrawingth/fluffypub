@@ -243,6 +243,7 @@ export const th: TranslationTree = {
     importResultUpdated: 'อัปเดตแล้ว {count} รายการ',
     importResultSkipped: 'ข้ามไป {count} รายการ',
     importResultNothing: 'ไม่มีอะไรให้นำเข้า',
+    importResultError: 'นำเข้าไม่สำเร็จ: {message}',
     setNameLabel: 'ชื่อชุด',
     setNamePlaceholder: 'เช่น มาร์กเกอร์ผสมเองของฉัน',
     setNameHint: 'ใช้สำหรับมาร์กเกอร์ที่ไม่มีในฐานข้อมูลอ้างอิงของแบรนด์ — ปากกานอกแบรนด์ สีที่เลิกผลิตแล้ว หรือสีที่ผสมเอง',

@@ -1,5 +1,5 @@
 import type { MarkerRepository } from '../repository/MarkerRepository'
-import type { CustomMarker, MarkerReference, UserMarkerSet } from '../types'
+import type { CreateCustomMarkerInput, CustomMarker, MarkerReference, UserMarkerSet } from '../types'
 import { isValidHex } from '../validation/hexValidation'
 import { parseCsvRecords, toCsvText } from './csvParser'
 
@@ -126,10 +126,19 @@ async function resolveOwnedReferences(
 }
 
 /**
- * Writes 'new' rows as new custom markers. 'duplicate' rows are skipped or
- * updated according to `duplicatePolicy` (default 'skip') — updating a
- * reference-matched row writes a swatch override, never mutates the
- * reference itself. 'error' rows are always skipped.
+ * Writes 'new' rows as new custom markers — batched into a single
+ * `addCustomMarkers` call rather than one `addCustomMarker` per row, so an
+ * N-row import costs one round trip instead of N. That matters a lot for a
+ * network-backed repository (each round trip is a full read-modify-write);
+ * for a 48-row import at N separate calls, any single dropped/slow request
+ * would silently break the rest of the batch with no visible error. See
+ * MarkerRepository.addCustomMarkers.
+ *
+ * 'duplicate' rows are skipped or updated according to `duplicatePolicy`
+ * (default 'skip') — updating a reference-matched row writes a swatch
+ * override, never mutates the reference itself. These stay per-row calls
+ * since duplicates are typically a small minority of an import. 'error'
+ * rows are always skipped.
  */
 export async function commitSetCsvImport(
   preview: SetImportPreview,
@@ -137,9 +146,9 @@ export async function commitSetCsvImport(
   repository: MarkerRepository,
   duplicatePolicy: DuplicatePolicy = 'skip',
 ): Promise<{ created: number; updated: number; skipped: number }> {
-  let created = 0
   let updated = 0
   let skipped = 0
+  const newInputs: CreateCustomMarkerInput[] = []
 
   for (const row of preview.rows) {
     if (row.status === 'error') {
@@ -165,16 +174,19 @@ export async function commitSetCsvImport(
       continue
     }
 
-    await repository.addCustomMarker(userSet.id, {
+    newInputs.push({
       markerCode: row.markerCode,
       colorName: row.colorName,
       hex: row.hex,
       notes: row.notes,
     })
-    created += 1
   }
 
-  return { created, updated, skipped }
+  if (newInputs.length > 0) {
+    await repository.addCustomMarkers(userSet.id, newInputs)
+  }
+
+  return { created: newInputs.length, updated, skipped }
 }
 
 /** JSON import for a set: an array of { marker_code, color_name, hex, notes }. */

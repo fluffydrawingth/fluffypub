@@ -91,6 +91,8 @@ export interface MarkerRepository {
   ): Promise<UserMarkerSet>
 
   addCustomMarker(userSetId: string, input: CreateCustomMarkerInput): Promise<UserMarkerSet>
+  /** Same as calling `addCustomMarker` once per input, but as a single read-modify-write — for bulk CSV/JSON imports, so N rows costs one round trip instead of N. */
+  addCustomMarkers(userSetId: string, inputs: CreateCustomMarkerInput[]): Promise<UserMarkerSet>
   updateCustomMarker(
     userSetId: string,
     customMarkerId: string,

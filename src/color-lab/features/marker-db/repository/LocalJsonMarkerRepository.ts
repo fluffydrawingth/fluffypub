@@ -442,6 +442,30 @@ export class LocalJsonMarkerRepository implements MarkerRepository {
     return userSet
   }
 
+  async addCustomMarkers(userSetId: string, inputs: CreateCustomMarkerInput[]): Promise<UserMarkerSet> {
+    for (const input of inputs) {
+      if (!isValidHex(input.hex)) throw new Error(`Invalid hex value: ${input.hex}`)
+    }
+    const data = this.read()
+    const userSet = this.requireUserSet(data, userSetId)
+    for (const input of inputs) {
+      const marker: CustomMarker = {
+        id: generateId(),
+        markerCode: input.markerCode,
+        colorName: input.colorName,
+        hex: input.hex,
+        ...hexFields(input.hex),
+        notes: input.notes,
+        createdAt: now(),
+        updatedAt: now(),
+      }
+      userSet.customMarkers.push(marker)
+    }
+    userSet.updatedAt = now()
+    this.write(data)
+    return userSet
+  }
+
   async updateCustomMarker(
     userSetId: string,
     customMarkerId: string,
