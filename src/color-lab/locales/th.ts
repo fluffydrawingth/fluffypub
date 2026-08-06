@@ -16,6 +16,7 @@ export const th: TranslationTree = {
     colorName: 'ชื่อสี',
     exportPng: 'ส่งออกเป็น PNG',
     exportJson: 'ส่งออกเป็น JSON',
+    exportMatchedTo: 'จับคู่กับ: {label}',
     regenerate: 'สร้างใหม่',
     copied: 'คัดลอกแล้ว!',
     dropzoneDefaultLabel: 'ผลงานระบายสี',

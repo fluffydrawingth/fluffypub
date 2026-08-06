@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import { Shuffle, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SaveAsCuratedPaletteButton } from '@/features/curated-palettes'
@@ -47,6 +47,14 @@ export function PaletteResultPanel({
   const { t } = useLocalization()
   const [adjusting, setAdjusting] = useState(false)
   const [matches, setMatches] = useState<MarkerMatchResult[] | null>(null)
+  const [matchedSetLabel, setMatchedSetLabel] = useState<string | null>(null)
+
+  // Stable across renders so MarkerMatchPanel's effect (keyed on this
+  // callback) doesn't fire spuriously on every unrelated parent re-render.
+  const handleMatchesChange = useCallback((nextMatches: MarkerMatchResult[] | null, setLabel: string | null) => {
+    setMatches(nextMatches)
+    setMatchedSetLabel(setLabel)
+  }, [])
 
   // Label the PNG export with the marker code the user matched each swatch
   // to, aligned by index — but only where the match's own requestedHex
@@ -55,6 +63,12 @@ export function PaletteResultPanel({
   // yet) never mislabels a swatch. See exportPaletteAsPng.
   const markerCodes = matches
     ? palette.map((color, i) => (matches[i]?.requestedHex === color.hex ? matches[i].closestMarkerCode : undefined))
+    : undefined
+
+  // The exported PNG's header bar — which marker set the codes above came
+  // from — omitted entirely when there's no current match.
+  const exportHeaderText = matchedSetLabel
+    ? t('common.exportMatchedTo', { label: matchedSetLabel })
     : undefined
 
   return (
@@ -76,7 +90,7 @@ export function PaletteResultPanel({
           <Shuffle className={cn('size-4', isRegenerating && 'animate-spin')} />
           {t('common.regenerate')}
         </Button>
-        <PaletteExportButton palette={palette} markerCodes={markerCodes} />
+        <PaletteExportButton palette={palette} markerCodes={markerCodes} headerText={exportHeaderText} />
         {adjust && (
           <Button
             type="button"
@@ -102,7 +116,7 @@ export function PaletteResultPanel({
         />
       )}
 
-      {!error && <MarkerMatchPanel palette={palette} onMatchesChange={setMatches} />}
+      {!error && <MarkerMatchPanel palette={palette} onMatchesChange={handleMatchesChange} />}
 
       {devDiagnostics}
     </div>

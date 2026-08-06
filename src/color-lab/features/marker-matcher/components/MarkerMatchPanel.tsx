@@ -33,8 +33,14 @@ function paletteKey(palette: PaletteColor[]): string {
 
 interface MarkerMatchPanelProps {
   palette: PaletteColor[]
-  /** Notified with the current match results (or null) on every change, so a sibling like PaletteResultPanel can label the PNG export with marker codes. */
-  onMatchesChange?: (matches: MarkerMatchResult[] | null) => void
+  /**
+   * Notified with the current match results (or null) and the matched
+   * set's display label (e.g. "Ohuhu · Honolulu · Pastel Colors 48", or
+   * null alongside null matches) on every change, so a sibling like
+   * PaletteResultPanel can label the PNG export with marker codes and the
+   * set name.
+   */
+  onMatchesChange?: (matches: MarkerMatchResult[] | null, setLabel: string | null) => void
 }
 
 /**
@@ -64,13 +70,15 @@ export function MarkerMatchPanel({ palette, onMatchesChange }: MarkerMatchPanelP
     if (options.length === 0) setSelectedSetId(null)
   }, [options, selectedSetId])
 
+  const matchedSetLabel = matches ? (options.find((o) => o.setId === selectedSetId)?.label ?? null) : null
+
   useEffect(() => {
-    onMatchesChange?.(matches)
+    onMatchesChange?.(matches, matchedSetLabel)
     // Also clears out a stale export label on unmount (e.g. an extraction
     // error hides this panel entirely) so PaletteExportButton doesn't keep
     // labeling swatches with codes from a palette no longer on screen.
-    return () => onMatchesChange?.(null)
-  }, [matches, onMatchesChange])
+    return () => onMatchesChange?.(null, null)
+  }, [matches, matchedSetLabel, onMatchesChange])
 
   const runMatch = useCallback(
     async (setId: string) => {

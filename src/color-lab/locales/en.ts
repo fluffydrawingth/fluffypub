@@ -14,6 +14,7 @@ export const en = {
     colorName: 'Color name',
     exportPng: 'Export PNG',
     exportJson: 'Export JSON',
+    exportMatchedTo: 'Matched to: {label}',
     regenerate: 'Regenerate',
     copied: 'Copied!',
     dropzoneDefaultLabel: 'coloring page',
