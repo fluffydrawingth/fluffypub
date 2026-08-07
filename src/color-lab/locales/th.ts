@@ -49,6 +49,7 @@ export const th: TranslationTree = {
     tabFromImage: 'สร้างจากรูปภาพ',
     tabGeneratePalette: 'สร้างตามบรรยากาศ',
     tabRandomPalette: 'สุ่มพาเลต',
+    tabFavorites: 'รายการโปรดของฉัน',
   },
   imagePalette: {
     reCrop: 'เลือกพื้นที่ใหม่',
@@ -366,6 +367,16 @@ export const th: TranslationTree = {
       published: 'เผยแพร่แล้ว',
       archived: 'เก็บถาวร',
     },
+  },
+  favoritePalettes: {
+    title: 'รายการโปรดของฉัน',
+    noPalettesYet: 'ยังไม่มีพาเลตโปรด — กดหัวใจเพื่อบันทึกไว้ที่นี่',
+    signInPrompt: 'เข้าสู่ระบบเพื่อบันทึกและดูพาเลตโปรดของคุณ',
+    signInCta: 'เข้าสู่ระบบ',
+    addToFavorites: 'ถูกใจ',
+    removeFromFavorites: 'ถูกใจแล้ว',
+    remove: 'ลบ',
+    deleteConfirm: 'ลบพาเลตนี้ออกจากรายการโปรดใช่หรือไม่',
   },
   randomPalette: {
     title: 'สุ่มพาเลต',

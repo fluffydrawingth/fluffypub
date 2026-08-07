@@ -1,23 +1,23 @@
 import { Palette as PaletteIcon } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { MyFavoritesView } from '@/features/favorite-palettes'
+import type { UploadedImage } from '@/features/image-upload'
 import { RandomPaletteGenerator } from '@/features/random-palette'
 import { useLocalization } from '@/localization'
 import { FromImageView } from './FromImageView'
 import { GeneratePaletteView } from './GeneratePaletteView'
 
-export type ColorLabTab = 'from-image' | 'generate' | 'random'
+export type ColorLabTab = 'from-image' | 'generate' | 'random' | 'favorites'
 
 interface ColorLabViewProps {
-  /**
-   * Fluffy Pub deep-link support (`?mode=image|vibe|random`, see
-   * docs/integration-with-fluffypub.md) — which tab opens first. Defaults
-   * to From Image, unchanged from the standalone app's behavior.
-   */
   initialTab?: ColorLabTab
+  /** Pre-supplied image (e.g. imported from a Community post) — forces the From Image tab regardless of initialTab. */
+  initialImage?: UploadedImage
 }
 
-export function ColorLabView({ initialTab = 'from-image' }: ColorLabViewProps) {
+export function ColorLabView({ initialTab = 'from-image', initialImage }: ColorLabViewProps = {}) {
   const { t } = useLocalization()
+  const tab = initialImage ? 'from-image' : initialTab
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-6 px-4 py-8 sm:py-10">
@@ -29,7 +29,7 @@ export function ColorLabView({ initialTab = 'from-image' }: ColorLabViewProps) {
         <p className="text-muted-foreground max-w-sm text-sm sm:text-base">{t('colorLab.subtitle')}</p>
       </header>
 
-      <Tabs defaultValue={initialTab} className="w-full items-center gap-8">
+      <Tabs defaultValue={tab} className="w-full items-center gap-8">
         <TabsList className="rounded-full">
           <TabsTrigger value="from-image" className="rounded-full">
             {t('colorLab.tabFromImage')}
@@ -40,16 +40,22 @@ export function ColorLabView({ initialTab = 'from-image' }: ColorLabViewProps) {
           <TabsTrigger value="random" className="rounded-full">
             {t('colorLab.tabRandomPalette')}
           </TabsTrigger>
+          <TabsTrigger value="favorites" className="rounded-full">
+            {t('colorLab.tabFavorites')}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="from-image" className="flex w-full flex-col items-center">
-          <FromImageView />
+          <FromImageView initialImage={initialImage} />
         </TabsContent>
         <TabsContent value="generate" className="flex w-full flex-col items-center">
           <GeneratePaletteView />
         </TabsContent>
         <TabsContent value="random" className="flex w-full flex-col items-center">
           <RandomPaletteGenerator />
+        </TabsContent>
+        <TabsContent value="favorites" className="flex w-full flex-col items-center">
+          <MyFavoritesView />
         </TabsContent>
       </Tabs>
     </div>

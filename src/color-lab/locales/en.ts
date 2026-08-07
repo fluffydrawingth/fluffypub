@@ -47,6 +47,7 @@ export const en = {
     tabFromImage: 'From Image',
     tabGeneratePalette: 'Generate by Vibe',
     tabRandomPalette: 'Random Palette',
+    tabFavorites: 'My Favorites',
   },
   imagePalette: {
     reCrop: 'Re-crop',
@@ -372,6 +373,16 @@ export const en = {
       published: 'Published',
       archived: 'Archived',
     },
+  },
+  favoritePalettes: {
+    title: 'My Favorites',
+    noPalettesYet: 'No favorite palettes yet — heart a palette to save it here.',
+    signInPrompt: 'Sign in to save and view your favorite palettes.',
+    signInCta: 'Sign In',
+    addToFavorites: 'Favorite',
+    removeFromFavorites: 'Favorited',
+    remove: 'Remove',
+    deleteConfirm: 'Remove this palette from your favorites?',
   },
   randomPalette: {
     title: 'Random Palette',

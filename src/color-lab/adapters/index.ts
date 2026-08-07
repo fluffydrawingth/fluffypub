@@ -1,5 +1,6 @@
 export * from './StorageAdapter'
 export * from './AdminAccessAdapter'
+export * from './AuthAccessAdapter'
 export * from './NavigationAdapter'
 export * from './CommunityImageSourceAdapter'
 export * from './LocalizationAdapter'

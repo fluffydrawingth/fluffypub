@@ -29,7 +29,7 @@ function parse(hash: string): Route {
   const q = new URLSearchParams(query);
   const p = pathOnly.split('/').filter(Boolean);
   if (!p.length) return { path: '/' };
-  if (p[0]==='creative-tools' && p[1]==='color-lab') return { path:'/creative-tools/color-lab', params:{ mode: q.get('mode') || '' } };
+  if (p[0]==='creative-tools' && p[1]==='color-lab') return { path:'/creative-tools/color-lab', params:{ mode: q.get('mode') || '', post: q.get('post') || '' } };
   if (p[0]==='products' && p[1]) return { path:'/products/:slug', params:{ slug:p[1] } };
   if (p[0]==='products') return { path:'/products', params:{ category: q.get('cat') || '' } };
   if (p[0]==='digital-products') return { path:'/digital-products' };

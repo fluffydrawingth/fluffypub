@@ -5,11 +5,17 @@
 
 // Top-level public tools — the only entry points a public nav should ever
 // link to. Admin tools live in a separate module: see ./admin.ts.
-export { ColorLabView as ColorLabPage } from '@/app/views/ColorLabView'
+export { ColorLabView as ColorLabPage, type ColorLabTab } from '@/app/views/ColorLabView'
 export { FromImageView as ImagePaletteTool } from '@/app/views/FromImageView'
 export { GeneratePaletteView as VibePaletteGenerator } from '@/app/views/GeneratePaletteView'
 export { RandomPaletteGenerator } from '@/features/random-palette'
 export { MarkerMatchPanel } from '@/features/marker-matcher'
+
+// Image ingestion — for building the UploadedImage a host app passes as
+// ColorLabPage's initialImage (e.g. a CommunityImageSourceAdapter
+// implementation importing a Community post's photo).
+export type { UploadedImage } from '@/features/image-upload'
+export { loadImageFromUrl } from '@/features/image-upload'
 
 // Palette types + color utilities
 export type { HexColor, LabColor, OklabColor, OklchColor, PaletteColor, RgbColor } from '@/shared/color'
@@ -32,6 +38,10 @@ export { markerRepository } from '@/features/marker-db'
 // Curated palettes
 export type { CuratedPalette, CuratedPaletteRepository } from '@/features/curated-palettes'
 export { curatedPaletteRepository } from '@/features/curated-palettes'
+
+// Favorite palettes
+export type { FavoritePalette, FavoritePaletteRepository } from '@/features/favorite-palettes'
+export { favoritePaletteRepository } from '@/features/favorite-palettes'
 
 // Integration adapters
 export * from '@/adapters'

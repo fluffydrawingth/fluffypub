@@ -2,6 +2,7 @@ import { useCallback, useState, type ReactNode } from 'react'
 import { Shuffle, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SaveAsCuratedPaletteButton } from '@/features/curated-palettes'
+import { FavoritePaletteButton } from '@/features/favorite-palettes'
 import { MarkerMatchPanel, type MarkerMatchResult } from '@/features/marker-matcher'
 import { AdjustColorsPanel, PaletteDisplay, PaletteExportButton } from '@/features/palette'
 import { useLocalization } from '@/localization'
@@ -91,6 +92,7 @@ export function PaletteResultPanel({
           {t('common.regenerate')}
         </Button>
         <PaletteExportButton palette={palette} markerCodes={markerCodes} headerText={exportHeaderText} />
+        <FavoritePaletteButton palette={palette} />
         {adjust && (
           <Button
             type="button"

@@ -298,6 +298,11 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
               <button onClick={toggleSave} style={{ padding: '6px 10px', borderRadius: 20, border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', color: saved ? p : '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
                 {saved ? `🔖 ${tRaw('บันทึกแล้ว', 'Saved')}` : `🔖 ${tRaw('บันทึก', 'Save')}`}
               </button>
+              {(post.artwork_urls?.[0] || post.artwork_url) && (
+                <button onClick={() => navigate(`/creative-tools/color-lab?mode=image&post=${post.id}`)} style={{ padding: '6px 10px', borderRadius: 20, border: '1.5px solid #e5e7eb', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
+                  🎨 {tRaw('สร้างพาเลตต์', 'Generate Palette')}
+                </button>
+              )}
               <ShareButton post={post} p={p} theme={theme} tRaw={tRaw} />
             </div>
           )}
@@ -398,6 +403,11 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
                   <button onClick={toggleSave} style={{ padding: '7px 12px', borderRadius: 20, border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', color: saved ? p : '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
                     {saved ? `🔖 ${tRaw('บันทึกแล้ว', 'Saved')}` : `🔖 ${tRaw('บันทึก', 'Save')}`}
                   </button>
+                  {(post.artwork_urls?.[0] || post.artwork_url) && (
+                    <button onClick={() => navigate(`/creative-tools/color-lab?mode=image&post=${post.id}`)} style={{ padding: '7px 12px', borderRadius: 20, border: '1.5px solid #e5e7eb', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
+                      🎨 {tRaw('สร้างพาเลตต์', 'Generate Palette')}
+                    </button>
+                  )}
                   <ShareButton post={post} p={p} theme={theme} tRaw={tRaw} />
                 </div>
               )}

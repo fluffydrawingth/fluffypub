@@ -17,15 +17,21 @@ import { deltaEOk, hexToRgb, rgbToHex, rgbToOklab, type PaletteColor } from '@/s
 import { PaletteControls, usePaletteStore } from '@/features/palette'
 import { PaletteResultPanel } from '@/features/palette-result'
 import { useLocalization } from '@/localization'
+import type { UploadedImage } from '@/features/image-upload'
 
 /** undefined = crop not chosen yet (show cropper); null = full image confirmed. */
 type CropChoice = CropRect | null | undefined
 
 const REROLL_MIN_DISTANCE = 0.045
 
-export function FromImageView() {
+interface FromImageViewProps {
+  /** Pre-supplied image (e.g. imported from a Community post) — skips the dropzone and auto-extracts against the full image. */
+  initialImage?: UploadedImage
+}
+
+export function FromImageView({ initialImage }: FromImageViewProps = {}) {
   const { t } = useLocalization()
-  const { image, isLoading: isImageLoading, error: imageError, loadFile, clear } = useImageUpload()
+  const { image, isLoading: isImageLoading, error: imageError, loadFile, setImage, clear } = useImageUpload()
   const colorCount = usePaletteStore((state) => state.colorCount)
   const setColorCount = usePaletteStore((state) => state.setColorCount)
   const setPalette = usePaletteStore((state) => state.setPalette)
@@ -33,6 +39,18 @@ export function FromImageView() {
   const [mode, setMode] = useState<ExtractionMode>('artwork')
   const [includeNeutrals, setIncludeNeutrals] = useState(MODE_PRESETS.artwork.includeNeutralsDefault)
   const [crop, setCrop] = useState<CropChoice>(undefined)
+
+  // Deep-linked image (e.g. from a Community post): skip the dropzone and
+  // crop-confirmation step entirely — full image, extraction auto-runs via
+  // useColorExtraction below as soon as `image` and `crop` are both set.
+  // Keyed on the URL so a different initialImage (new deep link) re-applies,
+  // but never overrides an image the user has since picked/re-cropped
+  // themselves.
+  useEffect(() => {
+    if (!initialImage) return
+    setImage(initialImage)
+    setCrop(null)
+  }, [initialImage?.url, setImage])
 
   const [colors, setColors] = useState<ExtractedColor[]>([])
   const [pickSlot, setPickSlot] = useState<number | null>(null)

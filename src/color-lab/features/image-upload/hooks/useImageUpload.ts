@@ -6,11 +6,13 @@ interface UseImageUploadResult {
   isLoading: boolean
   error: string | null
   loadFile: (file: File) => void
+  /** Injects an already-built UploadedImage (e.g. from loadImageFromUrl) without going through file input. */
+  setImage: (image: UploadedImage) => void
   clear: () => void
 }
 
 export function useImageUpload(): UseImageUploadResult {
-  const [image, setImage] = useState<UploadedImage | null>(null)
+  const [image, setImageState] = useState<UploadedImage | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const objectUrlRef = useRef<string | null>(null)
@@ -38,7 +40,7 @@ export function useImageUpload(): UseImageUploadResult {
       element.onload = () => {
         revokePrevious()
         objectUrlRef.current = url
-        setImage({ element, url, fileName: file.name })
+        setImageState({ element, url, fileName: file.name })
         setIsLoading(false)
       }
 
@@ -53,11 +55,24 @@ export function useImageUpload(): UseImageUploadResult {
     [revokePrevious],
   )
 
+  // For images that arrive already built (e.g. loadImageFromUrl) — not a
+  // blob: URL we own, so nothing to revoke for the new image itself, but a
+  // previously loaded local file's blob URL is released to avoid a leak.
+  const setImage = useCallback(
+    (nextImage: UploadedImage) => {
+      revokePrevious()
+      setError(null)
+      setIsLoading(false)
+      setImageState(nextImage)
+    },
+    [revokePrevious],
+  )
+
   const clear = useCallback(() => {
     revokePrevious()
-    setImage(null)
+    setImageState(null)
     setError(null)
   }, [revokePrevious])
 
-  return { image, isLoading, error, loadFile, clear }
+  return { image, isLoading, error, loadFile, setImage, clear }
 }

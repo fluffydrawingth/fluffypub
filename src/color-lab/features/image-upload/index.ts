@@ -1,4 +1,5 @@
 export * from './types'
 export { useImageUpload } from './hooks/useImageUpload'
+export { loadImageFromUrl } from './loadImageFromUrl'
 export { ImageDropzone } from './components/ImageDropzone'
 export { ImageCropper } from './components/ImageCropper'
