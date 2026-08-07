@@ -362,6 +362,7 @@ export const th: TranslationTree = {
     untitledPalette: 'พาเลตไม่มีชื่อ',
     savedAsDraft: 'บันทึกเป็นฉบับร่างแล้ว',
     saveAsCurated: 'บันทึกเป็นพาเลตที่คัดสรร',
+    saveError: 'บันทึกไม่สำเร็จ: {message}',
     status: {
       draft: 'ฉบับร่าง',
       published: 'เผยแพร่แล้ว',
@@ -377,6 +378,7 @@ export const th: TranslationTree = {
     removeFromFavorites: 'ถูกใจแล้ว',
     remove: 'ลบ',
     deleteConfirm: 'ลบพาเลตนี้ออกจากรายการโปรดใช่หรือไม่',
+    saveError: 'บันทึกไม่สำเร็จ: {message}',
   },
   randomPalette: {
     title: 'สุ่มพาเลต',

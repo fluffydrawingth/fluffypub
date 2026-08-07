@@ -368,6 +368,7 @@ export const en = {
     untitledPalette: 'Untitled palette',
     savedAsDraft: 'Saved as draft',
     saveAsCurated: 'Save as curated palette',
+    saveError: 'Save failed: {message}',
     status: {
       draft: 'Draft',
       published: 'Published',
@@ -383,6 +384,7 @@ export const en = {
     removeFromFavorites: 'Favorited',
     remove: 'Remove',
     deleteConfirm: 'Remove this palette from your favorites?',
+    saveError: 'Save failed: {message}',
   },
   randomPalette: {
     title: 'Random Palette',

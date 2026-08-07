@@ -30,6 +30,7 @@ export function FavoritePaletteButton({ palette }: FavoritePaletteButtonProps) {
   const { t } = useLocalization()
   const [existing, setExisting] = useState<FavoritePalette | null>(null)
   const [isBusy, setIsBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const hexes = palette.map((c) => c.hex)
   const hexesKey = hexes.join(',')
@@ -54,6 +55,7 @@ export function FavoritePaletteButton({ palette }: FavoritePaletteButtonProps) {
       return
     }
     setIsBusy(true)
+    setError(null)
     try {
       if (existing) {
         await favoritePaletteRepository.delete(existing.id)
@@ -62,22 +64,29 @@ export function FavoritePaletteButton({ palette }: FavoritePaletteButtonProps) {
         const created = await favoritePaletteRepository.create({ colors: hexes })
         setExisting(created)
       }
+    } catch (err) {
+      // A silent failure here (network/backend error swallowed) looks
+      // identical to the button doing nothing — always surface it.
+      setError(t('favoritePalettes.saveError', { message: err instanceof Error ? err.message : String(err) }))
     } finally {
       setIsBusy(false)
     }
   }
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      className="rounded-full"
-      onClick={handleClick}
-      disabled={isBusy}
-    >
-      <Heart className={cn('size-4', existing && 'fill-current text-primary')} />
-      {existing ? t('favoritePalettes.removeFromFavorites') : t('favoritePalettes.addToFavorites')}
-    </Button>
+    <div className="flex flex-col items-center gap-1">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="rounded-full"
+        onClick={handleClick}
+        disabled={isBusy}
+      >
+        <Heart className={cn('size-4', existing && 'fill-current text-primary')} />
+        {existing ? t('favoritePalettes.removeFromFavorites') : t('favoritePalettes.addToFavorites')}
+      </Button>
+      {error && <p className="text-destructive text-xs">{error}</p>}
+    </div>
   )
 }

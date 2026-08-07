@@ -20,23 +20,34 @@ interface SaveAsCuratedPaletteButtonProps {
 export function SaveAsCuratedPaletteButton({ palette }: SaveAsCuratedPaletteButtonProps) {
   const { t } = useLocalization()
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   if (!localAdminAccessAdapter.isAdmin() || palette.length === 0) return null
 
   const handleSave = async () => {
-    await curatedPaletteRepository.create({
-      titleEn: 'Untitled palette',
-      slug: '',
-      colors: palette.map((c) => c.hex),
-    })
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setError(null)
+    try {
+      await curatedPaletteRepository.create({
+        titleEn: 'Untitled palette',
+        slug: '',
+        colors: palette.map((c) => c.hex),
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (err) {
+      // A silent failure here (network/backend error swallowed) looks
+      // identical to the button doing nothing — always surface it.
+      setError(t('curatedPalettes.saveError', { message: err instanceof Error ? err.message : String(err) }))
+    }
   }
 
   return (
-    <Button type="button" variant="ghost" size="sm" className="rounded-full" onClick={handleSave}>
-      {saved ? <Check className="size-4" /> : <Star className="size-4" />}
-      {saved ? t('curatedPalettes.savedAsDraft') : t('curatedPalettes.saveAsCurated')}
-    </Button>
+    <div className="flex flex-col items-center gap-1">
+      <Button type="button" variant="ghost" size="sm" className="rounded-full" onClick={handleSave}>
+        {saved ? <Check className="size-4" /> : <Star className="size-4" />}
+        {saved ? t('curatedPalettes.savedAsDraft') : t('curatedPalettes.saveAsCurated')}
+      </Button>
+      {error && <p className="text-destructive text-xs">{error}</p>}
+    </div>
   )
 }
