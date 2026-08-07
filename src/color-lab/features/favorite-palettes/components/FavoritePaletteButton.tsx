@@ -12,8 +12,11 @@ interface FavoritePaletteButtonProps {
   palette: PaletteColor[]
 }
 
-function sameColors(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((hex, i) => hex === b[i])
+function sameColors(a: string[] | undefined, b: string[]): boolean {
+  // Defensive: a malformed/mismatched-shape favorite from a repository
+  // (e.g. a network or backend response that isn't what the interface
+  // promises) should never crash the whole app — just fail the match.
+  return Array.isArray(a) && a.length === b.length && a.every((hex, i) => hex === b[i])
 }
 
 /**

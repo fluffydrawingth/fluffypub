@@ -581,7 +581,7 @@ async function handleJournal(req, res) {
 module.exports = async function handler(req, res) {
   // Rewritten here from /api/color-lab (see vercel.json) — kept off its own
   // route file since api/ was already at the Hobby plan's 12-function cap.
-  if (req.query.resource === 'markers' || req.query.resource === 'curated') return handleColorLab(req, res);
+  if (req.query.resource === 'markers' || req.query.resource === 'curated' || req.query.resource === 'favorites') return handleColorLab(req, res);
   if (req.query.type === 'robots') return handleRobots(req, res);
   if (req.query.type === 'sitemap') return handleSitemap(req, res);
   if (req.query.type === 'free-download') return handleFreeDownloads(req, res);

@@ -27,7 +27,10 @@ export class SupabaseFavoritePaletteRepository implements FavoritePaletteReposit
       const res = await fetch(ENDPOINT, { headers: authHeaders() })
       if (!res.ok) return []
       const data = (await res.json()) as FavoritePalette[] | null
-      return Array.isArray(data) ? data : []
+      // Defensive: drop any entry that isn't actually a favorite-palette
+      // shape (e.g. a routing/response mismatch on the backend) rather
+      // than letting a malformed `colors` field crash the whole page.
+      return Array.isArray(data) ? data.filter((item) => item && Array.isArray(item.colors)) : []
     } catch {
       return []
     }
