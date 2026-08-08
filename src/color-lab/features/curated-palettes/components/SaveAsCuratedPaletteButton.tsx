@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Check, Star } from 'lucide-react'
 import { localAdminAccessAdapter } from '@/adapters'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import { useLocalization } from '@/localization'
 import type { PaletteColor } from '@/shared/color'
 import { curatedPaletteRepository } from '../repository/instance'
@@ -16,6 +18,13 @@ interface SaveAsCuratedPaletteButtonProps {
  * touches the original, and regenerating the on-screen palette never
  * touches the draft. See docs/curated-palettes.md and
  * docs/public-admin-separation.md.
+ *
+ * Regular customers never see this at all (fully hidden, not just
+ * disabled). The leading divider + "Admin" badge are purely for the
+ * admin's own benefit — sitting right next to the customer-facing
+ * FavoritePaletteButton in the same row, it needs to read as clearly
+ * different at a glance so the one person who does see both doesn't
+ * mix up "I like this" with "publish this as site content."
  */
 export function SaveAsCuratedPaletteButton({ palette }: SaveAsCuratedPaletteButtonProps) {
   const { t } = useLocalization()
@@ -43,10 +52,16 @@ export function SaveAsCuratedPaletteButton({ palette }: SaveAsCuratedPaletteButt
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <Button type="button" variant="ghost" size="sm" className="rounded-full" onClick={handleSave}>
-        {saved ? <Check className="size-4" /> : <Star className="size-4" />}
-        {saved ? t('curatedPalettes.savedAsDraft') : t('curatedPalettes.saveAsCurated')}
-      </Button>
+      <div className="flex items-center gap-2">
+        <Separator orientation="vertical" className="h-5" />
+        <Badge variant="outline" className="text-muted-foreground">
+          {t('navigation.adminEntry')}
+        </Badge>
+        <Button type="button" variant="ghost" size="sm" className="rounded-full" onClick={handleSave}>
+          {saved ? <Check className="size-4" /> : <Star className="size-4" />}
+          {saved ? t('curatedPalettes.savedAsDraft') : t('curatedPalettes.saveAsCurated')}
+        </Button>
+      </div>
       {error && <p className="text-destructive text-xs">{error}</p>}
     </div>
   )
