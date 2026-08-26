@@ -61,6 +61,14 @@ interface ColorFormState {
 
 const EMPTY_FORM: ColorFormState = { markerCode: '', colorName: '', hex: '#AA3BFF', notes: '' }
 
+interface DetailsFormState {
+  customName: string
+  plannedCount: string
+  notes: string
+}
+
+const EMPTY_DETAILS_FORM: DetailsFormState = { customName: '', plannedCount: '', notes: '' }
+
 interface SetDetailPageProps {
   userSetId: string
   brands: MarkerBrand[]
@@ -91,6 +99,9 @@ export function SetDetailPage({
   const [editingCustomMarker, setEditingCustomMarker] = useState<CustomMarker | null>(null)
   const [form, setForm] = useState<ColorFormState>(EMPTY_FORM)
   const [formError, setFormError] = useState<string | null>(null)
+  const [detailsFormOpen, setDetailsFormOpen] = useState(false)
+  const [detailsForm, setDetailsForm] = useState<DetailsFormState>(EMPTY_DETAILS_FORM)
+  const [detailsError, setDetailsError] = useState<string | null>(null)
   const [overrideTarget, setOverrideTarget] = useState<MarkerReference | null>(null)
   const [overrideHex, setOverrideHex] = useState('#AA3BFF')
   const [importPreview, setImportPreview] = useState<SetImportPreview | null>(null)
@@ -113,6 +124,16 @@ export function SetDetailPage({
         : EMPTY_FORM,
     )
   }, [formOpen, editingCustomMarker])
+
+  useEffect(() => {
+    if (!detailsFormOpen || !userSet) return
+    setDetailsError(null)
+    setDetailsForm({
+      customName: userSet.customName,
+      plannedCount: userSet.plannedCount ? String(userSet.plannedCount) : '',
+      notes: userSet.notes ?? '',
+    })
+  }, [detailsFormOpen, userSet])
 
   if (!userSet) {
     return (
@@ -189,6 +210,33 @@ export function SetDetailPage({
     onBack()
   }
 
+  const handleSaveDetails = async () => {
+    const customName = detailsForm.customName.trim()
+    if (!customName) {
+      setDetailsError(t('markerDatabase.setNameRequired'))
+      return
+    }
+    const plannedCountTrimmed = detailsForm.plannedCount.trim()
+    const plannedCount = plannedCountTrimmed ? Number(plannedCountTrimmed) : undefined
+    if (plannedCountTrimmed && (!Number.isFinite(plannedCount) || plannedCount! <= 0)) {
+      setDetailsError(t('markerDatabase.plannedCountInvalid'))
+      return
+    }
+    try {
+      await markerRepository.updateUserSet(userSet.id, {
+        customName,
+        plannedCount,
+        notes: detailsForm.notes.trim() || undefined,
+      })
+      await onChanged()
+      setDetailsFormOpen(false)
+    } catch (err) {
+      // Same principle as the CSV/JSON import paths above — a save that
+      // fails silently looks identical to nothing happening.
+      setDetailsError(t('markerDatabase.saveError', { message: err instanceof Error ? err.message : String(err) }))
+    }
+  }
+
   const handleToggleOwned = async (reference: MarkerReference, owned: boolean) => {
     await markerRepository.setReferenceOwned(userSet.id, reference.id, owned)
     await onChanged()
@@ -244,9 +292,9 @@ export function SetDetailPage({
       ].filter(Boolean)
       setStatus(parts.length > 0 ? parts.join(', ') + '.' : t('markerDatabase.importResultNothing'))
     } catch (err) {
-      // A network-backed repository (Fluffy Pub's Supabase-backed one) can
-      // fail partway through — surface it instead of leaving the modal
-      // open with no feedback, see docs/integration-with-fluffypub.md.
+      // A network-backed repository (e.g. a host app's Supabase-backed one)
+      // can fail partway through — surface it instead of leaving the modal
+      // open with no feedback. See docs/integration-with-fluffypub.md.
       setStatus(t('markerDatabase.importResultError', { message: err instanceof Error ? err.message : String(err) }))
     }
   }
@@ -266,12 +314,23 @@ export function SetDetailPage({
                 {seriesName && ` · ${seriesName}`}
               </p>
             )}
-            <h2 className="text-lg font-medium">{userSet.customName}</h2>
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-lg font-medium">{userSet.customName}</h2>
+              <button
+                type="button"
+                aria-label={t('markerDatabase.editSetDetailsAria')}
+                className="text-muted-foreground hover:text-foreground p-1"
+                onClick={() => setDetailsFormOpen(true)}
+              >
+                <Pencil className="size-3.5" />
+              </button>
+            </div>
             <p className="text-muted-foreground text-sm">
               {userSet.plannedCount
                 ? t('markerDatabase.ownedOfPlanned', { count: ownedCount, plannedCount: userSet.plannedCount })
                 : t(`markerDatabase.${pluralKey('ownedCount', ownedCount)}`, { count: ownedCount })}
             </p>
+            {userSet.notes && <p className="text-muted-foreground mt-0.5 text-xs italic">{userSet.notes}</p>}
           </div>
         </div>
         <button
@@ -514,6 +573,58 @@ export function SetDetailPage({
       />
 
       {/* Add/edit custom color */}
+      {/* Rename the set / edit its planned count and notes */}
+      <Dialog open={detailsFormOpen} onOpenChange={setDetailsFormOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('markerDatabase.editSetDetailsTitle')}</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label>
+                {t('markerDatabase.setNameLabel')} <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                value={detailsForm.customName}
+                onChange={(e) => setDetailsForm((f) => ({ ...f, customName: e.target.value }))}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>{t('markerDatabase.plannedCountLabel')}</Label>
+              <Input
+                type="number"
+                min={1}
+                value={detailsForm.plannedCount}
+                onChange={(e) => setDetailsForm((f) => ({ ...f, plannedCount: e.target.value }))}
+                placeholder={t('markerDatabase.plannedCountPlaceholder')}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>{t('markerDatabase.notes')}</Label>
+              <Textarea
+                rows={2}
+                value={detailsForm.notes}
+                onChange={(e) => setDetailsForm((f) => ({ ...f, notes: e.target.value }))}
+              />
+            </div>
+
+            {detailsError && <p className="text-destructive text-sm">{detailsError}</p>}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setDetailsFormOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="button" onClick={handleSaveDetails} disabled={!detailsForm.customName.trim()}>
+              {t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

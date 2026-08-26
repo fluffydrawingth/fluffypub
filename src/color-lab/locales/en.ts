@@ -193,6 +193,13 @@ export const en = {
     backToSets: 'Back to sets',
     setsBackLabel: 'Sets',
     deleteSetAria: 'Delete this set',
+    editSetDetailsAria: 'Edit set name and details',
+    editSetDetailsTitle: 'Edit set details',
+    setNameRequired: 'Set name is required.',
+    plannedCountLabel: 'Planned count (optional)',
+    plannedCountPlaceholder: 'e.g. 48',
+    plannedCountInvalid: 'Enter a whole number greater than 0.',
+    saveError: 'Save failed: {message}',
     importHint:
       'Importing a file is the fastest way to add custom colors — "Add color" is best for one-off additions and corrections.',
     importCsv: 'Import CSV',
