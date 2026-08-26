@@ -87,6 +87,19 @@ function json(res, status, data) {
   res.status(status).json(data);
 }
 
+// For responses that are genuinely public and identical for every caller —
+// no admin/auth branching on this exact URL, ever (that's the whole safety
+// condition; see json()'s comment above for why every OTHER response stays
+// no-store). Lets Vercel's Edge Network serve repeat hits straight from
+// cache with no function invocation and no DB round trip, instead of every
+// visitor paying full cold-start + query latency for data that rarely
+// changes (theme config, public product/artist listings). Use json(), not
+// this, for anything whose output depends on who's asking.
+function jsonPublic(res, status, data, maxAgeSeconds = 60) {
+  res.setHeader('Cache-Control', `public, s-maxage=${maxAgeSeconds}, stale-while-revalidate=${maxAgeSeconds * 5}`);
+  res.status(status).json(data);
+}
+
 async function requireAuth(req, res, roles) {
   const user = await getUser(req);
   if (!user) { json(res, 401, { error: 'Not authenticated' }); return null; }
@@ -109,4 +122,4 @@ async function getThemeBranding() {
   }
 }
 
-module.exports = { supabase, getToken, getUser, json, requireAuth, getThemeBranding };
+module.exports = { supabase, getToken, getUser, json, jsonPublic, requireAuth, getThemeBranding };

@@ -1,9 +1,12 @@
-const { supabase, requireAuth, json } = require('./_lib');
+const { supabase, requireAuth, json, jsonPublic } = require('./_lib');
 
 module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
+    // Identical response for every caller (no admin variant) — safe to
+    // edge-cache. Matches the client's own cfetch(..., TTL_LONG) 5-minute
+    // window, see src/lib/api.ts.
     const { data } = await supabase.from('theme').select('config').eq('id', 1).single();
-    return json(res, 200, data?.config || {});
+    return jsonPublic(res, 200, data?.config || {}, 300);
   }
   if (req.method === 'PUT') {
     const user = await requireAuth(req, res, ['admin']);

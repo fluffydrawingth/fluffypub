@@ -1,5 +1,5 @@
 // /api/products, /api/products?id=xxx
-const { supabase, requireAuth, getUser, json } = require('./_lib');
+const { supabase, requireAuth, getUser, json, jsonPublic } = require('./_lib');
 
 const PRODUCT_SELECT = 'id,title,slug,price,original_price,artist_id,artist_name,artist_slug,category,categories,description,description_th,description_en,rich_description,image,cover_image_url,type,is_physical,is_digital,pages,rating,reviews,tags,search_keywords,featured,bestseller,is_new,is_hot,active,status,shipping_required,shipping_note,digital_download_url,download_instruction,physical_stock,variants,title_th,title_en,price_thb,price_usd,r2_key,r2_file_name,file_size,file_type,created_at,artist_physical_royalty_thb,digital_platform_fee_thb,digital_platform_fee_usd,digital_artist_royalty_percent';
 
@@ -26,7 +26,10 @@ module.exports = async function handler(req, res) {
     if (!isAdmin) q = q.eq('status', 'published');
     const { data, error } = await q;
     if (error) return json(res, 500, { error: error.message });
-    return json(res, 200, data);
+    // The admin variant is a different URL (?admin=1) — different cache
+    // key — so only the plain public listing is safe to edge-cache here.
+    if (isAdmin) return json(res, 200, data);
+    return jsonPublic(res, 200, data, 60);
   }
 
   // GET single product by id or slug

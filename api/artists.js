@@ -1,4 +1,4 @@
-const { supabase, requireAuth, json } = require('./_lib');
+const { supabase, requireAuth, json, jsonPublic } = require('./_lib');
 
 module.exports = async function handler(req, res) {
   const { action } = req.query;
@@ -285,7 +285,9 @@ module.exports = async function handler(req, res) {
         : await supabase.from('profiles').select('id,name,artist_slug,bio,role,cover_image_url,avatar_url,website,contact_email,social_links,artist_status,created_at').eq('id', id).eq('role','artist').single();
       if (error || !data) return json(res, 404, { error: 'Artist not found' });
       const { data: products } = await supabase.from('products').select('id,title,title_th,title_en,slug,image,cover_image_url,price,price_thb,price_usd,category,type,is_digital,is_physical,variants,is_new').eq('artist_id', data.id).eq('active', true).eq('status','published');
-      return json(res, 200, { ...data, products: products || [] });
+      // Same response for every caller (no admin/private variant of a
+      // single artist's public profile) — safe to edge-cache.
+      return jsonPublic(res, 200, { ...data, products: products || [] }, 60);
     }
     const { data: artists } = await supabase.from('profiles')
       .select('id,name,username,artist_slug,bio,cover_image_url,avatar_url,website,social_links,artist_status,created_at,artist_id')
@@ -300,7 +302,8 @@ module.exports = async function handler(req, res) {
       sort_order: a.social_links?.sort_order ?? 9999,
       productCount: (products || []).filter(p => p.artist_id === a.id).length,
     })).sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
-    return json(res, 200, result);
+    // Same response for every caller — safe to edge-cache.
+    return jsonPublic(res, 200, result, 60);
   }
 
   // POST /api/artists — create new artist account
