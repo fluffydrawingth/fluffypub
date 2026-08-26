@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useTheme } from '../lib/theme';
+import { api } from '../lib/api';
 
 export interface CropSettings {
   imageUrl: string;
@@ -9,6 +10,11 @@ export interface CropSettings {
   aspectRatio: number; // width/height, e.g. 16/9
   focalPointX: number; // 0-1 normalized
   focalPointY: number; // 0-1 normalized
+  // Despite the name, this is a URL once uploaded (see handleSave) — kept
+  // as-is so every existing reader (CroppedImage, AdminPage previews,
+  // getThemeBranding in api/_lib.js) needs no changes. Only freshly
+  // selected files pass through a data: URI transiently before Save
+  // uploads them and replaces it with a real storage URL.
   croppedDataUrl?: string; // final output
 }
 
@@ -21,6 +27,19 @@ interface Props {
 }
 
 const DEFAULT_ASPECT = 16 / 9;
+
+// Converts a data: URI (from FileReader or canvas.toDataURL) into a File so
+// it can go through api.uploadFile — the whole point of this component's
+// fix: images get uploaded to Supabase Storage, never embedded as base64
+// in the theme config that every page load fetches.
+function dataUrlToFile(dataUrl: string, fileName: string): File {
+  const [header, base64] = dataUrl.split(',');
+  const mime = header.match(/data:([^;]+)/)?.[1] || 'image/jpeg';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new File([bytes], fileName, { type: mime });
+}
 
 export default function ImageCropEditor({ title, hint, value, aspectRatio = DEFAULT_ASPECT, onChange }: Props) {
   const { theme } = useTheme();
@@ -36,6 +55,8 @@ export default function ImageCropEditor({ title, hint, value, aspectRatio = DEFA
   const [focalY, setFocalY] = useState(value?.focalPointY || 0.5);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
@@ -95,6 +116,9 @@ export default function ImageCropEditor({ title, hint, value, aspectRatio = DEFA
     if (!rawImage) return;
     if (!imgRef.current) {
       const img = new Image();
+      // Needed to re-crop a previously-uploaded (now remote-URL) image
+      // without tainting the canvas — harmless for local blob/data URLs.
+      img.crossOrigin = 'anonymous';
       img.onload = () => { imgRef.current = img; drawPreview(); };
       img.src = rawImage;
     } else {
@@ -176,16 +200,42 @@ export default function ImageCropEditor({ title, hint, value, aspectRatio = DEFA
     return canvas.toDataURL('image/jpeg', 0.92);
   };
 
-  const handleSave = () => {
-    const croppedDataUrl = generateCroppedImage();
-    onChange({
-      imageUrl: rawImage!,
-      cropX: offsetX, cropY: offsetY,
-      zoom, aspectRatio,
-      focalPointX: focalX, focalPointY: focalY,
-      croppedDataUrl,
-    });
-    setMode('idle');
+  const handleSave = async () => {
+    setSaveError(null);
+    setIsSaving(true);
+    try {
+      // The cropped preview is regenerated and re-uploaded on every save
+      // (cheap — it's the small display-size image). The full original is
+      // only (re-)uploaded when it's still a local data: URI — once it's a
+      // real storage URL, further crop tweaks reuse it as-is instead of
+      // re-uploading the same bytes.
+      const croppedFile = dataUrlToFile(generateCroppedImage(), 'crop.jpg');
+      const croppedUpload = await api.uploadFile(croppedFile, 'theme');
+      if (croppedUpload.error) throw new Error(croppedUpload.error);
+
+      let originalUrl = rawImage!;
+      if (rawImage!.startsWith('data:')) {
+        const ext = rawImage!.slice(5, rawImage!.indexOf(';')).split('/')[1] || 'jpg';
+        const originalUpload = await api.uploadFile(dataUrlToFile(rawImage!, `original.${ext}`), 'theme');
+        if (originalUpload.error) throw new Error(originalUpload.error);
+        originalUrl = originalUpload.publicUrl;
+      }
+
+      onChange({
+        imageUrl: originalUrl,
+        cropX: offsetX, cropY: offsetY,
+        zoom, aspectRatio,
+        focalPointX: focalX, focalPointY: focalY,
+        croppedDataUrl: croppedUpload.publicUrl,
+      });
+      setMode('idle');
+    } catch (err) {
+      // A save that silently fails looks identical to nothing happening —
+      // always surface it, same principle as everywhere else this pass.
+      setSaveError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleReset = () => {
@@ -205,10 +255,13 @@ export default function ImageCropEditor({ title, hint, value, aspectRatio = DEFA
           <div>
             <div style={{ fontWeight: 800, color: 'white', fontSize: 15 }}>✂️ Crop — {title}</div>
             <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>Drag to pan · Scroll to zoom · Click to set focal point</div>
+            {saveError && <div style={{ fontSize: 12, color: '#f87171', marginTop: 4 }}>Save failed: {saveError}</div>}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => setMode('idle')} style={{ padding: '8px 16px', borderRadius: 10, background: 'transparent', border: '1px solid #475569', color: '#94a3b8', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Cancel</button>
-            <button onClick={handleSave} style={{ padding: '8px 16px', borderRadius: 10, background: p, border: 'none', color: 'white', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>✓ Apply Crop</button>
+            <button onClick={() => setMode('idle')} disabled={isSaving} style={{ padding: '8px 16px', borderRadius: 10, background: 'transparent', border: '1px solid #475569', color: '#94a3b8', cursor: isSaving ? 'default' : 'pointer', fontSize: 13, fontWeight: 600, opacity: isSaving ? 0.6 : 1 }}>Cancel</button>
+            <button onClick={handleSave} disabled={isSaving} style={{ padding: '8px 16px', borderRadius: 10, background: p, border: 'none', color: 'white', cursor: isSaving ? 'default' : 'pointer', fontSize: 13, fontWeight: 700, opacity: isSaving ? 0.6 : 1 }}>
+              {isSaving ? 'Uploading…' : '✓ Apply Crop'}
+            </button>
           </div>
         </div>
 
@@ -298,7 +351,7 @@ export default function ImageCropEditor({ title, hint, value, aspectRatio = DEFA
         </button>
         {displayImg && (
           <>
-            <button onClick={() => { if (rawImage) setMode('cropping'); else { const img = new Image(); img.onload = () => { imgRef.current = img; setMode('cropping'); }; img.src = displayImg; setRawImage(displayImg); } }}
+            <button onClick={() => { if (rawImage) setMode('cropping'); else { const img = new Image(); img.crossOrigin = 'anonymous'; img.onload = () => { imgRef.current = img; setMode('cropping'); }; img.src = displayImg; setRawImage(displayImg); } }}
               style={{ padding: '9px 16px', borderRadius: 12, border: `1.5px solid ${p}30`, background: 'white', color: p, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
               ✂️ Edit Crop
             </button>
