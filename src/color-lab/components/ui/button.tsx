@@ -38,20 +38,25 @@ const buttonVariants = cva(
   }
 )
 
-function Button({
-  className,
-  variant = "default",
-  size = "default",
-  asChild = false,
-  ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
+// forwardRef (rather than the ref-as-prop shorthand fluffy-color-lab's
+// React 19 allows) is required here: fluffypub runs React 18, where a
+// plain function component silently drops a `ref` passed to it. Without
+// this, `<PopoverTrigger asChild><Button>` (and any other
+// asChild-into-Radix-primitive usage) never reaches the real <button>
+// DOM node, so e.g. Radix Popper can't measure the trigger and its
+// content renders permanently off-screen instead of failing loudly.
+const Button = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentProps<"button"> &
+    VariantProps<typeof buttonVariants> & {
+      asChild?: boolean
+    }
+>(({ className, variant = "default", size = "default", asChild = false, ...props }, ref) => {
   const Comp = asChild ? Slot.Root : "button"
 
   return (
     <Comp
+      ref={ref}
       data-slot="button"
       data-variant={variant}
       data-size={size}
@@ -59,6 +64,7 @@ function Button({
       {...props}
     />
   )
-}
+})
+Button.displayName = "Button"
 
 export { Button, buttonVariants }
