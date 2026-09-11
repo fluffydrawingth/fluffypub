@@ -1,17 +1,53 @@
 import { matchPaletteToMarkerSet, type MarkerMatchResult, type MatchableMarker } from '@/features/color-engine'
-import type { MarkerReference, MarkerRepository, UserMarkerSet } from '@/features/marker-db'
+import type {
+  MarkerBrand,
+  MarkerCommercialSet,
+  MarkerReference,
+  MarkerRepository,
+  MarkerSeries,
+  UserMarkerSet,
+} from '@/features/marker-db'
 import type { HexColor } from '@/shared/color'
 import type { MarkerSetOption } from './types'
+
+/**
+ * "Brand · Series · Set name" (or just the custom name for a set with no
+ * commercial reference) — the one place this label is built, shared by
+ * the selector (listAvailableMarkerSets) and match results
+ * (resolveMatchableMarkers's setLabel), so a matched marker can say which
+ * physical set to reach for using the exact same label the picker showed.
+ */
+function labelForUserSet(
+  userSet: UserMarkerSet,
+  commercialSets: MarkerCommercialSet[],
+  brands: MarkerBrand[],
+  series: MarkerSeries[],
+): string {
+  const brandName = (id: string) => brands.find((b) => b.id === id)?.name ?? ''
+  const seriesName = (id?: string) => (id ? (series.find((s) => s.id === id)?.name ?? '') : '')
+
+  const commercialSet = userSet.referenceSetId
+    ? commercialSets.find((s) => s.id === userSet.referenceSetId)
+    : undefined
+  return commercialSet
+    ? [brandName(commercialSet.brandId), seriesName(commercialSet.seriesId), userSet.customName]
+        .filter(Boolean)
+        .join(' · ')
+    : userSet.customName
+}
 
 /**
  * Resolves a user's marker set into matchable markers, one per owned
  * reference (or custom marker), preferring — in order — a personal swatch
  * override, then the marker's own stored hex (custom markers only have
  * this), then the reference library's approximate hex. See
- * docs/algorithms.md.
+ * docs/algorithms.md. `setLabel` is stamped onto every resolved marker so
+ * a pooled match result (see matchAgainstSets) can still say which set it
+ * came from.
  */
 async function resolveMatchableMarkers(
   userSet: UserMarkerSet,
+  setLabel: string,
   repository: MarkerRepository,
 ): Promise<MatchableMarker[]> {
   const overrideByReference = new Map(userSet.swatchOverrides.map((o) => [o.markerReferenceId, o] as const))
@@ -29,6 +65,7 @@ async function resolveMatchableMarkers(
         hex: override.hex,
         lab: override.lab,
         source: 'override',
+        setLabel,
       }
     }
     return {
@@ -37,6 +74,7 @@ async function resolveMatchableMarkers(
       hex: reference.approximateHex,
       lab: reference.lab,
       source: 'reference',
+      setLabel,
     }
   })
 
@@ -46,6 +84,7 @@ async function resolveMatchableMarkers(
     hex: marker.hex,
     lab: marker.lab,
     source: 'custom',
+    setLabel,
   }))
 
   return [...referenceMatchers, ...customMatchers]
@@ -68,10 +107,19 @@ export async function matchAgainstSets(
   userSetIds: string[],
   repository: MarkerRepository,
 ): Promise<MarkerMatchResult[]> {
-  const userSets = (await Promise.all(userSetIds.map((id) => repository.getUserSet(id)))).filter(
-    (set): set is UserMarkerSet => set !== null,
-  )
-  const matchable = (await Promise.all(userSets.map((set) => resolveMatchableMarkers(set, repository)))).flat()
+  const [userSets, brands, series, commercialSets] = await Promise.all([
+    Promise.all(userSetIds.map((id) => repository.getUserSet(id))).then((sets) =>
+      sets.filter((set): set is UserMarkerSet => set !== null),
+    ),
+    repository.listBrands(),
+    repository.listSeries(),
+    repository.listCommercialSets(),
+  ])
+  const matchable = (
+    await Promise.all(
+      userSets.map((set) => resolveMatchableMarkers(set, labelForUserSet(set, commercialSets, brands, series), repository)),
+    )
+  ).flat()
   if (matchable.length === 0 || paletteHexes.length === 0) return []
   return matchPaletteToMarkerSet(paletteHexes, matchable)
 }
@@ -94,24 +142,16 @@ export async function listAvailableMarkerSets(repository: MarkerRepository): Pro
     repository.listUserSets(),
   ])
 
-  const brandName = (id: string) => brands.find((b) => b.id === id)?.name ?? ''
-  const seriesName = (id?: string) => (id ? (series.find((s) => s.id === id)?.name ?? '') : '')
-
   const options: MarkerSetOption[] = []
   for (const userSet of userSets) {
     const availableCount = userSet.ownedMarkerReferenceIds.length + userSet.customMarkers.length
     if (availableCount === 0) continue
 
-    const commercialSet = userSet.referenceSetId
-      ? commercialSets.find((s) => s.id === userSet.referenceSetId)
-      : undefined
-    const label = commercialSet
-      ? [brandName(commercialSet.brandId), seriesName(commercialSet.seriesId), userSet.customName]
-          .filter(Boolean)
-          .join(' · ')
-      : userSet.customName
-
-    options.push({ setId: userSet.id, label, availableCount })
+    options.push({
+      setId: userSet.id,
+      label: labelForUserSet(userSet, commercialSets, brands, series),
+      availableCount,
+    })
   }
   return options
 }

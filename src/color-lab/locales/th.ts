@@ -337,6 +337,7 @@ export const th: TranslationTree = {
     optionLabelOne: '{label} — มีสี {count} สี',
     optionLabelOther: '{label} — มีสี {count} สี',
     matchColors: 'จับคู่สี',
+    fromSet: 'จากชุด: {label}',
     matchedUsing: 'จับคู่โดยใช้: {source}',
     confidence: {
       Excellent: 'ใกล้เคียงมาก',

@@ -15,6 +15,15 @@ export interface MatchableMarker {
   hex: HexColor
   lab: LabColor
   source?: MatchSource
+  /**
+   * Display label of the marker set this marker was resolved from (e.g.
+   * "Ohuhu · Honolulu · Pastel Colors 48") — set by the caller that pools
+   * markers from possibly several sets (see marker-matcher's
+   * matchAgainstSets), so a match result can say which physical set to
+   * reach for, not just a bare code. Undefined when the caller only has
+   * one unlabeled marker list and pooling isn't a concern.
+   */
+  setLabel?: string
 }
 
 export type MatchConfidence = 'Excellent' | 'Close' | 'Approximate' | 'Distant'
@@ -27,4 +36,6 @@ export interface MarkerMatchResult {
   deltaE: number
   confidence: MatchConfidence
   source?: MatchSource
+  /** See {@link MatchableMarker.setLabel}. */
+  setLabel?: string
 }

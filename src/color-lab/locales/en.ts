@@ -342,6 +342,7 @@ export const en = {
     optionLabelOne: '{label} — {count} color available',
     optionLabelOther: '{label} — {count} colors available',
     matchColors: 'Match colors',
+    fromSet: 'From: {label}',
     matchedUsing: 'Matched using: {source}',
     confidence: {
       Excellent: 'Excellent',

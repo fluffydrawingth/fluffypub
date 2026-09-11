@@ -212,6 +212,11 @@ export function MarkerMatchPanel({ palette, onMatchesChange }: MarkerMatchPanelP
                         {match.markerName && <span className="text-muted-foreground"> · {match.markerName}</span>}
                       </p>
                       <p className="text-muted-foreground font-mono text-xs">{match.markerHex}</p>
+                      {match.setLabel && (
+                        <p className="text-primary truncate text-[11px] font-medium">
+                          {t('markerMatcher.fromSet', { label: match.setLabel })}
+                        </p>
+                      )}
                       {match.source && (
                         <p className="text-muted-foreground text-[11px]">
                           {t('markerMatcher.matchedUsing', { source: t(`markerMatcher.source.${match.source}`) })}

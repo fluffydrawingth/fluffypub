@@ -52,6 +52,7 @@ export function matchPaletteToMarkerSet(
       deltaE: closestDistance,
       confidence: classifyConfidence(closestDistance),
       source: closest.source,
+      setLabel: closest.setLabel,
     }
   })
 }

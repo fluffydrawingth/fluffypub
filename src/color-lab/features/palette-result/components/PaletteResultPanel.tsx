@@ -57,13 +57,18 @@ export function PaletteResultPanel({
     setMatchedSetLabel(setLabel)
   }, [])
 
-  // Label the PNG export with the marker code the user matched each swatch
-  // to, aligned by index — but only where the match's own requestedHex
-  // still agrees with the current palette's hex at that position, so a
-  // stale in-flight match (palette just regenerated, re-match not back
-  // yet) never mislabels a swatch. See exportPaletteAsPng.
-  const markerCodes = matches
-    ? palette.map((color, i) => (matches[i]?.requestedHex === color.hex ? matches[i].closestMarkerCode : undefined))
+  // Label the PNG export with the marker detail the user matched each
+  // swatch to (code, color name/legacy code, and which set it came from),
+  // aligned by index — but only where the match's own requestedHex still
+  // agrees with the current palette's hex at that position, so a stale
+  // in-flight match (palette just regenerated, re-match not back yet)
+  // never mislabels a swatch. See exportPaletteAsPng.
+  const markerLabels = matches
+    ? palette.map((color, i) => {
+        const match = matches[i]
+        if (!match || match.requestedHex !== color.hex) return undefined
+        return { code: match.closestMarkerCode, colorName: match.markerName, setLabel: match.setLabel }
+      })
     : undefined
 
   // The exported PNG's header bar — which marker set the codes above came
@@ -91,7 +96,7 @@ export function PaletteResultPanel({
           <Shuffle className={cn('size-4', isRegenerating && 'animate-spin')} />
           {t('common.regenerate')}
         </Button>
-        <PaletteExportButton palette={palette} markerCodes={markerCodes} headerText={exportHeaderText} />
+        <PaletteExportButton palette={palette} markerLabels={markerLabels} headerText={exportHeaderText} />
         <FavoritePaletteButton palette={palette} />
         {adjust && (
           <Button
