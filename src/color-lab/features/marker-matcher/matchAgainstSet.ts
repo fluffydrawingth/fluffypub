@@ -54,20 +54,35 @@ async function resolveMatchableMarkers(
 /**
  * The one place that imports both `color-engine/marker-matching` (pure,
  * no storage dependency) and `marker-db` (storage, no palette concept) —
- * resolves a user's marker set to its member markers and calls the pure
- * matcher, so matching logic exists exactly once for both palette flows.
+ * resolves one or more of a user's marker sets to their member markers
+ * and calls the pure matcher once against the pooled list, so matching
+ * logic exists exactly once for both palette flows. Pooling (rather than
+ * matching each set separately and picking the best per-set result) is
+ * the same problem either way — the pure matcher is already just "find
+ * the closest marker in this list" — so someone who owns several sets
+ * gets one combined "closest marker you actually own, across everything
+ * selected" answer instead of a result to sort through per set.
  */
+export async function matchAgainstSets(
+  paletteHexes: HexColor[],
+  userSetIds: string[],
+  repository: MarkerRepository,
+): Promise<MarkerMatchResult[]> {
+  const userSets = (await Promise.all(userSetIds.map((id) => repository.getUserSet(id)))).filter(
+    (set): set is UserMarkerSet => set !== null,
+  )
+  const matchable = (await Promise.all(userSets.map((set) => resolveMatchableMarkers(set, repository)))).flat()
+  if (matchable.length === 0 || paletteHexes.length === 0) return []
+  return matchPaletteToMarkerSet(paletteHexes, matchable)
+}
+
+/** Single-set convenience wrapper around {@link matchAgainstSets} — kept for callers matching against exactly one set. */
 export async function matchAgainstSet(
   paletteHexes: HexColor[],
   userSetId: string,
   repository: MarkerRepository,
 ): Promise<MarkerMatchResult[]> {
-  const userSet = await repository.getUserSet(userSetId)
-  if (!userSet) return []
-
-  const matchable = await resolveMatchableMarkers(userSet, repository)
-  if (matchable.length === 0 || paletteHexes.length === 0) return []
-  return matchPaletteToMarkerSet(paletteHexes, matchable)
+  return matchAgainstSets(paletteHexes, [userSetId], repository)
 }
 
 /** User-owned sets with at least one resolvable color, labeled "Brand · Series · Set name" for the selector. */

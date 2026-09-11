@@ -334,7 +334,11 @@ export const en = {
     noticeApproximate:
       'Marker matches are approximate. Actual ink color may vary with paper, lighting, scanning, and swatch conditions.',
     dismissAria: 'Dismiss',
-    chooseSetPlaceholder: 'Choose a marker set',
+    chooseSetPlaceholder: 'Choose marker sets',
+    searchSetsPlaceholder: 'Search sets…',
+    noSetsMatchSearch: 'No sets match your search.',
+    setsSelectedCountOne: '{count} set selected',
+    setsSelectedCountOther: '{count} sets selected',
     optionLabelOne: '{label} — {count} color available',
     optionLabelOther: '{label} — {count} colors available',
     matchColors: 'Match colors',

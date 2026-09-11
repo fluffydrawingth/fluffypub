@@ -2,22 +2,16 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowRight, Palette as PaletteIcon, Sparkles, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { useNavigationStore } from '@/app/navigationStore'
 import { localAdminAccessAdapter } from '@/adapters'
 import { markerRepository } from '@/features/marker-db'
-import { useLocalization, pluralKey } from '@/localization'
+import { useLocalization } from '@/localization'
 import type { PaletteColor } from '@/shared/color'
 import { cn } from '@/shared/lib/utils'
-import { matchAgainstSet } from '../matchAgainstSet'
+import { matchAgainstSets } from '../matchAgainstSet'
 import { useAvailableMarkerSets } from '../hooks/useAvailableMarkerSets'
 import { hasSeenMatchNotice, markMatchNoticeSeen } from '../seenNotice'
+import { MarkerSetMultiSelect } from './MarkerSetMultiSelect'
 import type { MarkerMatchResult, MatchConfidence } from '../types'
 
 const CONFIDENCE_STYLES: Record<MatchConfidence, string> = {
@@ -56,7 +50,7 @@ export function MarkerMatchPanel({ palette, onMatchesChange }: MarkerMatchPanelP
   const goToMarkerDb = useNavigationStore((s) => s.goToMarkerDb)
   const isAdmin = localAdminAccessAdapter.isAdmin()
 
-  const [selectedSetId, setSelectedSetId] = useState<string | null>(null)
+  const [selectedSetIds, setSelectedSetIds] = useState<string[]>([])
   const [matches, setMatches] = useState<MarkerMatchResult[] | null>(null)
   const [isMatching, setIsMatching] = useState(false)
   const [noticeVisible, setNoticeVisible] = useState(() => !hasSeenMatchNotice())
@@ -64,13 +58,20 @@ export function MarkerMatchPanel({ palette, onMatchesChange }: MarkerMatchPanelP
   const lastKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (options.length > 0 && (!selectedSetId || !options.some((o) => o.setId === selectedSetId))) {
-      setSelectedSetId(options[0].setId)
-    }
-    if (options.length === 0) setSelectedSetId(null)
-  }, [options, selectedSetId])
+    // Default to the first set so matching still works with zero clicks
+    // when there's only one — once the user has picked their own
+    // selection (of any size, including none), leave it alone rather
+    // than re-adding a default every time options refresh.
+    setSelectedSetIds((current) => {
+      const stillValid = current.filter((id) => options.some((o) => o.setId === id))
+      if (stillValid.length > 0) return stillValid
+      if (current.length > 0) return [] // user had picked sets that all disappeared — don't silently re-pick one
+      return options.length > 0 ? [options[0].setId] : []
+    })
+  }, [options])
 
-  const matchedSetLabel = matches ? (options.find((o) => o.setId === selectedSetId)?.label ?? null) : null
+  const selectedLabels = options.filter((o) => selectedSetIds.includes(o.setId)).map((o) => o.label)
+  const matchedSetLabel = matches && selectedLabels.length > 0 ? selectedLabels.join(' + ') : null
 
   useEffect(() => {
     onMatchesChange?.(matches, matchedSetLabel)
@@ -81,17 +82,19 @@ export function MarkerMatchPanel({ palette, onMatchesChange }: MarkerMatchPanelP
   }, [matches, matchedSetLabel, onMatchesChange])
 
   const runMatch = useCallback(
-    async (setId: string) => {
+    async (setIds: string[]) => {
       setIsMatching(true)
       try {
-        const result = await matchAgainstSet(
+        const result = await matchAgainstSets(
           palette.map((c) => c.hex),
-          setId,
+          setIds,
           markerRepository,
         )
         setMatches(result)
         hasMatchedRef.current = true
-        lastKeyRef.current = `${setId}::${paletteKey(palette)}`
+        // Order-independent — picking the same sets in a different order
+        // (or the options list re-rendering) shouldn't look like a change.
+        lastKeyRef.current = `${[...setIds].sort().join(',')}::${paletteKey(palette)}`
       } finally {
         setIsMatching(false)
       }
@@ -100,14 +103,14 @@ export function MarkerMatchPanel({ palette, onMatchesChange }: MarkerMatchPanelP
   )
 
   // Once the user has matched at least once, keep results current
-  // automatically — regenerating the palette or switching sets re-matches
-  // without a second click.
+  // automatically — regenerating the palette or changing the set
+  // selection re-matches without a second click.
   useEffect(() => {
-    if (!hasMatchedRef.current || !selectedSetId) return
-    const key = `${selectedSetId}::${paletteKey(palette)}`
+    if (!hasMatchedRef.current || selectedSetIds.length === 0) return
+    const key = `${[...selectedSetIds].sort().join(',')}::${paletteKey(palette)}`
     if (key === lastKeyRef.current) return
-    runMatch(selectedSetId)
-  }, [selectedSetId, palette, runMatch])
+    runMatch(selectedSetIds)
+  }, [selectedSetIds, palette, runMatch])
 
   const dismissNotice = () => {
     markMatchNoticeSeen()
@@ -172,26 +175,12 @@ export function MarkerMatchPanel({ palette, onMatchesChange }: MarkerMatchPanelP
           )}
 
           <div className="flex flex-col items-center gap-2 sm:flex-row">
-            <Select value={selectedSetId ?? undefined} onValueChange={setSelectedSetId}>
-              <SelectTrigger className="w-full sm:flex-1">
-                <SelectValue placeholder={t('markerMatcher.chooseSetPlaceholder')} />
-              </SelectTrigger>
-              <SelectContent>
-                {options.map((option) => (
-                  <SelectItem key={option.setId} value={option.setId}>
-                    {t(`markerMatcher.${pluralKey('optionLabel', option.availableCount)}`, {
-                      label: option.label,
-                      count: option.availableCount,
-                    })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MarkerSetMultiSelect options={options} selectedIds={selectedSetIds} onChange={setSelectedSetIds} />
             <Button
               type="button"
               className="w-full shrink-0 rounded-full sm:w-auto"
-              disabled={!selectedSetId || isMatching}
-              onClick={() => selectedSetId && runMatch(selectedSetId)}
+              disabled={selectedSetIds.length === 0 || isMatching}
+              onClick={() => selectedSetIds.length > 0 && runMatch(selectedSetIds)}
             >
               <Sparkles className={cn('size-4', isMatching && 'animate-spin')} />
               {t('markerMatcher.matchColors')}

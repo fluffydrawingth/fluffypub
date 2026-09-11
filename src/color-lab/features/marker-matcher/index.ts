@@ -1,4 +1,5 @@
 export * from './types'
-export { matchAgainstSet, listAvailableMarkerSets } from './matchAgainstSet'
+export { matchAgainstSet, matchAgainstSets, listAvailableMarkerSets } from './matchAgainstSet'
+export { MarkerSetMultiSelect } from './components/MarkerSetMultiSelect'
 export { useAvailableMarkerSets } from './hooks/useAvailableMarkerSets'
 export { MarkerMatchPanel } from './components/MarkerMatchPanel'
