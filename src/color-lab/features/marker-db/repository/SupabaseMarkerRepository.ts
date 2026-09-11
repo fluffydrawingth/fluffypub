@@ -41,6 +41,10 @@ function emptyData(): MarkerDbData {
   }
 }
 
+function clone(data: MarkerDbData): MarkerDbData {
+  return typeof structuredClone === 'function' ? structuredClone(data) : (JSON.parse(JSON.stringify(data)) as MarkerDbData)
+}
+
 function now(): string {
   return new Date().toISOString()
 }
@@ -79,14 +83,48 @@ function authHeaders(): Record<string, string> {
  * still being durable, shared Supabase data instead of per-browser
  * storage.
  */
+// How long a fetched blob is reused before the next read() goes back to
+// the network. Short enough that a second admin's edit shows up almost
+// immediately (this store is already last-write-wins, single-admin — see
+// the class doc), long enough to collapse the burst of near-simultaneous
+// read() calls a single render (e.g. useAvailableMarkerSets, which alone
+// fires 5) or a page with several marker-aware panels produces into one
+// network round trip instead of five-plus.
+const READ_CACHE_TTL_MS = 5000
+
 export class SupabaseMarkerRepository implements MarkerRepository {
   private readonly endpoint = '/api/color-lab?resource=markers'
+  private cached: { data: MarkerDbData; expiresAt: number } | null = null
+  private inFlight: Promise<MarkerDbData> | null = null
 
   private async read(): Promise<MarkerDbData> {
+    // Every caller mutates the object it gets back in place (e.g.
+    // `data.brands.push(brand)`) before handing it to write() — so a
+    // cache hit must still return an independent clone, never the same
+    // object two callers could be mutating concurrently.
+    if (this.cached && this.cached.expiresAt > Date.now()) return clone(this.cached.data)
+    // Collapse concurrent callers (several repository methods called via
+    // Promise.all in the same tick) onto one in-flight fetch instead of
+    // each starting its own.
+    if (this.inFlight) return clone(await this.inFlight)
+
+    this.inFlight = this.fetchFresh()
+    try {
+      const data = await this.inFlight
+      this.cached = { data, expiresAt: Date.now() + READ_CACHE_TTL_MS }
+      return clone(data)
+    } finally {
+      this.inFlight = null
+    }
+  }
+
+  private async fetchFresh(): Promise<MarkerDbData> {
     // Network failures (API unreachable, offline) degrade to an empty set
     // rather than throwing — matching bounds are just unavailable, never
     // a crash. Real fetch errors reject the promise, not just non-ok
     // responses, so this needs a try/catch, not only an `!res.ok` check.
+    // Not cached — a transient blip shouldn't get remembered for the
+    // full TTL.
     let data: Partial<MarkerDbData> | null
     try {
       const res = await fetch(this.endpoint)
@@ -107,6 +145,10 @@ export class SupabaseMarkerRepository implements MarkerRepository {
   }
 
   private async write(data: MarkerDbData): Promise<void> {
+    // Invalidate first — if the write fails, the next read should still
+    // go to the network rather than keep serving what's now a stale
+    // cache of pre-write data for up to READ_CACHE_TTL_MS.
+    this.cached = null
     const res = await fetch(this.endpoint, {
       method: 'PUT',
       headers: authHeaders(),
