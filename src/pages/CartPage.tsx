@@ -45,7 +45,16 @@ export default function CartPage() {
 
   return (
     <div style={{ fontFamily: theme.fontFamily, background: theme.bgColor, minHeight: '70vh' }}>
-      <style>{`@media(max-width:640px){.cg{grid-template-columns:1fr!important;}.cs{position:static!important;}}`}</style>
+      <style>{`
+        @media(max-width:640px){
+          .cg{grid-template-columns:1fr!important;}
+          .cs{position:static!important;}
+          .cart-item{flex-wrap:wrap!important;gap:8px!important;}
+          .cart-item-right{flex-direction:row!important;align-items:center!important;justify-content:space-between!important;width:100%!important;padding-top:4px!important;border-top:1px solid #f3f4f6!important;}
+          .cart-item-right-price{font-size:15px!important;}
+          .cart-item-right-actions{display:flex!important;align-items:center!important;gap:8px!important;}
+        }
+      `}</style>
       <div style={{ maxWidth: 920, margin: '0 auto', padding: '28px 16px' }}>
         <h1 style={{ fontSize: 26, fontWeight: 900, color: theme.textColor, marginBottom: 6 }}>
           {tRaw('ตะกร้าสินค้า', 'Shopping Cart')} 🛒
@@ -56,7 +65,7 @@ export default function CartPage() {
           {/* Items */}
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
             {items.map(item => (
-              <div key={`${item.id}::${item.optionId}`} style={{ background: 'white', borderRadius: 16, padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
+              <div key={`${item.id}::${item.optionId}`} className="cart-item" style={{ background: 'white', borderRadius: 16, padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
                 <div style={{ width: 64, height: 64, borderRadius: 12, background: `linear-gradient(135deg,${theme.bgColor},${theme.bgColor2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, flexShrink: 0, overflow: 'hidden' }}>
                   {item.coverImageUrl
                     ? <img src={item.coverImageUrl} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -70,21 +79,21 @@ export default function CartPage() {
                   </div>
                   <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 1 }}>{item.optionType === 'digital' ? '⬇️ Digital' : '📦 Physical'}</div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'flex-end', gap: 7, flexShrink: 0 }}>
-                  <div style={{ fontSize: 15, fontWeight: 900, color: theme.textColor }}>
+                <div className="cart-item-right" style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'flex-end', gap: 7, flexShrink: 0 }}>
+                  <div className="cart-item-right-price" style={{ fontSize: 15, fontWeight: 900, color: theme.textColor }}>
                     {fmtItem(item)}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div className="cart-item-right-actions" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <button onClick={() => decrement(item.id, item.optionId)}
                       style={{ width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${p}40`, background: 'white', color: p, cursor: 'pointer', fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
                     <span style={{ fontSize: 14, fontWeight: 700, color: theme.textColor, minWidth: 20, textAlign: 'center' as const }}>{item.qty}</span>
                     <button onClick={() => increment(item.id, item.optionId)}
                       style={{ width: 28, height: 28, borderRadius: 8, border: `1.5px solid ${p}40`, background: 'white', color: p, cursor: 'pointer', fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                    <button onClick={() => remove(item.id, item.optionId)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 11, fontWeight: 600, fontFamily: theme.fontFamily, padding: 0 }}>
+                      {tRaw('ลบ', 'Remove')}
+                    </button>
                   </div>
-                  <button onClick={() => remove(item.id, item.optionId)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 11, fontWeight: 600, fontFamily: theme.fontFamily, padding: 0 }}>
-                    {tRaw('ลบ', 'Remove')}
-                  </button>
                 </div>
               </div>
             ))}
