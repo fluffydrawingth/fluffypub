@@ -272,6 +272,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
         @media(max-width:759px){ .cp-desktop{display:none!important} }
         @media(min-width:760px){ .cp-mobile{display:none!important} }
         .cp-right-col::-webkit-scrollbar{width:0}
+        .cp-icon-btn:hover{transform:scale(1.12);box-shadow:0 4px 12px rgba(0,0,0,0.12)!important;}
       `}</style>
 
       {/* ═══════════════════════════════════════════════════
@@ -297,13 +298,13 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
               </div>
               {/* Emoji-only icon buttons to save space on mobile */}
               <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                <button onClick={toggleSave} title={saved ? tRaw('บันทึกแล้ว', 'Saved') : tRaw('บันทึก', 'Save')}
-                  style={{ width: 36, height: 36, borderRadius: '50%', border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  {saved ? '🔖' : '🔖'}
+                <button className="cp-icon-btn" onClick={toggleSave} title={saved ? tRaw('บันทึกแล้ว', 'Saved') : tRaw('บันทึก', 'Save')}
+                  style={{ width: 36, height: 36, borderRadius: '50%', border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+                  🔖
                 </button>
                 {(post.artwork_urls?.[0] || post.artwork_url) && (
-                  <button onClick={() => navigate(`/creative-tools/color-lab?mode=image&post=${post.id}`)} title={tRaw('สร้างพาเลตต์', 'Generate Palette')}
-                    style={{ width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #e5e7eb', background: 'white', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <button className="cp-icon-btn" onClick={() => navigate(`/creative-tools/color-lab?mode=image&post=${post.id}`)} title={tRaw('สร้างพาเลตต์', 'Generate Palette')}
+                    style={{ width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #e5e7eb', background: 'white', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
                     🎨
                   </button>
                 )}
@@ -405,15 +406,19 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
                     </button>
                     {created && <div style={{ fontSize: 13, color: '#94a3b8' }}>{created}</div>}
                   </div>
-                  <button onClick={toggleSave} style={{ padding: '7px 12px', borderRadius: 20, border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', color: saved ? p : '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
-                    {saved ? `🔖 ${tRaw('บันทึกแล้ว', 'Saved')}` : `🔖 ${tRaw('บันทึก', 'Save')}`}
-                  </button>
-                  {(post.artwork_urls?.[0] || post.artwork_url) && (
-                    <button onClick={() => navigate(`/creative-tools/color-lab?mode=image&post=${post.id}`)} style={{ padding: '7px 12px', borderRadius: 20, border: '1.5px solid #e5e7eb', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 800, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
-                      🎨 {tRaw('สร้างพาเลตต์', 'Generate Palette')}
+                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                    <button className="cp-icon-btn" onClick={toggleSave} title={saved ? tRaw('บันทึกแล้ว', 'Saved') : tRaw('บันทึก', 'Save')}
+                      style={{ width: 38, height: 38, borderRadius: '50%', border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', cursor: 'pointer', fontSize: 17, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+                      🔖
                     </button>
-                  )}
-                  <ShareButton post={post} p={p} theme={theme} tRaw={tRaw} />
+                    {(post.artwork_urls?.[0] || post.artwork_url) && (
+                      <button className="cp-icon-btn" onClick={() => navigate(`/creative-tools/color-lab?mode=image&post=${post.id}`)} title={tRaw('สร้างพาเลตต์', 'Generate Palette')}
+                        style={{ width: 38, height: 38, borderRadius: '50%', border: '1.5px solid #e5e7eb', background: 'white', cursor: 'pointer', fontSize: 17, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+                        🎨
+                      </button>
+                    )}
+                    <ShareButton post={post} p={p} theme={theme} tRaw={tRaw} iconOnly />
+                  </div>
                 </div>
               )}
 
@@ -716,9 +721,9 @@ function ShareButton({ post, p, theme, tRaw, iconOnly = false }: any) {
 
   return (
     <div style={{ position: 'relative' }}>
-      <button onClick={nativeShare} disabled={exporting} title={tRaw('แชร์', 'Share')}
+      <button className={iconOnly ? 'cp-icon-btn' : ''} onClick={nativeShare} disabled={exporting} title={tRaw('แชร์', 'Share')}
         style={iconOnly
-          ? { width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #e5e7eb', background: 'white', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
+          ? { width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #e5e7eb', background: 'white', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }
           : { padding: '7px 12px', borderRadius: 20, border: '1.5px solid #e5e7eb', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: theme.fontFamily }}>
         {exporting ? '⏳' : iconOnly ? '📤' : `📤 ${tRaw('แชร์', 'Share')}`}
       </button>
