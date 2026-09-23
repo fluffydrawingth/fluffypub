@@ -287,7 +287,7 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
 
           {/* 1. Header: avatar · name · date | save + share — sits behind the card */}
           {c && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px 28px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, padding: '8px 16px 28px' }}>
               <AvatarBtn size={38} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <button onClick={() => navigate(`/creator/${c.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 14, fontWeight: 800, color: '#1e293b', textAlign: 'left', fontFamily: theme.fontFamily }}>
@@ -295,15 +295,17 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
                 </button>
                 {created && <div style={{ fontSize: 12, color: '#94a3b8' }}>{created}</div>}
               </div>
-              <button onClick={toggleSave} style={{ padding: '6px 10px', borderRadius: 20, border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', color: saved ? p : '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
-                {saved ? `🔖 ${tRaw('บันทึกแล้ว', 'Saved')}` : `🔖 ${tRaw('บันทึก', 'Save')}`}
-              </button>
-              {(post.artwork_urls?.[0] || post.artwork_url) && (
-                <button onClick={() => navigate(`/creative-tools/color-lab?mode=image&post=${post.id}`)} style={{ padding: '6px 10px', borderRadius: 20, border: '1.5px solid #e5e7eb', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
-                  🎨 {tRaw('สร้างพาเลตต์', 'Generate Palette')}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
+                <button onClick={toggleSave} style={{ padding: '6px 10px', borderRadius: 20, border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', color: saved ? p : '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
+                  {saved ? `🔖 ${tRaw('บันทึกแล้ว', 'Saved')}` : `🔖 ${tRaw('บันทึก', 'Save')}`}
                 </button>
-              )}
-              <ShareButton post={post} p={p} theme={theme} tRaw={tRaw} />
+                {(post.artwork_urls?.[0] || post.artwork_url) && (
+                  <button onClick={() => navigate(`/creative-tools/color-lab?mode=image&post=${post.id}`)} style={{ padding: '6px 10px', borderRadius: 20, border: '1.5px solid #e5e7eb', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
+                    🎨 {tRaw('สร้างพาเลตต์', 'Generate Palette')}
+                  </button>
+                )}
+                <ShareButton post={post} p={p} theme={theme} tRaw={tRaw} />
+              </div>
             </div>
           )}
 
