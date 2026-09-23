@@ -287,24 +287,27 @@ export default function CommunityPostPage({ postId }: { postId: string }) {
 
           {/* 1. Header: avatar · name · date | save + share — sits behind the card */}
           {c && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, padding: '8px 16px 28px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px 28px' }}>
               <AvatarBtn size={38} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <button onClick={() => navigate(`/creator/${c.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 14, fontWeight: 800, color: '#1e293b', textAlign: 'left', fontFamily: theme.fontFamily }}>
+                <button onClick={() => navigate(`/creator/${c.id}`)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 14, fontWeight: 800, color: '#1e293b', textAlign: 'left', fontFamily: theme.fontFamily, overflow: 'hidden', whiteSpace: 'nowrap' as const, textOverflow: 'ellipsis', maxWidth: '100%', display: 'block' }}>
                   <BadgeIcon affiliate={c.affiliate_enabled} size={13} /> {c.name}
                 </button>
                 {created && <div style={{ fontSize: 12, color: '#94a3b8' }}>{created}</div>}
               </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
-                <button onClick={toggleSave} style={{ padding: '6px 10px', borderRadius: 20, border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', color: saved ? p : '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
-                  {saved ? `🔖 ${tRaw('บันทึกแล้ว', 'Saved')}` : `🔖 ${tRaw('บันทึก', 'Save')}`}
+              {/* Emoji-only icon buttons to save space on mobile */}
+              <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                <button onClick={toggleSave} title={saved ? tRaw('บันทึกแล้ว', 'Saved') : tRaw('บันทึก', 'Save')}
+                  style={{ width: 36, height: 36, borderRadius: '50%', border: `1.5px solid ${saved ? p : '#e5e7eb'}`, background: saved ? p + '12' : 'white', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {saved ? '🔖' : '🔖'}
                 </button>
                 {(post.artwork_urls?.[0] || post.artwork_url) && (
-                  <button onClick={() => navigate(`/creative-tools/color-lab?mode=image&post=${post.id}`)} style={{ padding: '6px 10px', borderRadius: 20, border: '1.5px solid #e5e7eb', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: theme.fontFamily, whiteSpace: 'nowrap' }}>
-                    🎨 {tRaw('สร้างพาเลตต์', 'Generate Palette')}
+                  <button onClick={() => navigate(`/creative-tools/color-lab?mode=image&post=${post.id}`)} title={tRaw('สร้างพาเลตต์', 'Generate Palette')}
+                    style={{ width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #e5e7eb', background: 'white', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    🎨
                   </button>
                 )}
-                <ShareButton post={post} p={p} theme={theme} tRaw={tRaw} />
+                <ShareButton post={post} p={p} theme={theme} tRaw={tRaw} iconOnly />
               </div>
             </div>
           )}
@@ -633,7 +636,7 @@ function TagEditBlock({ label, type, values, setValues, theme, p, efld, tRaw }: 
 }
 
 // ── Share button ───────────────────────────────────────────────────────────────
-function ShareButton({ post, p, theme, tRaw }: any) {
+function ShareButton({ post, p, theme, tRaw, iconOnly = false }: any) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -713,8 +716,11 @@ function ShareButton({ post, p, theme, tRaw }: any) {
 
   return (
     <div style={{ position: 'relative' }}>
-      <button onClick={nativeShare} disabled={exporting} style={{ padding: '7px 12px', borderRadius: 20, border: `1.5px solid #e5e7eb`, background: 'white', color: '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: theme.fontFamily }}>
-        {exporting ? '⏳' : `📤 ${tRaw('แชร์', 'Share')}`}
+      <button onClick={nativeShare} disabled={exporting} title={tRaw('แชร์', 'Share')}
+        style={iconOnly
+          ? { width: 36, height: 36, borderRadius: '50%', border: '1.5px solid #e5e7eb', background: 'white', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }
+          : { padding: '7px 12px', borderRadius: 20, border: '1.5px solid #e5e7eb', background: 'white', color: '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 800, fontFamily: theme.fontFamily }}>
+        {exporting ? '⏳' : iconOnly ? '📤' : `📤 ${tRaw('แชร์', 'Share')}`}
       </button>
       {open && (
         <div style={{ position: 'absolute', top: '110%', right: 0, background: 'white', border: '1.5px solid #e5e7eb', borderRadius: 14, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, minWidth: 190, overflow: 'hidden' }}>
