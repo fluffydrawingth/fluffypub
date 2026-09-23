@@ -147,6 +147,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeConfig>(() => getCachedTheme());
 
   useEffect(() => {
+    // Skip overwriting localStorage/state with CDN-cached API data if we saved
+    // recently (within 10 min). The GET response is edge-cached for 300s, so
+    // a fresh save would be overwritten by the stale CDN response otherwise.
+    const savedAt = Number(localStorage.getItem('fluffy_theme_saved_at') || 0);
+    const recentlySaved = Date.now() - savedAt < 10 * 60 * 1000;
+    if (recentlySaved) return;
     fetch('/api/theme').then(r=>r.json()).then(t => {
       if (t && typeof t === 'object' && !Array.isArray(t)) {
         const applied = applyParsed(JSON.parse(JSON.stringify(t)));
@@ -161,7 +167,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const saveTheme = async (t: ThemeConfig) => {
     const token = localStorage.getItem('fluffy_token');
     setThemeState(t);
-    try { localStorage.setItem(THEME_CACHE_KEY, JSON.stringify(t)); } catch {}
+    try {
+      localStorage.setItem(THEME_CACHE_KEY, JSON.stringify(t));
+      localStorage.setItem('fluffy_theme_saved_at', Date.now().toString());
+    } catch {}
     await fetch('/api/theme', { method:'PUT', headers:{'Content-Type':'application/json', ...(token?{Authorization:`Bearer ${token}`}:{})}, body: JSON.stringify(t) });
   };
 

@@ -4202,14 +4202,18 @@ function PagesCMSTab() {
   );
 }
 
-function FeaturedProductsPicker({ draft, setDraft }: any) {
+function FeaturedProductsPicker({ draft, setDraft, onAutoSave }: any) {
   const [allProducts, setAllProducts] = useState<any[]>([]);
   useEffect(() => { api.getProducts().then((p:any) => setAllProducts(Array.isArray(p)?p:[])); }, []);
   const ids: string[] = draft.featuredProductIds || [];
   const toggle = (id: string) => {
     setDraft((d: any) => {
       const cur: string[] = d.featuredProductIds || [];
-      return { ...d, featuredProductIds: cur.includes(id) ? cur.filter((x:string)=>x!==id) : [...cur, id] };
+      const next = { ...d, featuredProductIds: cur.includes(id) ? cur.filter((x:string)=>x!==id) : [...cur, id] };
+      // Auto-save immediately so homepage reflects the change without requiring
+      // the user to find and click the global "Save Changes" button.
+      if (onAutoSave) onAutoSave(next);
+      return next;
     });
   };
   return (
@@ -4942,7 +4946,7 @@ function ThemeTab() {
             </div>
             <div style={{borderTop:'1px solid #f3f4f6',paddingTop:14}}>
               <label style={{display:'block',fontSize:11,fontWeight:700,color:'#6b7280',marginBottom:6}}>FEATURED PRODUCTS <span style={{fontWeight:400}}>(select which products appear)</span></label>
-              <FeaturedProductsPicker draft={draft} setDraft={setDraft} />
+              <FeaturedProductsPicker draft={draft} setDraft={setDraft} onAutoSave={saveTheme} />
             </div>
           </div>
 
