@@ -10,7 +10,7 @@ export default function ProductCard({ product, priority = false }: { product: an
   const { theme } = useTheme();
   const { add, items, increment } = useCart();
   const { navigate } = useRouter();
-  const { lang, tRaw, currency, price } = useLang();
+  const { lang, t, tRaw, currency, price } = useLang();
   const [modal, setModal] = useState(false);
   const { isFav, toggle } = useFavorites();
   const { user } = useAuth();
@@ -74,7 +74,7 @@ export default function ProductCard({ product, priority = false }: { product: an
     setModal(false);
   };
 
-  const btnLabel = blockedByUSD ? '฿' : availableOptions.length === 0 ? '—' : inCartAny ? '✓' : availableOptions.length > 1 ? '⚙️' : '+';
+  const btnLabel = blockedByUSD ? '฿' : availableOptions.length === 0 ? '—' : inCartAny ? '✓' : '🛒';
   const displayPrice = price(priceTHB, priceUSD);
   const isDisabled = blockedByUSD || availableOptions.length === 0;
 
@@ -119,7 +119,7 @@ export default function ProductCard({ product, priority = false }: { product: an
               <span style={{ fontSize: 17.5, fontWeight: 900, color: theme.textColor }}>{displayPrice}</span>
               {blockedByUSD && <div style={{ fontSize: 11.5, color: '#f59e0b', fontWeight: 800, marginTop: 2 }}>฿ THB only</div>}
             </div>
-            <button onClick={handleCartBtn} disabled={isDisabled}
+            <button onClick={handleCartBtn} disabled={isDisabled} title={t('add_to_cart')} aria-label={t('add_to_cart')}
               style={{ background: inCartAny ? '#10b981' : isDisabled ? '#e5e7eb' : p, color: isDisabled ? '#9ca3af' : 'white', border: 'none', cursor: isDisabled ? 'not-allowed' : 'pointer', padding: '6px 12px', borderRadius: 12, fontSize: 14, fontWeight: 800, fontFamily: theme.fontFamily, flexShrink: 0 }}>
               {btnLabel}
             </button>
