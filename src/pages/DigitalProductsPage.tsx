@@ -47,6 +47,11 @@ export default function DigitalProductsPage() {
   if (sort === 'price_asc') filtered = [...filtered].sort((a, b) => (a.price_thb || 0) - (b.price_thb || 0));
   else if (sort === 'price_desc') filtered = [...filtered].sort((a, b) => (b.price_thb || 0) - (a.price_thb || 0));
   else if (sort === 'newest') filtered = [...filtered].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+  else if (sort === 'popular') {
+    // Same rule as the shop page: Hot-flagged first, newest first within each group.
+    const isHot = (x: any) => ((x.is_hot ?? x.isHot) === true ? 1 : 0);
+    filtered = [...filtered].sort((a, b) => isHot(b) - isHot(a) || new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+  }
   else filtered = [...filtered].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
 
   const selStyle = (active: boolean) => ({
@@ -82,6 +87,7 @@ export default function DigitalProductsPage() {
           <select value={sort} onChange={e => setSort(e.target.value)}
             style={{ padding: '10px 16px', borderRadius: 20, border: `1.5px solid ${p}30`, outline: 'none', fontSize: 16, fontFamily: theme.fontFamily, background: 'white', cursor: 'pointer', color: theme.textColor }}>
             <option value="featured">{tRaw('แนะนำ', 'Featured')}</option>
+            <option value="popular">{tRaw('ยอดนิยม', 'Popular')}</option>
             <option value="newest">{tRaw('ใหม่ล่าสุด', 'Newest')}</option>
             <option value="price_asc">{tRaw('ราคา ต่ำ-สูง', 'Price: Low–High')}</option>
             <option value="price_desc">{tRaw('ราคา สูง-ต่ำ', 'Price: High–Low')}</option>
